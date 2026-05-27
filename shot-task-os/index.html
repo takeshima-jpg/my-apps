@@ -860,6 +860,8 @@ input[type=checkbox] {
 
       <button class="btn-panel" onclick="openReview()">▸ 月次棚卸レビュー</button>
       <button class="btn-panel" onclick="exportJSON()">▸ JSONバックアップ</button>
+      <button class="btn-panel" onclick="importJSON()">▸ JSONインポート</button>
+      <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="handleImportFile(event)">
     </div>
   </div>
 </div>
@@ -1679,6 +1681,57 @@ function exportJSON() {
   a.href = URL.createObjectURL(blob);
   a.download = `shot-task-os-backup-${today}.json`;
   a.click();
+}
+
+// ── IMPORT ──
+function importJSON() {
+  document.getElementById('importFileInput').click();
+}
+
+function handleImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      // 配列直接 or { tasks: [...] } 形式に対応
+      const imported = Array.isArray(data) ? data : (data.tasks || []);
+      if (!Array.isArray(imported) || imported.length === 0) {
+        alert('有効なデータが見つかりませんでした。');
+        return;
+      }
+      const existing = tasks.length;
+      if (existing > 0) {
+        const choice = confirm(
+          `現在 ${existing} 件のタスクがあります。\n\n` +
+          `【OK】既存データに追加インポート（重複はスキップ）\n` +
+          `【キャンセル】既存データを上書き（全置換）`
+        );
+        if (choice) {
+          // 追加：既存IDと重複しないものだけ追加
+          const existingIds = new Set(tasks.map(t => t.id));
+          const newTasks = imported.filter(t => !existingIds.has(t.id));
+          tasks.push(...newTasks);
+          alert(`${newTasks.length} 件を追加しました（重複 ${imported.length - newTasks.length} 件スキップ）。`);
+        } else {
+          // 上書き
+          tasks = imported;
+          alert(`${imported.length} 件のタスクで上書きしました。`);
+        }
+      } else {
+        tasks = imported;
+        alert(`${imported.length} 件のタスクをインポートしました。`);
+      }
+      save();
+      render();
+      // ファイル選択をリセット
+      event.target.value = '';
+    } catch(err) {
+      alert('JSONの読み込みに失敗しました。\n' + err.message);
+    }
+  };
+  reader.readAsText(file);
 }
 
 
