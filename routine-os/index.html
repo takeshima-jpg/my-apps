@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <link rel="icon" type="image/png" href="./icons/favicon.ico">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Routine OS v2</title>
+
+<style>
+:root{
+  --red:#E24B4A;--red-l:#FCEBEB;--red-d:#791F1F;
+  --orange:#EF9F27;--orange-l:#FAEEDA;--orange-d:#854F0B;
+  --blue:#378ADD;--blue-l:#E6F1FB;--blue-d:#0C447C;
+  --gray:#888780;--gray-l:#F1EFE8;--gray-d:#444441;
+  --green:#639922;--green-l:#EAF3DE;--green-d:#3B6D11;
+  --purple:#7F77DD;--purple-l:#EEEDFE;--purple-d:#3C3489;
+  --bg:#F8F7F4;--surface:#fff;--border:rgba(0,0,0,0.1);
+  --text:#1a1a1a;--text2:#666;--text3:#999;
+  --r:8px;--r-lg:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Meiryo','メイリオ','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;background:var(--bg);color:var(--text);font-size:16px;}
+.app{display:flex;height:100vh;overflow:hidden;}
+
+.sidebar{width:200px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+.sb-hd{padding:14px 16px;border-bottom:1px solid var(--border);}
+.sb-logo{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;}
+.sb-title{font-size:14px;font-weight:700;color:var(--text);margin-top:2px;}
+.sb-nav{padding:6px 0;flex:1;overflow-y:auto;}
+.ni{display:flex;align-items:center;gap:8px;padding:11px 16px;cursor:pointer;color:var(--text2);font-size:14px;border-left:3px solid transparent;transition:background .1s;}
+.ni:hover{background:var(--bg);}
+.ni.act{color:var(--text);background:var(--bg);border-left-color:var(--blue);font-weight:600;}
+.ni-ico{font-size:13px;width:16px;text-align:center;}
+.sb-ft{padding:10px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);}
+
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 18px;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:50;}
+.vision-area{padding:8px 20px;border-bottom:1px solid var(--border);}
+.vision-card{background:#f7f7f9;border:1px solid #dcdce6;border-radius:10px;padding:10px 16px;display:flex;align-items:baseline;gap:14px;max-width:800px;}
+.vision-type{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.6rem;color:#9898a8;letter-spacing:0.1em;white-space:nowrap;min-width:52px;}
+.vision-body{font-size:0.78rem;color:#5a5a6e;line-height:1.7;}
+.vision-keyword{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.68rem;color:#9898a8;margin-right:8px;}
+.tb-t{font-size:17px;font-weight:700;}
+.tb-a{display:flex;gap:6px;}
+.btn{padding:8px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;color:var(--text);font-family:inherit;transition:all .1s;white-space:nowrap;}
+.btn:hover{background:var(--bg);}
+.btn-p{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-p:hover{background:var(--blue-d);}
+.btn-d{background:var(--red-l);color:var(--red-d);border-color:var(--red);}
+.btn-g{background:var(--green-l);color:var(--green-d);border-color:var(--green);}
+.btn-sm{padding:4px 9px;font-size:12px;}
+.content{padding:18px;flex:1;}
+
+/* Badges */
+.lb{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;}
+.l1{background:var(--red-l);color:var(--red-d);}
+.l2{background:var(--orange-l);color:var(--orange-d);}
+.l3{background:var(--blue-l);color:var(--blue-d);}
+.l4{background:var(--gray-l);color:var(--gray-d);}
+.sb2{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;}
+.s-pend{background:#FFF3CD;color:#856404;}
+.s-done{background:var(--green-l);color:var(--green-d);}
+.s-ov{background:var(--red-l);color:var(--red-d);}
+.s-skip{background:var(--gray-l);color:var(--gray-d);}
+.s-stop{background:#eee;color:#888;}
+
+/* Cards */
+.card{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);overflow:hidden;margin-bottom:12px;}
+.ch{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.ct{font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;}
+.cc{font-size:12px;background:var(--bg);padding:3px 8px;border-radius:999px;color:var(--text2);}
+
+/* Task rows */
+.tr{display:flex;align-items:flex-start;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+.tr:last-child{border-bottom:none;}
+.tr:hover{background:var(--bg);}
+.tr.pin{background:#FFF8F8;border-left:3px solid var(--red);padding-left:13px;}
+.tt{flex:1;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5;min-width:0;}
+.tm{font-size:13px;color:var(--text3);white-space:nowrap;}
+.ta{display:flex;gap:5px;opacity:0;transition:opacity .1s;}
+.tr:hover .ta{opacity:1;}
+.od{width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block;margin-right:4px;flex-shrink:0;}
+
+/* Metrics */
+.mets{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.met{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);padding:14px 16px;}
+.ml{font-size:12px;color:var(--text3);margin-bottom:4px;}
+.mv{font-size:24px;font-weight:700;color:var(--text);}
+.ms{font-size:12px;color:var(--text3);margin-top:2px;}
+.met.dan .mv{color:var(--red);}
+.met.inf .mv{color:var(--blue);}
+.met.grn .mv{color:var(--green);}
+
+/* Dashboard grid */
+.dg{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:14px;}
+
+/* Alerts */
+.al{padding:10px 14px;border-radius:var(--r);font-size:13px;margin-bottom:8px;display:flex;align-items:flex-start;gap:8px;}
+.al-d{background:var(--red-l);color:var(--red-d);border:1px solid rgba(226,75,74,.3);}
+.al-w{background:var(--orange-l);color:var(--orange-d);border:1px solid rgba(239,159,39,.3);}
+.al-i{background:var(--blue-l);color:var(--blue-d);border:1px solid rgba(55,138,221,.3);}
+.al-g{background:var(--green-l);color:var(--green-d);border:1px solid rgba(99,153,34,.3);}
+
+/* Filter bar */
+.fb{display:flex;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border);background:var(--bg);flex-wrap:wrap;align-items:center;}
+.fc{padding:5px 11px;border-radius:999px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;color:var(--text2);}
+.fc.act{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+/* Task table */
+.sc{overflow-x:auto;}
+.tt2{width:100%;border-collapse:collapse;}
+.tt2 th{padding:10px 12px;text-align:left;font-size:13px;font-weight:700;color:var(--text2);border-bottom:2px solid var(--border);background:var(--bg);white-space:nowrap;}
+.tt2 td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.tt2 tr:hover td{background:#F8F7F4;}
+.ii{border:none;background:transparent;font-size:14px;font-family:inherit;color:var(--text);width:100%;padding:4px 5px;border-radius:4px;min-height:32px;}
+.ii:focus{outline:1px solid var(--blue);background:#fff;}
+.is{border:none;background:transparent;font-size:14px;font-family:inherit;color:var(--text);padding:4px 5px;border-radius:4px;cursor:pointer;min-height:32px;}
+.is:focus{outline:1px solid var(--blue);background:#fff;}
+.ab{padding:5px 9px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:13px;color:var(--text2);white-space:nowrap;}
+.ab:hover{background:var(--bg);}
+.ab.dn{color:var(--green-d);border-color:var(--green);}
+.ab.sk{color:var(--orange-d);border-color:var(--orange);}
+.ab.dg2{color:var(--red-d);border-color:var(--red);}
+
+/* Calendar */
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:var(--r-lg);overflow:hidden;}
+.ch2{background:var(--bg);padding:7px;text-align:center;font-size:10px;font-weight:700;color:var(--text2);}
+.cd{background:var(--surface);padding:5px;min-height:88px;}
+.cd.om{background:var(--bg);opacity:.5;}
+.cd.tod{background:#EEF5FF;}
+.cdn{font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:700;}
+.ct2{font-size:9px;padding:1px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+
+/* Execution Mode Cards */
+.exec-card{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);padding:22px 24px;margin-bottom:16px;transition:box-shadow .1s;}
+.exec-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.exec-card.l1{border-left:4px solid var(--red);}
+.exec-card.l2{border-left:4px solid var(--orange);}
+.exec-card.l3{border-left:4px solid var(--blue);}
+.exec-card.l4{border-left:4px solid var(--gray);}
+.exec-card.overdue{background:#FFF5F5;}
+.exec-title{font-size:20px;font-weight:700;margin-bottom:10px;line-height:1.35;}
+.exec-notify{font-size:15px;color:var(--text2);background:var(--bg);border-radius:var(--r);padding:12px 14px;margin:12px 0;line-height:1.6;border-left:3px solid var(--blue);}
+.exec-deliv{font-size:14px;color:var(--green-d);background:var(--green-l);border-radius:var(--r);padding:10px 14px;margin:10px 0;}
+.exec-note{font-size:13px;color:var(--text3);margin-top:8px;}
+.exec-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}
+.exec-counter{font-size:14px;color:var(--text2);margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+
+/* Reminder cards */
+.rc{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);padding:13px;margin-bottom:9px;}
+.rc.pri{border-left:3px solid var(--red);}
+.rc.deferred{background:var(--bg);border-style:dashed;}
+.rt{font-size:10px;color:var(--text3);margin-bottom:5px;display:flex;align-items:center;gap:6px;}
+.rm{font-size:13px;font-weight:600;color:var(--text);margin-bottom:9px;line-height:1.45;}
+.ra{display:flex;gap:5px;flex-wrap:wrap;}
+
+/* Pinned banner */
+.pb{background:#FFF0F0;border-bottom:1px solid rgba(226,75,74,.2);padding:8px 16px;font-size:12px;font-weight:700;color:var(--red-d);display:flex;align-items:center;gap:5px;}
+.pb::before{content:'●';color:var(--red);}
+
+/* Review */
+.rs h3{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.rs{margin-bottom:20px;}
+
+/* Log rows */
+.log-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px;}
+.log-row:last-child{border-bottom:none;}
+.log-action{padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;}
+.la-done{background:var(--green-l);color:var(--green-d);}
+.la-skip{background:var(--gray-l);color:var(--gray-d);}
+.la-post{background:var(--orange-l);color:var(--orange-d);}
+.la-stop{background:var(--red-l);color:var(--red-d);}
+
+/* Quality check */
+.qc-section{margin-bottom:18px;}
+.qc-section h3{font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+
+.empty{padding:24px;text-align:center;color:var(--text3);font-size:14px;}
+.csv-ta{width:100%;height:180px;padding:10px;border:1px solid var(--border);border-radius:var(--r);font-family:monospace;font-size:13px;resize:vertical;}
+.hid{display:none!important;}
+select,input,textarea{font-family:inherit;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fr{margin-bottom:14px;}
+.fl{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:.04em;}
+.fi{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;font-family:inherit;color:var(--text);}
+.fi:focus{outline:none;border-color:var(--blue);}
+.fs{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;font-family:inherit;color:var(--text);background:#fff;}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200;}
+.md{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2);}
+.mh{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:5;}
+.mt{font-size:16px;font-weight:700;}
+.mb{padding:20px;}
+.mf{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--surface);}
+.saved-toast{position:fixed;bottom:20px;right:20px;background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:var(--r);font-size:13px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;}
+.saved-toast.show{opacity:1;}
+.memo-area{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;font-family:inherit;resize:vertical;min-height:70px;}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="sidebar">
+  <div class="sb-hd">
+    <div class="sb-logo">Routine OS v2</div>
+    <div class="sb-title">意思決定システム</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="ni act" data-v="dashboard" onclick="sv(this,'dashboard')"><span class="ni-ico">⊞</span>ダッシュボード</div>
+    <div class="ni" data-v="list" onclick="sv(this,'list')"><span class="ni-ico">≡</span>タスク一覧</div>
+    <div class="ni" data-v="calendar" onclick="sv(this,'calendar')"><span class="ni-ico">◻</span>カレンダー</div>
+    <div class="ni" data-v="monthly" onclick="sv(this,'monthly')"><span class="ni-ico">↺</span>月次レビュー</div>
+    <div class="ni" data-v="holidays" onclick="sv(this,'holidays')"><span class="ni-ico">□</span>祝日管理</div>
+  </nav>
+  <div class="sb-ft" id="td-disp"></div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <div class="tb-t" id="vt">ダッシュボード</div>
+    <div class="tb-a">
+      <button class="btn" onclick="showAdd()">＋ タスク追加</button>
+    </div>
+  </div>
+  <div class="vision-area" id="visionArea"></div>
+
+  <div id="v-dashboard" class="content"></div>
+
+
+  <div id="v-list" class="hid content">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+      <input id="list-kw" class="fi" placeholder="🔍 タイトル・備考・サイクルで検索" style="flex:1;min-width:160px;padding:8px 12px;font-size:14px;">
+      <select id="list-filter-status" class="fc" style="padding:6px 10px;font-size:13px;">
+        <option value="">ステータス</option>
+        <option value="未完了">未完了</option>
+        <option value="スキップ">スキップ</option>
+        <option value="停止">停止</option>
+      </select>
+      <select id="list-filter-layer" class="fc" style="padding:6px 10px;font-size:13px;">
+        <option value="">レイヤー</option>
+        <option value="1">意思決定・経営</option>
+        <option value="2">重要運用</option>
+        <option value="3">改善・振り返り</option>
+        <option value="4">任意・保守</option>
+      </select>
+      <button class="btn" onclick="clearListFilter()" style="white-space:nowrap;">✕ クリア</button>
+      <span id="list-count" style="font-size:13px;color:var(--text2);white-space:nowrap;"></span>
+    </div>
+    <div id="list-body"></div>
+  </div>
+
+  <div id="v-calendar" class="hid content">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <button class="btn btn-sm" onclick="cm(-1)">◀</button>
+      <div style="font-size:15px;font-weight:700;" id="cml"></div>
+      <button class="btn btn-sm" onclick="cm(1)">▶</button>
+    </div>
+    <div id="cal"></div>
+    <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;font-size:11px;">
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:11px;height:11px;border-radius:2px;background:var(--red-l);border:1px solid var(--red);"></div>意思決定・経営</div>
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:11px;height:11px;border-radius:2px;background:var(--orange-l);border:1px solid var(--orange);"></div>重要運用</div>
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:11px;height:11px;border-radius:2px;background:var(--blue-l);border:1px solid var(--blue);"></div>改善・振り返り</div>
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:11px;height:11px;border-radius:2px;background:var(--gray-l);border:1px solid var(--gray);"></div>任意・保守</div>
+    </div>
+  </div>
+
+  <div id="v-monthly" class="hid content"><div id="monthly-body"></div></div>
+
+
+  <div id="v-holidays" class="hid content">
+    <div class="card" style="max-width:600px;">
+      <div class="ch"><span class="ct">祝日マスタ管理</span><span id="h-count" class="cc"></span></div>
+      <div style="padding:18px;">
+        <div class="fr">
+          <label class="fl">祝日を1件追加</label>
+          <div style="display:flex;gap:6px;">
+            <input type="date" class="fi" id="h-date" style="width:150px;flex-shrink:0;">
+            <input type="text" class="fi" id="h-name" placeholder="祝日名（例：元日）">
+            <button class="btn btn-p" onclick="addH()" style="flex-shrink:0;">追加</button>
+          </div>
+        </div>
+        <div class="fr">
+          <label class="fl">年別プリセット取込</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn" onclick="importPreset(2026)">2026年祝日を追加</button>
+            <button class="btn" onclick="importPreset(2027)">2027年祝日を追加</button>
+            <button class="btn" onclick="importPreset(2028)">2028年祝日を追加</button>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:5px;">同じ日付が既にある場合は追加されません</div>
+        </div>
+        <div id="h-preset-result" style="margin-bottom:10px;"></div>
+        <div id="hl"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Task Modal -->
+<div class="mo hid" id="tm">
+  <div class="md">
+    <div class="mh"><div class="mt" id="mtt">タスク追加</div><button class="btn btn-sm" onclick="cModal()">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fr"><label class="fl">タイトル *</label><input class="fi" id="f-ti" placeholder="タスクタイトル"></div>
+        <div class="fr"><label class="fl">サイクル</label><select class="fs" id="f-cy"><option>週次</option><option>隔週</option><option>月次</option><option>隔月</option><option>四半期</option><option>半期</option><option>年次</option><option>任意日</option><option>不定期</option></select></div>
+        <div class="fr"><label class="fl">レイヤー分類 *</label><select class="fs" id="f-la"><option value="1">1. 意思決定・経営</option><option value="2">2. 重要運用</option><option value="3">3. 改善・振り返り</option><option value="4">4. 任意・保守</option></select></div>
+        <div class="fr"><label class="fl">次回予定日</label><input type="date" class="fi" id="f-nd"></div>
+        <div class="fr"><label class="fl">加算タイプ</label><select class="fs" id="f-at"><option value="calendar">カレンダー日</option><option value="business">営業日</option></select></div>
+        <div class="fr"><label class="fl">加算基準</label><select class="fs" id="f-ab"><option value="from_next">前回予定日から加算</option><option value="from_last">最終実施日から加算</option><option value="from_ms">月初から加算</option><option value="from_me">月末から加算</option><option value="from_ys">年初から加算</option><option value="fixed">指定月日固定</option></select></div>
+        <div class="fr"><label class="fl">例外加算日数（通常は未使用）</label><input type="number" class="fi" id="f-ad" placeholder="通常はサイクルから自動計算"></div>
+      </div>
+      <div class="fr"><label class="fl">成果物・完了条件</label><input class="fi" id="f-dl" placeholder="何ができたら完了か（具体的に）"></div>
+      <div class="fr"><label class="fl">通知文（行動・判断を促す文章）</label><input class="fi" id="f-nm" placeholder="例：今週の売上ズレを確認し、打ち手を1つ決める"></div>
+      <div class="fr"><label class="fl">URL</label><input class="fi" id="f-url" placeholder="https://"></div>
+      <div class="fr"><label class="fl">備考</label><input class="fi" id="f-nt" placeholder="補足情報"></div>
+      <div style="display:flex;gap:14px;">
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;"><input type="checkbox" id="f-ew"> 土日除外</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;"><input type="checkbox" id="f-eh"> 祝日除外</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;"><input type="checkbox" id="f-sk"> スキップ可</label>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn" onclick="cModal()">キャンセル</button>
+      <button class="btn btn-p" onclick="saveT()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Action Modal (complete/skip/postpone with memo) -->
+<div class="mo hid" id="am">
+  <div class="md" style="width:420px;">
+    <div class="mh"><div class="mt" id="am-tt">アクション</div><button class="btn btn-sm" onclick="cActModal()">✕</button></div>
+    <div class="mb">
+      <div id="am-skip-wrap" class="fr hid">
+        <label class="fl">スキップ理由</label>
+        <select class="fs" id="am-sr"><option>今回は不要</option><option>情報が揃っていない</option><option>他タスクに統合</option><option>優先度低下</option><option>その他</option></select>
+      </div>
+      <div class="fr">
+        <label class="fl">メモ（任意）</label>
+        <textarea class="memo-area" id="am-memo" placeholder="メモを残せます（履歴に保存されます）"></textarea>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn" onclick="cActModal()">キャンセル</button>
+      <button class="btn btn-p" id="am-ok" onclick="doAction()">実行</button>
+    </div>
+  </div>
+</div>
+
+<div class="saved-toast" id="toast">保存しました</div>
+
+<script>
+// ========== STATE ==========
+var tasks=[], taskLogs=[], holidays=[], nid=1;
+// holidays = [{ date: 'YYYY-MM-DD', name: '祝日名' }, ...]
+var filt={}, eid=null, calY=new Date().getFullYear(), calM=new Date().getMonth();
+var pendingAction=null; // {taskId, action:'complete'|'skip'|'postpone'}
+var curView='dashboard';
+
+var today=new Date(); today.setHours(0,0,0,0);
+// ローカル日付でYYYY-MM-DDを生成（toISOString()はUTC基準でずれるため使わない）
+var tds=(function(){var y=today.getFullYear(),m=String(today.getMonth()+1).padStart(2,'0'),d=String(today.getDate()).padStart(2,'0');return y+'-'+m+'-'+d;})();
+
+// ========== DATE STATE HELPERS ==========
+function toDateKey(value){
+  if(!value)return '';
+  if(typeof value==='string')return value.slice(0,10);
+  var d=new Date(value);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function getTodayKey(){return tds;}
+function getDateState(nextDate){
+  var key=toDateKey(nextDate);
+  if(!key)return 'none';
+  if(key<tds)return 'overdue';
+  if(key===tds)return 'today';
+  return 'future';
+}
+var thisYear=today.getFullYear();
+
+var LN={1:'意思決定・経営',2:'重要運用',3:'改善・振り返り',4:'任意・保守'};
+var CY=['週次','隔週','月次','隔月','四半期','半期','年次','任意日','不定期'];
+var VTITLES={dashboard:'ダッシュボード',list:'タスク一覧',calendar:'カレンダー',monthly:'月次レビュー',holidays:'祝日管理'};
+
+document.getElementById('td-disp').textContent=today.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+
+// ========== STORAGE ==========
+function saveData(){
+  try{
+    localStorage.setItem('routineOS_tasks', JSON.stringify(tasks));
+    localStorage.setItem('routineOS_logs', JSON.stringify(taskLogs));
+    localStorage.setItem('routineOS_holidays', JSON.stringify(holidays));
+    localStorage.setItem('routineOS_nid', String(nid));
+    showToast();
+  }catch(e){console.warn('save failed',e);}
+}
+function loadData(){
+  try{
+    var t=localStorage.getItem('routineOS_tasks');
+    var l=localStorage.getItem('routineOS_logs');
+    var h=localStorage.getItem('routineOS_holidays');
+    var n=localStorage.getItem('routineOS_nid');
+    if(t) tasks=JSON.parse(t);
+    if(l) taskLogs=JSON.parse(l);
+    if(h) {
+      var raw=JSON.parse(h);
+      // 旧形式 ['YYYY-MM-DD', ...] を新形式 [{date,name},...] へ変換
+      holidays=raw.map(function(item){
+        if(typeof item==='string') return {date:item, name:''};
+        return item;
+      });
+    }
+    if(n) nid=parseInt(n)||1;
+    if(!h) initDefaultHolidays();
+  }catch(e){console.warn('load failed',e);initDefaultHolidays();}
+}
+function initDefaultHolidays(){
+  holidays=importJapaneseHolidays(2025).concat(importJapaneseHolidays(2026));
+}
+// 既存タスクのaddBase・addTypeを正規化（移行処理）
+function migrateRoutineFields(){
+  tasks.forEach(function(t){
+    // cycleを正規化（揺れ・空白・レイヤー名混入を修復）
+    t.cycle=normalizeCycle(t.cycle);
+    // addDaysからcycleを推定（cycleが壊れている場合の救済）
+    if(!t.cycle&&t.addDays){
+      var days=Number(t.addDays);
+      if(days===7)t.cycle='週次';
+      else if(days===14)t.cycle='隔週';
+      else if(days>=28&&days<=31)t.cycle='月次';
+      else if(days>=90&&days<=93)t.cycle='四半期';
+      else if(days>=180&&days<=186)t.cycle='半期';
+      else if(days>=365)t.cycle='年次';
+    }
+    if(!t.addBase||t.addBase==='from_last'){t.addBase='from_next';}
+    if(!t.addType){t.addType='calendar';}
+    if(t.lastScheduledDate===undefined){t.lastScheduledDate='';}
+    if(!t.status){t.status='未完了';}
+    // updatedAt がない既存タスクには lastDate or nextDate から補完
+    if(!t.updatedAt){
+      t.updatedAt=t.lastDate?t.lastDate+'T00:00:00.000Z':(t.nextDate?t.nextDate+'T00:00:00.000Z':new Date().toISOString());
+    }
+    // 日付フィールドを正規化
+    if(t.nextDate)t.nextDate=normalizeDate(t.nextDate)||t.nextDate;
+    if(t.lastScheduledDate)t.lastScheduledDate=normalizeDate(t.lastScheduledDate)||t.lastScheduledDate;
+    if(t.lastDate)t.lastDate=normalizeDate(t.lastDate)||t.lastDate;
+  });
+}
+function showToast(){
+  var t=document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},1500);
+}
+function clearAll(){
+  if(!confirm('全タスクデータを削除しますか？この操作は元に戻せません。'))return;
+  tasks=[];taskLogs=[];nid=1;
+  saveData();rAll();
+}
+
+// ========== CYCLE NORMALIZATION ==========
+function normalizeCycle(value){
+  var raw=String(value||'').trim();
+  if(!raw)return '';
+  // レイヤー名が誤ってcycleに入っている場合は除去
+  var layerNames=['意思決定・経営','重要運用','改善・振り返り','任意・保守'];
+  for(var i=0;i<layerNames.length;i++){if(raw===layerNames[i])return '';}
+  if(raw.indexOf('隔週')>=0)return '隔週';
+  if(raw.indexOf('週次')>=0||raw.indexOf('毎週')>=0||raw.toLowerCase().indexOf('weekly')>=0)return '週次';
+  if(raw.indexOf('隔月')>=0)return '隔月';
+  if(raw.indexOf('四半期')>=0||raw.indexOf('3ヶ月')>=0||raw.indexOf('3か月')>=0)return '四半期';
+  if(raw.indexOf('半期')>=0||raw.indexOf('半年')>=0||raw.indexOf('6ヶ月')>=0||raw.indexOf('6か月')>=0)return '半期';
+  if(raw.indexOf('月次')>=0||raw.indexOf('毎月')>=0||raw.toLowerCase().indexOf('monthly')>=0)return '月次';
+  if(raw.indexOf('年次')>=0||raw.indexOf('毎年')>=0||raw.toLowerCase().indexOf('yearly')>=0||raw.toLowerCase().indexOf('annual')>=0)return '年次';
+  if(raw.indexOf('任意日')>=0)return '任意日';
+  if(raw.indexOf('不定期')>=0)return '不定期';
+  return '';
+}
+
+
+function ds(d){if(typeof d==='string')return d.slice(0,10);return d.toISOString().slice(0,10);}
+function pd(s){if(!s)return null;return new Date(s+'T00:00:00');}
+function isWE(d){var x=new Date(d+'T00:00:00');return x.getDay()===0||x.getDay()===6;}
+function isHol(d){
+  var s=typeof d==='string'?d.slice(0,10):ds(d);
+  return holidays.some(function(h){return h.date===s;});
+}
+
+function normalizeDate(v){
+  if(!v||typeof v!=='string')return '';
+  v=v.trim();
+  // Already YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}$/.test(v)){var dt=new Date(v+'T00:00:00');return isNaN(dt)?v:v;}
+  // YYYY/M/D or YYYY/MM/DD
+  var m=v.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if(m){return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');}
+  // M/D or MM/DD (no year)
+  m=v.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if(m){return thisYear+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0');}
+  // M月D日
+  m=v.match(/^(\d{1,2})月(\d{1,2})日?$/);
+  if(m){return thisYear+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0');}
+  // M月D日YYYY年 or YYYY年M月D日
+  m=v.match(/(\d{4})年(\d{1,2})月(\d{1,2})日?/);
+  if(m){return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');}
+  return v; // keep original for quality check
+}
+function isValidDate(s){if(!s)return false;var d=new Date(s+'T00:00:00');return !isNaN(d)&&s===ds(d);}
+
+// ========== BUSINESS DAY CALC ==========
+function addBD(st,n,ew,eh){
+  var d=new Date(st+'T00:00:00'),cnt=0,step=n>=0?1:-1,tgt=Math.abs(n);
+  while(cnt<tgt){d.setDate(d.getDate()+step);if(ew&&isWE(ds(d)))continue;if(eh&&isHol(ds(d)))continue;cnt++;}
+  return ds(d);
+}
+function addCD(st,n){var d=new Date(st+'T00:00:00');d.setDate(d.getDate()+n);return ds(d);}
+function nBD(y,m,n,eh){var d=new Date(y,m,1),cnt=0;while(d.getMonth()===m){var s=ds(d);if(!isWE(s)&&(!eh||!isHol(s))){cnt++;if(cnt===n)return s;}d.setDate(d.getDate()+1);}return null;}
+function nLBD(y,m,n,eh){var d=new Date(y,m+1,0),cnt=0;while(d.getMonth()===m){var s=ds(d);if(!isWE(s)&&(!eh||!isHol(s))){cnt++;if(cnt===Math.abs(n))return s;}d.setDate(d.getDate()-1);}return null;}
+
+function calcNext(t,from){
+  if(!from||!isValidDate(from))return null;
+  var days=parseInt(t.addDays);if(isNaN(days))return null;
+  var tp=t.addType||'calendar',ab=t.addBase||'from_last',eh=t.excludeHolidays,ew=t.excludeWeekends;
+  var base=new Date(from+'T00:00:00');
+  if(ab==='fixed'&&t.fixedM&&t.fixedD){
+    var nx=new Date(base.getFullYear(),t.fixedM-1,t.fixedD);
+    if(nx<=base)nx.setFullYear(nx.getFullYear()+1);
+    return ds(nx);
+  }
+  if(ab==='from_ms'){var m=base.getMonth(),y=base.getFullYear(),nm=m+1>11?0:m+1,ny=m+1>11?y+1:y;return tp==='business'?nBD(ny,nm,days,eh):(new Date(ny,nm,days)).toISOString().slice(0,10);}
+  if(ab==='from_me'){var m=base.getMonth(),y=base.getFullYear(),nm=m+1>11?0:m+1,ny=m+1>11?y+1:y;return tp==='business'?nLBD(ny,nm,Math.abs(days),eh):ds(new Date(ny,nm+1,days));}
+  if(ab==='from_ys'){var y=base.getFullYear()+1;return tp==='business'?nBD(y,0,days,eh):ds(new Date(y,0,days));}
+  return tp==='business'?addBD(from,days,ew!==false,eh):addCD(from,days);
+}
+
+// ========== STATUS HELPERS ==========
+function isOv(t){if(!t.nextDate||t.status==='完了'||t.status==='停止')return false;return getDateState(t.nextDate)==='overdue';}
+function isTod(t){if(!t.nextDate||t.status==='完了'||t.status==='停止')return false;return getDateState(t.nextDate)==='today';}
+function isWk(t){if(!t.nextDate)return false;var e=new Date(today);e.setDate(e.getDate()+7);return t.nextDate>=tds&&t.nextDate<=ds(e)&&t.status!=='完了'&&t.status!=='停止';}
+
+// ========== LOGGING ==========
+var logNid=1;
+function addLog(taskId,action,opts){
+  opts=opts||{};
+  var t=tasks.find(function(x){return x.id===taskId;})||{};
+  taskLogs.push({
+    logId:logNid++,taskId:taskId,title:t.title||opts.title||'',
+    layer:t.layer||opts.layer,cycle:t.cycle||opts.cycle,
+    action:action,actionDate:tds,
+    previousNextDate:opts.prev||t.nextDate||'',
+    newNextDate:opts.next||'',
+    skipReason:opts.skipReason||'',memo:opts.memo||''
+  });
+}
+
+// ========== VIEW SWITCHING ==========
+function sv(el,v){
+  document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('act');});
+  document.querySelectorAll('[id^="v-"]').forEach(function(n){n.classList.add('hid');});
+  if(el)el.classList.add('act');
+  document.getElementById('v-'+v).classList.remove('hid');
+  document.getElementById('vt').textContent=VTITLES[v]||v;
+  curView=v;
+  if(v==='dashboard')rDash();
+  if(v==='list'){
+    // 検索・フィルターのイベントを登録（重複防止のため一度外してから付ける）
+    var kwEl=document.getElementById('list-kw');
+    var stEl=document.getElementById('list-filter-status');
+    var lyEl=document.getElementById('list-filter-layer');
+    if(kwEl){
+      kwEl.removeEventListener('input',rList);
+      kwEl.addEventListener('input',rList);
+    }
+    if(stEl){
+      stEl.removeEventListener('change',rList);
+      stEl.addEventListener('change',rList);
+    }
+    if(lyEl){
+      lyEl.removeEventListener('change',rList);
+      lyEl.addEventListener('change',rList);
+    }
+    rList();
+  }
+  if(v==='calendar')rCal();
+  if(v==='monthly')rMonthly();
+  if(v==='holidays')rHol();
+}
+function rAll(){
+  if(curView==='dashboard')rDash();
+  else if(curView==='list')rList();
+  else if(curView==='calendar')rCal();
+  else if(curView==='monthly')rMonthly();
+  
+}
+
+// ========== BADGE HELPERS ==========
+function stBadge(t){
+  var s=t.status||'未完了',ov=isOv(t);
+  var cls=s==='完了'?'s-done':s==='スキップ'?'s-skip':s==='停止'?'s-stop':ov?'s-ov':'s-pend';
+  return '<span class="sb2 '+cls+'">'+s+'</span>';
+}
+function layBadge(l){return '<span class="lb l'+l+'">'+(LN[l]||'')+'</span>';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ========== TASK ROW (dashboard/small) ==========
+// 今日より未来で、3営業日以内かどうか判定
+function isWithin3BD(t){
+  if(!t.nextDate||t.status==='完了'||t.status==='停止')return false;
+  if(t.nextDate<=tds)return false; // 今日以前は対象外
+  // 今日から3営業日後を求める
+  var d=new Date(tds+'T00:00:00'),cnt=0;
+  while(cnt<3){
+    d.setDate(d.getDate()+1);
+    if(!isWE(ds(d))&&!isHol(ds(d)))cnt++;
+  }
+  return t.nextDate<=ds(d);
+}
+
+function tRow(t,pin){
+  var state=getDateState(t.nextDate);
+  var ov=(state==='overdue')&&t.status!=='完了'&&t.status!=='停止';
+  var tod2=(state==='today')&&t.status!=='完了'&&t.status!=='停止';
+  // 翌日以降3営業日以内 = 緑（当日・期限切れは除く）
+  var near=state==='future'&&isWithin3BD(t);
+  // 行の背景色を期限ステータスで決定
+  var bg=ov?'#FFF0F0':tod2?'#FFFDE6':near?'#F0F7E6':'';
+  var leftBorder=ov?'border-left:4px solid var(--red);padding-left:12px;':
+                 tod2?'border-left:4px solid #F0C000;padding-left:12px;':
+                 near?'border-left:4px solid var(--green);padding-left:12px;':'';
+  var dotColor=ov?'var(--red)':tod2?'#D4A800':near?'var(--green)':'';
+  var dot=dotColor?'<span style="width:8px;height:8px;border-radius:50%;background:'+dotColor+';display:inline-block;margin-right:4px;flex-shrink:0;margin-top:6px;"></span>':'';
+  var titleEl=t.url
+    ?'<a class="tt" href="'+esc(t.url)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none;">'+esc(t.title)+'<span style="font-size:11px;margin-left:5px;opacity:0.5;">↗</span></a>'
+    :'<span class="tt">'+esc(t.title)+'</span>';
+  return '<div class="tr'+(pin?' pin':'')+'" style="'+(bg?'background:'+bg+';':'')+leftBorder+'" onclick="openEdit('+t.id+')">'+dot+
+    titleEl+layBadge(t.layer)+
+    '<span class="tm">'+(t.nextDate||'未設定')+'</span>'+stBadge(t)+
+    '<div class="ta" onclick="event.stopPropagation()">'+
+    '<button class="ab dn" onclick="trigAction('+t.id+',\'complete\')">完了</button>'+
+    '<button class="ab" onclick="trigAction('+t.id+',\'postpone\')">翌日</button>'+
+    '<button class="ab sk" onclick="trigAction('+t.id+',\'skip\')">スキップ</button>'+
+    '<button class="ab" onclick="openEdit('+t.id+')">編集</button>'+
+    '<button class="ab dg2" onclick="stopT('+t.id+')">停止</button>'+
+    '</div></div>';
+}
+
+// ========== TASK LIST ==========
+function rList(){
+  var el=document.getElementById('list-body');
+  var kw=(document.getElementById('list-kw')||{value:''}).value.trim().toLowerCase();
+  var filterStatus=(document.getElementById('list-filter-status')||{value:''}).value;
+  var filterLayer=(document.getElementById('list-filter-layer')||{value:''}).value;
+
+  var filtered=tasks.filter(function(t){
+    if(filterStatus&&t.status!==filterStatus)return false;
+    if(filterLayer&&String(t.layer)!==filterLayer)return false;
+    if(kw){
+      var text=((t.title||'')+(t.note||'')+(t.cycle||'')).toLowerCase();
+      return text.indexOf(kw)>=0;
+    }
+    return true;
+  });
+
+  filtered.sort(function(a,b){
+    var aStop=a.status==='停止',bStop=b.status==='停止';
+    if(aStop&&!bStop)return 1;
+    if(!aStop&&bStop)return -1;
+    var ad=a.nextDate||'9999',bd=b.nextDate||'9999';
+    return ad<bd?-1:ad>bd?1:0;
+  });
+
+  // 件数表示だけ更新
+  var countEl=document.getElementById('list-count');
+  if(countEl)countEl.textContent=filtered.length+' / '+tasks.length+' 件';
+
+  // テーブルのみ再描画（検索バーは触らない）
+  el.innerHTML=
+    '<div class="card"><div class="sc"><table class="tt2">'+
+    '<thead><tr>'+
+    '<th style="width:32px">No</th>'+
+    '<th style="min-width:180px">タイトル</th>'+
+    '<th style="width:76px">サイクル</th>'+
+    '<th style="width:116px">レイヤー</th>'+
+    '<th style="width:100px">次回予定日</th>'+
+    '<th style="width:72px">ステータス</th>'+
+    '<th style="width:170px">操作</th>'+
+    '</tr></thead>'+
+    '<tbody>'+
+    (filtered.length?filtered.map(function(t){
+      var state=getDateState(t.nextDate);
+      var ov=state==='overdue'&&t.status!=='完了'&&t.status!=='停止';
+      var tod2=state==='today'&&t.status!=='完了'&&t.status!=='停止';
+      var near=state==='future'&&isWithin3BD(t);
+      var s=t.status||'未完了';
+      var sc=s==='完了'?'s-done':s==='スキップ'?'s-skip':s==='停止'?'s-stop':ov?'s-ov':'s-pend';
+      var bg=ov?'#FFF0F0':tod2?'#FFFDE6':near?'#F0F7E6':'';
+      var leftB=ov?'border-left:4px solid var(--red);':tod2?'border-left:4px solid #F0C000;':near?'border-left:4px solid var(--green);':'';
+      var ndCell=t.nextDate||'<span style="color:var(--text3);font-size:12px;">未設定</span>';
+      if(t.nextDate&&ov)ndCell='<span style="color:var(--red);font-weight:700;">'+t.nextDate+'</span>';
+      return '<tr style="'+(bg?'background:'+bg+';':'')+leftB+'">'+
+        '<td style="color:var(--text3);font-size:12px;">'+t.id+'</td>'+
+        '<td><span style="font-size:14px;font-weight:600;">'+esc(t.title||'')+'</span>'+
+          (t.url?'<a href="'+esc(t.url)+'" target="_blank" style="margin-left:6px;font-size:11px;color:var(--blue);">🔗</a>':'')+
+        '</td>'+
+        '<td style="font-size:12px;">'+esc(t.cycle||'')+'</td>'+
+        '<td>'+layBadge(t.layer)+'</td>'+
+        '<td style="font-size:13px;">'+ndCell+'</td>'+
+        '<td><span class="sb2 '+sc+'">'+s+'</span></td>'+
+        '<td><div style="display:flex;gap:3px;flex-wrap:nowrap;">'+
+          (s!=='停止'?'<button class="ab dn" onclick="trigAction('+t.id+',\'complete\')">完了</button>':'') +
+          (s!=='停止'?'<button class="ab" onclick="trigAction('+t.id+',\'postpone\')">翌日</button>':'') +
+          (s!=='停止'?'<button class="ab sk" onclick="trigAction('+t.id+',\'skip\')">スキップ</button>':'') +
+          '<button class="ab" onclick="openEdit('+t.id+')">編集</button>'+
+          (s!=='停止'?'<button class="ab dg2" onclick="stopT('+t.id+')">停止</button>':'')+
+        '</div></td>'+
+      '</tr>';
+    }).join(''):'<tr><td colspan="7" class="empty">該当するタスクがありません</td></tr>')+
+    '</tbody></table></div></div>';
+}
+function clearListFilter(){
+  var kw=document.getElementById('list-kw');
+  var fs=document.getElementById('list-filter-status');
+  var fl=document.getElementById('list-filter-layer');
+  if(kw)kw.value='';
+  if(fs)fs.value='';
+  if(fl)fl.value='';
+  rList();
+}
+
+function quickAdd(){
+  var title=document.getElementById('q-title').value.trim();
+  if(!title){document.getElementById('q-title').focus();return;}
+  var cycle=normalizeCycle(document.getElementById('q-cycle').value)||'不定期';
+  var layer=parseInt(document.getElementById('q-layer').value)||4;
+  var nextDate=document.getElementById('q-date').value||'';
+  // サイクルから addDays を自動計算（Task OS 側の stoppage 判定に使用）
+  var cycleToAddDays={'週次':7,'隔週':14,'月次':30,'隔月':60,'四半期':91,'半期':182,'年次':365};
+  var addDays=cycleToAddDays[cycle]||null;
+  tasks.push({id:nid++,title:title,cycle:cycle,layer:layer,nextDate:nextDate,
+    status:'未完了',addType:'calendar',addBase:'from_next',addDays:addDays,
+    lastScheduledDate:'',notifyMsg:'',deliverable:'',url:'',note:'',
+    excludeWeekends:false,excludeHolidays:false,skippable:true,
+    updatedAt:new Date().toISOString()});
+  document.getElementById('q-title').value='';
+  document.getElementById('q-date').value='';
+  saveData();rAll();
+}
+
+// ========== DASHBOARD ==========
+function rDash(){
+  var tod=tasks.filter(isTod),ov=tasks.filter(isOv);  var thisMonth=tds.slice(0,7);
+  var nextMonthDate=new Date(today.getFullYear(),today.getMonth()+1,1);
+  var nextMonth=(nextMonthDate.getFullYear()+'-'+String(nextMonthDate.getMonth()+1).padStart(2,'0'));
+  var thisMonthTasks=tasks.filter(function(t){return t.nextDate&&t.nextDate.slice(0,7)===thisMonth&&t.status!=='停止'&&!isOv(t)&&!isTod(t);});
+  thisMonthTasks.sort(function(a,b){return (a.nextDate||'9999')<(b.nextDate||'9999')?-1:1;});
+  var inc=tasks.filter(function(t){
+    return (!t.status||t.status==='未完了')&&t.status!=='停止'&&t.nextDate&&isValidDate(t.nextDate);
+  });
+  // Layer1: overdue + today + this week + top5 by nextDate
+  var l1shown=tasks.filter(function(t){
+    return t.layer==1&&t.status!=='停止'&&(isOv(t)||isTod(t));
+  }).sort(function(a,b){
+    if(isOv(a)&&!isOv(b))return -1;
+    if(!isOv(a)&&isOv(b))return 1;
+    return (a.nextDate||'9999')<(b.nextDate||'9999')?-1:1;
+  });
+  var el=document.getElementById('v-dashboard');
+  // 期限切れ警告バナー
+  var ovBanner='';
+  if(ov.length){
+    ovBanner='<div style="background:var(--red-l);border:1.5px solid var(--red);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">'+
+      '<div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--red-d);">⚠ 期限切れタスクが '+ov.length+' 件あります</div>'+
+      '<div style="font-size:11px;color:var(--red-d);margin-top:3px;opacity:.8;">処理されるまでここに表示され続けます</div>'+
+      '</div>'+
+      '</div>';
+  }
+  el.innerHTML=ovBanner+
+    (ov.length?'<div class="card" style="margin-bottom:14px;border-color:var(--red);border-width:1.5px;background:var(--red-l);">'+
+    '<div class="ch" style="background:var(--red-l);"><span class="ct" style="color:var(--red-d)">期限切れタスク</span><span class="cc" style="background:rgba(226,75,74,.15);color:var(--red-d)">'+ov.length+'</span></div>'+
+    '<div style="background:var(--red-l);">'+ov.map(function(t){return tRow(t);}).join('')+'</div></div>':'')+
+    (l1shown.length?'<div class="card" style="margin-bottom:14px;border-color:rgba(226,75,74,.45);border-width:1.5px;">'+
+    '<div class="pb">意思決定・経営タスク（期限切れ・今日のみ）</div>'+
+    '<div>'+l1shown.map(function(t){return tRow(t,true);}).join('')+'</div></div>':'')+
+    '<div class="mets">'+
+    '<div class="met'+(ov.length?' dan':'')+'"><div class="ml">期限切れ</div><div class="mv">'+ov.length+'</div><div class="ms">要対応</div></div>'+
+    '<div class="met'+(tod.length?' inf':'')+'"><div class="ml">今日のタスク</div><div class="mv">'+tod.length+'</div><div class="ms">本日中</div></div>'+
+    '<div class="met"><div class="ml">今月の予定</div><div class="mv">'+thisMonthTasks.length+'</div><div class="ms">今月中</div></div>'+
+    '<div class="met"><div class="ml">総タスク数</div><div class="mv">'+tasks.length+'</div><div class="ms">件</div></div>'+
+    '</div>'+
+    '<div class="dg">'+
+    (tod.length?'<div class="card" style="margin-bottom:0;border-color:#F0C000;border-width:1.5px;background:#FFFDE6;">'+
+    '<div class="ch" style="background:#FFFDE6;"><span class="ct" style="color:#856404;">今日のタスク</span><span class="cc" style="background:rgba(240,192,0,.2);color:#856404;">'+tod.length+'</span></div>'+
+    '<div style="background:#FFFDE6;">'+tod.map(function(t){return tRow(t);}).join('')+'</div></div>':'')+
+    '<div class="card"><div class="ch"><span class="ct">今月予定のタスク</span><span class="cc">'+thisMonthTasks.length+'</span></div>'+(thisMonthTasks.length?thisMonthTasks.map(function(t){return tRow(t);}).join(''):'<div class="empty">今月の追加タスクはありません</div>')+'</div>'+
+    '<div class="card"><div class="ch"><span class="ct">未完了タスク</span><span class="cc">'+inc.length+'</span></div>'+(inc.length?inc.slice(0,5).map(function(t){return tRow(t);}).join('')+(inc.length>5?'<div class="empty">他'+(inc.length-5)+'件</div>':''):'<div class="empty">未完了タスクはありません</div>')+'</div>'+
+    '</div>'+
+    // クイック新規タスク追加フォーム
+    '<div class="card" style="margin-top:4px;">'+
+    '<div class="ch"><span class="ct">新規タスクをここから追加</span></div>'+
+    '<div style="padding:14px 16px;">'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">'+
+    '<div style="flex:2;min-width:160px;"><label class="fl">タイトル *</label><input class="fi" id="q-title" placeholder="タスク名を入力" style="padding:7px 10px;font-size:14px;"></div>'+
+    '<div style="width:90px;"><label class="fl">サイクル</label><select class="fs" id="q-cycle" style="padding:7px 8px;font-size:13px;"><option>週次</option><option>隔週</option><option selected>月次</option><option>隔月</option><option>四半期</option><option>半期</option><option>年次</option><option>不定期</option></select></div>'+
+    '<div style="width:128px;"><label class="fl">レイヤー</label><select class="fs" id="q-layer" style="padding:7px 8px;font-size:13px;"><option value="1">意思決定・経営</option><option value="2">重要運用</option><option value="3">改善・振り返り</option><option value="4" selected>任意・保守</option></select></div>'+
+    '<div style="width:130px;"><label class="fl">次回予定日</label><input type="date" class="fi" id="q-date" style="padding:7px 8px;font-size:13px;"></div>'+
+    '<button class="btn btn-p" onclick="quickAdd()" style="padding:8px 16px;white-space:nowrap;align-self:flex-end;margin-bottom:1px;">追加</button>'+
+    '</div>'+
+    '</div></div>';
+}
+
+// ========== TODAY EXECUTION MODE ==========
+// ========== TASK TABLE ==========
+// ========== ACTION MODAL ==========
+function trigAction(id,action){
+  pendingAction={taskId:id,action:action};
+  var t=tasks.find(function(x){return x.id===id;});
+  var labels={complete:'完了にする',skip:'スキップする',postpone:'翌日に延期する'};
+  document.getElementById('am-tt').textContent=(t?esc(t.title)+' を ':'')+labels[action];
+  document.getElementById('am-skip-wrap').classList.toggle('hid',action!=='skip');
+  document.getElementById('am-memo').value='';
+  document.getElementById('am-ok').textContent=labels[action];
+  document.getElementById('am').classList.remove('hid');
+}
+function cActModal(){document.getElementById('am').classList.add('hid');pendingAction=null;}
+function doAction(){
+  if(!pendingAction)return;
+  var memo=document.getElementById('am-memo').value.trim();
+  var action=pendingAction.action,id=pendingAction.taskId;
+  if(action==='complete')doComplete(id,memo);
+  else if(action==='skip')doSkip(id,document.getElementById('am-sr').value,memo);
+  else if(action==='postpone')doPostpone(id,memo);
+  cActModal();
+}
+
+function getTomorrowDate(){
+  var d=parseLocalDate(getTodayLocalString());
+  d.setDate(d.getDate()+1);
+  return formatLocalDate(d);
+}
+// サイクルから周期を推定（addDaysが未設定でも機能する）
+// サイクルのみで周期を決定（normalizeCycle経由で揺れを吸収）
+// ========== LOCAL DATE FUNCTIONS (タイムゾーン非依存) ==========
+function parseLocalDate(dateStr){
+  var s=normalizeDate(String(dateStr||'').trim());
+  if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(s))return null;
+  var parts=s.split('-').map(Number);
+  var y=parts[0],m=parts[1],d=parts[2];
+  var date=new Date(y,m-1,d);
+  date.setHours(0,0,0,0);
+  if(date.getFullYear()!==y||date.getMonth()!==m-1||date.getDate()!==d)return null;
+  return date;
+}
+function formatLocalDate(date){
+  var y=date.getFullYear();
+  var m=String(date.getMonth()+1).padStart(2,'0');
+  var d=String(date.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+d;
+}
+function getTodayLocalString(){
+  var d=new Date();d.setHours(0,0,0,0);return formatLocalDate(d);
+}
+function addDaysLocal(date,days){
+  var next=new Date(date.getFullYear(),date.getMonth(),date.getDate()+days);
+  next.setHours(0,0,0,0);return next;
+}
+function addMonthsLocal(date,months){
+  var y=date.getFullYear(),m=date.getMonth(),d=date.getDate();
+  var target=new Date(y,m+months,1);
+  var lastDay=new Date(target.getFullYear(),target.getMonth()+1,0).getDate();
+  target.setDate(Math.min(d,lastDay));
+  target.setHours(0,0,0,0);return target;
+}
+function addYearsLocal(date,years){return addMonthsLocal(date,years*12);}
+
+function getRoutineInterval(t){
+  var cycle=normalizeCycle(typeof t==='string'?t:(t&&t.cycle?t.cycle:''));
+  var map={'週次':{type:'days',value:7},'隔週':{type:'days',value:14},'月次':{type:'months',value:1},'隔月':{type:'months',value:2},'四半期':{type:'months',value:3},'半期':{type:'months',value:6},'年次':{type:'years',value:1}};
+  return map[cycle]||null;
+}
+function getCycleInterval(t){return getRoutineInterval(t);}
+function canInferIntervalFromCycle(t){return getRoutineInterval(t)!==null;}
+// 既存コードとの後方互換（旧文字列ベース加算は残置）
+function addMonthsSafe(dateStr,months){var d=new Date(dateStr+'T00:00:00');var orig=d.getDate();d.setMonth(d.getMonth()+months);if(d.getDate()!==orig)d.setDate(0);return ds(d);}
+function addYearsSafe(dateStr,years){var d=new Date(dateStr+'T00:00:00');d.setFullYear(d.getFullYear()+years);return ds(d);}
+
+// 完了・スキップ専用：ローカル日付計算で確実に未来日を返す（最大240回）
+function calcNextRoutineDate(t,previousScheduledDate){
+  var todayStr=getTodayLocalString();
+  var today=parseLocalDate(todayStr);
+  var base=parseLocalDate(previousScheduledDate)||parseLocalDate(t.nextDate)||parseLocalDate(t.lastScheduledDate)||today;
+  var interval=getRoutineInterval(t);
+  if(!interval){
+    console.error('サイクル判定失敗',{title:t.title,cycle:t.cycle,normalizedCycle:normalizeCycle(t.cycle),addDays:t.addDays,task:t});
+    return null;
+  }
+  function addOnce(date){
+    if(interval.type==='days')return addDaysLocal(date,interval.value);
+    if(interval.type==='months')return addMonthsLocal(date,interval.value);
+    if(interval.type==='years')return addYearsLocal(date,interval.value);
+    return null;
+  }
+  var next=addOnce(base);
+  var guard=0;
+  while(next&&next<=today&&guard<240){next=addOnce(next);guard++;}
+  if(!next||next<=today){
+    console.error('未来日の生成に失敗',{title:t.title,cycle:t.cycle,base:formatLocalDate(base),today:todayStr,interval:interval,task:t});
+    return null;
+  }
+  return formatLocalDate(next);
+}
+function calcNextBySchedule(t,prev){return calcNextRoutineDate(t,prev);}
+// 延期専用（周期計算なし）
+function ensureFutureDate(dateValue){
+  if(!dateValue||!isValidDate(dateValue)||dateValue<=tds)return getTomorrowDate();
+  return dateValue;
+}
+function doComplete(id,memo){
+  var t=tasks.find(function(x){return String(x.id)===String(id);});if(!t)return;
+  t.cycle=normalizeCycle(t.cycle);
+  var prev=parseLocalDate(t.nextDate);
+  var previousScheduledDate=prev?formatLocalDate(prev):getTodayLocalString();
+  var nextDate=calcNextRoutineDate(t,previousScheduledDate);
+  if(!nextDate){
+    alert('次回予定日を計算できません。\n\nタスク名: '+t.title+'\n保存されているサイクル: '+(t.cycle||'空')+'\n次回予定日: '+(t.nextDate||'空')+'\n\nconsoleの診断ログを確認してください。');
+    return;
+  }
+  t.lastScheduledDate=previousScheduledDate;
+  t.lastDate=previousScheduledDate;
+  t.nextDate=nextDate;
+  t.status='未完了';
+  t.updatedAt=new Date().toISOString();
+  addLog(id,'完了',{prev:previousScheduledDate,next:nextDate,memo:memo});
+  saveData();
+  // 月次レビュー完了時のみメンテナンス処理を実行
+  if(t.title==='月次レビュー'){runMonthlyMaintenance();}
+  rAll();
+}
+function doSkip(id,reason,memo){
+  var t=tasks.find(function(x){return String(x.id)===String(id);});if(!t)return;
+  t.cycle=normalizeCycle(t.cycle);
+  var prev=parseLocalDate(t.nextDate);
+  var previousScheduledDate=prev?formatLocalDate(prev):getTodayLocalString();
+  var nextDate=calcNextRoutineDate(t,previousScheduledDate);
+  if(!nextDate){
+    alert('次回予定日を計算できません。\n\nタスク名: '+t.title+'\n保存されているサイクル: '+(t.cycle||'空')+'\n次回予定日: '+(t.nextDate||'空')+'\n\nconsoleの診断ログを確認してください。');
+    return;
+  }
+  t.lastScheduledDate=previousScheduledDate;
+  t.lastDate=previousScheduledDate;
+  t.nextDate=nextDate;
+  t.status='未完了';
+  t.updatedAt=new Date().toISOString();
+  addLog(id,'スキップ',{prev:previousScheduledDate,next:nextDate,skipReason:reason,memo:memo});
+  saveData();rAll();
+}
+// デバッグ用テスト関数（コンソールで testRoutineDateCalc() を実行）
+function testRoutineDateCalc(){
+  var samples=[
+    {title:'週次テスト',cycle:'週次',nextDate:'2026-05-06'},
+    {title:'月次テスト',cycle:'月次',nextDate:'2026-05-03'},
+    {title:'年次テスト',cycle:'年次',nextDate:'2026-05-04'}
+  ];
+  console.table(samples.map(function(t){return{title:t.title,cycle:t.cycle,nextDate:t.nextDate,result:calcNextRoutineDate(t,t.nextDate)};}));
+}
+function doPostpone(id,memo){
+  var t=tasks.find(function(x){return x.id===id;});if(!t)return;
+  var prev=t.nextDate;
+  // 延期はlastScheduledDateを更新しない（周期計算でなく一時回避）
+  var nx=getTomorrowDate();
+  addLog(id,'延期',{prev:prev,next:nx,memo:memo});
+  t.nextDate=nx;t.status='未完了';t.updatedAt=new Date().toISOString();
+  saveData();rAll();
+}
+function stopT(id){
+  var t=tasks.find(function(x){return x.id===id;});if(!t)return;
+  addLog(id,'停止',{prev:t.nextDate});
+  t.status='停止';t.updatedAt=new Date().toISOString();
+  saveData();rAll();
+}
+function delT(id){
+  if(!confirm('削除しますか？'))return;
+  var t=tasks.find(function(x){return x.id===id;});
+  if(t)addLog(id,'削除',{prev:t.nextDate,title:t.title,layer:t.layer,cycle:t.cycle});
+  tasks=tasks.filter(function(x){return x.id!==id;});
+  saveData();rAll();
+}
+function recalc(id){
+  var t=tasks.find(function(x){return x.id===id;});if(!t||!t.addDays){alert('加算日数が未設定です');return;}
+  var f=t.lastDate||t.nextDate||tds,nx=calcNext(t,f);if(nx){t.nextDate=nx;saveData();rAll();}
+}
+
+// ========== CALENDAR ==========
+function rCal(){
+  var lbl=document.getElementById('cml');lbl.textContent=calY+'年'+(calM+1)+'月';
+  var con=document.getElementById('cal');
+  var fd=new Date(calY,calM,1).getDay(),dim=new Date(calY,calM+1,0).getDate();
+  var tbd={};
+  tasks.forEach(function(t){if(t.nextDate&&t.status!=='停止'){var k=t.nextDate.slice(0,10);if(!tbd[k])tbd[k]=[];tbd[k].push(t);}});
+  var html='<div class="cg">';
+  ['日','月','火','水','木','金','土'].forEach(function(d){html+='<div class="ch2">'+d+'</div>';});
+  for(var i=0;i<fd;i++){var p=new Date(calY,calM,-fd+i+1);html+='<div class="cd om"><div class="cdn">'+p.getDate()+'</div></div>';}
+  for(var d=1;d<=dim;d++){
+    var dstr=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var isT=dstr===tds,dts=tbd[dstr]||[];
+    html+='<div class="cd'+(isT?' tod':'')+'"><div class="cdn"'+(isT?' style="color:var(--blue);font-weight:800;"':'')+'>'+d+'</div>'+
+      dts.slice(0,3).map(function(t){return'<div class="ct2 l'+t.layer+'" title="'+esc(t.title)+'" onclick="openEdit('+t.id+')">'+esc(t.title)+'</div>';}).join('')+
+      (dts.length>3?'<div style="font-size:9px;color:var(--text3)">+'+( dts.length-3)+'</div>':'')+
+      '</div>';
+  }
+  var tc=fd+dim,rem=(7-tc%7)%7;
+  for(var i=1;i<=rem;i++)html+='<div class="cd om"><div class="cdn">'+i+'</div></div>';
+  html+='</div>';con.innerHTML=html;
+}
+function cm(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}rCal();}
+
+// ========== REMINDERS ==========
+// 月次レビューページから完了を実行する
+function completeMonthlyReview(id){
+  if(!confirm('月次レビューを完了しますか？\n・次回予定日が翌月に更新されます\n・バックアップJSONが自動ダウンロードされます'))return;
+  doComplete(id,'月次レビュー完了');
+  // 完了後にページを再描画
+  rMonthly();
+}
+
+// ========== MONTHLY REVIEW ==========
+function rMonthly(){
+  var el=document.getElementById('monthly-body');
+  var now=new Date(today);
+  var thisMonth=tds.slice(0,7);
+  var nextMonthDate=new Date(now.getFullYear(),now.getMonth()+1,1);
+  var nextMonth=nextMonthDate.getFullYear()+'-'+String(nextMonthDate.getMonth()+1).padStart(2,'0');
+  var monthStart=thisMonth+'-01';
+
+  // 今月のログ
+  var monthLogs=taskLogs.filter(function(l){return l.actionDate&&l.actionDate.slice(0,7)===thisMonth;});
+  // 来月予定
+  var nextMonthTasks=tasks.filter(function(t){return t.nextDate&&t.nextDate.slice(0,7)===nextMonth&&t.status!=='停止';});
+  nextMonthTasks.sort(function(a,b){return (a.nextDate||'')>(b.nextDate||'')?1:-1;});
+  // 期限切れ
+  var ovTasks=tasks.filter(isOv);
+  // 停止・要整理候補（addDaysなしは除外、cycle基準で循環できるため）
+  var candidates=tasks.filter(function(t){
+    return t.status!=='停止'&&(
+      !t.nextDate||
+      !t.cycle||
+      t.cycle==='不定期'||
+      !t.notifyMsg||
+      !t.deliverable
+    );
+  }).concat(tasks.filter(function(t){return t.status==='停止';}));
+
+  function logRows(arr){
+    if(!arr.length)return '<div class="empty">なし</div>';
+    return arr.map(function(l){
+      var cls=l.action==='完了'?'la-done':l.action==='スキップ'?'la-skip':l.action==='延期'?'la-post':'la-stop';
+      return '<div class="log-row">'+
+        '<span class="log-action '+cls+'">'+l.action+'</span>'+
+        '<span style="flex:1;font-size:14px;font-weight:600;">'+esc(l.title)+'</span>'+
+        (l.skipReason?'<span style="font-size:12px;color:var(--text3);">'+esc(l.skipReason)+'</span>':'')+ 
+        (l.memo?'<span style="font-size:12px;color:var(--text3);">📝 '+esc(l.memo)+'</span>':'')+
+        '<span style="font-size:12px;color:var(--text3);">'+l.actionDate+'</span>'+
+        '</div>';
+    }).join('');
+  }
+
+  // 月次レビュータスクを取得（完了ボタン表示用）
+  var mrTask=tasks.find(function(t){return t.title==='月次レビュー'&&t.status!=='停止';});
+
+  el.innerHTML=
+    // 判断軸の説明
+    '<div class="al al-i" style="margin-bottom:18px;font-size:13px;">'+
+    'この月次レビューでは、タスクを増やすのではなく、<strong>減らす・統合する・次回予定を整える</strong>ことを優先します。</div>'+
+
+    // チェックリスト + 完了ボタン
+    '<div class="card" style="margin-bottom:18px;"><div class="ch"><span class="ct">月次レビュー チェックリスト</span></div>'+
+    '<div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;">'+
+    ['不要なルーチンを停止したか','重複ルーチンを統合したか','期限切れを処理したか','来月の重要ルーチンを確認したか','レイヤー分類を見直したか'].map(function(item){
+      return '<label style="display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer;">'+
+        '<input type="checkbox" style="width:18px;height:18px;cursor:pointer;" onchange="this.parentElement.style.opacity=this.checked?\'0.45\':\'1\'">'+
+        '<span>'+item+'</span></label>';
+    }).join('')+
+    '</div>'+
+    '<div style="padding:0 18px 18px;border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">'+
+    (mrTask
+      ? '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'+
+        '<button class="btn btn-g" style="font-size:15px;padding:10px 22px;" onclick="completeMonthlyReview('+mrTask.id+')">✓ 月次レビューを完了する</button>'+
+        '<span style="font-size:13px;color:var(--text2);">次回予定日：'+esc(mrTask.nextDate||'未設定')+'　→　完了後に翌月へ更新＆バックアップ自動ダウンロード</span>'+
+        '</div>'
+      : '<div style="font-size:13px;color:var(--text3);">「月次レビュー」タスクが見つかりません。タスク一覧から追加してください。</div>'
+    )+
+    '</div></div>'+
+
+    // 1. 今月実行したルーチン
+    '<div class="rs"><h3>今月実行したルーチン（'+monthLogs.length+'件）</h3>'+logRows(monthLogs)+'</div>'+
+
+    // 2. 来月予定
+    '<div class="rs"><h3>来月予定のルーチン（'+nextMonthTasks.length+'件）</h3>'+
+    (nextMonthTasks.length?nextMonthTasks.map(function(t){
+      return '<div class="tr"><span class="tt">'+esc(t.title)+'</span>'+layBadge(t.layer)+
+        '<span class="tm">'+esc(t.cycle||'')+'</span>'+
+        '<span class="tm">'+esc(t.nextDate||'')+'</span>'+
+        '<div class="ta" style="opacity:1;display:flex;gap:4px;">'+
+        '<button class="ab" onclick="openEdit('+t.id+')">編集</button>'+
+        '<button class="ab dg2" onclick="stopT('+t.id+')">停止</button>'+
+        '</div></div>';
+    }).join(''):'<div class="empty">来月の予定ルーチンはありません</div>')+
+    '</div>'+
+
+    // 3. 期限切れ
+    '<div class="rs"><h3>期限切れルーチン（'+ovTasks.length+'件）</h3>'+
+    (ovTasks.length?ovTasks.map(function(t){
+      return '<div class="tr" style="background:#FFF0F0;border-left:4px solid var(--red);padding-left:12px;">'+
+        '<span class="tt">'+esc(t.title)+'</span>'+layBadge(t.layer)+
+        '<span class="tm">'+esc(t.nextDate||'')+'</span>'+
+        '<div class="ta" style="opacity:1;display:flex;gap:4px;">'+
+        '<button class="ab dn" onclick="trigAction('+t.id+',\'complete\')">完了</button>'+
+        '<button class="ab" onclick="trigAction('+t.id+',\'postpone\')">翌日</button>'+
+        '<button class="ab sk" onclick="trigAction('+t.id+',\'skip\')">スキップ</button>'+
+        '<button class="ab" onclick="openEdit('+t.id+')">編集</button>'+
+        '<button class="ab dg2" onclick="stopT('+t.id+')">停止</button>'+
+        '</div></div>';
+    }).join(''):'<div class="empty">期限切れはありません</div>')+
+    '</div>'+
+
+    // 4. 停止・要整理候補
+    '<div class="rs"><h3>停止・要整理候補（'+candidates.length+'件）</h3>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:8px;">次回予定未設定・加算日数なし・通知文なし・完了条件なし・停止済みのタスク</div>'+
+    (candidates.length?candidates.map(function(t){
+      var reasons=[];
+      if(!t.nextDate)reasons.push('次回予定未設定');
+      if(!t.cycle||t.cycle==='不定期')reasons.push('周期未設定');
+      if(!t.notifyMsg)reasons.push('通知文なし');
+      if(!t.deliverable)reasons.push('完了条件なし');
+      if(t.status==='停止')reasons.push('停止済み');
+      return '<div class="tr"><span class="tt">'+esc(t.title)+'</span>'+
+        '<span style="font-size:12px;color:var(--text3);flex:1;">'+reasons.join(' / ')+'</span>'+
+        '<div class="ta" style="opacity:1;display:flex;gap:4px;">'+
+        '<button class="ab" onclick="openEdit('+t.id+')">編集</button>'+
+        (t.status!=='停止'?'<button class="ab dg2" onclick="stopT('+t.id+')">停止</button>':'')+
+        '</div></div>';
+    }).join(''):'<div class="empty">整理候補はありません</div>')+
+    '</div>';
+}
+
+// ========== QUALITY CHECK ==========
+// ========== MONTHLY MAINTENANCE ==========
+function exportBackup(){
+  var now=new Date();
+  var y=now.getFullYear();
+  var m=String(now.getMonth()+1).padStart(2,'0');
+  var d=String(now.getDate()).padStart(2,'0');
+  var backup={exportedAt:now.toISOString(),tasks:tasks,taskLogs:taskLogs};
+  var blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='routine-os-backup-'+y+'-'+m+'-'+d+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function runMonthlyMaintenance(){
+  // 完了・スキップ履歴を直近300件に制限
+  if(Array.isArray(taskLogs)&&taskLogs.length>300){
+    taskLogs=taskLogs.slice(-300);
+  }
+  // 不正なstatusを「未完了」に補正（停止・完了・未完了・スキップ以外）
+  var validStatuses=['未完了','完了','スキップ','停止'];
+  tasks.forEach(function(t){
+    if(!t.status||validStatuses.indexOf(t.status)<0){t.status='未完了';}
+  });
+  // nextDateが空のアクティブタスクをコンソールに出力（参考情報）
+  var noDate=tasks.filter(function(t){return !t.nextDate&&t.status!=='停止';});
+  if(noDate.length){console.info('[月次メンテ] 次回予定日未設定タスク '+noDate.length+'件:',noDate.map(function(t){return t.title;}));}
+  saveData();
+  exportBackup();
+}
+
+
+function rHol(){
+  var sorted=[...holidays].sort(function(a,b){return a.date<b.date?-1:1;});
+  var cnt=document.getElementById('h-count');
+  if(cnt)cnt.textContent=sorted.length+'件';
+  var el=document.getElementById('hl');
+  if(!sorted.length){el.innerHTML='<div class="empty">祝日が登録されていません</div>';return;}
+  el.innerHTML='<div style="margin-top:12px;">'+
+    '<div style="display:grid;grid-template-columns:120px 1fr auto;gap:0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">'+
+    '<div style="padding:6px 10px;background:var(--bg);font-size:10px;font-weight:700;color:var(--text2);border-bottom:1px solid var(--border);">日付</div>'+
+    '<div style="padding:6px 10px;background:var(--bg);font-size:10px;font-weight:700;color:var(--text2);border-bottom:1px solid var(--border);">祝日名</div>'+
+    '<div style="padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);"></div>'+
+    sorted.map(function(h,i){
+      var last=i===sorted.length-1;
+      var borderB=last?'':';border-bottom:1px solid var(--border)';
+      return '<div style="padding:6px 10px;font-size:12px'+borderB+'">'+esc(h.date)+'</div>'+
+        '<div style="padding:6px 10px;font-size:12px'+borderB+'">'+
+          '<input class="ii" value="'+esc(h.name||'')+'" placeholder="祝日名" onchange="updateHolName(\''+h.date+'\',this.value)" style="width:100%;">'+
+        '</div>'+
+        '<div style="padding:4px 8px'+borderB+'">'+
+          '<button class="btn btn-d btn-sm" onclick="remH(\''+h.date+'\')">削除</button>'+
+        '</div>';
+    }).join('')+
+    '</div></div>';
+}
+
+function addH(){
+  var d=document.getElementById('h-date').value;
+  var n=document.getElementById('h-name').value.trim();
+  if(!d)return;
+  if(holidays.some(function(h){return h.date===d;})){
+    alert(d+' はすでに登録されています');return;
+  }
+  holidays.push({date:d,name:n});
+  document.getElementById('h-date').value='';
+  document.getElementById('h-name').value='';
+  saveData();rHol();
+}
+
+function updateHolName(date,name){
+  var h=holidays.find(function(h){return h.date===date;});
+  if(h){h.name=name;saveData();}
+}
+
+function remH(d){
+  holidays=holidays.filter(function(h){return h.date!==d;});
+  saveData();rHol();
+}
+
+// 将来API・ライブラリ連携に切り替えられるよう関数として分離
+function importJapaneseHolidays(year){
+  var data={
+    2025:[
+      {date:'2025-01-01',name:'元日'},
+      {date:'2025-01-13',name:'成人の日'},
+      {date:'2025-02-11',name:'建国記念の日'},
+      {date:'2025-02-23',name:'天皇誕生日'},
+      {date:'2025-02-24',name:'天皇誕生日 振替休日'},
+      {date:'2025-03-20',name:'春分の日'},
+      {date:'2025-04-29',name:'昭和の日'},
+      {date:'2025-05-03',name:'憲法記念日'},
+      {date:'2025-05-04',name:'みどりの日'},
+      {date:'2025-05-05',name:'こどもの日'},
+      {date:'2025-05-06',name:'こどもの日 振替休日'},
+      {date:'2025-07-21',name:'海の日'},
+      {date:'2025-08-11',name:'山の日'},
+      {date:'2025-09-15',name:'敬老の日'},
+      {date:'2025-09-23',name:'秋分の日'},
+      {date:'2025-10-13',name:'スポーツの日'},
+      {date:'2025-11-03',name:'文化の日'},
+      {date:'2025-11-23',name:'勤労感謝の日'},
+      {date:'2025-11-24',name:'勤労感謝の日 振替休日'}
+    ],
+    2026:[
+      {date:'2026-01-01',name:'元日'},
+      {date:'2026-01-12',name:'成人の日'},
+      {date:'2026-02-11',name:'建国記念の日'},
+      {date:'2026-02-23',name:'天皇誕生日'},
+      {date:'2026-03-20',name:'春分の日'},
+      {date:'2026-04-29',name:'昭和の日'},
+      {date:'2026-05-03',name:'憲法記念日'},
+      {date:'2026-05-04',name:'みどりの日'},
+      {date:'2026-05-05',name:'こどもの日'},
+      {date:'2026-05-06',name:'こどもの日 振替休日'},
+      {date:'2026-07-20',name:'海の日'},
+      {date:'2026-08-11',name:'山の日'},
+      {date:'2026-09-21',name:'敬老の日'},
+      {date:'2026-09-22',name:'国民の休日'},
+      {date:'2026-09-23',name:'秋分の日'},
+      {date:'2026-10-12',name:'スポーツの日'},
+      {date:'2026-11-03',name:'文化の日'},
+      {date:'2026-11-23',name:'勤労感謝の日'}
+    ],
+    2027:[
+      {date:'2027-01-01',name:'元日'},
+      {date:'2027-01-11',name:'成人の日'},
+      {date:'2027-02-11',name:'建国記念の日'},
+      {date:'2027-02-23',name:'天皇誕生日'},
+      {date:'2027-03-21',name:'春分の日'},
+      {date:'2027-03-22',name:'春分の日 振替休日'},
+      {date:'2027-04-29',name:'昭和の日'},
+      {date:'2027-05-03',name:'憲法記念日'},
+      {date:'2027-05-04',name:'みどりの日'},
+      {date:'2027-05-05',name:'こどもの日'},
+      {date:'2027-07-19',name:'海の日'},
+      {date:'2027-08-11',name:'山の日'},
+      {date:'2027-09-20',name:'敬老の日'},
+      {date:'2027-09-23',name:'秋分の日'},
+      {date:'2027-10-11',name:'スポーツの日'},
+      {date:'2027-11-03',name:'文化の日'},
+      {date:'2027-11-23',name:'勤労感謝の日'}
+    ],
+    2028:[
+      {date:'2028-01-01',name:'元日'},
+      {date:'2028-01-10',name:'成人の日'},
+      {date:'2028-02-11',name:'建国記念の日'},
+      {date:'2028-02-23',name:'天皇誕生日'},
+      {date:'2028-03-20',name:'春分の日'},
+      {date:'2028-04-29',name:'昭和の日'},
+      {date:'2028-05-03',name:'憲法記念日'},
+      {date:'2028-05-04',name:'みどりの日'},
+      {date:'2028-05-05',name:'こどもの日'},
+      {date:'2028-07-17',name:'海の日'},
+      {date:'2028-08-11',name:'山の日'},
+      {date:'2028-09-18',name:'敬老の日'},
+      {date:'2028-09-22',name:'秋分の日'},
+      {date:'2028-10-09',name:'スポーツの日'},
+      {date:'2028-11-03',name:'文化の日'},
+      {date:'2028-11-23',name:'勤労感謝の日'}
+    ]
+  };
+  return data[year]||[];
+}
+
+function importPreset(year){
+  var preset=importJapaneseHolidays(year);
+  if(!preset.length){
+    alert(year+'年のプリセットデータはありません');return;
+  }
+  var existing=holidays.map(function(h){return h.date;});
+  var added=0,skipped=0;
+  preset.forEach(function(h){
+    if(existing.includes(h.date)){skipped++;}
+    else{holidays.push({date:h.date,name:h.name});added++;}
+  });
+  var res=document.getElementById('h-preset-result');
+  if(res){
+    res.innerHTML='<div class="al '+(added>0?'al-g':'al-i')+'">' +
+      year+'年の祝日：'+added+'件を追加しました'+(skipped?' （'+skipped+'件はすでに登録済みのためスキップ）':'')+'</div>';
+    setTimeout(function(){res.innerHTML='';},4000);
+  }
+  saveData();rHol();
+}
+
+// ========== MODAL ==========
+function showAdd(){eid=null;document.getElementById('mtt').textContent='タスク追加';clrForm();document.getElementById('tm').classList.remove('hid');}
+function openEdit(id){
+  eid=id;var t=tasks.find(function(x){return x.id===id;});if(!t)return;
+  document.getElementById('mtt').textContent='タスク編集：'+t.title;
+  document.getElementById('f-ti').value=t.title||'';
+  document.getElementById('f-cy').value=t.cycle||'月次';
+  document.getElementById('f-la').value=t.layer||1;
+  document.getElementById('f-nd').value=t.nextDate||'';
+  document.getElementById('f-at').value=t.addType||'calendar';
+  document.getElementById('f-ab').value=t.addBase||'from_next';
+  document.getElementById('f-ad').value=t.addDays||'';
+  document.getElementById('f-dl').value=t.deliverable||'';
+  document.getElementById('f-nm').value=t.notifyMsg||'';
+  document.getElementById('f-url').value=t.url||'';
+  document.getElementById('f-nt').value=t.note||'';
+  document.getElementById('f-ew').checked=t.excludeWeekends||false;
+  document.getElementById('f-eh').checked=t.excludeHolidays||false;
+  document.getElementById('f-sk').checked=t.skippable||false;
+  document.getElementById('tm').classList.remove('hid');
+}
+function cModal(){document.getElementById('tm').classList.add('hid');eid=null;}
+function clrForm(){
+  ['f-ti','f-nd','f-ad','f-dl','f-nm','f-url','f-nt'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('f-cy').value='月次';document.getElementById('f-la').value='1';
+  document.getElementById('f-at').value='calendar';document.getElementById('f-ab').value='from_next';
+  document.getElementById('f-ew').checked=false;document.getElementById('f-eh').checked=false;document.getElementById('f-sk').checked=false;
+}
+function saveT(){
+  var ti=document.getElementById('f-ti').value.trim();if(!ti){alert('タイトルを入力してください');return;}
+  var data={title:ti,cycle:normalizeCycle(document.getElementById('f-cy').value),layer:parseInt(document.getElementById('f-la').value),nextDate:document.getElementById('f-nd').value,addType:document.getElementById('f-at').value,addBase:document.getElementById('f-ab').value||'from_next',addDays:parseInt(document.getElementById('f-ad').value)||null,deliverable:document.getElementById('f-dl').value,notifyMsg:document.getElementById('f-nm').value,url:document.getElementById('f-url').value,note:document.getElementById('f-nt').value,excludeWeekends:document.getElementById('f-ew').checked,excludeHolidays:document.getElementById('f-eh').checked,skippable:document.getElementById('f-sk').checked};
+  if(eid){var t=tasks.find(function(x){return x.id===eid;});if(t){Object.assign(t,data);t.updatedAt=new Date().toISOString();}}
+  else{tasks.push(Object.assign({id:nid++,status:'未完了',lastScheduledDate:'',updatedAt:new Date().toISOString()},data));}
+  cModal();saveData();rAll();
+}
+
+// ========== CSV IMPORT ==========
+function doImport(){
+  var raw=document.getElementById('csv-inp').value.trim();if(!raw)return;
+  var lines=raw.split('\n'),hdrs=lines[0].split(',').map(function(h){return h.trim();}),cnt=0,errs=[];
+  for(var i=1;i<lines.length;i++){
+    if(!lines[i].trim())continue;
+    var vals=lines[i].split(',').map(function(v){return v.trim();}),row={};
+    hdrs.forEach(function(h,idx){row[h]=vals[idx]||'';});
+    if(!row['タイトル'])continue;
+    var cyv=normalizeCycle(row['サイクル']||'')||'不定期';
+    var nxv=row['次回予定']||'';
+    var nxNorm=normalizeDate(nxv);
+    if(nxv&&!isValidDate(nxNorm))errs.push('No.'+(i)+' 「'+row['タイトル']+'」の日付が不正：'+nxv);
+    tasks.push({id:nid++,title:row['タイトル'],cycle:cyv,dept:row['部署']||'',nextDate:isValidDate(nxNorm)?nxNorm:nxv,url:row['URL']||'',note:row['備考']||'',layer:4,status:'未完了',addType:'calendar',addBase:'from_next',lastScheduledDate:''});
+    cnt++;
+  }
+  var html='<div class="al al-g">'+cnt+'件を取込みました。レイヤー分類・成果物・通知文を手動設定してください。</div>';
+  if(errs.length)html+=errs.map(function(e){return'<div class="al al-w">'+e+'</div>';}).join('');
+  document.getElementById('ir').innerHTML=html;
+  saveData();rAll();
+}
+// ========== SEED DATA ==========
+function normalizeSeedDate(v){
+  if(!v||typeof v!=='string')return '';
+  v=v.trim();
+  if(v===''||v==='#VALUE!'||v==='vg')return v; // 不正値はそのまま保持
+  if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v;
+  var m=v.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  m=v.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if(m)return '2026-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0');
+  m=v.match(/^(\d{1,2})月(\d{1,2})日?$/);
+  if(m)return '2026-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0');
+  m=v.match(/(\d{4})年(\d{1,2})月(\d{1,2})日?/);
+  if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  return v;
+}
+
+function classifyLayerFromSeed(seed){
+  var t=(seed.title||'')+(seed.dept||'');
+  if(/経営計画|予算|四半期|5か年|市場情報|競合|組織図|人事制度|数字進捗|年間スケジュール|3AC年間スケジュール/.test(t))return 1;
+  if(/BS|PL|CF|bixid|決算|領収書|クレーム|ワークフロー|Pマーク|内部WEB|内部ＷＥＢ/.test(t))return 2;
+  if(/VISION|夢ブック|100リスト|タスク見直し|ソーシャル|ソシログ|ヒトメモ|学習|ミッションステートメント|GPTカスタマイズ|行動探求|コミュニケーションアンケート|構想バックログ|未来年表|100回帳/.test(t))return 3;
+  return 4;
+}
+
+function buildDeliverableFromSeed(seed){
+  var map={
+    '経営計画推移表（役員用）':'売上・利益・主要KPIのズレを確認し、必要な打ち手を1つ決める',
+    '予算編成会議':'予算の進捗・差異・修正方針を確認する',
+    'PL実績記入':'PL実績が最新状態に更新されている',
+    'BS記入(bixidチェック)':'BS内容を確認し、異常値がないか確認する',
+    'CF記入':'CF実績が最新状態に更新されている',
+    '四半期見直し(声掛け)':'四半期ごとの声掛け対象と実施内容を確認する',
+    '5か年計画見直し(仕事)':'5か年計画の進捗と修正点を確認する',
+    '組織図見直し':'現在の組織図と次の変更方針を確認する'
+  };
+  return map[seed.title]||'';
+}
+
+function buildNotifyMessageFromSeed(seed){
+  var layer=classifyLayerFromSeed(seed);
+  if(layer!==1&&layer!==2)return '';
+  var map={
+    '経営計画推移表（役員用）':'経営計画推移表を確認し、売上・利益のズレと打ち手を決める',
+    '予算編成会議':'予算の進捗を確認し、差異と修正方針を決める',
+    'PL実績記入':'PL実績を入力し、計画との差異を確認する',
+    'BS記入(bixidチェック)':'BSを確認し、異常値と改善点を確認する',
+    'CF記入':'CF実績を入力し、資金繰りの異常がないか確認する'
+  };
+  return map[seed.title]||('【'+seed.title+'】を確認し、必要な判断・更新を行う');
+}
+
+// サイクルで循環するため dayOffset は addDays に入れない
+function buildAddRuleFromOffsets(seed){
+  return{addType:'calendar',addBase:'from_next',addDays:null};
+}
+
+function buildInitialSeedTasks(){
+  var VALID_CYCLES=['週次','隔週','月次','四半期','半期','年次','任意日','不定期'];
+  var raw=[
+    {no:1,title:"ソーシャル・ユニバース(振り返り)",cycle:"半期",dept:"個人",reviewDate:"12/25",yearOffset:0,monthOffset:4,dayOffset:0,nextDate:"4/25",url:"https://docs.google.com/spreadsheets/d/1lGrxaUKc0rHaarKUNtFXrZwrK-46yE6M_rMdzvWVTDo/edit?gid=1135943840#gid=1135943840",note:""},
+    {no:2,title:"経営計画推移表（役員用）",cycle:"週次",dept:"全社",reviewDate:"4/19",yearOffset:0,monthOffset:0,dayOffset:14,nextDate:"5/3",url:"https://docs.google.com/spreadsheets/d/1y7NOdib7q8n6_6fvuBAGUd_DlskTV7OWIwzd_8ML7Fg/edit?gid=434604706#gid=434604706",note:""},
+    {no:3,title:"夢ブック(手書き)更新",cycle:"隔週",dept:"個人",reviewDate:"4/19",yearOffset:0,monthOffset:0,dayOffset:14,nextDate:"5/3",url:"",note:""},
+    {no:4,title:"★竹嶋家★ＶＩＳＩＯＮ",cycle:"月次",dept:"個人",reviewDate:"4/19",yearOffset:0,monthOffset:0,dayOffset:14,nextDate:"5/3",url:"https://docs.google.com/document/d/1oQr5aCParvbhIvc8p2XzH72DT7IgRRo00EgbVDpTOy0/edit?tab=t.0",note:""},
+    {no:5,title:"1dayチェック",cycle:"週次",dept:"個人",reviewDate:"4/26",yearOffset:0,monthOffset:0,dayOffset:7,nextDate:"5/3",url:"https://docs.google.com/spreadsheets/d/18mdCQgazkVxP9I1bne7hkolVW2baf34NWWhZyX7R3SA/edit?gid=1794259601#gid=1794259601",note:""},
+    {no:6,title:"タスク見直し",cycle:"週次",dept:"個人",reviewDate:"4/26",yearOffset:0,monthOffset:0,dayOffset:7,nextDate:"5/3",url:"https://docs.google.com/document/d/1T8_Ikb3eYWwI-h5P96S-dIXAzUnsMgAK6TxQw_6ZATc/edit?tab=t.0",note:""},
+    {no:7,title:"3AC朝会、執行会報告",cycle:"週次",dept:"全社",reviewDate:"4/27",yearOffset:0,monthOffset:0,dayOffset:7,nextDate:"5/4",url:"https://docs.google.com/spreadsheets/d/1AF3oyLxQ8Vcb9_Y1psht7pGx6gfjwNBcf5Nz0uPhob8/edit#gid=0",note:""},
+    {no:8,title:"経営企画室作戦会議",cycle:"月次",dept:"個人",reviewDate:"4/27",yearOffset:0,monthOffset:0,dayOffset:7,nextDate:"5/4",url:"https://docs.google.com/document/d/1MXkvruc53xvoHZFhFg7706XTLMPU_E2lUTqsDqMil2Y/edit?tab=t.0",note:""},
+    {no:9,title:"竹嶋VISION",cycle:"週次",dept:"個人",reviewDate:"4/27",yearOffset:0,monthOffset:0,dayOffset:7,nextDate:"5/4",url:"https://docs.google.com/document/d/1xTPDAHyT9gI9aD7jDELpgrf1fvA1rxnP5bgAKqkMTDY/edit?tab=t.0",note:""},
+    {no:10,title:"次年度の握り決め",cycle:"年次",dept:"全社",reviewDate:"11/4",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"5/4",url:"",note:""},
+    {no:11,title:"ソシログ",cycle:"週次",dept:"個人",reviewDate:"4/28",yearOffset:0,monthOffset:0,dayOffset:7,nextDate:"5/5",url:"https://note.com/",note:""},
+    {no:12,title:"100リスト見直し(やりたいこと)",cycle:"月次",dept:"個人",reviewDate:"4/5",yearOffset:0,monthOffset:1,dayOffset:0,nextDate:"5/5",url:"https://docs.google.com/spreadsheets/d/15D1VYcOfspJc5CJ7ciZUvbgKZw7vyU-x-qFoSBtRI7Y/edit#gid=0",note:""},
+    {no:13,title:"GB作戦会議(GBドライブ)",cycle:"週次",dept:"個人",reviewDate:"4/29",yearOffset:0,monthOffset:0,dayOffset:7,nextDate:"5/6",url:"https://drive.google.com/drive/folders/1uFO-jIVAfetQ8GiKCSWFXoYq1-YjzZXS",note:""},
+    {no:14,title:"BS記入(bixidチェック)",cycle:"月次",dept:"全社",reviewDate:"4/25",yearOffset:0,monthOffset:0,dayOffset:14,nextDate:"5/9",url:"https://apps.bixid.net/auth/Login/",note:""},
+    {no:15,title:"クレーム分析レポート",cycle:"隔週",dept:"事業推進本部",reviewDate:"4/10",yearOffset:0,monthOffset:1,dayOffset:0,nextDate:"5/10",url:"https://docs.google.com/spreadsheets/d/1puuUHdr1jn3X40_9KS_6DxLBHXHuv8lFT-WSDLtjt10/edit?gid=1484934036#gid=1484934036",note:""},
+    {no:16,title:"Pマーク取得返上リスト",cycle:"半期",dept:"営業企画本部",reviewDate:"4/10",yearOffset:0,monthOffset:1,dayOffset:0,nextDate:"5/10",url:"https://docs.google.com/spreadsheets/d/1tjKg7IEgPcDOY_Q4ORhI0bG85x8-y1diXYDbw8M0EBs/edit#gid=55040838",note:""},
+    {no:17,title:"土日の予定確認",cycle:"月次",dept:"個人",reviewDate:"4/27",yearOffset:0,monthOffset:0,dayOffset:14,nextDate:"5/11",url:"",note:""},
+    {no:18,title:"予算編成会議",cycle:"月次",dept:"全社",reviewDate:"4/13",yearOffset:0,monthOffset:1,dayOffset:0,nextDate:"5/13",url:"https://docs.google.com/spreadsheets/d/15ZQfUmrQJgOl03OPcAdTA-dyA_FUk9z3nwbV_PDd1Kc/edit?gid=501843879#gid=501843879",note:""},
+    {no:19,title:"PL実績記入",cycle:"月次",dept:"全社",reviewDate:"4/14",yearOffset:0,monthOffset:1,dayOffset:0,nextDate:"5/14",url:"https://docs.google.com/spreadsheets/d/15ZQfUmrQJgOl03OPcAdTA-dyA_FUk9z3nwbV_PDd1Kc/edit?gid=501843879#gid=501843879",note:""},
+    {no:20,title:"CF記入",cycle:"月次",dept:"全社",reviewDate:"4/14",yearOffset:0,monthOffset:1,dayOffset:0,nextDate:"5/14",url:"",note:""},
+    {no:21,title:"竹島事務所月次決算",cycle:"月次",dept:"個人",reviewDate:"2/16",yearOffset:0,monthOffset:3,dayOffset:0,nextDate:"5/16",url:"https://secure.freee.co.jp/",note:""},
+    {no:22,title:"年間スケジュール確認",cycle:"月次",dept:"個人",reviewDate:"4/16",yearOffset:0,monthOffset:1,dayOffset:0,nextDate:"5/16",url:"https://docs.google.com/spreadsheets/d/1ym6gAMkwvZQRrRJi0Jz94LsvKJePx3f1nw41j-b0h74/edit#gid=414241657",note:""},
+    {no:23,title:"構想バックログ",cycle:"月次",dept:"個人",reviewDate:"4/22",yearOffset:0,monthOffset:1,dayOffset:0,nextDate:"5/22",url:"https://docs.google.com/spreadsheets/d/1qh4jhV9vQhIdw8hEAeCZZRxlNk0VVH4pcL4_r0GF1nA/edit?gid=0#gid=0",note:""},
+    {no:24,title:"ヒトメモ",cycle:"四半期",dept:"個人",reviewDate:"4/23",yearOffset:0,monthOffset:1,dayOffset:0,nextDate:"5/23",url:"https://docs.google.com/spreadsheets/d/1Sna1dNq41rtElMv7HYW8uknhhQCE3hG5oE911zjxSGM/edit?gid=0#gid=0",note:""},
+    {no:25,title:"ストックチェック",cycle:"月次",dept:"個人",reviewDate:"5/1",yearOffset:0,monthOffset:1,dayOffset:0,nextDate:"6/1",url:"",note:""},
+    {no:26,title:"市場情報の更新",cycle:"半期",dept:"営業企画本部",reviewDate:"12/1",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"6/1",url:"https://docs.google.com/spreadsheets/d/12YHZmBPT-lAoITCJXk6SRdOi98tI2jKk_c6e5-Y56OY/edit#gid=0",note:""},
+    {no:27,title:"四半期見直し(声掛け)",cycle:"四半期",dept:"全社",reviewDate:"3/1",yearOffset:0,monthOffset:3,dayOffset:0,nextDate:"6/1",url:"https://docs.google.com/spreadsheets/d/1ALQej38WnjczxAKC6mGHnBI4kh_e6adeG6T4Qt6SNtw/edit#gid=1433657731",note:"3月、6月、9月、12月"},
+    {no:28,title:"ミッションステートメント見直し",cycle:"半期",dept:"個人",reviewDate:"12/5",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"6/5",url:"",note:""},
+    {no:29,title:"GPTカスタマイズ",cycle:"半期",dept:"個人",reviewDate:"12/25",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"6/25",url:"",note:""},
+    {no:30,title:"竹嶋VISION(戦略振り返り)",cycle:"月次",dept:"個人",reviewDate:"3/25",yearOffset:0,monthOffset:3,dayOffset:0,nextDate:"6/25",url:"https://docs.google.com/document/d/1xTPDAHyT9gI9aD7jDELpgrf1fvA1rxnP5bgAKqkMTDY/edit?tab=t.0",note:""},
+    {no:31,title:"夢ブック(半期見直し)",cycle:"",dept:"個人",reviewDate:"1/1",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"7/1",url:"",note:""},
+    {no:32,title:"5か年計画見直し(仕事)",cycle:"半期",dept:"全社",reviewDate:"1/1",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"7/1",url:"https://docs.google.com/spreadsheets/d/1oup9A5mkFPfPLUtj_OnX_X_KcXsdU-kiIgJQ8ApPQBU/edit#gid=214113197",note:"3AC2030開始後見直しのため4月飛ばし / 見直し日：10月、4月 / 2025年4月未"},
+    {no:33,title:"VISION定期点検",cycle:"半期",dept:"個人",reviewDate:"1/4",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"7/4",url:"",note:""},
+    {no:34,title:"学習計画見直し",cycle:"月次",dept:"個人",reviewDate:"7/7",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"7/7",url:"https://docs.google.com/spreadsheets/d/1Cd6B2T1X0asO_8yRav49XbqwJwCHf3qJwxwLH-ASyPw/edit#gid=268085824",note:"休学届"},
+    {no:35,title:"ワークフローの承認時間の分析",cycle:"四半期",dept:"全社",reviewDate:"4/8",yearOffset:0,monthOffset:3,dayOffset:0,nextDate:"7/8",url:"https://lookerstudio.google.com/u/0/reporting/e63d8e26-d51f-4b11-8d31-ff28e111f7e7/page/hFDzC/edit",note:""},
+    {no:36,title:"ゆみさんと食事",cycle:"年次",dept:"個人",reviewDate:"7/10",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"7/10",url:"",note:""},
+    {no:37,title:"お墓参り",cycle:"半期",dept:"個人",reviewDate:"1/13",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"7/13",url:"",note:""},
+    {no:38,title:"競合会社見直し(帝国データバンク)",cycle:"半期",dept:"全社",reviewDate:"1/29",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"7/29",url:"",note:""},
+    {no:39,title:"行動探求：７つのリーダーシップの力アセスシート",cycle:"半期",dept:"個人",reviewDate:"2/15",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"8/15",url:"",note:""},
+    {no:40,title:"コミュニケーションアンケート",cycle:"半期",dept:"全社",reviewDate:"3/8",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"9/8",url:"",note:""},
+    {no:41,title:"人事制度マッピング見直し",cycle:"半期",dept:"全社",reviewDate:"4/1",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"10/1",url:"https://docs.google.com/spreadsheets/d/1iB8jKbqD-YvWoW9NnVecXukqs9I8POgFLg4fKGMvtTQ/edit#gid=61180483",note:"4月：半期見直し / 10月：経営計画書見直し"},
+    {no:42,title:"竹島事務所決算書、決算データ作成",cycle:"年次",dept:"個人",reviewDate:"10/15",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"10/15",url:"",note:""},
+    {no:43,title:"競合報告",cycle:"半期",dept:"個人",reviewDate:"4/15",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"10/15",url:"https://docs.google.com/spreadsheets/d/19A99Ph1UFYn9eATZWzm9eh5H9A7wFXUMNkEuyenYH9E/edit#gid=156311823",note:""},
+    {no:44,title:"組織図見直し",cycle:"四半期",dept:"全社",reviewDate:"5/1",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"11/1",url:"https://docs.google.com/spreadsheets/d/1-gHQWgT0R85lSbyjF3aYVNJBS1vxk7K3R5CThTK4kps/edit#gid=1707096619",note:""},
+    {no:45,title:"3AC年間スケジュール",cycle:"",dept:"全社",reviewDate:"11/10",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"11/10",url:"https://docs.google.com/spreadsheets/d/1ZK-JF4i3XkS5nMunNWefWbC7oofHHphdrf59Uph8w04/edit?gid=0#gid=0",note:""},
+    {no:46,title:"一粒万倍日×天赦日確認",cycle:"年次",dept:"個人",reviewDate:"12/21",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"12/21",url:"",note:""},
+    {no:47,title:"年間スケジュール作成",cycle:"年次",dept:"個人",reviewDate:"12/26",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"12/26",url:"https://docs.google.com/spreadsheets/d/1tHNPtNsTQ3-Hz5aN1T4W0H3Z-OuJDMH5eK4cGyecD2Y/edit#gid=226897527",note:""},
+    {no:48,title:"未来年表作成",cycle:"年次",dept:"個人",reviewDate:"12/26",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"12/26",url:"https://docs.google.com/spreadsheets/d/14sG5d3jwC3Wa0sD4ox4ThOkwbh10lQL-/edit#gid=1559101162",note:""},
+    {no:49,title:"夢ブック作成",cycle:"年次",dept:"個人",reviewDate:"12/26",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"12/26",url:"",note:""},
+    {no:50,title:"100回帳印刷",cycle:"年次",dept:"個人",reviewDate:"12/26",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"12/26",url:"",note:""},
+    {no:51,title:"100リスト作成(手書き)",cycle:"年次",dept:"個人",reviewDate:"1/1",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"1/1",url:"",note:""},
+    {no:52,title:"竹嶋家の５カ条見直し",cycle:"半期",dept:"個人",reviewDate:"1/1",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"1/1",url:"https://docs.google.com/presentation/d/1qrPoDtNZxC2iYg2wJq1aHQaM8fJwOKh5/edit#slide=id.p1",note:""},
+    {no:53,title:"健康診断",cycle:"年次",dept:"個人",reviewDate:"1/15",yearOffset:1,monthOffset:0,dayOffset:0,nextDate:"1/15",url:"",note:"PSA検査 / アレルギー検査受ける"},
+    {no:54,title:"歯医者",cycle:"半期",dept:"個人",reviewDate:"",yearOffset:0,monthOffset:6,dayOffset:0,nextDate:"6/30",url:"",note:""},
+    {no:55,title:"領収書提出",cycle:"隔週",dept:"個人",reviewDate:"vg",yearOffset:0,monthOffset:0,dayOffset:14,nextDate:"#VALUE!",url:"",note:""},
+    {no:56,title:"100リスト置き場",cycle:"年次",dept:"個人",reviewDate:"",yearOffset:0,monthOffset:0,dayOffset:0,nextDate:"",url:"https://drive.google.com/drive/folders/12WxnLxFrKCYLywZ6S1eFhincqUO0Sg0i",note:""},
+    {no:57,title:"内部ＷＥＢ管理表",cycle:"",dept:"営業企画本部",reviewDate:"",yearOffset:0,monthOffset:0,dayOffset:0,nextDate:"",url:"https://docs.google.com/spreadsheets/d/1rqk52I_s2_CgcK0bi4fee9XAFIT7m6yZWieE30guk_s/edit#gid=476589038",note:""},
+    {no:58,title:"数字進捗サイトマップ",cycle:"",dept:"全社",reviewDate:"",yearOffset:0,monthOffset:0,dayOffset:0,nextDate:"",url:"https://docs.google.com/spreadsheets/d/1ALQej38WnjczxAKC6mGHnBI4kh_e6adeG6T4Qt6SNtw/edit#gid=368206739",note:""},
+    {no:59,title:"bixid(PL、BS、CF)",cycle:"隔週",dept:"全社",reviewDate:"",yearOffset:0,monthOffset:0,dayOffset:0,nextDate:"",url:"https://apps.bixid.net/home/Home/",note:""}
+  ];
+
+  return raw.map(function(seed){
+    var cleanTitle=(seed.title||'').trim().replace(/[\r\n"]/g,'');
+    var rawCy=(seed.cycle||'').trim();
+    var cycle=VALID_CYCLES.indexOf(rawCy)>=0?rawCy:'不定期';
+    var nextDate=normalizeSeedDate(seed.nextDate||'');
+    var addRule=buildAddRuleFromOffsets(seed);
+    var id=seed.no||(nid++);
+    return{
+      id:id,
+      title:cleanTitle,
+      cycle:cycle,
+      dept:seed.dept||'',
+      nextDate:nextDate,
+      url:seed.url||'',
+      note:seed.note||'',
+      layer:classifyLayerFromSeed(seed),
+      status:'未完了',
+      addType:addRule.addType,
+      addBase:addRule.addBase,
+      addDays:addRule.addDays,
+      deliverable:buildDeliverableFromSeed(seed),
+      notifyMsg:buildNotifyMessageFromSeed(seed),
+      excludeWeekends:false,
+      excludeHolidays:false,
+      skippable:true,
+      lastScheduledDate:''
+    };
+  });
+}
+
+function seedInitialTasksIfNeeded(){
+  var saved=localStorage.getItem('routineOS_tasks');
+  if(saved){
+    try{
+      var parsed=JSON.parse(saved);
+      if(Array.isArray(parsed)&&parsed.length>0){
+        // 既存データに月次レビュータスクがなければ追加
+        var hasMonthly=parsed.some(function(t){return t.title==='月次レビュー';});
+        if(!hasMonthly){
+          var nextFirst=(function(){
+            var d=new Date();d.setDate(1);d.setMonth(d.getMonth()+1);
+            return formatLocalDate(d);
+          })();
+          tasks.push({id:nid++,title:'月次レビュー',cycle:'月次',layer:3,nextDate:nextFirst,status:'未完了',addType:'calendar',addBase:'from_next',addDays:null,lastScheduledDate:'',notifyMsg:'今月のルーチンを振り返り、不要なタスクを停止・統合する。',deliverable:'月次レビュー完了・バックアップ取得済み',url:'',note:'',excludeWeekends:false,excludeHolidays:false,skippable:false});
+          saveData();
+        }
+        return;
+      }
+    }catch(e){}
+  }
+  if(tasks&&tasks.length>0){
+    var hasMonthly2=tasks.some(function(t){return t.title==='月次レビュー';});
+    if(!hasMonthly2){
+      var nextFirst2=(function(){
+        var d=new Date();d.setDate(1);d.setMonth(d.getMonth()+1);
+        return formatLocalDate(d);
+      })();
+      tasks.push({id:nid++,title:'月次レビュー',cycle:'月次',layer:3,nextDate:nextFirst2,status:'未完了',addType:'calendar',addBase:'from_next',addDays:null,lastScheduledDate:'',notifyMsg:'今月のルーチンを振り返り、不要なタスクを停止・統合する。',deliverable:'月次レビュー完了・バックアップ取得済み',url:'',note:'',excludeWeekends:false,excludeHolidays:false,skippable:false});
+      saveData();
+    }
+    return;
+  }
+  tasks=buildInitialSeedTasks();
+  // シードデータにも月次レビューを追加
+  var hasMR=tasks.some(function(t){return t.title==='月次レビュー';});
+  if(!hasMR){
+    var nextFirst3=(function(){
+      var d=new Date();d.setDate(1);d.setMonth(d.getMonth()+1);
+      return formatLocalDate(d);
+    })();
+    tasks.push({id:nid,title:'月次レビュー',cycle:'月次',layer:3,nextDate:nextFirst3,status:'未完了',addType:'calendar',addBase:'from_next',addDays:null,lastScheduledDate:'',notifyMsg:'今月のルーチンを振り返り、不要なタスクを停止・統合する。',deliverable:'月次レビュー完了・バックアップ取得済み',url:'',note:'',excludeWeekends:false,excludeHolidays:false,skippable:false});
+    nid++;
+  } else {
+    nid=Math.max.apply(null,tasks.map(function(t){return t.id;}))+1;
+  }
+  saveData();
+}
+
+function uQB(){
+  var n=tasks.filter(function(t){return(!t.cycle||!normalizeCycle(t.cycle))&&t.status!=='停止';}).length;
+  var el=document.getElementById('qb');
+  if(el)el.textContent=n>0?n:'';
+}
+
+// ========== VISION2026 ==========
+var VISION_DATA={
+  vision:[
+    '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。',
+    '安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。',
+    '挑戦する人が成長できる社会をつくる。そのために、守りの総合支援がある。',
+  ],
+  principles:[
+    {title:'成長',text:'未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。'},
+    {title:'愛',  text:'周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。'},
+    {title:'誠実',text:'自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。'},
+    {title:'寛容',text:'個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。'},
+  ],
+  directions:[
+    {title:'確信',text:'頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。油断せず備える。'},
+    {title:'仲間',text:'弱みも未来も共有し、自立し、責任を持って、前向きに、同じゴールに向かい仮説検証ができる人を大切にする。'},
+    {title:'健康',text:'心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。'},
+  ],
+};
+function renderVision(){
+  var area=document.getElementById('visionArea');
+  if(!area)return;
+  // 日付をシードに固定（同じ日は同じ表示、ちらつかない）
+  var dateStr=getTodayLocalString().replace(/-/g,'');
+  var seed=parseInt(dateStr)%100;
+  var types=['vision','principle','direction'];
+  var type=types[seed%3];
+  var html='';
+  if(type==='vision'){
+    var item=VISION_DATA.vision[seed%VISION_DATA.vision.length];
+    html='<div class="vision-card"><span class="vision-type">VISION</span><span class="vision-body">'+item+'</span></div>';
+  }else if(type==='principle'){
+    var item=VISION_DATA.principles[seed%VISION_DATA.principles.length];
+    html='<div class="vision-card"><span class="vision-type">原則</span><span class="vision-body"><span class="vision-keyword">'+item.title+'</span>'+item.text+'</span></div>';
+  }else{
+    var item=VISION_DATA.directions[seed%VISION_DATA.directions.length];
+    html='<div class="vision-card"><span class="vision-type">指針</span><span class="vision-body"><span class="vision-keyword">'+item.title+'</span>'+item.text+'</span></div>';
+  }
+  area.innerHTML=html;
+}
+
+// ========== INIT ==========
+loadData();
+seedInitialTasksIfNeeded();
+migrateRoutineFields();
+saveData();
+renderVision();
+rDash();
+uQB();
+
+</script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js")
+        .then(r => console.log("SW registered:", r))
+        .catch(e => console.log("SW error:", e));
+    }
+  </script>
+</body>
+</html>

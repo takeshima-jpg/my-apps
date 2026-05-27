@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <link rel="icon" type="image/png" href="./icons/favicon.ico">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Reflect OS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#faf9f6;
+  --sf:#fff;
+  --bd:#e8e4dc;
+  --tx:#1a1814;
+  --mu:#7a7670;
+  --di:#b0aca4;
+  --go:#2a5a3a;
+  --go-lt:#f0f5f1;
+  --go-bd:#a8c8b4;
+  --bl:#3a4a6a;
+  --bl-lt:#f0f3f8;
+  --mono:'JetBrains Mono','Courier New',monospace;
+  --serif:'Hiragino Mincho ProN','Georgia',serif;
+  --max:760px;
+}
+body{font-family:var(--serif);background:var(--bg);color:var(--tx);min-height:100vh;font-size:15px;line-height:1.8}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+input,textarea,select{background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:3px;font-family:var(--serif);font-size:14px;outline:none;transition:border-color .15s;padding:9px 12px;width:100%}
+input:focus,textarea:focus,select:focus{border-color:var(--go)}
+textarea{resize:vertical;line-height:1.8}
+button{cursor:pointer;font-family:var(--serif);border:none;border-radius:3px;transition:all .15s}
+
+/* ── Layout ── */
+#hdr{border-bottom:1px solid var(--bd);padding:14px 28px;display:flex;align-items:center;gap:16px;background:var(--bg)}
+.logo{font-size:11px;color:var(--di);letter-spacing:.22em;flex-shrink:0}.logo b{color:var(--go);font-weight:400}
+nav{display:flex;gap:2px}
+.nb{padding:5px 13px;font-size:11px;letter-spacing:.05em;background:transparent;color:var(--di);border:1px solid transparent;border-radius:3px;cursor:pointer;font-family:var(--serif)}
+.nb.on{background:var(--sf);color:var(--tx);border-color:var(--bd)}
+.hdr-r{margin-left:auto;display:flex;gap:6px}
+#v26{padding:8px 28px;border-bottom:1px solid var(--bd);background:var(--bg)}
+.v26c{display:flex;align-items:baseline;gap:14px;max-width:var(--max);margin:0 auto}
+.v26t{font-family:var(--mono);font-size:9px;color:var(--di);letter-spacing:.14em;min-width:38px}
+.v26b{font-size:11px;color:var(--mu);line-height:1.7}
+.v26k{font-family:var(--mono);font-size:9px;color:var(--di);margin-right:8px}
+#body{max-width:var(--max);margin:0 auto;padding:32px 28px 80px}
+
+/* ── Buttons ── */
+.btn-p{background:var(--go);color:#fff;padding:9px 20px;font-size:13px}
+.btn-p:hover{background:#1e4a2a}
+.btn-s{background:transparent;color:var(--mu);border:1px solid var(--bd);padding:8px 16px;font-size:12px}
+.btn-s:hover{border-color:var(--mu)}
+.btn-g{background:transparent;color:var(--di);border:1px solid var(--bd);padding:4px 10px;font-size:11px}
+.btn-g:hover{border-color:var(--mu);color:var(--mu)}
+.btn-d{background:transparent;color:#b05050;border:1px solid #e0c0c0;padding:3px 8px;font-size:10px}
+
+/* ── Section ── */
+.sec{margin-bottom:40px}
+.sec-lbl{font-size:10px;color:var(--di);letter-spacing:.2em;text-transform:uppercase;margin-bottom:16px}
+.dvd{border-top:1px solid var(--bd);margin:28px 0}
+
+/* ── VISION ── */
+.vision-block{margin-bottom:32px}
+.vision-text{font-size:15px;color:var(--go);line-height:2;white-space:pre-wrap;padding:16px 0}
+.vision-expand{cursor:pointer;font-size:11px;color:var(--di);display:flex;align-items:center;gap:6px;padding:4px 0;user-select:none}
+.vision-expand:hover{color:var(--mu)}
+.vision-detail{display:none;padding:16px 0 8px;border-top:1px solid var(--bd);margin-top:8px}
+.vision-detail.open{display:block}
+.vision-principle{display:flex;gap:14px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:13px}
+.vision-principle:last-child{border-bottom:none}
+.vp-kw{color:var(--go);min-width:36px;font-size:12px}
+.vp-num{color:var(--di);font-family:var(--mono);font-size:10px;min-width:14px;padding-top:2px}
+.vp-text{color:var(--mu);line-height:1.7}
+
+/* ── Theme cards ── */
+.theme-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:auto;gap:8px;margin-bottom:8px}
+@media(max-width:640px){.theme-grid{grid-template-columns:1fr}}
+.tcard{background:var(--sf);border:1px solid var(--bd);border-radius:5px;overflow:hidden;transition:border-color .15s;cursor:pointer}
+.tcard:hover{border-color:var(--go-bd)}
+.tcard-main{padding:14px 16px}
+.tcard-name{font-size:14px;color:var(--tx);margin-bottom:5px;line-height:1.4}
+.tcard-meta{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.tcard-status{font-size:10px;padding:1px 8px;border-radius:10px;border:1px solid}
+.st-active{color:var(--go);border-color:var(--go-bd);background:var(--go-lt)}
+.st-plan{color:#7a6030;border-color:#d8c080;background:#fdf8e8}
+.st-hold{color:var(--di);border-color:var(--bd);background:var(--bg)}
+.st-done{color:var(--bl);border-color:#b0c0e0;background:var(--bl-lt)}
+.st-exit{color:#b05050;border-color:#e0b0b0;background:#fdf0f0}
+.tcard-summary{font-size:12px;color:var(--mu);line-height:1.6}
+.tcard-detail{display:none;border-top:1px solid var(--bd);padding:12px 16px;font-size:12px;color:var(--mu);line-height:1.7}
+.tcard-detail.open{display:block}
+.tcard-dl{font-size:9px;color:var(--di);letter-spacing:.1em;text-transform:uppercase;margin:10px 0 4px}
+.tcard-dl:first-child{margin-top:0}
+.ms-pill{display:inline-flex;padding:2px 8px;font-size:10px;border-radius:10px;border:1px solid;margin:2px;gap:4px}
+.ms-done{color:var(--go);border-color:var(--go-bd);background:var(--go-lt)}
+.ms-doing{color:#7a6030;border-color:#d8c080;background:#fdf8e8}
+.ms-todo{color:var(--di);border-color:var(--bd);background:var(--bg)}
+.kpi-row{font-size:11px;color:var(--mu);padding:3px 0;display:flex;gap:8px}
+.kpi-name{color:var(--di)}
+.tcard-acts{display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid var(--bd)}
+
+/* ── Log items ── */
+.log-item{padding:16px 0;border-bottom:1px solid var(--bd);cursor:pointer}
+.log-item:first-child{border-top:1px solid var(--bd)}
+.log-item:hover .log-title{color:var(--go)}
+.log-date{font-size:10px;color:var(--di);font-family:var(--mono);margin-bottom:4px;display:flex;gap:8px;align-items:center}
+.log-title{font-size:15px;color:var(--tx);margin-bottom:5px;transition:color .15s}
+.log-lesson{font-size:13px;color:var(--mu);line-height:1.7;border-left:2px solid var(--go-bd);padding-left:12px;margin-top:4px}
+.log-q{font-size:12px;color:var(--bl);margin-top:4px}
+.log-exp{font-size:12px;color:var(--go);margin-top:4px}
+.log-acts{display:flex;gap:6px;margin-top:10px}
+.tbadge{font-size:9px;padding:1px 7px;border-radius:10px}
+.gdoc-ok{font-size:10px;color:var(--bl);opacity:.7}
+.gdoc-no{font-size:10px;color:var(--di);opacity:.6}
+
+/* ── Question items ── */
+.q-item{padding:12px 0;border-bottom:1px solid var(--bd);font-size:14px;color:var(--bl);line-height:1.7}
+.q-item:first-child{border-top:1px solid var(--bd)}
+.q-from{font-size:10px;color:var(--di);font-family:var(--mono);margin-top:3px}
+
+/* ── Form ── */
+.form-wrap{max-width:640px;margin:0 auto}
+.form-hdr{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.field{margin-bottom:14px}
+.lbl{display:block;font-size:10px;color:var(--mu);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px}
+.lbl-opt{font-size:9px;color:var(--di);margin-left:6px;font-style:italic;text-transform:none;letter-spacing:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.hint{background:var(--go-lt);border-left:2px solid var(--go-bd);padding:10px 14px;font-size:12px;color:var(--go);margin-bottom:18px;line-height:1.7}
+.expand-tog{display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--di);font-size:11px;padding:6px 0;background:transparent;border:none;font-family:var(--serif);width:100%}
+.expand-tog:hover{color:var(--mu)}
+.expand-arr{font-size:9px;transition:transform .2s;display:inline-block}
+.expand-tog.open .expand-arr{transform:rotate(90deg)}
+.expand-body{display:none;padding:8px 0 4px}
+.expand-body.open{display:block}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.chip{padding:3px 10px;font-size:11px;background:var(--bg);color:var(--di);border:1px solid var(--bd);border-radius:12px;cursor:pointer;font-family:var(--serif)}
+.chip:hover{border-color:var(--mu)}
+.chip.on{background:var(--go-lt);color:var(--go);border-color:var(--go-bd)}
+.sldr-row{display:flex;align-items:center;gap:8px}
+.sldr-row input[type=range]{accent-color:var(--go);padding:0;border:none;background:transparent;box-shadow:none}
+.sldr-v{font-size:12px;color:var(--go);min-width:16px;text-align:right}
+.ms-row{display:flex;gap:7px;align-items:center;margin-bottom:6px}
+.ms-row input{flex:1}
+.kpi-row-edit{display:flex;gap:7px;align-items:center;margin-bottom:6px}
+.kpi-row-edit input{flex:1}
+.url-wrap{display:flex;gap:7px}
+.url-wrap input{flex:1}
+
+/* ── Lesson/exp strip ── */
+.learn-item{padding:12px 0;border-bottom:1px solid var(--bd);font-size:14px;color:var(--mu);line-height:1.7}
+.learn-item:first-child{border-top:1px solid var(--bd)}
+.learn-from{font-size:10px;color:var(--di);font-family:var(--mono);margin-top:3px}
+.learn-exp{color:var(--go)}
+
+/* ── Record buttons ── */
+.rec-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:0}
+.rec-btn{padding:13px 8px;text-align:center;border:1px solid var(--bd);border-radius:5px;cursor:pointer;font-family:var(--serif);background:var(--sf);transition:all .15s;font-size:13px}
+.rec-btn:hover{border-color:var(--go-bd);background:var(--go-lt)}
+.rec-btn-lbl{color:var(--go);display:block;margin-bottom:2px}
+.rec-btn-desc{font-size:10px;color:var(--di)}
+
+/* ── Dash ── */
+.dash-tabs{display:flex;gap:2px;margin-bottom:24px}
+.dash-tab{padding:6px 14px;font-size:11px;background:transparent;color:var(--di);border:1px solid var(--bd);border-radius:3px;cursor:pointer;font-family:var(--serif)}
+.dash-tab.on{background:var(--go-lt);color:var(--go);border-color:var(--go-bd)}
+
+/* ── Exp board ── */
+.exp-board{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.exp-col{padding:16px}
+.exp-col-hd{font-size:10px;color:var(--di);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.exp-cnt{font-size:10px;color:var(--di);font-family:var(--mono)}
+.exp-item{padding:10px 0;border-bottom:1px solid var(--bd);font-size:13px;color:var(--tx);line-height:1.6}
+.exp-item:first-of-type{border-top:1px solid var(--bd)}
+.exp-src{font-size:10px;color:var(--di);margin-top:3px;font-family:var(--mono)}
+.exp-btns{display:flex;gap:4px;margin-top:6px}
+.exp-btn{padding:2px 8px;font-size:10px;border-radius:3px;background:transparent;border:1px solid var(--bd);color:var(--di);cursor:pointer;font-family:var(--serif)}
+.exp-btn:hover{border-color:var(--mu);color:var(--mu)}
+
+/* ── Search ── */
+.srch-wrap{position:relative;margin-bottom:16px}
+.srch-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--di);font-size:13px;pointer-events:none}
+.srch-wrap input{padding-left:32px;font-size:14px}
+
+/* ── Theme form extras ── */
+.tf-sect{font-size:10px;color:var(--di);letter-spacing:.16em;text-transform:uppercase;margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--bd)}
+
+/* ── Misc ── */
+.empty{font-size:13px;color:var(--di);padding:16px 0}
+.draft-badge{font-size:10px;color:#8080c0}
+.more-lnk{font-size:12px;color:var(--di);cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-top:8px;background:transparent;border:none;font-family:var(--serif);padding:0}
+.more-lnk:hover{color:var(--mu)}
+@keyframes fu{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fu .22s ease}
+
+/* ── Philosophy log ── */
+.phil-keep{font-size:13px;color:#2a6a3a;background:#f0f5f1;border-left:2px solid #a8c8b4;padding:6px 12px;margin-top:5px;line-height:1.7}
+.phil-drop{font-size:13px;color:#8a3030;background:#fdf0f0;border-left:2px solid #e0b0b0;padding:6px 12px;margin-top:5px;line-height:1.7}
+.phil-pivot{display:inline-flex;font-size:11px;color:#5a4a8a;background:#f4f1fa;border:1px solid #c8b8e8;border-radius:10px;padding:2px 10px;margin-top:5px}
+.phil-field{font-size:13px;color:var(--mu);line-height:1.75;margin-top:5px}
+.phil-lbl{font-size:10px;color:var(--di);letter-spacing:.1em;text-transform:uppercase;margin-top:12px;margin-bottom:2px}
+/* Timeline */
+.tl-wrap{position:relative;padding-left:28px}
+.tl-wrap::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:1px;background:var(--bd)}
+.tl-item{position:relative;margin-bottom:28px}
+.tl-dot{position:absolute;left:-24px;top:4px;width:9px;height:9px;border-radius:50%;background:#5a4a8a;border:2px solid #f4f1fa}
+.tl-date{font-size:10px;color:var(--di);font-family:var(--mono);margin-bottom:4px}
+.tl-title{font-size:14px;color:var(--tx);margin-bottom:4px}
+.tl-change{font-size:13px;color:var(--mu);line-height:1.7}
+</style>
+</head>
+<body>
+<div id="hdr">
+  <div class="logo">REFLECT <b>OS</b></div>
+  <nav id="nav">
+    <button class="nb on" data-tab="home">HOME</button>
+    <button class="nb" data-tab="log">ログ</button>
+    <button class="nb" data-tab="exp">実験</button>
+    <button class="nb" data-tab="dash">分析</button>
+    <button class="nb" data-tab="search">検索</button>
+  </nav>
+  <div class="hdr-r">
+    <button class="btn-g" id="btn-exp">⬇ export</button>
+    <label class="btn-g" style="cursor:pointer">⬆ import<input type="file" accept=".json" id="imp" style="display:none"></label>
+  </div>
+</div>
+<div id="v26"></div>
+<div id="body"><div style="color:var(--di);padding:40px;font-size:12px;letter-spacing:.1em">loading...</div></div>
+
+<script>
+/* ── DB ── */
+const DBN='ReflectOS6',DBV=1;
+function odb(){return new Promise((res,rej)=>{const r=indexedDB.open(DBN,DBV);r.onupgradeneeded=e=>{const db=e.target.result;['logs','themes','settings'].forEach(s=>{if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'});});};r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e);});}
+async function dbput(s,v){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).put(v);tx.oncomplete=res;tx.onerror=rej;});}
+async function dbget(s,k){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readonly');const r=tx.objectStore(s).get(k);r.onsuccess=()=>res(r.result);r.onerror=rej;});}
+async function dball(s){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readonly');const r=tx.objectStore(s).getAll();r.onsuccess=()=>res(r.result);r.onerror=rej;});}
+async function dbdel(s,k){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).delete(k);tx.oncomplete=res;tx.onerror=rej;});}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
+const tod=()=>new Date().toISOString().split('T')[0];
+const dAgo=d=>Math.floor((Date.now()-new Date(d))/(864e5));
+function h(tag,a,...kids){const e=document.createElement(tag);Object.entries(a||{}).forEach(([k,v])=>{if(k==='cls')e.className=v;else if(k==='css')e.style.cssText=v;else if(k[0]==='o'&&k[1]==='n')e.addEventListener(k.slice(2).toLowerCase(),v);else e.setAttribute(k,v);});kids.flat(9).forEach(c=>{if(c==null)return;if(typeof c==='string'||typeof c==='number')e.appendChild(document.createTextNode(String(c)));else e.appendChild(c);});return e;}
+const D=(a,...c)=>h('div',a,...c);
+const Sp=(a,...c)=>h('span',a,...c);
+const Bt=(a,...c)=>h('button',a,...c);
+const In=(a)=>h('input',a);
+const Ta=(a)=>h('textarea',a);
+const Sel=(a,...c)=>h('select',a,...c);
+const Opt=(v,t,sel)=>h('option',{value:v,...(sel?{selected:''}:{})},t);
+
+/* ── State ── */
+let S={vision:{vision:'',yearGoal:''},themes:[],logs:[],tab:'home',forming:null,editing:null,fd:{},_dashTab:'lessons'};
+
+/* ── Constants ── */
+const TM={note:{label:'振り返り',bg:'#f0f5f1',ac:'#2a6a3a'},moya:{label:'モヤモヤ',bg:'#f0f0f8',ac:'#4a4a8a'},vision:{label:'VISION点検',bg:'#faf0e8',ac:'#7a5020'},strategy:{label:'戦略テーマ',bg:'#f0f5f0',ac:'#1a6050'},philosophy:{label:'思想変化',bg:'#f4f1fa',ac:'#5a4a8a'}};
+const EMOTIONS=['希望','興奮','感謝','誇り','安心','楽しさ','不安','恐怖','怒り','悲しみ','失望','孤独','混乱','モヤモヤ','葛藤'];
+const BIASES=['返報依存','承認欲求','透明性の錯覚','期待投影','対立回避','確証バイアス','サンクコスト','楽観バイアス'];
+const THEME_CATS=['戦略','プロジェクト','VISION','新規事業','人間関係','学習','財務','組織'];
+const THEME_STATUS=['構想中','実行中','保留','完了','撤退'];
+const THEME_PRI=['S','A','B','C'];
+const MS_ST=['未着手','実行中','完了'];
+function stClass(st){return{実行中:'st-active',保留:'st-hold',完了:'st-done',撤退:'st-exit',構想中:'st-plan'}[st]||'st-plan';}
+
+/* ── Form primitives ── */
+function fld(lb,child,opt=false,note=''){const w=D({cls:'field'});if(lb){const l=h('label',{cls:'lbl'},lb);if(opt)l.appendChild(Sp({cls:'lbl-opt'},'任意'));w.appendChild(l);}w.appendChild(child);if(note)w.appendChild(D({css:'font-size:11px;color:var(--di);margin-top:3px'},note));return w;}
+function tI(lb,key,ph='',tp='text',opt=false,fd2){const fd=fd2||S.fd;const e=In({type:tp,placeholder:ph});e.value=fd[key]||(tp==='date'?'':'');e.addEventListener('input',()=>fd[key]=e.value);return fld(lb,e,opt);}
+function urlF(key){const w=D({cls:'url-wrap'});const e=In({type:'url',placeholder:'https://docs.google.com/...'});e.style.flex='1';e.value=S.fd[key]||'';e.addEventListener('input',()=>S.fd[key]=e.value);const ob=Bt({cls:'btn-g',onclick:()=>{if(S.fd[key])window.open(S.fd[key],'_blank');}},'開く');w.appendChild(e);w.appendChild(ob);return fld('Google Docs URL',w,true,'深く書いた後にURLを貼る');}
+function taF(lb,key,ph='',mh=70,opt=false,fd2){const fd=fd2||S.fd;const e=Ta({placeholder:ph,css:`min-height:${mh}px;width:100%`});e.value=fd[key]||'';e.addEventListener('input',()=>fd[key]=e.value);return fld(lb,e,opt);}
+function selF(lb,key,opts,fd2){const fd=fd2||S.fd;const sel=Sel({},opts.map(o=>Opt(o,o,fd[key]===o)));sel.addEventListener('change',()=>fd[key]=sel.value);if(!fd[key]&&opts.length)fd[key]=opts[0];return fld(lb,sel);}
+function sldrF(lb,key){const v=S.fd[key]||5;const vs=Sp({cls:'sldr-v'},String(v));const e=In({type:'range',min:'1',max:'10'});e.value=v;const lbEl=h('label',{cls:'lbl'},`${lb} — ${v}`);e.addEventListener('input',()=>{S.fd[key]=+e.value;vs.textContent=e.value;lbEl.textContent=`${lb} — ${e.value}`;});return D({cls:'field'},lbEl,D({cls:'sldr-row'},e,vs));}
+function chipsF(lb,key,opts,single=false,opt=false){const sel=S.fd[key]||(single?'':[]);const w=D({cls:'chips'});opts.forEach(o=>{const a=single?sel===o:(Array.isArray(sel)&&sel.includes(o));const c=Bt({cls:'chip'+(a?' on':'')},o);c.addEventListener('click',()=>{if(single)S.fd[key]=S.fd[key]===o?'':o;else{const cur=S.fd[key]||[];S.fd[key]=cur.includes(o)?cur.filter(x=>x!==o):[...cur,o];}ra();});w.appendChild(c);});return fld(lb,w,opt);}
+function thChipsF(key){const selIds=S.fd[key]||[];const w=D({cls:'chips'});if(!S.themes.length){w.appendChild(Sp({css:'font-size:12px;color:var(--di)'},'（テーマ未登録）'));return fld('探求テーマ',w,true);}S.themes.forEach(t=>{const a=selIds.includes(t.id);const c=Bt({cls:'chip'+(a?' on':'')},t.title);c.addEventListener('click',()=>{const cur=S.fd[key]||[];S.fd[key]=cur.includes(t.id)?cur.filter(x=>x!==t.id):[...cur,t.id];ra();});w.appendChild(c);});return fld('探求テーマ',w,true);}
+function expandSec(label,items){const tog=Bt({cls:'expand-tog'},Sp({cls:'expand-arr'},'▶'),' '+label);const body=D({cls:'expand-body'});items.forEach(x=>x&&body.appendChild(x));tog.addEventListener('click',()=>{tog.classList.toggle('open');body.classList.toggle('open');});return D({},tog,body);}
+
+/* ── Theme form ── */
+function buildThemeForm(tfd){
+  const msEditor=()=>{
+    if(!tfd.milestones)tfd.milestones=[];
+    const w=D({});
+    const render=()=>{
+      w.innerHTML='';
+      tfd.milestones.forEach((ms,i)=>{
+        const row=D({cls:'ms-row'});
+        const ti=In({type:'text',placeholder:'マイルストーン名'});ti.value=ms.title||'';ti.addEventListener('input',()=>tfd.milestones[i].title=ti.value);
+        const dl=In({type:'date'});dl.value=ms.deadline||'';dl.addEventListener('input',()=>tfd.milestones[i].deadline=dl.value);
+        const st=Sel({css:'width:76px;padding:7px 5px;font-size:12px'});MS_ST.forEach(s=>{const o=h('option',{value:s},s);if(ms.status===s)o.selected=true;st.appendChild(o);});st.addEventListener('change',()=>tfd.milestones[i].status=st.value);
+        const rm=Bt({cls:'btn-d',onclick:()=>{tfd.milestones.splice(i,1);render();}},'×');
+        row.appendChild(ti);row.appendChild(dl);row.appendChild(st);row.appendChild(rm);w.appendChild(row);
+      });
+      const add=Bt({cls:'btn-g',css:'font-size:11px;margin-top:2px'},'＋ 追加');
+      add.addEventListener('click',()=>{tfd.milestones.push({id:uid(),title:'',deadline:'',status:'未着手'});render();});
+      w.appendChild(add);
+    };
+    render();return fld('マイルストーン',w,true);
+  };
+  const kpiEditor=()=>{
+    if(!tfd.metrics)tfd.metrics=[];
+    const w=D({});
+    const render=()=>{
+      w.innerHTML='';
+      tfd.metrics.forEach((k,i)=>{
+        const row=D({cls:'kpi-row-edit'});
+        const ni=In({type:'text',placeholder:'指標名'});ni.value=k.name||'';ni.addEventListener('input',()=>tfd.metrics[i].name=ni.value);
+        const ti=In({type:'text',placeholder:'目標値',css:'max-width:130px'});ti.value=k.target||'';ti.addEventListener('input',()=>tfd.metrics[i].target=ti.value);
+        const rm=Bt({cls:'btn-d',onclick:()=>{tfd.metrics.splice(i,1);render();}},'×');
+        row.appendChild(ni);row.appendChild(ti);row.appendChild(rm);w.appendChild(row);
+      });
+      const add=Bt({cls:'btn-g',css:'font-size:11px;margin-top:2px'},'＋ 追加');
+      add.addEventListener('click',()=>{tfd.metrics.push({id:uid(),name:'',target:''});render();});
+      w.appendChild(add);
+    };
+    render();return fld('KPI / 数字',w,true);
+  };
+  return [
+    tI('テーマ名','title','例：2億円プロジェクト','text',false,tfd),
+    D({cls:'g2'},selF('カテゴリ','category',THEME_CATS,tfd),selF('ステータス','status',THEME_STATUS,tfd)),
+    D({cls:'g2'},selF('優先度','priority',THEME_PRI,tfd),tI('目標日','targetDate','','date',true,tfd)),
+    taF('概要（一言）','summary','','50',false,tfd),
+    taF('目的','purpose','何を実現したいか',60,true,tfd),
+    taF('現在の状態','currentState','今どこまで来ているか',60,true,tfd),
+    taF('次の一手','nextAction','次に何をするか',55,true,tfd),
+    D({cls:'tf-sect'},'マイルストーン・数字'),
+    msEditor(),kpiEditor(),
+    D({cls:'tf-sect'},'感情・リスク'),
+    tI('感情状態','emotionState','ワクワク / 重い / 不安 など','text',true,tfd),
+    taF('リスク','risks','警戒していること',50,true,tfd),
+  ];
+}
+
+function openThemeForm(existing){
+  const tfd=existing?JSON.parse(JSON.stringify(existing)):{id:uid(),title:'',category:'戦略',status:'構想中',priority:'A',milestones:[],metrics:[],createdAt:tod()};
+  const main=document.getElementById('body');main.innerHTML='';
+  const wrap=D({cls:'form-wrap fu'});
+  const bk=Bt({cls:'btn-s',css:'margin-bottom:20px',onclick:()=>ra()},'← 戻る');
+  wrap.appendChild(bk);
+  const card=D({css:'background:var(--sf);border:1px solid var(--bd);border-radius:5px;padding:24px 28px'});
+  buildThemeForm(tfd).forEach(x=>x&&card.appendChild(x));
+  wrap.appendChild(card);
+  const acts=D({css:'display:flex;gap:8px;margin-top:20px;margin-bottom:40px'});
+  const sv=Bt({cls:'btn-p'},existing?'更新':'追加');
+  sv.addEventListener('click',async()=>{if(!tfd.title?.trim()){alert('テーマ名を入力してください');return;}tfd.updatedAt=tod();if(!tfd.createdAt)tfd.createdAt=tod();await dbput('themes',tfd);const i=S.themes.findIndex(x=>x.id===tfd.id);if(i>=0)S.themes[i]=tfd;else S.themes.push(tfd);ra();});
+  acts.appendChild(sv);
+  if(existing){const dl=Bt({cls:'btn-d',css:'margin-left:auto',onclick:async()=>{if(!confirm('削除しますか？'))return;await dbdel('themes',tfd.id);S.themes=S.themes.filter(x=>x.id!==tfd.id);ra();}},  '削除');acts.appendChild(dl);}
+  const cn=Bt({cls:'btn-s',onclick:()=>ra()},'キャンセル');acts.appendChild(cn);
+  wrap.appendChild(acts);
+  main.appendChild(wrap);
+}
+
+/* ── Log form ── */
+function buildLogForm(type){
+  const hint=D({cls:'hint'},'必要なものだけ記録してください。全部埋める必要はありません。');
+  const required=[D({cls:'g2'},tI('タイトル','title','ひと言で'),tI('日付','date','','date')),taF('教訓','lesson','腹落ちした学び。一言でも可。',70),taF('次の実験','nextExp','「〜してみる」で書く',55)];
+  const optional=[urlF('gdocUrl'),thChipsF('themes'),tI('関連人物','people','名前をカンマ区切り','text',true),tI('未解決の問い','question','まだ答えが出ていない問い','text',true),tI('タグ','tags','カンマ区切り','text',true)];
+  let detail=[];
+  if(type==='note'||type==='moya'){detail=[chipsF('感情','emotions',EMOTIONS,false,true),chipsF('バイアス','biases',BIASES,false,true),taF('身体感覚','body','胸・喉・胃・頭など',50,true),tI('メタファー','metaphor','この経験を一言で','text',true)];}
+  if(type==='moya')detail.unshift(taF('何にモヤモヤしたか','moya_what','違和感・引っかかり',55,true));
+  if(type==='vision'){optional.push(taF('VISIONの変化','vision_change','',55,true),taF('変えること','next_change','',50,true),taF('捨てること','next_drop','',50,true));detail=[...detail,sldrF('確信度','confidence'),sldrF('違和感','discomfort')];}
+  if(type==='strategy'){optional.push(taF('進捗','progress','',55,true),chipsF('判断','decision_choice',['継続','修正','撤退','保留'],true,true));detail=[...detail,taF('動機の源','motivation','',55,true)];}
+  if(type==='philosophy'){
+    return [
+      hint,
+      D({cls:'g2'},tI('タイトル','title','ひと言で'),tI('日付','date','','date')),
+      taF('当時の思想','old_belief','その頃、何を信じていたか',70),
+      taF('何が変わったか','what_changed','どう変わったか。一言でも可。',70),
+      taF('転換点','pivot','何がきっかけで変わったか',60),
+      taF('今の理解','new_belief','今、どう理解しているか',70),
+      D({css:'border-top:1px solid var(--bd);margin:16px 0'}),
+      taF('残したい思想','keep_belief','今後も持ち続けたいこと',55,true),
+      taF('捨てたい思想','drop_belief','手放したいこと',55,true),
+      taF('今のVISIONとの接続','vision_connection','このテーマがVISIONのどこと繋がるか',55,true),
+      thChipsF('themes'),
+      tI('関連人物','people','名前をカンマ区切り','text',true),
+      urlF('gdocUrl'),
+      tI('タグ','tags','カンマ区切り','text',true),
+    ].filter(Boolean);
+  }
+  return [hint,...required,D({css:'border-top:1px solid var(--bd);margin:16px 0'}),...optional,detail.length?expandSec('詳細（感情・バイアス）',detail):null].filter(Boolean);
+}
+
+function renderLogForm(type){
+  const meta=TM[type]||{label:'',ac:'var(--go)'};
+  const wrap=D({cls:'form-wrap fu'});
+  const hdr=D({cls:'form-hdr'});
+  const bk=Bt({cls:'btn-s',onclick:()=>{S.forming=null;S.editing=null;S.fd={};ra();}},'← 戻る');
+  hdr.appendChild(bk);
+  hdr.appendChild(D({},D({css:'font-size:11px;color:var(--di);margin-bottom:2px'},meta.label),D({css:`font-size:14px;color:${meta.ac}`},'深く考えた後に記録する')));
+  wrap.appendChild(hdr);
+  const card=D({css:'background:var(--sf);border:1px solid var(--bd);border-radius:5px;padding:24px 28px'});
+  buildLogForm(type).forEach(x=>x&&card.appendChild(x));
+  wrap.appendChild(card);
+  const acts=D({css:'display:flex;gap:8px;margin-top:16px;margin-bottom:40px'});
+  const sv=Bt({cls:'btn-p',onclick:()=>saveLog('published')},'保存');
+  const dr=Bt({cls:'btn-g',onclick:()=>saveLog('draft')},'下書き');
+  acts.appendChild(sv);acts.appendChild(dr);wrap.appendChild(acts);
+  return wrap;
+}
+
+async function saveLog(status){
+  const r={...S.fd,status,id:S.fd.id||uid(),date:S.fd.date||tod(),type:S.forming||S.editing?.type};
+  await dbput('logs',r);
+  const i=S.logs.findIndex(x=>x.id===r.id);if(i>=0)S.logs[i]=r;else S.logs.unshift(r);
+  S.logs.sort((a,b)=>b.date.localeCompare(a.date));
+  S.forming=null;S.editing=null;S.fd={};ra();
+}
+
+/* ── Log card ── */
+function logCard(r){
+  const meta=TM[r.type]||{};
+  const item=D({cls:'log-item'});
+  const dr=D({cls:'log-date'});
+  dr.appendChild(document.createTextNode(r.date));
+  dr.appendChild(Sp({cls:'tbadge',css:`background:${meta.bg||'#f5f5f5'};color:${meta.ac||'#888'}`},meta.label||r.type));
+  if(r.status==='draft')dr.appendChild(Sp({cls:'draft-badge'},'下書き'));
+  if(r.gdocUrl)dr.appendChild(Sp({cls:'gdoc-ok'},'● GDoc'));else dr.appendChild(Sp({cls:'gdoc-no'},'○ GDoc'));
+  item.appendChild(dr);
+  item.appendChild(D({cls:'log-title'},r.title||'（無題）'));
+  if(r.lesson)item.appendChild(D({cls:'log-lesson'},r.lesson.length>120?r.lesson.slice(0,120)+'…':r.lesson));
+  if(r.question)item.appendChild(D({cls:'log-q'},'？ '+(r.question.length>80?r.question.slice(0,80)+'…':r.question)));
+  if(r.nextExp)item.appendChild(D({cls:'log-exp'},'▶ '+(r.nextExp.length>80?r.nextExp.slice(0,80)+'…':r.nextExp)));
+  // Philosophy extras
+  if(r.type==='philosophy'){
+    if(r.pivot)item.appendChild(Sp({cls:'phil-pivot'},'転換点: '+r.pivot.slice(0,60)));
+    if(r.keep_belief)item.appendChild(D({cls:'phil-keep'},'残す: '+r.keep_belief.slice(0,80)+(r.keep_belief.length>80?'…':'')));
+    if(r.drop_belief)item.appendChild(D({cls:'phil-drop'},'手放す: '+r.drop_belief.slice(0,80)+(r.drop_belief.length>80?'…':'')));
+  }
+  const acts=D({cls:'log-acts'});
+  if(r.gdocUrl){const gl=h('a',{href:r.gdocUrl,target:'_blank',cls:'btn-g',style:'display:inline-flex;align-items:center;gap:4px',onclick:e=>e.stopPropagation()},'GDocを開く');acts.appendChild(gl);}
+  acts.appendChild(D({css:'flex:1'}));
+  const ed=Bt({cls:'btn-g',onclick:e=>{e.stopPropagation();S.editing=r;S.forming=null;S.fd=JSON.parse(JSON.stringify(r));ra();}},'編集');
+  const dl=Bt({cls:'btn-d',onclick:async e=>{e.stopPropagation();if(!confirm('削除しますか？'))return;await dbdel('logs',r.id);S.logs=S.logs.filter(x=>x.id!==r.id);ra();}},'削除');
+  acts.appendChild(ed);acts.appendChild(dl);item.appendChild(acts);
+  return item;
+}
+
+/* ── HOME ── */
+function renderHome(){
+  const f=document.createDocumentFragment();
+  const pub=S.logs.filter(r=>r.status!=='draft');
+
+  // VISION
+  const vblock=D({cls:'vision-block'});
+  vblock.appendChild(D({cls:'sec-lbl'},'VISION 2026'));
+  vblock.appendChild(D({cls:'vision-text'},
+    '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。\n'+
+    '安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、\n'+
+    '仲間と目指す確信のある未来を選ぶ。'
+  ));
+  const vexp=D({cls:'vision-expand'});
+  vexp.appendChild(Sp({css:'font-size:10px'},'▶'));
+  vexp.appendChild(document.createTextNode('  原則・指針を見る'));
+  const vdet=D({cls:'vision-detail'});
+  [['1','成長','未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。'],['2','愛','周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。'],['3','誠実','自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。'],['4','寛容','個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。']].forEach(([n,kw,tx])=>{const row=D({cls:'vision-principle'});row.appendChild(Sp({cls:'vp-num'},n));row.appendChild(Sp({cls:'vp-kw'},kw));row.appendChild(Sp({cls:'vp-text'},tx));vdet.appendChild(row);});
+  [['1','確信','頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。油断せず備える。'],['2','仲間','弱みも未来も共有し、自立し、責任を持って、前向きに、同じゴールに向かい仮説検証ができる人を大切にする。'],['3','健康','心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。']].forEach(([n,kw,tx])=>{const row=D({cls:'vision-principle'});row.appendChild(Sp({cls:'vp-num'},n));row.appendChild(Sp({cls:'vp-kw'},kw));row.appendChild(Sp({cls:'vp-text'},tx));vdet.appendChild(row);});
+  const veBtn=Bt({cls:'btn-g',css:'margin-top:12px;font-size:11px'},'VISIONを編集');veBtn.addEventListener('click',e=>{e.stopPropagation();renderVisionEdit();});vdet.appendChild(veBtn);
+  vblock.appendChild(vexp);vblock.appendChild(vdet);
+  vexp.addEventListener('click',()=>{const open=vdet.classList.toggle('open');vexp.children[0].textContent=open?'▼':'▶';});
+  f.appendChild(vblock);
+
+  // Themes
+  const priOrd={S:0,A:1,B:2,C:3};
+  const stOrd={実行中:0,構想中:1,保留:2,完了:3,撤退:4};
+  const themes=[...S.themes].sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9)||(stOrd[a.status]||9)-(stOrd[b.status]||9));
+  const tsec=D({cls:'sec'});
+  const tHd=D({css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:16px'});
+  tHd.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0'},'探求テーマ'));
+  const addTh=Bt({cls:'btn-g'},'＋ テーマ追加');addTh.addEventListener('click',()=>openThemeForm(null));
+  tHd.appendChild(addTh);tsec.appendChild(tHd);
+  if(!themes.length){tsec.appendChild(D({cls:'empty'},'テーマを追加してください'));}
+  else{
+    const grid=D({cls:'theme-grid'});
+    themes.forEach(t=>{
+      const relLogs=pub.filter(r=>(r.themes||[]).includes(t.id));
+      const card=D({cls:'tcard'});
+      const main2=D({cls:'tcard-main'});
+      main2.appendChild(D({cls:'tcard-name'},t.title));
+      const meta2=D({cls:'tcard-meta'});
+      if(t.status)meta2.appendChild(Sp({cls:'tcard-status '+stClass(t.status)},t.status));
+      if(t.priority==='S')meta2.appendChild(Sp({css:'font-size:10px;color:#9a7000;font-family:var(--mono)'},'S'));
+      main2.appendChild(meta2);
+      if(t.summary)main2.appendChild(D({cls:'tcard-summary'},t.summary));
+      card.appendChild(main2);
+      // Expandable detail
+      const det=D({cls:'tcard-detail'});
+      if(t.purpose){det.appendChild(D({cls:'tcard-dl'},'目的'));det.appendChild(D({css:'font-size:13px;color:var(--mu);line-height:1.7;margin-bottom:8px'},t.purpose));}
+      if(t.currentState){det.appendChild(D({cls:'tcard-dl'},'現在地'));det.appendChild(D({css:'font-size:13px;color:var(--mu);line-height:1.7;margin-bottom:8px'},t.currentState));}
+      if(t.nextAction){det.appendChild(D({cls:'tcard-dl'},'次の一手'));det.appendChild(D({css:'font-size:13px;color:var(--go);line-height:1.7;margin-bottom:8px'},t.nextAction));}
+      const ms=(t.milestones||[]).filter(m=>m.title);
+      if(ms.length){det.appendChild(D({cls:'tcard-dl'},'マイルストーン'));const ml=D({css:'margin-bottom:8px'});ms.forEach(m=>{const st=m.status||'未着手';ml.appendChild(Sp({cls:'ms-pill '+(st==='完了'?'ms-done':st==='実行中'?'ms-doing':'ms-todo')},(st==='完了'?'✓':st==='実行中'?'▶':'○')+' '+m.title));});det.appendChild(ml);}
+      const kpis=(t.metrics||[]).filter(k=>k.name);
+      if(kpis.length){det.appendChild(D({cls:'tcard-dl'},'数字目標'));kpis.forEach(k=>{const kr=D({cls:'kpi-row'});kr.appendChild(Sp({cls:'kpi-name'},k.name+' '));kr.appendChild(document.createTextNode(k.target));det.appendChild(kr);});}
+      if(relLogs.length){det.appendChild(D({cls:'tcard-dl'},'関連振り返り'));det.appendChild(D({css:'font-size:13px;color:var(--mu);margin-bottom:8px'},relLogs.length+'件'));}
+      const qs2=relLogs.filter(r=>r.question?.trim()).length;
+      if(qs2){det.appendChild(D({css:'font-size:12px;color:var(--bl);margin-bottom:4px'},'問い '+qs2+'件'));}
+      const acts2=D({cls:'tcard-acts'});
+      const editBtn=Bt({cls:'btn-g',css:'font-size:11px'},'編集');editBtn.addEventListener('click',e=>{e.stopPropagation();openThemeForm(t);});acts2.appendChild(editBtn);
+      det.appendChild(acts2);
+      card.appendChild(det);
+      main2.addEventListener('click',()=>{det.classList.toggle('open');});
+      grid.appendChild(card);
+    });
+    tsec.appendChild(grid);
+  }
+  f.appendChild(tsec);
+
+  // Record buttons
+  f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:12px'},'記録する'));
+  const rec=D({cls:'rec-grid',css:'margin-bottom:32px'});
+  Object.entries(TM).forEach(([id,meta])=>{
+    const b=D({cls:'rec-btn'});
+    b.appendChild(Sp({cls:'rec-btn-lbl'},meta.label));
+    b.appendChild(Sp({cls:'rec-btn-desc'},'記録'));
+    b.addEventListener('click',()=>{S.forming=id;S.fd={id:uid(),type:id,date:tod()};ra();});
+    rec.appendChild(b);
+  });
+  f.appendChild(rec);
+
+  // Recent logs
+  if(pub.length){
+    f.appendChild(D({cls:'sec-lbl'},'最近の振り返り'));
+    pub.slice(0,5).forEach(r=>f.appendChild(logCard(r)));
+    if(pub.length>5){const more=Bt({cls:'more-lnk',onclick:()=>{S.tab='log';ra();updateNav();}},'→ すべて見る（'+pub.length+'件）');f.appendChild(more);}
+  }
+
+  // Questions
+  const qs=pub.filter(r=>r.question?.trim());
+  if(qs.length){
+    f.appendChild(D({cls:'sec-lbl',css:'margin-top:32px'},'未解決の問い'));
+    qs.slice(0,5).forEach(r=>{const qi=D({cls:'q-item'});qi.appendChild(document.createTextNode('？ '+r.question));qi.appendChild(D({cls:'q-from'},r.date+' / '+(r.title||'')));f.appendChild(qi);});
+    if(qs.length>5){const more=Bt({cls:'more-lnk',onclick:()=>{S.tab='dash';S._dashTab='questions';ra();updateNav();}},'→ すべて見る');f.appendChild(more);}
+  }
+
+  return f;
+}
+
+/* ── Vision edit ── */
+function renderVisionEdit(){
+  const main=document.getElementById('body');main.innerHTML='';
+  const wrap=D({cls:'form-wrap fu'});
+  const bk=Bt({cls:'btn-s',css:'margin-bottom:20px',onclick:()=>ra()},'← 戻る');wrap.appendChild(bk);
+  const card=D({css:'background:var(--sf);border:1px solid var(--bd);border-radius:5px;padding:24px 28px'});
+  const els={};
+  [['vision','VISION'],['yearGoal','年末ゴール']].forEach(([k,l])=>{const e=Ta({css:'min-height:60px;width:100%'});e.value=S.vision[k]||'';els[k]=e;card.appendChild(fld(l,e,true));});
+  const acts=D({css:'display:flex;gap:8px;margin-top:6px'});
+  const sv=Bt({cls:'btn-p',onclick:async()=>{['vision','yearGoal'].forEach(k=>S.vision[k]=els[k].value);await dbput('settings',{id:'vision',value:S.vision});ra();}},'保存');
+  const cn=Bt({cls:'btn-s',onclick:()=>ra()},'キャンセル');
+  acts.appendChild(sv);acts.appendChild(cn);card.appendChild(acts);wrap.appendChild(card);main.appendChild(wrap);
+}
+
+/* ── LOG tab ── */
+function renderLog(){
+  const f=document.createDocumentFragment();
+  const hd=D({css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px'});
+  hd.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0'},'ログ（'+S.logs.length+'件）'));
+  const fc=D({css:'display:flex;gap:4px;flex-wrap:wrap'});
+  let ft='all';const fB={};
+  ['all',...Object.keys(TM)].forEach(t=>{const lb=t==='all'?'すべて':TM[t]?.label||t;const c=Bt({cls:'chip'+(t==='all'?' on':'')},lb);fB[t]=c;c.addEventListener('click',()=>{ft=t;Object.entries(fB).forEach(([k,v])=>v.className='chip'+(k===t?' on':''));upd();});fc.appendChild(c);});
+  hd.appendChild(fc);f.appendChild(hd);
+  const lw=D({});f.appendChild(lw);
+  function upd(){lw.innerHTML='';const rs=ft==='all'?S.logs:S.logs.filter(r=>r.type===ft);if(!rs.length){lw.appendChild(D({cls:'empty'},'記録がありません'));return;}rs.forEach(r=>lw.appendChild(logCard(r)));}
+  upd();return f;
+}
+
+/* ── EXP tab ── */
+function renderExp(){
+  const f=document.createDocumentFragment();
+  f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:20px'},'実験ボード'));
+  const pub=S.logs.filter(r=>r.status!=='draft'&&r.nextExp?.trim());
+  const cols=[['未着手',pub.filter(r=>!r.expStatus||r.expStatus==='todo'),'todo'],['実行中',pub.filter(r=>r.expStatus==='doing'),'doing'],['完了',pub.filter(r=>r.expStatus==='done'),'done']];
+  const board=D({cls:'exp-board'});
+  cols.forEach(([title,items,st])=>{
+    const col=D({cls:'exp-col'});
+    const th=D({cls:'exp-col-hd'});th.appendChild(document.createTextNode(title));th.appendChild(Sp({cls:'exp-cnt'},String(items.length)));col.appendChild(th);
+    if(!items.length)col.appendChild(D({cls:'empty'},'なし'));
+    items.forEach(r=>{
+      const it=D({cls:'exp-item'+(st==='doing'?' doing':st==='done'?' done':'')});
+      it.appendChild(D({},r.nextExp));it.appendChild(D({cls:'exp-src'},r.date+' / '+(r.title||'')));
+      const btns=D({cls:'exp-btns'});
+      if(st!=='todo'){const b=Bt({cls:'exp-btn'},'未着手');b.addEventListener('click',async()=>{r.expStatus='todo';await dbput('logs',r);const i=S.logs.findIndex(x=>x.id===r.id);if(i>=0)S.logs[i]=r;ra();});btns.appendChild(b);}
+      if(st!=='doing'){const b=Bt({cls:'exp-btn',css:'color:var(--go);border-color:var(--go-bd)'},'実行中');b.addEventListener('click',async()=>{r.expStatus='doing';await dbput('logs',r);const i=S.logs.findIndex(x=>x.id===r.id);if(i>=0)S.logs[i]=r;ra();});btns.appendChild(b);}
+      if(st!=='done'){const b=Bt({cls:'exp-btn',css:'color:var(--bl);border-color:#b0c0e0'},'完了');b.addEventListener('click',async()=>{r.expStatus='done';await dbput('logs',r);const i=S.logs.findIndex(x=>x.id===r.id);if(i>=0)S.logs[i]=r;ra();});btns.appendChild(b);}
+      it.appendChild(btns);col.appendChild(it);
+    });
+    board.appendChild(col);
+  });
+  f.appendChild(board);
+  const decs=S.logs.filter(r=>r.decision?.trim()&&r.status!=='draft');
+  if(decs.length){
+    f.appendChild(D({cls:'sec-lbl',css:'margin-top:8px;margin-bottom:16px'},'意思決定ログ'));
+    decs.forEach(r=>{const row=D({css:'display:flex;gap:14px;padding:10px 0;border-bottom:1px solid var(--bd);font-size:14px'});row.appendChild(Sp({css:'font-size:10px;color:var(--di);font-family:var(--mono);white-space:nowrap;padding-top:3px'},r.date));const rt=D({css:'flex:1'});rt.appendChild(D({},r.decision));rt.appendChild(D({css:'font-size:11px;color:var(--di);margin-top:2px'},r.title||''));row.appendChild(rt);f.appendChild(row);});
+  }
+  return f;
+}
+
+/* ── DASH tab ── */
+function renderDash(){
+  const f=document.createDocumentFragment();
+  let dashTab=S._dashTab||'lessons';
+  const tabBar=D({cls:'dash-tabs'});
+  const tabs=[['lessons','教訓'],['questions','問い'],['metaphors','メタファー'],['philosophy','思想変化']];
+  const tabBtns={};
+  tabs.forEach(([id,lb])=>{const tb=Bt({cls:'dash-tab'+(dashTab===id?' on':'')},lb);tabBtns[id]=tb;tb.addEventListener('click',()=>{dashTab=id;S._dashTab=id;Object.entries(tabBtns).forEach(([k,v])=>v.className='dash-tab'+(k===id?' on':''));tabBody.innerHTML='';renderDashTab(tabBody,dashTab);});tabBar.appendChild(tb);});
+  f.appendChild(tabBar);
+  const pub=S.logs.filter(r=>r.status!=='draft');
+  const tabBody=D({});f.appendChild(tabBody);
+  function renderDashTab(container,tab){
+    if(tab==='lessons'){
+      const ls=pub.filter(r=>r.lesson?.trim());
+      container.appendChild(D({cls:'sec-lbl'},'よく出る教訓（'+ls.length+'件）'));
+      if(!ls.length){container.appendChild(D({cls:'empty'},'まだなし'));return;}
+      ls.forEach(r=>{const it=D({cls:'learn-item'});it.appendChild(document.createTextNode(r.lesson));it.appendChild(D({cls:'learn-from'},r.date+' / '+(r.title||'')));container.appendChild(it);});
+    }else if(tab==='questions'){
+      const qs=pub.filter(r=>r.question?.trim());
+      container.appendChild(D({cls:'sec-lbl'},'未解決の問い（'+qs.length+'件）'));
+      if(!qs.length){container.appendChild(D({cls:'empty'},'まだなし'));return;}
+      qs.forEach(r=>{const qi=D({cls:'q-item'});qi.appendChild(document.createTextNode('？ '+r.question));qi.appendChild(D({cls:'q-from'},r.date+' / '+(r.title||'')));container.appendChild(qi);});
+    }else if(tab==='metaphors'){
+      const ms=pub.filter(r=>r.metaphor?.trim());
+      container.appendChild(D({cls:'sec-lbl'},'よく出るメタファー（'+ms.length+'件）'));
+      if(!ms.length){container.appendChild(D({cls:'empty'},'まだなし'));return;}
+      ms.forEach(r=>{const it=D({cls:'learn-item'});it.appendChild(Sp({cls:'learn-exp'},r.metaphor));it.appendChild(D({cls:'learn-from'},r.date+' / '+(r.title||'')));container.appendChild(it);});
+    }else if(tab==='philosophy'){
+      const ps=pub.filter(r=>r.type==='philosophy').sort((a,b)=>a.date.localeCompare(b.date));
+      container.appendChild(D({cls:'sec-lbl'},'思想タイムライン（'+ps.length+'件）'));
+      if(!ps.length){container.appendChild(D({cls:'empty'},'思想変化の記録がまだありません'));return;}
+      const tl=D({cls:'tl-wrap'});
+      ps.forEach(r=>{
+        const item=D({cls:'tl-item'});
+        item.appendChild(D({cls:'tl-dot'}));
+        item.appendChild(D({cls:'tl-date'},r.date+(r.title?' — '+r.title:'')));
+        if(r.what_changed)item.appendChild(D({cls:'tl-change'},r.what_changed));
+        if(r.pivot)item.appendChild(Sp({cls:'phil-pivot',css:'margin-top:6px;display:inline-flex'},'転換点: '+r.pivot));
+        if(r.keep_belief){
+          item.appendChild(D({cls:'phil-lbl'},'残す'));
+          item.appendChild(D({cls:'phil-keep'},r.keep_belief));
+        }
+        if(r.drop_belief){
+          item.appendChild(D({cls:'phil-lbl'},'手放す'));
+          item.appendChild(D({cls:'phil-drop'},r.drop_belief));
+        }
+        tl.appendChild(item);
+      });
+      container.appendChild(tl);
+    }
+  }
+  renderDashTab(tabBody,dashTab);
+  return f;
+}
+
+/* ── SEARCH tab ── */
+function renderSearch(){
+  const f=document.createDocumentFragment();
+  f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:16px'},'検索'));
+  const sw=D({cls:'srch-wrap'});sw.appendChild(Sp({cls:'srch-ico'},'🔍'));
+  const si=In({type:'text',placeholder:'教訓・問い・実験・人物・テーマ・タグ...',css:'padding-left:32px'});
+  sw.appendChild(si);f.appendChild(sw);
+  const cnt=D({css:'font-size:12px;color:var(--di);margin-bottom:16px'});f.appendChild(cnt);
+  const rw=D({});f.appendChild(rw);
+  function upd(){const q=si.value.toLowerCase().trim();let rs=[...S.logs];if(q){rs=rs.filter(r=>{const thN=(r.themes||[]).map(id=>S.themes.find(t=>t.id===id)?.title||'').join(' ');const tx=[r.title,r.lesson,r.nextExp,r.question,r.people,r.tags,r.moya_what,r.metaphor,r.old_belief,r.what_changed,r.keep_belief,r.drop_belief,r.pivot,r.new_belief,thN,...(r.emotions||[]),...(r.biases||[])].filter(Boolean).join(' ').toLowerCase();return tx.includes(q);});}cnt.textContent=rs.length+'件';rw.innerHTML='';rs.forEach(r=>rw.appendChild(logCard(r)));}
+  si.addEventListener('input',upd);upd();return f;
+}
+
+/* ── VISION2026 strip ── */
+const VD={vision:['守りの総合支援を通して、挑戦する人が成長できる社会をつくる。','安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。'],principles:[{title:'成長',text:'未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。'},{title:'愛',text:'周囲の成長と可能性を気にかけ、信頼して渡す。たくさん与えて心でつながる。'},{title:'誠実',text:'自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。'},{title:'寛容',text:'個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。'}],directions:[{title:'確信',text:'頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。'},{title:'仲間',text:'弱みも未来も共有し、自立し、責任を持って、同じゴールに向かい仮説検証ができる人を大切にする。'},{title:'健康',text:'心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。'}]};
+function renderV26(){const area=document.getElementById('v26');if(!area)return;const seed=parseInt(new Date().toISOString().slice(0,10).replace(/-/g,''))%100;const types=['vision','principle','direction'];const type=types[seed%3];let inner='';if(type==='vision'){const item=VD.vision[seed%VD.vision.length];inner=`<span class="v26t">VISION</span><span class="v26b">${item}</span>`;}else if(type==='principle'){const item=VD.principles[seed%VD.principles.length];inner=`<span class="v26t">原則</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}else{const item=VD.directions[seed%VD.directions.length];inner=`<span class="v26t">指針</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}area.innerHTML=`<div class="v26c">${inner}</div>`;}
+
+/* ── Main render ── */
+function ra(){
+  const main=document.getElementById('body');main.innerHTML='';
+  if(S.forming||S.editing){main.appendChild(renderLogForm(S.forming||S.editing?.type));return;}
+  const wrap=D({cls:'fu'});
+  if(S.tab==='home')wrap.appendChild(renderHome());
+  else if(S.tab==='log')wrap.appendChild(renderLog());
+  else if(S.tab==='exp')wrap.appendChild(renderExp());
+  else if(S.tab==='dash')wrap.appendChild(renderDash());
+  else if(S.tab==='search')wrap.appendChild(renderSearch());
+  main.appendChild(wrap);
+}
+function updateNav(){document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));}
+document.getElementById('nav').addEventListener('click',e=>{const t=e.target.dataset.tab;if(!t)return;S.tab=t;S.forming=null;S.editing=null;updateNav();ra();});
+
+/* ── Export / Import ── */
+document.getElementById('btn-exp').addEventListener('click',()=>{const d=JSON.stringify({version:7,vision:S.vision,themes:S.themes,logs:S.logs,exportedAt:new Date().toISOString()},null,2);const a=document.createElement('a');a.href='data:application/json,'+encodeURIComponent(d);a.download=`reflect-os-${tod()}.json`;a.click();});
+document.getElementById('imp').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=async ev=>{try{const d=JSON.parse(ev.target.result);if(d.vision){await dbput('settings',{id:'vision',value:d.vision});S.vision=d.vision;}for(const t of(d.themes||[]))await dbput('themes',t);const allL=d.logs||d.reflections||[];for(const r of allL)await dbput('logs',r);S.themes=d.themes||[];S.logs=allL.sort((a,b)=>b.date.localeCompare(a.date));alert('インポート完了');ra();}catch(err){alert('エラー: '+err.message);}};reader.readAsText(f);});
+
+/* ── Default themes ── */
+const DEFAULT_THEMES=[
+  {id:'th_01',title:'2億円プロジェクト',category:'プロジェクト',summary:'新執行体制への移行',purpose:'組織の意思決定構造を変え、2億円規模の事業基盤をつくる',status:'実行中',priority:'S',startDate:'2026-01-01',targetDate:'2026-10-31',milestones:[{id:'m01a',title:'完了スケジュール作成',deadline:'2026-01-31',status:'完了'},{id:'m01b',title:'完了',deadline:'2026-07-21',status:'実行中'},{id:'m01c',title:'新運営開始',deadline:'2026-10-31',status:'未着手'}],metrics:[{id:'k01a',name:'完了期限',target:'7月21日'},{id:'k01b',name:'新運営開始',target:'10月'}],currentState:'7月21日完了に向けて進行中',nextAction:'新運営開始準備',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
+  {id:'th_02',title:'仲間の定義決め・仲間探し',category:'組織',summary:'仲間の定義を文書化し、採用・アサインを進める',purpose:'同じゴールに向かえる仲間を定義し、実際に一緒に仕事できる体制をつくる',status:'実行中',priority:'A',startDate:'2026-01-01',targetDate:'2026-10-31',milestones:[{id:'m02a',title:'仲間の定義文書化',deadline:'2026-03-31',status:'完了'},{id:'m02b',title:'初回アサイン／採用',deadline:'2026-06-30',status:'実行中'},{id:'m02c',title:'パートナーとして一緒に仕事をする',deadline:'2026-10-31',status:'未着手'}],metrics:[],currentState:'初回アサイン・採用を進行中',nextAction:'採用候補者との面談',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
+  {id:'th_03',title:'意思決定するための数字を変える',category:'財務',summary:'経営の主指標を再設計し、月次運用を確立する',purpose:'感覚ではなく数字で意思決定できる経営体制をつくる',status:'実行中',priority:'A',startDate:'2026-04-01',targetDate:'2026-06-30',milestones:[{id:'m03a',title:'指標定義・設計',deadline:'2026-04-30',status:'完了'},{id:'m03b',title:'月次運用開始',deadline:'2026-05-31',status:'実行中'},{id:'m03c',title:'経営会議の主指標化',deadline:'2026-06-30',status:'未着手'}],metrics:[],currentState:'月次運用を開始',nextAction:'経営会議での主指標採用',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
+  {id:'th_04',title:'M&A実行',category:'戦略',summary:'企業価値算定・PMI習得からクロージングまで',purpose:'M&Aを通じて事業規模と可能性を拡大する',status:'実行中',priority:'A',startDate:'2026-01-01',targetDate:'2026-12-31',milestones:[{id:'m04a',title:'企業価値算定・PMI勉強',deadline:'2026-03-31',status:'完了'},{id:'m04b',title:'ロングリスト確定',deadline:'2026-04-30',status:'完了'},{id:'m04c',title:'DD開始',deadline:'2026-07-31',status:'実行中'},{id:'m04d',title:'1件目クロージング',deadline:'2026-09-30',status:'未着手'},{id:'m04e',title:'PMI完了',deadline:'2026-12-31',status:'未着手'}],metrics:[],currentState:'DD開始フェーズ',nextAction:'DD候補先の絞り込み',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
+  {id:'th_05',title:'3AC 2030 VISION発足',category:'VISION',summary:'2億円PJ完了後に2030VISIONを策定・社内運用開始',purpose:'10年先の会社の方向性を仲間と共有し、全員が同じゴールを向ける状態をつくる',status:'構想中',priority:'B',startDate:'2026-05-01',targetDate:'2026-10-31',milestones:[{id:'m05a',title:'中心メンバー選定完了',deadline:'2026-05-31',status:'実行中'},{id:'m05b',title:'合宿／集中セッション',deadline:'2026-07-31',status:'未着手'},{id:'m05c',title:'2030VISION確定→社内運用開始',deadline:'2026-10-31',status:'未着手'}],metrics:[],currentState:'中心メンバー選定中',nextAction:'メンバー選定を5月末までに完了',visionConnection:'守りの総合支援を通して挑戦する人が成長できる社会をつくるための長期指針',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
+  {id:'th_06',title:'社内新規事業創出',category:'新規事業',summary:'2〜3テーマを同時並行で試行、12月に継続/撤退判断',purpose:'既存事業に依存しない新たな収益の柱をつくる',status:'構想中',priority:'B',startDate:'2026-01-01',targetDate:'2026-12-31',milestones:[{id:'m06a',title:'継続／撤退判断',deadline:'2026-12-31',status:'未着手'}],metrics:[{id:'k06a',name:'同時並行テーマ数',target:'2〜3'},{id:'k06b',name:'初期投資上限（各）',target:'3,000万円'},{id:'k06c',name:'年間売上目標',target:'5,000万〜1億円'},{id:'k06d',name:'撤退判断率',target:'50%以上'}],currentState:'テーマ検討中',nextAction:'テーマ候補の洗い出し',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
+];
+async function seedDefaultThemes(){const existing=await dball('themes');if(existing.length>0)return;for(const t of DEFAULT_THEMES)await dbput('themes',t);S.themes=DEFAULT_THEMES;}
+
+/* ── Boot ── */
+(async()=>{
+  try{const v=await dbget('settings','vision');if(v?.value)S.vision=v.value;}catch(e){}
+  try{
+    await seedDefaultThemes();
+    const priOrd={S:0,A:1,B:2,C:3};
+    const th=await dball('themes');
+    S.themes=th.sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));
+    const lg=await dball('logs');
+    S.logs=lg.sort((a,b)=>b.date.localeCompare(a.date));
+  }catch(e){console.warn(e);}
+  renderV26();ra();
+})();
+</script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js")
+        .then(r => console.log("SW registered:", r))
+        .catch(e => console.log("SW error:", e));
+    }
+  </script>
+</body>
+</html>

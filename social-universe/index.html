@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <link rel="icon" type="image/png" href="./icons/favicon.ico">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ソーシャル・ユニバース</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#1C2B4A; --navy-h:#263d6e; --bg:#EDEEF2;
+  --s50:#f8fafc; --s100:#f1f5f9; --s200:#e2e8f0; --s300:#cbd5e1;
+  --s400:#94a3b8; --s500:#64748b; --s600:#475569; --s700:#334155; --s800:#1e293b;
+  --grow:#22c55e; --grow-l:#dcfce7; --grow-b:#86efac; --grow-d:#15803d;
+  --norm:#64748b; --norm-l:#f1f5f9; --norm-b:#cbd5e1; --norm-d:#334155;
+  --drain:#ef4444; --drain-l:#fee2e2; --drain-b:#fca5a5; --drain-d:#991b1b;
+  --biz:#3b82f6; --biz-l:#eff6ff; --biz-d:#1d4ed8;
+  --learn:#f59e0b; --learn-l:#fffbeb; --learn-d:#92400e;
+  --life:#22c55e; --life-l:#f0fdf4; --life-d:#15803d;
+  --t10:#7c3aed; --t10-l:#ede9fe; --t10-b:#c4b5fd;
+  --dorm:0.25;
+  --rose:#f43f5e; --em:#10b981; --em-l:#d1fae5;
+  --mg-bg:#fefce8; --mg-bd:#fde68a; --mg-ac:#d97706;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--s800);min-height:100vh;font-size:14px;overflow:hidden;}
+
+/* ─── HEADER ─── */
+header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-items:center;justify-content:space-between;height:50px;box-shadow:0 2px 12px rgba(0,0,0,.25);position:relative;z-index:200;}
+.h-title{font-size:15px;font-weight:700;letter-spacing:.04em;}
+.h-sub{font-size:9px;color:#94a3b8;margin-top:1px;}
+.h-actions{display:flex;align-items:center;gap:6px;}
+.hbtn{display:inline-flex;align-items:center;gap:4px;padding:6px 11px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap;}
+.hbtn-add   {background:white;color:var(--navy);}
+.hbtn-add:hover{background:#e2e8f0;}
+.hbtn-ghost {background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.2);}
+.hbtn-ghost:hover{background:rgba(255,255,255,.22);}
+
+/* ─── 3-COL LAYOUT ─── */
+.app-body{display:grid;grid-template-columns:186px 1fr 268px;height:calc(100vh - 50px);overflow:hidden;}
+
+/* ─── LEFT PANEL ─── */
+.left-panel{background:white;border-right:1px solid var(--s200);overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;}
+.lp-sec{margin-bottom:2px;}
+.lp-ttl{font-size:9.5px;font-weight:700;color:var(--s400);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
+.leg-purpose-name{font-size:12px;font-weight:700;margin-bottom:1px;}
+.leg-purpose-q{font-size:10px;color:var(--s500);font-style:italic;line-height:1.4;margin-bottom:2px;}
+.leg-purpose-flow{font-size:10px;color:var(--s400);line-height:1.5;margin-bottom:8px;}
+.leg-biz{color:var(--biz-d);} .leg-learn{color:var(--learn-d);} .leg-life{color:var(--life-d);}
+.leg-sep{border:none;border-top:1px solid var(--s100);margin:6px 0;}
+.leg-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:11px;color:var(--s700);}
+.leg-dot{border-radius:50%;flex-shrink:0;}
+.filter-item{display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer;font-size:12px;color:var(--s700);}
+.filter-item input{width:13px;height:13px;cursor:pointer;accent-color:var(--navy);}
+.filter-sel{width:100%;border:1px solid var(--s200);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--s800);font-family:inherit;background:white;outline:none;margin-top:4px;}
+.filter-sel:focus{border-color:var(--biz);}
+.sort-btn{width:100%;text-align:left;background:var(--s50);border:1px solid var(--s200);border-radius:6px;padding:5px 9px;font-size:11px;color:var(--s600);cursor:pointer;font-family:inherit;margin-bottom:5px;transition:background .15s;}
+.sort-btn:hover{background:var(--s100);}
+.sort-btn.active{background:var(--t10-l);border-color:var(--t10-b);color:var(--t10);}
+
+/* ─── FREE MAP CENTER ─── */
+.map-center{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.map-toolbar{padding:8px 14px;display:flex;align-items:center;justify-content:space-between;background:white;border-bottom:1px solid var(--s200);flex-shrink:0;}
+.map-stats{font-size:11px;color:var(--s400);}
+.map-cols{display:grid;grid-template-columns:repeat(3,1fr);flex:1;overflow:hidden;gap:0;}
+
+/* Column */
+.map-col{position:relative;overflow:hidden;border-right:1px solid var(--s200);display:flex;flex-direction:column;}
+.map-col:last-child{border-right:none;}
+.map-col-hd{padding:10px 14px 8px;flex-shrink:0;border-bottom:1px solid rgba(0,0,0,.06);}
+.map-col-hd-name{font-size:13px;font-weight:700;margin-bottom:2px;}
+.map-col-hd-desc{font-size:10px;color:var(--s500);line-height:1.4;}
+.mch-biz{background:var(--biz-l);} .mch-biz .map-col-hd-name{color:var(--biz-d);}
+.mch-learn{background:var(--learn-l);} .mch-learn .map-col-hd-name{color:var(--learn-d);}
+.mch-life{background:var(--life-l);} .mch-life .map-col-hd-name{color:var(--life-d);}
+
+/* Free canvas */
+.map-canvas{position:relative;flex:1;overflow:hidden;cursor:default;}
+.map-canvas.drag-target{background:rgba(124,58,237,.04);}
+.map-canvas.drag-target-biz  {background:rgba(59,130,246,.05);}
+.map-canvas.drag-target-learn{background:rgba(245,158,11,.05);}
+.map-canvas.drag-target-life {background:rgba(34,197,94,.05);}
+
+/* Person circles on canvas */
+.pc-free{
+  position:absolute;
+  border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:grab;
+  font-size:10px;font-weight:600;text-align:center;
+  line-height:1.15;word-break:break-all;
+  flex-shrink:0;
+  border-style:solid;
+  transition:box-shadow .15s, outline .1s;
+  user-select:none;
+  transform:translate(-50%,-50%);
+  padding:3px;
+  z-index:1;
+}
+.pc-free:hover{box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:10;}
+.pc-free.selected{
+  outline:3px solid var(--t10);
+  outline-offset:3px;
+  box-shadow:0 0 0 6px rgba(124,58,237,.15);
+  z-index:20;
+}
+.pc-free.dragging-now{
+  opacity:.4;cursor:grabbing;z-index:50;
+  box-shadow:0 8px 24px rgba(0,0,0,.25);
+}
+.pc-free.dormant-show{opacity:var(--dorm);filter:grayscale(70%);}
+/* Energy colors */
+.pce-grow {background:var(--grow-l);border-color:var(--grow);color:var(--grow-d);}
+.pce-norm {background:var(--norm-l);border-color:var(--norm-b);color:var(--norm-d);}
+.pce-drain{background:var(--drain-l);border-color:var(--drain);color:var(--drain-d);}
+/* Sizes */
+.pcz-lg{width:72px;height:72px;font-size:10px;}
+.pcz-md{width:52px;height:52px;font-size:9.5px;}
+.pcz-sm{width:38px;height:38px;font-size:9px;}
+/* Frequency border */
+.pcf-h{border-width:3.5px;}
+.pcf-m{border-width:1.8px;}
+.pcf-l{border-width:1.2px;border-style:dashed;}
+/* Badges */
+.pc-star{position:absolute;top:-4px;right:-4px;background:var(--t10);color:white;font-size:7px;border-radius:50%;width:13px;height:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.pc-warn-badge{position:absolute;top:-4px;left:-4px;background:#dc2626;color:white;font-size:7px;border-radius:50%;width:13px;height:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.pc-type-tag{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);background:white;border:1px solid var(--s200);border-radius:8px;padding:1px 5px;font-size:8.5px;font-weight:600;color:var(--s600);white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.06);}
+.pc-vf-badge{position:absolute;bottom:-3px;right:-3px;font-size:8px;width:12px;height:12px;border-radius:50%;background:white;border:1px solid rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;line-height:1;}
+
+/* Drop zone highlight ring inside columns */
+.map-canvas.drop-active::after{
+  content:'';position:absolute;inset:6px;border-radius:10px;
+  border:2px dashed rgba(124,58,237,.4);pointer-events:none;
+}
+
+/* ── CANVAS GUIDE (配置補助・評価軸ではない) ── */
+.canvas-guide{
+  position:absolute;inset:0;pointer-events:none;z-index:0;
+  display:flex;flex-direction:column;
+}
+.cg-zone{
+  flex:1;display:flex;align-items:center;
+  padding:0 10px;position:relative;
+}
+.cg-zone:not(:last-child)::after{
+  content:'';position:absolute;bottom:0;left:8px;right:8px;
+  border-bottom:1px dashed rgba(0,0,0,.07);
+}
+.cg-label{
+  font-size:10px;font-weight:500;color:rgba(0,0,0,.13);
+  letter-spacing:.03em;user-select:none;white-space:nowrap;
+}
+
+/* ─── TOAST ─── */
+.toast{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  background:var(--s800);color:white;padding:8px 18px;border-radius:18px;
+  font-size:12px;font-weight:500;z-index:9999;pointer-events:none;
+  opacity:0;transition:opacity .22s;white-space:nowrap;
+}
+.toast.show{opacity:1;}
+
+/* ─── QAP (right) ─── */
+.qap-col{background:white;border-left:1px solid var(--s200);overflow-y:auto;}
+.qap-empty{padding:22px 16px;text-align:center;}
+.qap-empty-ico{font-size:28px;margin-bottom:8px;}
+.qap-empty-ttl{font-size:12px;font-weight:600;color:var(--s600);margin-bottom:4px;}
+.qap-empty-sub{font-size:11px;color:var(--s400);line-height:1.6;margin-bottom:14px;}
+.qap-today-ttl{font-size:10px;font-weight:700;color:var(--s500);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;text-align:left;}
+.qap-today-card{background:var(--s50);border:1px solid var(--s200);border-radius:8px;padding:8px 10px;margin-bottom:5px;cursor:pointer;text-align:left;}
+.qap-today-card:hover{border-color:var(--t10-b);background:var(--t10-l);}
+.qap-today-nm{font-size:12px;font-weight:600;color:var(--s800);}
+.qap-today-why{font-size:10px;color:var(--s500);margin-top:2px;}
+
+.qap-card{border-bottom:3px solid transparent;}
+.qap-card.e-grow{border-color:var(--grow);}
+.qap-card.e-drain{border-color:var(--drain);}
+.qap-card.e-norm{border-color:var(--norm-b);}
+.qap-hdr{padding:12px 14px 10px;border-bottom:1px solid var(--s100);position:sticky;top:0;background:white;z-index:5;}
+.qap-close{float:right;background:none;border:none;cursor:pointer;color:var(--s400);font-size:16px;line-height:1;margin-top:-2px;font-family:inherit;}
+.qap-close:hover{color:var(--s700);}
+.qap-name{font-size:15px;font-weight:700;color:var(--s800);margin-bottom:5px;}
+.qap-saved{font-size:10px;color:var(--em);font-weight:600;display:none;margin-left:5px;}
+.qap-saved.show{display:inline;}
+.qap-badges{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px;}
+.qap-meta{font-size:10px;color:var(--s500);line-height:1.7;}
+.qap-body{padding:10px 14px;display:flex;flex-direction:column;gap:8px;}
+.qap-fl{display:block;font-size:9.5px;font-weight:600;color:var(--s400);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.qap-inp{width:100%;border:1px solid var(--s200);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--s800);font-family:'Noto Sans JP',sans-serif;background:white;outline:none;transition:border-color .15s;resize:none;}
+.qap-inp:focus{border-color:var(--biz);box-shadow:0 0 0 2px rgba(59,130,246,.1);}
+.qap-inp.urgent{border-color:#fca5a5;}
+.qap-sel{width:100%;border:1px solid var(--s200);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--s800);font-family:inherit;background:white;outline:none;}
+.qap-sel:focus{border-color:var(--biz);}
+.qap-g2{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.qap-chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--s700);cursor:pointer;}
+.qap-chk input{width:13px;height:13px;cursor:pointer;}
+.qap-drain-warn{background:#fef2f2;border:1px solid #fca5a5;border-radius:7px;padding:8px 10px;font-size:11px;color:#7f1d1d;display:flex;align-items:center;gap:6px;}
+.qap-rec{background:#fefce8;border:1px solid #fde68a;border-radius:7px;padding:9px 10px;}
+.qap-rec-ttl{font-size:10px;font-weight:700;color:#92400e;margin-bottom:2px;}
+.qap-rec-txt{font-size:11px;color:#78350f;line-height:1.6;}
+.qap-rec-btn{margin-top:5px;font-size:11px;color:var(--mg-ac);cursor:pointer;font-weight:600;background:none;border:none;font-family:inherit;padding:0;}
+.qap-rec-btn:hover{text-decoration:underline;}
+.qap-ftr{padding:10px 14px;border-top:1px solid var(--s100);display:flex;flex-direction:column;gap:6px;}
+.qap-ftr-row{display:flex;gap:5px;}
+.qbtn{border-radius:7px;padding:6px 9px;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--s200);}
+.qbtn-edit{flex:1;background:var(--navy);color:white;border-color:var(--navy);}
+.qbtn-edit:hover{background:var(--navy-h);}
+.qbtn-t10{flex:1;background:var(--t10-l);color:var(--t10);border-color:var(--t10-b);}
+.qbtn-t10:hover{background:#ddd6fe;}
+.qbtn-dorm{flex:1;background:var(--s50);color:var(--s600);}
+.qbtn-dorm:hover{background:var(--s100);}
+.qbtn-del{background:#fff1f2;color:#9f1239;border-color:#fecdd3;}
+.qbtn-del:hover{background:#fee2e2;}
+
+/* ─── BADGES ─── */
+.bd{font-size:10px;padding:2px 6px;border-radius:20px;font-weight:500;display:inline-block;}
+.bd-grow{background:var(--grow-l);color:var(--grow-d);}
+.bd-norm{background:var(--norm-l);color:var(--norm-d);}
+.bd-drain{background:var(--drain-l);color:var(--drain-d);}
+.bd-t10{background:var(--t10-l);color:var(--t10);border:1px solid var(--t10-b);}
+.bd-draining{background:#fee2e2;color:#991b1b;}
+.bd-dorm{background:var(--s100);color:var(--s500);}
+.bd-biz{background:var(--biz-l);color:var(--biz-d);}
+.bd-learn{background:var(--learn-l);color:var(--learn-d);}
+.bd-life{background:var(--life-l);color:var(--life-d);}
+
+/* ─── DORMANT SCREEN ─── */
+.dorm-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;overflow-y:auto;}
+.dorm-screen.open{display:block;}
+.dorm-hdr{background:var(--navy);color:white;padding:13px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.dorm-body{max-width:740px;margin:0 auto;padding:22px 18px;}
+.dorm-search{width:100%;border:1px solid var(--s200);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;margin-bottom:14px;}
+.dorm-search:focus{border-color:var(--biz);}
+.dorm-card{background:white;border:1px solid var(--s200);border-radius:11px;padding:14px 16px;margin-bottom:9px;display:flex;align-items:flex-start;gap:12px;}
+.dorm-info{flex:1;min-width:0;}
+.dorm-nm{font-size:14px;font-weight:600;color:var(--s800);margin-bottom:3px;}
+.dorm-meta{font-size:11px;color:var(--s400);line-height:1.7;}
+.dorm-memo{font-size:11px;color:var(--s500);margin-top:3px;font-style:italic;}
+.dorm-restore{background:var(--em-l);color:#065f46;border:1px solid #a7f3d0;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.dorm-restore:hover{background:#bbf7d0;}
+
+/* ─── PERSON MODAL ─── */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.42);backdrop-filter:blur(4px);z-index:400;display:flex;align-items:center;justify-content:center;padding:16px;}
+.md{background:white;border-radius:16px;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.22);}
+.md-hd{position:sticky;top:0;background:white;border-bottom:1px solid var(--s100);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0;z-index:10;}
+.md-ttl{font-size:15px;font-weight:700;color:var(--s800);}
+.md-cls{background:transparent;border:none;cursor:pointer;color:var(--s400);font-size:18px;line-height:1;font-family:inherit;}
+.md-cls:hover{color:var(--s700);}
+.md-bd{padding:14px 18px;}
+.md-ft{position:sticky;bottom:0;background:white;border-top:1px solid var(--s100);padding:11px 18px;display:flex;align-items:center;justify-content:space-between;border-radius:0 0 16px 16px;}
+.fg{margin-bottom:10px;}
+.fl{display:block;font-size:11px;font-weight:500;color:var(--s500);margin-bottom:3px;}
+.fi,.fs,.ft{width:100%;border:1px solid var(--s200);border-radius:7px;padding:6px 9px;font-size:13px;color:var(--s800);font-family:'Noto Sans JP',sans-serif;background:white;outline:none;transition:border-color .15s;}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--biz);box-shadow:0 0 0 3px rgba(59,130,246,.1);}
+.ft{resize:vertical;min-height:50px;}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;}
+.f-div{margin:12px 0 10px;border:none;border-top:1px solid var(--s100);}
+.btn-p{background:var(--navy);color:white;border:none;border-radius:7px;padding:8px 15px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;}
+.btn-p:hover{background:var(--navy-h);}
+.btn-s{background:white;color:var(--s700);border:1px solid var(--s200);border-radius:7px;padding:8px 15px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;}
+.btn-s:hover{background:var(--s50);}
+.btn-d{background:transparent;color:var(--rose);border:none;border-radius:7px;padding:7px 11px;font-size:13px;cursor:pointer;font-family:inherit;}
+.btn-d:hover{color:#be123c;}
+
+/* ─── BACKUP ─── */
+.bk-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.bk-card{background:var(--s50);border:1px solid var(--s200);border-radius:9px;padding:14px;}
+.bk-ttl{font-size:13px;font-weight:600;color:var(--s800);margin-bottom:5px;}
+.bk-desc{font-size:12px;color:var(--s500);margin-bottom:11px;line-height:1.5;}
+.jp{background:#0f172a;border-radius:7px;padding:10px;overflow:auto;max-height:160px;}
+.jp pre{font-family:'JetBrains Mono',monospace;font-size:10px;color:#94a3b8;white-space:pre-wrap;}
+.st-box{border-radius:7px;padding:8px 11px;margin-bottom:11px;display:flex;align-items:center;gap:7px;font-size:13px;}
+.st-ok{background:var(--em-l);color:#065f46;border:1px solid #a7f3d0;}
+.st-err{background:#fee2e2;color:#991b1b;border:1px solid #fecdd3;}
+
+/* ─── PRINT ─── */
+#printPage{display:none;}
+@media print{
+  body>*:not(#printPage){display:none!important;}
+  html,body{height:100%;margin:0;padding:0;background:white!important;overflow:visible;}
+  #printPage{display:block!important;width:100%;height:100%;}
+  @page{size:A3 landscape;margin:10mm;}
+
+  /* ── Root: flex column, space-between ── */
+  .pp-root{
+    display:flex;flex-direction:column;justify-content:space-between;
+    width:100%;height:100%;
+    font-family:'Noto Sans JP',sans-serif;font-size:9.5pt;color:#1e293b;
+    box-sizing:border-box;
+  }
+
+  /* ── Header ── */
+  .pp-head{border-bottom:2pt solid #1C2B4A;display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:2mm;flex-shrink:0;}
+  .pp-title{font-size:22pt;font-weight:800;color:#1C2B4A;}
+  .pp-date{font-size:10pt;color:#64748b;}
+
+  /* ── Mid: map + top10, takes all remaining space ── */
+  .pp-mid{flex:1;display:grid;grid-template-columns:62% 36%;gap:4mm;min-height:0;overflow:hidden;align-items:stretch;}
+
+  /* Map column */
+  .pp-map-area{display:flex;flex-direction:column;gap:1.5mm;min-height:0;overflow:hidden;}
+  .pp-map-ttl{font-size:9.5pt;font-weight:700;color:#1C2B4A;border-left:2.5pt solid #1C2B4A;padding-left:2mm;flex-shrink:0;}
+  .pp-map-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:0.5pt solid #e2e8f0;border-radius:2mm;overflow:hidden;flex:1;min-height:0;}
+  .pp-col{position:relative;border-right:0.5pt solid #e2e8f0;overflow:hidden;display:flex;flex-direction:column;}
+  .pp-col:last-child{border-right:none;}
+  .pp-col-hd{padding:2mm 3mm;font-size:8.5pt;font-weight:700;border-bottom:0.5pt solid #e2e8f0;flex-shrink:0;}
+  .pp-col-hd-biz{color:#1d4ed8;background:#eff6ff;}
+  .pp-col-hd-learn{color:#92400e;background:#fffbeb;}
+  .pp-col-hd-life{color:#15803d;background:#f0fdf4;}
+
+  /* Canvas: 3 zones 30/50/20 */
+  .pp-canvas{position:relative;flex:1;display:grid;grid-template-rows:30% 50% 20%;min-height:0;}
+  .pp-canvas-zone{position:relative;overflow:hidden;}
+  .pp-canvas-zone:not(:last-child){border-bottom:0.4pt dashed rgba(0,0,0,.08);}
+  .pp-canvas-zone-lbl{position:absolute;top:1mm;left:1.5mm;font-size:6pt;color:rgba(0,0,0,.15);font-weight:500;pointer-events:none;}
+
+  /* Circles: absolute on .pp-canvas */
+  .canvas-guide{display:none;}
+  .pp-pc{position:absolute;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:600;text-align:center;line-height:1.1;word-break:break-all;border-style:solid;transform:translate(-50%,-50%);z-index:2;}
+  .pp-pc-grow{background:#dcfce7;border-color:#22c55e;color:#15803d;}
+  .pp-pc-norm{background:#f1f5f9;border-color:#cbd5e1;color:#334155;}
+  .pp-pc-drain{background:#fee2e2;border-color:#ef4444;color:#991b1b;}
+  .pp-pc-lg{width:15mm;height:15mm;font-size:6.5pt;}
+  .pp-pc-md{width:11mm;height:11mm;font-size:5.5pt;}
+  .pp-pc-sm{width:8mm;height:8mm;font-size:5pt;}
+  .pp-fq-h{border-width:2pt;}.pp-fq-m{border-width:1pt;}.pp-fq-l{border-width:0.8pt;border-style:dashed;}
+  .pp-star{position:absolute;top:-2mm;right:-2mm;background:#7c3aed;color:white;font-size:5pt;border-radius:50%;width:3.5mm;height:3.5mm;display:flex;align-items:center;justify-content:center;}
+  .pp-warn-p{position:absolute;top:-2mm;left:-2mm;background:#dc2626;color:white;font-size:5pt;font-weight:900;border-radius:50%;width:3.5mm;height:3.5mm;display:flex;align-items:center;justify-content:center;}
+  .pp-type-tag{position:absolute;bottom:-3mm;left:50%;transform:translateX(-50%);background:white;border:0.5pt solid #e2e8f0;border-radius:4px;padding:0.5mm 2mm;font-size:5pt;color:#64748b;white-space:nowrap;}
+
+  /* Top10 */
+  .pp-t10-col{display:flex;flex-direction:column;gap:1.5mm;min-height:0;overflow:hidden;}
+  .pp-t10-ttl{font-size:9.5pt;font-weight:700;color:#1C2B4A;border-left:2.5pt solid #7c3aed;padding-left:2mm;flex-shrink:0;}
+  .pp-t10-tbl{width:100%;border-collapse:collapse;}
+  .pp-t10-tbl tr{border-bottom:0.4pt solid #e2e8f0;}
+  .pp-t10-tbl td{padding:1.5mm 1mm;vertical-align:top;}
+  .pp-t10-num{font-size:9pt;font-weight:700;color:#7c3aed;width:6mm;text-align:center;}
+  .pp-t10-name{font-size:9pt;font-weight:700;color:#1e293b;width:22mm;white-space:nowrap;}
+  .pp-t10-act{font-size:8.5pt;color:#334155;line-height:1.5;}
+  .pp-t10-note{font-size:6.5pt;color:#94a3b8;margin-top:1.5mm;text-align:right;}
+
+  /* Legend: footer pinned at bottom */
+  .pp-legend{border-top:1.5pt solid #1C2B4A;padding-top:2mm;display:grid;grid-template-columns:repeat(5,1fr);gap:3mm;page-break-inside:avoid;overflow:hidden;flex-shrink:0;margin-top:auto;}
+  .pp-leg-blk{}
+  .pp-leg-ttl{font-size:7.5pt;font-weight:700;color:#1C2B4A;border-bottom:0.5pt solid #e2e8f0;padding-bottom:0.8mm;margin-bottom:1.5mm;}
+  .pp-leg-row{display:flex;align-items:center;gap:1.5mm;margin-bottom:1.2mm;font-size:7pt;color:#334155;line-height:1.4;}
+  .pp-leg-dot{border-radius:50%;flex-shrink:0;border-style:solid;}
+  .pp-leg-sub{font-size:6.5pt;color:#94a3b8;margin-top:0.5mm;line-height:1.5;}
+}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════ -->
+<header>
+  <div>
+    <div class="h-title">ソーシャル・ユニバース</div>
+    <div class="h-sub">人間関係を意思決定の武器にする</div>
+  </div>
+  <div class="h-actions">
+    <button class="hbtn hbtn-ghost" onclick="openDormant()">🌿 余白リスト</button>
+    <button class="hbtn hbtn-ghost" onclick="openBackup()">💾 バックアップ</button>
+    <button class="hbtn hbtn-ghost" onclick="doPrint()">🖨 A3印刷</button>
+    <button class="hbtn hbtn-add"   onclick="openModal(null)">＋ 人物を追加</button>
+  </div>
+</header>
+
+<!-- ═══ 3-COL BODY ═══════════════════════════════════════════ -->
+<div class="app-body">
+
+  <!-- LEFT -->
+  <div class="left-panel">
+    <div class="lp-sec">
+      <div class="lp-ttl">凡例・判断基準</div>
+      <div class="leg-purpose-name leg-biz">事業・成果</div>
+      <div class="leg-purpose-q">「組めば事業が伸びるか？」</div>
+      <div class="leg-purpose-flow">価値観 → 仮説 → 実案件</div>
+      <div class="leg-purpose-name leg-learn">視野・学び</div>
+      <div class="leg-purpose-q">「前提が壊れるか？」</div>
+      <div class="leg-purpose-flow">違和感 → 共創 → 実験</div>
+      <div class="leg-purpose-name leg-life">安心・人生</div>
+      <div class="leg-purpose-q">「自然体でいられるか？」</div>
+      <div class="leg-purpose-flow" style="margin-bottom:0">居心地 → 継続 → 相互開示</div>
+    </div>
+    <hr class="leg-sep">
+    <div class="lp-sec">
+      <div class="lp-ttl">エネルギー（色）</div>
+      <div class="leg-row"><span class="leg-dot" style="width:10px;height:10px;background:var(--grow);border:1.5px solid var(--grow-d)"></span>増える：前向き</div>
+      <div class="leg-row"><span class="leg-dot" style="width:10px;height:10px;background:var(--norm-l);border:1.5px solid var(--norm-b)"></span>普通：変化なし</div>
+      <div class="leg-row"><span class="leg-dot" style="width:10px;height:10px;background:var(--drain-l);border:1.5px solid var(--drain)"></span>消耗：削られる</div>
+    </div>
+    <hr class="leg-sep">
+    <div class="lp-sec">
+      <div class="lp-ttl">頻度（外枠）</div>
+      <div class="leg-row"><span class="leg-dot" style="width:12px;height:12px;background:transparent;border:3px solid var(--s400)"></span>毎週〜隔週</div>
+      <div class="leg-row"><span class="leg-dot" style="width:12px;height:12px;background:transparent;border:1.5px solid var(--s400)"></span>月1〜年数回</div>
+      <div class="leg-row"><span class="leg-dot" style="width:12px;height:12px;background:transparent;border:1px dashed var(--s400)"></span>半年に1回以下</div>
+    </div>
+    <hr class="leg-sep">
+    <div class="lp-sec">
+      <div class="lp-ttl">インパクト（大きさ）</div>
+      <div class="leg-row">大 → 中 → 小 の3段階</div>
+      <div class="lp-ttl" style="margin-top:6px">バッジ</div>
+      <div class="leg-row"><span style="font-size:11px">★</span> Top10</div>
+      <div class="leg-row"><span style="font-size:11px">⚠</span> isDraining</div>
+      <div class="leg-row" style="font-size:11px;color:var(--s400)">[タグ] 関係タイプ</div>
+    </div>
+    <hr class="leg-sep">
+    <div class="lp-sec">
+      <div class="lp-ttl">フィルター</div>
+      <label class="filter-item"><input type="checkbox" id="fTop10"    onchange="renderMap()"> Top10のみ</label>
+      <label class="filter-item"><input type="checkbox" id="fDrain"    onchange="renderMap()"> 消耗のみ</label>
+      <label class="filter-item"><input type="checkbox" id="fDraining" onchange="renderMap()"> isDrainingのみ</label>
+      <label class="filter-item"><input type="checkbox" id="fDormant"  onchange="renderMap()"> 余白も表示</label>
+      <div class="lp-ttl" style="margin-top:7px">関係タイプ別</div>
+      <select class="filter-sel" id="fType" onchange="renderMap()">
+        <option value="">すべて</option>
+        <option>チーム</option><option>メンター</option>
+        <option>スペシャリスト</option><option>親族</option>
+      </select>
+    </div>
+    <hr class="leg-sep">
+    <div class="lp-sec">
+      <div class="lp-ttl">初期配置</div>
+      <button class="sort-btn" id="sImpact" onclick="sortBy('impact')">インパクト順に整列</button>
+      <button class="sort-btn" id="sTop10"  onclick="sortBy('top10')">Top10優先に整列</button>
+      <button class="sort-btn" id="sUpdate" onclick="sortBy('update')">更新日順に整列</button>
+      <div style="font-size:10px;color:var(--s400);margin-top:4px;line-height:1.5">整列後も自由に<br>ドラッグで位置変更できます</div>
+    </div>
+  </div>
+
+  <!-- CENTER: Free Map -->
+  <div class="map-center">
+    <div class="map-toolbar">
+      <div class="map-stats" id="mapStats"></div>
+      <div style="font-size:10px;color:var(--s400)">ドラッグで自由配置 ／ ダブルクリックで詳細編集</div>
+    </div>
+    <div class="map-cols" id="mapCols">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+  <!-- RIGHT: QAP -->
+  <div class="qap-col" id="qapPanel"><!-- rendered by JS --></div>
+
+</div>
+
+<!-- ═══ DORMANT SCREEN ══════════════════════════════════════ -->
+<div class="dorm-screen" id="dormScreen">
+  <div class="dorm-hdr">
+    <div>
+      <div style="font-size:15px;font-weight:700">🌿 余白リスト（Dormant）</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:1px">今は積極的に関わらないが、人生から消さない人のリストです</div>
+    </div>
+    <button class="hbtn hbtn-ghost" onclick="closeDormant()">← 通常マップへ戻す</button>
+  </div>
+  <div class="dorm-body">
+    <p style="font-size:12px;color:var(--s500);margin-bottom:14px;line-height:1.6">余白リストの人はA3印刷には表示されません。必要に応じて通常マップへ復活できます。</p>
+    <input class="dorm-search" type="search" placeholder="名前で検索..." id="dormSearch" oninput="renderDormant()">
+    <div id="dormList"></div>
+  </div>
+</div>
+
+<!-- ═══ PERSON MODAL ════════════════════════════════════════ -->
+<div id="moOverlay" style="display:none" class="mo" onclick="if(event.target===this)closeModal()">
+<div class="md" onclick="event.stopPropagation()">
+  <div class="md-hd"><div class="md-ttl" id="moTitle">人物を追加</div><button class="md-cls" onclick="closeModal()">✕</button></div>
+  <div class="md-bd">
+    <input type="hidden" id="editId">
+    <div class="fg"><label class="fl">名前 *</label><input class="fi" id="fName" placeholder="例：田中さん"></div>
+    <div class="fg2">
+      <div class="fg"><label class="fl">関係の目的</label>
+        <select class="fs" id="fPurpose"><option>事業・成果</option><option>視野・学び</option><option>安心・人生</option></select></div>
+      <div class="fg"><label class="fl">エネルギー状態</label>
+        <select class="fs" id="fEnergy"><option>増える</option><option>普通</option><option>消耗</option></select></div>
+    </div>
+    <div class="fg2">
+      <div class="fg"><label class="fl">関係タイプ</label>
+        <select class="fs" id="fType2"><option>チーム</option><option>メンター</option><option>スペシャリスト</option><option>親族</option></select></div>
+      <div class="fg"><label class="fl">頻度</label>
+        <select class="fs" id="fFreq"><option>毎週〜隔週</option><option>月1〜年数回</option><option>半年に1回以下</option></select></div>
+    </div>
+    <div class="fg3">
+      <div class="fg"><label class="fl">インパクト</label>
+        <select class="fs" id="fImpact"><option>大</option><option>中</option><option>小</option></select></div>
+      <div class="fg"><label class="fl">価値の流れ</label>
+        <select class="fs" id="fValueFlow">
+          <option value="◉">◉ もらい与える</option><option value="〇">〇 もらっている</option>
+          <option value="●">● 与えている</option><option value="">— なし</option>
+        </select></div>
+      <div class="fg"><label class="fl">アクションタイプ</label>
+        <select class="fs" id="fActionType">
+          <option>深める</option><option>実験</option><option>役割明確化</option>
+          <option>距離を置く</option><option>手放す</option><option>維持</option>
+        </select></div>
+    </div>
+    <hr class="f-div">
+    <div class="fg"><label class="fl">今の関係の状態</label><textarea class="ft" id="fCurrentState" rows="2"></textarea></div>
+    <div class="fg"><label class="fl">本来どうしたいか</label><textarea class="ft" id="fDesiredState" rows="2"></textarea></div>
+    <div class="fg2">
+      <div class="fg"><label class="fl">ズレ・課題</label><textarea class="ft" id="fGap" rows="2"></textarea></div>
+      <div class="fg"><label class="fl">次のアクション</label><textarea class="ft" id="fNextAction" rows="2"></textarea></div>
+    </div>
+    <div class="fg2">
+      <div class="fg"><label class="fl">期限</label><input type="date" class="fi" id="fDueDate"></div>
+      <div class="fg"><label class="fl">メモ</label><input class="fi" id="fMemo"></div>
+    </div>
+    <div style="display:flex;gap:14px;margin-top:4px">
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--s700)">
+        <input type="checkbox" id="fIsTop10" style="width:13px;height:13px;accent-color:var(--t10)"> ⭐ Top10</label>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--s700)">
+        <input type="checkbox" id="fIsDraining" style="width:13px;height:13px;accent-color:#dc2626"> ⚠ isDraining</label>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--s700)">
+        <input type="checkbox" id="fIsDormant" style="width:13px;height:13px;accent-color:var(--s400)"> 🌿 余白</label>
+    </div>
+  </div>
+  <div class="md-ft">
+    <button class="btn-d" id="delBtn" onclick="doDelete()" style="display:none">🗑 削除</button>
+    <div style="display:flex;gap:7px;margin-left:auto">
+      <button class="btn-s" onclick="closeModal()">キャンセル</button>
+      <button class="btn-p" onclick="doSave()">保存</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ BACKUP MODAL ════════════════════════════════════════ -->
+<div id="backupOverlay" style="display:none" class="mo" onclick="if(event.target===this)closeBackup()">
+<div class="md" onclick="event.stopPropagation()">
+  <div class="md-hd"><div class="md-ttl">💾 バックアップ</div><button class="md-cls" onclick="closeBackup()">✕</button></div>
+  <div class="md-bd">
+    <div id="backupStatus"></div>
+    <div class="bk-grid">
+      <div class="bk-card">
+        <div class="bk-ttl">📤 JSONエクスポート</div>
+        <div class="bk-desc" id="bkDesc">全データをJSONで保存します。</div>
+        <button class="btn-p" onclick="doExport()">ダウンロード</button>
+      </div>
+      <div class="bk-card">
+        <div class="bk-ttl">📥 JSONインポート</div>
+        <div class="bk-desc">JSONファイルを読み込みます。現在のデータは上書きされます。</div>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="doImport(event)">
+        <button class="btn-s" onclick="document.getElementById('importFile').click()">ファイルを選択</button>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--s500);margin-bottom:5px">現在のデータプレビュー</div>
+    <div class="jp"><pre id="jsonPreview"></pre></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PRINT PAGE ══════════════════════════════════════════ -->
+<div id="printPage">
+  <div class="pp-root">
+    <div class="pp-head">
+      <div><div class="pp-title">ソーシャル・ユニバース</div><div style="font-size:7.5pt;color:#64748b;margin-top:0.5mm">人間関係を意思決定の武器にする</div></div>
+      <div class="pp-date" id="ppDate"></div>
+    </div>
+    <div class="pp-mid">
+      <div class="pp-map-area">
+        <div class="pp-map-ttl">関係エネルギーマップ（自由配置）</div>
+        <div class="pp-map-cols" id="ppMapCols"></div>
+      </div>
+      <div class="pp-t10-col">
+        <div class="pp-t10-ttl">⭐ Top10 アクション</div>
+        <div id="ppTop10"></div>
+      </div>
+    </div>
+    <div class="pp-legend">
+      <div class="pp-leg-blk">
+        <div class="pp-leg-ttl">■ 関係の目的（横）</div>
+        <div class="pp-leg-row" style="color:#1d4ed8"><b>事業・成果</b></div>
+        <div class="pp-leg-sub">「組めば事業が伸びるか？」<br>価値観 → 仮説 → 実案件</div>
+        <div class="pp-leg-row" style="color:#92400e;margin-top:1.5mm"><b>視野・学び</b></div>
+        <div class="pp-leg-sub">「前提が壊れるか？」<br>違和感 → 共創 → 実験</div>
+        <div class="pp-leg-row" style="color:#15803d;margin-top:1.5mm"><b>安心・人生</b></div>
+        <div class="pp-leg-sub">「自然体でいられるか？」<br>居心地 → 継続 → 相互開示</div>
+      </div>
+      <div class="pp-leg-blk">
+        <div class="pp-leg-ttl">● エネルギー（色）</div>
+        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:#dcfce7;border:1.5pt solid #22c55e"></span>増える：前向きになる</div>
+        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:#f1f5f9;border:1pt solid #cbd5e1"></span>普通：変化なし</div>
+        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:#fee2e2;border:1.5pt solid #ef4444"></span>消耗：削られる</div>
+      </div>
+      <div class="pp-leg-blk">
+        <div class="pp-leg-ttl">◯ 頻度（外枠）</div>
+        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:transparent;border:2pt solid #94a3b8"></span>毎週〜隔週</div>
+        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:transparent;border:1pt solid #94a3b8"></span>月1〜年数回</div>
+        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:transparent;border:0.8pt dashed #94a3b8"></span>半年に1回以下</div>
+        <div class="pp-leg-ttl" style="margin-top:1.5mm">● 大きさ</div>
+        <div class="pp-leg-row">大・中・小（インパクト）</div>
+      </div>
+      <div class="pp-leg-blk">
+        <div class="pp-leg-ttl">◉ 価値の流れ</div>
+        <div class="pp-leg-row"><span style="font-size:9pt;color:#15803d">◉</span>もらい与える</div>
+        <div class="pp-leg-row"><span style="font-size:9pt;color:#1d4ed8">〇</span>もらっている</div>
+        <div class="pp-leg-row"><span style="font-size:9pt;color:#dc2626">●</span>与えている</div>
+        <div class="pp-leg-ttl" style="margin-top:1.5mm">バッジ</div>
+        <div class="pp-leg-row">★ Top10　⚠ isDraining</div>
+      </div>
+      <div class="pp-leg-blk">
+        <div class="pp-leg-ttl">⚡ 3秒判断ガイド</div>
+        <div style="font-size:5.5pt;color:#334155;line-height:1.85">
+          <b style="color:#15803d">事業×増える</b>：深める・接点↑<br>
+          <b style="color:#64748b">事業×普通</b>：役割期待を明確化<br>
+          <b style="color:#991b1b">事業×消耗</b>：境界線・接点再設計<br>
+          <b style="color:#15803d">視野×増える</b>：軽い実験・共創<br>
+          <b style="color:#64748b">視野×普通</b>：接点・テーマ見直し<br>
+          <b style="color:#15803d">安心×増える</b>：利害なしで定期<br>
+          <b style="color:#991b1b">消耗全般</b>：距離・接点再設計
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════╗
+// ║  DATA                                                    ║
+// ╚══════════════════════════════════════════════════════════╝
+const SK = 'su-v6-persons';
+const PURPOSES  = ['事業・成果','視野・学び','安心・人生'];
+const VF_COL    = {'◉':'#15803d','〇':'#1d4ed8','●':'#dc2626',''  :''};
+const PUR_CLS   = {'事業・成果':'biz','視野・学び':'learn','安心・人生':'life'};
+const PUR_DESC  = {
+  '事業・成果':'組織の目標や成果に貢献する関係',
+  '視野・学び':'視野を広げ、学び・成長につながる関係',
+  '安心・人生':'安心感やつながり、人生を豊かにする関係',
+};
+
+function td(){ return new Date().toISOString().split('T')[0]; }
+function ts(){ return new Date().toISOString(); }
+function ld(k){ try{ const r=localStorage.getItem(k); if(r) return JSON.parse(r); }catch{} return null; }
+function sv(k,d){ localStorage.setItem(k,JSON.stringify(d)); }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function sel2(id,v){ const e=document.getElementById(id); if(!e)return; for(const o of e.options) if(o.value===v){o.selected=true;break;} }
+
+// ── INI DATA ──
+const INI = [
+  {id:'1',name:'前田さん',  relationshipPurpose:'事業・成果',energyState:'増える',relationshipType:'チーム',      frequency:'毎週〜隔週',impact:'大',valueFlow:'◉',isTop10:true, isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'月1で戦略MTGを設定する',actionType:'深める',  actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'2',name:'田中大さん',relationshipPurpose:'事業・成果',energyState:'増える',relationshipType:'チーム',      frequency:'月1〜年数回',impact:'大',valueFlow:'◉',isTop10:true, isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'打合せ頻度を上げる',    actionType:'深める',  actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'3',name:'鶴さん',    relationshipPurpose:'視野・学び',energyState:'増える',relationshipType:'メンター',    frequency:'月1〜年数回',impact:'大',valueFlow:'◉',isTop10:true, isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'合宿＋収益スキーム設計',actionType:'実験',    actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'4',name:'宮田さん',  relationshipPurpose:'事業・成果',energyState:'普通',  relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'〇',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'情シスキーム構築',     actionType:'役割明確化',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'5',name:'ゆみさん',  relationshipPurpose:'安心・人生',energyState:'増える',relationshipType:'親族',        frequency:'毎週〜隔週',impact:'大',valueFlow:'◉',isTop10:true, isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'年4回試合する',         actionType:'深める',  actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'6',name:'佐藤さん',  relationshipPurpose:'事業・成果',energyState:'消耗',  relationshipType:'チーム',      frequency:'半年に1回以下',  impact:'中',valueFlow:'●',isTop10:false,isDraining:true, isDormant:true, currentState:'',desiredState:'',gap:'',nextAction:'',                      actionType:'距離を置く',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'7',name:'古江さん',  relationshipPurpose:'視野・学び',energyState:'普通',  relationshipType:'メンター',    frequency:'月1〜年数回',impact:'中',valueFlow:'●',isTop10:false,isDraining:false,isDormant:true, currentState:'',desiredState:'',gap:'',nextAction:'',                      actionType:'役割明確化',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'8',name:'あきさん',  relationshipPurpose:'安心・人生',energyState:'普通',  relationshipType:'親族',        frequency:'半年に1回以下',  impact:'小',valueFlow:'',  isTop10:false,isDraining:false,isDormant:true, currentState:'',desiredState:'',gap:'',nextAction:'',                      actionType:'維持',    actionDueDate:'',memo:'落ち着いたら会いたい。',createdAt:ts(),updatedAt:ts()},
+  {id:'6077d5cf-9a16-4b37-8566-a6207725c7d2',name:'結石さん',relationshipPurpose:'事業・成果',energyState:'普通',relationshipType:'チーム',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'b1dc6422-3f45-450b-a6d4-688bef95c1bd',name:'恒平さん',relationshipPurpose:'事業・成果',energyState:'普通',relationshipType:'チーム',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'93040afe-3ab3-4308-89f2-7c0bcb1f59a3',name:'純さん',relationshipPurpose:'事業・成果',energyState:'普通',relationshipType:'チーム',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'eb26aed6-b0f2-4942-995e-3c691618c88b',name:'大山さん',relationshipPurpose:'事業・成果',energyState:'普通',relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'7cbfcf91-98fc-4a3c-9562-2de89920bc1e',name:'龍平さん',relationshipPurpose:'事業・成果',energyState:'普通',relationshipType:'チーム',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'89f7da92-b031-4f1c-aaa4-fec048a9caad',name:'臼井さん',relationshipPurpose:'事業・成果',energyState:'普通',relationshipType:'チーム',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'731c0fe5-144c-4894-b595-e9c72796c789',name:'梶原さん',relationshipPurpose:'事業・成果',energyState:'普通',relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'99f7ccb5-8212-4a21-9134-e5e0a7eb94e3',name:'小林茂さん',relationshipPurpose:'事業・成果',energyState:'普通',relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'17ea6e36-85c0-4fa3-b225-a098d8008320',name:'高根さん',relationshipPurpose:'事業・成果',energyState:'普通',relationshipType:'チーム',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'936f80e5-3ae4-4f28-b039-e995480058b3',name:'木内さん',relationshipPurpose:'視野・学び',energyState:'普通',relationshipType:'メンター',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'db8180a2-9e6b-4574-8d50-4723ed34c3d0',name:'竹田さん',relationshipPurpose:'視野・学び',energyState:'普通',relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'d3005879-07cd-4191-b037-9b0ca794dd5f',name:'達城さん',relationshipPurpose:'視野・学び',energyState:'普通',relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'b8034f4f-2579-4a0a-a23f-d9ae1164e219',name:'齋藤さん',relationshipPurpose:'視野・学び',energyState:'普通',relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'4d70bda0-6728-43dc-b734-2c2beb42fdfd',name:'武智さん',relationshipPurpose:'視野・学び',energyState:'普通',relationshipType:'メンター',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'8129839a-1e40-4796-b04a-f18e395cc58a',name:'梶川さん',relationshipPurpose:'視野・学び',energyState:'普通',relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'0a830e83-ca98-442e-9913-81e980a304fb',name:'木庭さん',relationshipPurpose:'視野・学び',energyState:'普通',relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'077e0090-bcad-42a9-b21c-89a84750ea5c',name:'那須さん',relationshipPurpose:'視野・学び',energyState:'普通',relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'b9e00ae6-ed04-4cb3-8664-d28512dbe3d3',name:'末廣さん',relationshipPurpose:'視野・学び',energyState:'普通',relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'5a9b4a6f-210e-44b2-8428-760027910ffc',name:'井崎さん',relationshipPurpose:'視野・学び',energyState:'普通',relationshipType:'スペシャリスト',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'4599525e-f2cd-4503-bb51-af79bda03ea5',name:'陽介',  relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'28e81172-2bc6-4ebc-9d7e-f271a042ce81',name:'徹さん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'e25a08a8-384d-4904-af18-ffc099381848',name:'野瀬',  relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'4ca6dddc-69ff-43c2-a3fd-34786f92de20',name:'河野さん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'2135b598-3b82-4251-a388-31bd5c1c5353',name:'出原さん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'6ef7e6e6-cf03-4c8d-b49c-98926b681130',name:'関さん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'1bd3377a-0f7e-4e81-8559-6b016489c0ba',name:'渡部さん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'a9854056-afd1-4ce3-972c-773418559598',name:'一久',  relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'75f31311-b54c-433e-9ea9-3ee4b481514a',name:'雅也',  relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'4fb05adb-ed89-40e7-b04e-076d75b3c6fd',name:'清美さん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'d0eb2dab-3113-420f-9f74-e612186ad8fc',name:'伸太郎',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'1fc1541b-1600-4cbe-83b8-c6ce5cd51db7',name:'和子',  relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'7492d68f-7755-4317-9873-a381d39c450d',name:'雅斗',  relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'d7d8f5cc-e342-4487-a2a1-59366f074ba0',name:'きょうしょうさん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'068db5c6-53ac-4094-9c29-94e88fa24dc7',name:'奏波',  relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'d6b2b54e-932c-4852-b10d-8ec313104ac4',name:'さやか',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'22d6175f-9c34-4faf-a0fb-57a87b9782aa',name:'ちょうけんさん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'29768a13-04c7-4789-b1a0-4d09413451b9',name:'友士郎',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'ad052b69-77fa-4ca1-a196-1cc1cede4481',name:'まさしさん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'501d221b-52ca-4e7d-b765-4da14da8efe5',name:'ひでくん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'4cf2d62f-1159-4c33-a709-91bbaa4930d9',name:'さっちゃん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'親族',frequency:'月1〜年数回',impact:'中',valueFlow:'',isTop10:false,isDraining:false,isDormant:false,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'3ddab3b5-3cf1-4d12-83e2-091d4beda03d',name:'池川さん',  relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'チーム',frequency:'半年に1回以下',impact:'小',valueFlow:'',isTop10:false,isDraining:false,isDormant:true,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'eef13b18-b948-48b5-b18e-f59dfecba4f9',name:'かつらさん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'チーム',frequency:'半年に1回以下',impact:'小',valueFlow:'',isTop10:false,isDraining:false,isDormant:true,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'11098ceb-d7a9-4119-a079-20487d46d1b8',name:'阿部悌久さん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'チーム',frequency:'半年に1回以下',impact:'小',valueFlow:'',isTop10:false,isDraining:false,isDormant:true,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'8fd12f9b-9740-4eaa-b76e-d2d34f56ad3f',name:'後藤俊輔さん',relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'チーム',frequency:'半年に1回以下',impact:'小',valueFlow:'',isTop10:false,isDraining:false,isDormant:true,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'ce83d5dd-0d5f-4070-8e93-48156da0157b',name:'樋口さん',  relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'チーム',frequency:'半年に1回以下',impact:'小',valueFlow:'',isTop10:false,isDraining:false,isDormant:true,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'962d4a6d-e9ca-4659-a5e5-a1b14f015051',name:'岡山さん',  relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'チーム',frequency:'半年に1回以下',impact:'小',valueFlow:'',isTop10:false,isDraining:false,isDormant:true,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'57b8b1e4-92a4-4e7b-8732-b24a8e29cf04',name:'松口さん',  relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'チーム',frequency:'半年に1回以下',impact:'小',valueFlow:'',isTop10:false,isDraining:false,isDormant:true,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'16766bb2-05e4-4cb8-a408-f8b6dd2065a8',name:'岡さん',    relationshipPurpose:'安心・人生',energyState:'普通',relationshipType:'チーム',frequency:'半年に1回以下',impact:'小',valueFlow:'',isTop10:false,isDraining:false,isDormant:true,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+  {id:'7b43728a-2472-4578-a82f-3edf630dc131',name:'龍平さん（余）',relationshipPurpose:'事業・成果',energyState:'普通',relationshipType:'チーム',frequency:'半年に1回以下',impact:'小',valueFlow:'',isTop10:false,isDraining:false,isDormant:true,currentState:'',desiredState:'',gap:'',nextAction:'',actionType:'維持',actionDueDate:'',memo:'',createdAt:ts(),updatedAt:ts()},
+];
+
+// ── INIT ──
+function ensureXY(p){
+  return {
+    ...p,
+    x: (p.x!==undefined&&p.x!==null) ? p.x : 50,
+    y: (p.y!==undefined&&p.y!==null) ? p.y : 50,
+  };
+}
+function mergeWithINI(stored){
+  const names=new Set(stored.map(p=>p.name));
+  const missing=INI.filter(p=>!names.has(p.name));
+  const merged=missing.length ? [...stored,...missing] : stored;
+  const withXY=merged.map(ensureXY);
+  sv(SK,withXY);
+  return withXY;
+}
+let persons = ld(SK) ? mergeWithINI(ld(SK)) : (sv(SK,INI.map(ensureXY)), INI.map(ensureXY));
+let selectedId = null;
+let currentSort = null;
+
+// ── HELPERS ──
+function energyCls(e){ return{増える:'grow',普通:'norm',消耗:'drain'}[e]||'norm'; }
+function sizeCls(i)  { return i==='大'?'pcz-lg':i==='中'?'pcz-md':'pcz-sm'; }
+function freqCls(f)  { return f==='毎週〜隔週'?'pcf-h':f==='月1〜年数回'?'pcf-m':'pcf-l'; }
+function colCls(pur) { return{事業・成果:'mch-biz',視野・学び:'mch-learn',安心・人生:'mch-life'}[pur]||'mch-biz'; }
+function canvasDragCls(pur){ return{事業・成果:'drag-target-biz',視野・学び:'drag-target-learn',安心・人生:'drag-target-life'}[pur]||''; }
+
+// ── AUTO-LAYOUT ──
+function autoLayout(list){
+  // Sort within list: top10 → impact large → drain → rest
+  const sorted=[...list].sort((a,b)=>{
+    if(a.isTop10&&!b.isTop10) return -1;
+    if(!a.isTop10&&b.isTop10) return 1;
+    const io={'大':0,'中':1,'小':2};
+    if(io[a.impact]!==io[b.impact]) return io[a.impact]-io[b.impact];
+    if((a.energyState==='消耗')!==( b.energyState==='消耗')) return a.energyState==='消耗'?-1:1;
+    return 0;
+  });
+  // Staggered grid positions
+  const patterns=[
+    [20,20],[55,18],[35,42],[70,38],[20,60],[60,58],[40,75],[75,68],[18,80],[55,80],[30,90],[70,85],
+    [45,22],[80,20],[25,50],[65,48],[48,65],[82,55],[15,35],[50,35],[75,22],[22,70],[62,70],[38,55],
+    [80,40],[10,25],[50,55],[85,65],[30,30],[68,30],[15,50],[55,65],[80,75],[25,85],[65,85],[45,90],
+  ];
+  sorted.forEach((p,i)=>{
+    if(p.x===undefined||p.y===undefined){
+      const [px,py]=patterns[i%patterns.length];
+      p.x=px; p.y=py;
+    }
+  });
+  return sorted;
+}
+
+// ── GET FILTERS ──
+function getFilters(){
+  return{
+    top10:   document.getElementById('fTop10')?.checked,
+    drain:   document.getElementById('fDrain')?.checked,
+    draining:document.getElementById('fDraining')?.checked,
+    dormant: document.getElementById('fDormant')?.checked,
+    type:    document.getElementById('fType')?.value||'',
+  };
+}
+
+function getMapPersons(){
+  const f=getFilters();
+  return persons.filter(p=>{
+    if(p.isDormant&&!f.dormant) return false;
+    if(f.top10    &&!p.isTop10) return false;
+    if(f.drain    &&p.energyState!=='消耗') return false;
+    if(f.draining &&!p.isDraining) return false;
+    if(f.type     &&p.relationshipType!==f.type) return false;
+    return true;
+  });
+}
+
+// ── RECOMMENDATION ──
+function getRec(p){
+  const pur=p.relationshipPurpose, e=p.energyState;
+  if(p.isDraining||e==='消耗') return '距離・接点・テーマを再設計する。まず「会う理由」を問い直す。';
+  if(pur==='事業・成果'&&e==='増える') return '深める。挑戦テーマを共有し、接点頻度を増やす。';
+  if(pur==='事業・成果'&&e==='普通')  return '役割期待を明確にする。';
+  if(pur==='視野・学び'&&e==='増える') return '軽い実験や共創テーマを設定する。';
+  if(pur==='視野・学び'&&e==='普通')  return '接点頻度と学びのテーマを見直す。';
+  if(pur==='視野・学び'&&e==='消耗')  return '距離を置くか、関わり方を限定する。';
+  if(pur==='安心・人生'&&e==='増える') return '利害なしで定期的に会う時間を取る。';
+  if(pur==='安心・人生'&&e==='普通')  return '無理に深めず、自然な接点を維持する。';
+  if(pur==='安心・人生'&&e==='消耗')  return '親しさと距離感を分け、境界線を引く。';
+  if(p.isTop10&&!p.nextAction) return 'Top10なのに次アクション未入力。次の3か月で何をするか必ず1つ決める。';
+  return '現状を維持しながら観察しましょう。';
+}
+
+function getTodaySuggestions(){
+  const drain=persons.filter(p=>!p.isDormant&&(p.isDraining||p.energyState==='消耗')).slice(0,1).map(p=>({p,why:'⚠ 消耗・距離設計が必要'}));
+  const noAct=persons.filter(p=>!p.isDormant&&p.isTop10&&!p.nextAction).slice(0,1).map(p=>({p,why:'⭐ Top10なのに次アクション未入力'}));
+  const lowF =persons.filter(p=>!p.isDormant&&p.relationshipPurpose==='事業・成果'&&p.frequency==='半年に1回以下'&&!drain.find(d=>d.p.id===p.id)).slice(0,1).map(p=>({p,why:'🔵 事業レイヤーだが接点が少ない'}));
+  return [...drain,...noAct,...lowF].slice(0,3);
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  FREE MAP RENDER                                         ║
+// ╚══════════════════════════════════════════════════════════╝
+function renderMap(){
+  const filtered=getMapPersons();
+
+  // Ensure x,y always present (ensureXY applied at load, but guard here too)
+  persons=persons.map(p=>
+    (p.x===undefined||p.x===null||p.y===undefined||p.y===null) ? ensureXY(p) : p
+  );
+
+  const container=document.getElementById('mapCols');
+  if(!container) return;
+
+  // Build 3 column canvases
+  let html='';
+  PURPOSES.forEach(pur=>{
+    const cc=colCls(pur);
+    const desc=PUR_DESC[pur];
+    html+=`<div class="map-col">
+      <div class="map-col-hd ${cc}">
+        <div class="map-col-hd-name">${pur}</div>
+        <div class="map-col-hd-desc">${desc}</div>
+      </div>
+      <div class="map-canvas" id="canvas-${pur}"
+        ondragover="onCanvasDragOver(event,'${pur}')"
+        ondragleave="onCanvasDragLeave(event,'${pur}')"
+        ondrop="onCanvasDrop(event,'${pur}')">
+        <div class="canvas-guide" aria-hidden="true">
+          <div class="cg-zone"><span class="cg-label">増やす</span></div>
+          <div class="cg-zone"><span class="cg-label">維持</span></div>
+          <div class="cg-zone"><span class="cg-label">距離を置く</span></div>
+        </div>
+      </div>
+    </div>`;
+  });
+  container.innerHTML=html;
+
+  // Place circles into canvases via DOM
+  const showDormant=getFilters().dormant;
+  filtered.forEach(p=>{
+    const canvas=document.getElementById('canvas-'+p.relationshipPurpose);
+    if(!canvas) return;
+    const el=createCircleEl(p,showDormant);
+    canvas.appendChild(el);
+    positionCircle(el, p.x??50, p.y??50);
+  });
+
+  updateStats(filtered);
+  renderQAP();
+}
+
+function createCircleEl(p, showDormant){
+  const ecls=energyCls(p.energyState);
+  const scls=sizeCls(p.impact);
+  const fcls=freqCls(p.frequency);
+  const dormCls=p.isDormant?' dormant-show':'';
+  const selCls=selectedId===p.id?' selected':'';
+  const vf=p.valueFlow;
+  const vfc=VF_COL[vf]||'';
+
+  const el=document.createElement('div');
+  el.className=`pc-free pce-${ecls} ${scls} ${fcls}${dormCls}${selCls}`;
+  el.dataset.id=p.id;
+  el.dataset.purpose=p.relationshipPurpose;
+  el.draggable=true;
+  el.title=`${p.name}\n${p.relationshipPurpose} / ${p.energyState}\n${p.relationshipType} / ${p.frequency}${p.isTop10?'\n★ Top10':''}${p.isDraining?'\n⚠ isDraining':''}`;
+
+  // Name text
+  el.appendChild(Object.assign(document.createElement('span'),{textContent:p.name}));
+
+  // Badges
+  if(p.isTop10){
+    const s=document.createElement('div'); s.className='pc-star'; s.textContent='★'; el.appendChild(s);
+  }
+  if(p.isDraining){
+    const w=document.createElement('div'); w.className='pc-warn-badge'; w.textContent='⚠'; el.appendChild(w);
+  }
+  if(vf){
+    const v=document.createElement('div'); v.className='pc-vf-badge'; v.style.color=vfc; v.textContent=vf; el.appendChild(v);
+  }
+  // Type tag
+  const tag=document.createElement('div'); tag.className='pc-type-tag'; tag.textContent=p.relationshipType; el.appendChild(tag);
+
+  // Events
+  el.addEventListener('click', e=>{ e.stopPropagation(); selectPerson(p.id); });
+  el.addEventListener('dblclick', e=>{ e.stopPropagation(); openModal(p.id); });
+  el.addEventListener('dragstart', e=>onCircleDragStart(e, p.id));
+  el.addEventListener('dragend',   e=>onCircleDragEnd(e));
+
+  return el;
+}
+
+function positionCircle(el, xPct, yPct){
+  const x=Math.max(5,Math.min(95,xPct));
+  const y=Math.max(5,Math.min(95,yPct));
+  el.style.left=x+'%';
+  el.style.top =y+'%';
+}
+
+function updateStats(filtered){
+  const all=persons.filter(p=>!p.isDormant);
+  const dormC=persons.filter(p=>p.isDormant).length;
+  const t10C=all.filter(p=>p.isTop10).length;
+  const drnC=all.filter(p=>p.isDraining||p.energyState==='消耗').length;
+  const el=document.getElementById('mapStats');
+  if(el) el.textContent=`マップ ${all.length}名 ／ Top10: ${t10C}名 ／ 消耗: ${drnC}名 ／ 余白: ${dormC}名`;
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  DRAG & DROP (Free Positioning)                          ║
+// ╚══════════════════════════════════════════════════════════╝
+let dragId=null;
+let dragOffX=0, dragOffY=0; // offset within circle at drag start
+
+function onCircleDragStart(e, id){
+  dragId=id;
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',id);
+
+  // Compute offset from circle center to mouse
+  const rect=e.currentTarget.getBoundingClientRect();
+  dragOffX=e.clientX-rect.left-rect.width/2;
+  dragOffY=e.clientY-rect.top-rect.height/2;
+  e.dataTransfer.setData('offX', dragOffX);
+  e.dataTransfer.setData('offY', dragOffY);
+
+  requestAnimationFrame(()=>{
+    e.currentTarget.classList.add('dragging-now');
+  });
+}
+
+function onCircleDragEnd(e){
+  e.currentTarget?.classList.remove('dragging-now');
+  dragId=null;
+  // Clean up column highlights
+  PURPOSES.forEach(pur=>{
+    const c=document.getElementById('canvas-'+pur);
+    if(c){ c.classList.remove('drop-active'); c.classList.remove(canvasDragCls(pur)); }
+  });
+}
+
+function onCanvasDragOver(e, pur){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  const c=document.getElementById('canvas-'+pur);
+  if(c&&!c.classList.contains('drop-active')){
+    c.classList.add('drop-active');
+    c.classList.add(canvasDragCls(pur));
+  }
+}
+
+function onCanvasDragLeave(e, pur){
+  const c=document.getElementById('canvas-'+pur);
+  if(c&&!c.contains(e.relatedTarget)){
+    c.classList.remove('drop-active');
+    c.classList.remove(canvasDragCls(pur));
+  }
+}
+
+function onCanvasDrop(e, newPurpose){
+  e.preventDefault();
+  const id=e.dataTransfer.getData('text/plain')||dragId;
+  if(!id) return;
+
+  const c=document.getElementById('canvas-'+newPurpose);
+  if(c){ c.classList.remove('drop-active'); c.classList.remove(canvasDragCls(newPurpose)); }
+
+  const i=persons.findIndex(p=>p.id===id);
+  if(i<0) return;
+
+  // Compute drop position as percentage within canvas
+  const rect=c.getBoundingClientRect();
+  const offX=parseFloat(e.dataTransfer.getData('offX'))||0;
+  const offY=parseFloat(e.dataTransfer.getData('offY'))||0;
+  const rawX=e.clientX-rect.left-offX;
+  const rawY=e.clientY-rect.top-offY;
+  const xPct=Math.max(5,Math.min(95, (rawX/rect.width)*100));
+  const yPct=Math.max(5,Math.min(95, (rawY/rect.height)*100));
+
+  const oldPurpose=persons[i].relationshipPurpose;
+  persons[i]={...persons[i], x:xPct, y:yPct, relationshipPurpose:newPurpose, updatedAt:ts()};
+  sv(SK,persons);
+
+  if(oldPurpose!==newPurpose){
+    showToast(`${persons[i].name} を「${newPurpose}」に移動しました`);
+  } else {
+    showToast(`${persons[i].name} の位置を保存しました`);
+  }
+
+  selectedId=id;
+  renderMap();
+}
+
+// ── Sort / auto-layout ──
+function sortBy(mode){
+  // Update active button
+  ['sImpact','sTop10','sUpdate'].forEach(id=>{
+    const b=document.getElementById(id); if(b) b.classList.remove('active');
+  });
+  const btn=document.getElementById(mode==='impact'?'sImpact':mode==='top10'?'sTop10':'sUpdate');
+  if(btn) btn.classList.add('active');
+  currentSort=mode;
+
+  // Group by purpose and assign auto positions
+  PURPOSES.forEach(pur=>{
+    let group=persons.filter(p=>p.relationshipPurpose===pur&&!p.isDormant);
+    if(mode==='impact'){
+      const o={'大':0,'中':1,'小':2};
+      group.sort((a,b)=>(o[a.impact]||2)-(o[b.impact]||2));
+    } else if(mode==='top10'){
+      group.sort((a,b)=>(b.isTop10?1:0)-(a.isTop10?1:0));
+    } else {
+      group.sort((a,b)=>new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
+    }
+    const patterns=[
+      [20,18],[55,15],[80,18],[18,38],[50,38],[80,38],[25,58],[55,58],[80,55],
+      [15,75],[45,75],[75,72],[35,25],[65,22],[30,48],[68,45],[40,68],[72,65],[20,85],[55,82],
+    ];
+    group.forEach((p,idx)=>{
+      const pi=persons.findIndex(x=>x.id===p.id);
+      if(pi>=0){
+        const [px,py]=patterns[idx%patterns.length];
+        persons[pi]={...persons[pi],x:px,y:py};
+      }
+    });
+  });
+  sv(SK,persons);
+  renderMap();
+  showToast('配置を整列しました');
+}
+
+function selectPerson(id){ selectedId=id; renderMap(); }
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  QUICK ACTION PANEL                                      ║
+// ╚══════════════════════════════════════════════════════════╝
+function renderQAP(){
+  const panel=document.getElementById('qapPanel');
+  if(!panel) return;
+
+  if(!selectedId){
+    const sugg=getTodaySuggestions();
+    let sHTML='';
+    sugg.forEach(({p,why})=>{
+      sHTML+=`<div class="qap-today-card" onclick="selectPerson('${p.id}')">
+        <div class="qap-today-nm">${esc(p.name)}</div>
+        <div class="qap-today-why">${why}</div>
+      </div>`;
+    });
+    panel.innerHTML=`<div class="qap-empty">
+      <div class="qap-empty-ico">👆</div>
+      <div class="qap-empty-ttl">人物をクリックしてください</div>
+      <div class="qap-empty-sub">円をクリックすると即アクション編集<br><span style="font-size:10px;color:var(--s300)">ダブルクリックで詳細編集</span></div>
+      ${sugg.length?`<div class="qap-today-ttl" style="margin-top:14px">📌 今日確認すべき人物</div>${sHTML}`:''}
+    </div>`;
+    return;
+  }
+
+  const p=persons.find(x=>x.id===selectedId);
+  if(!p){ selectedId=null; renderQAP(); return; }
+
+  const ecls=energyCls(p.energyState);
+  const isDrain=p.isDraining||p.energyState==='消耗';
+  const urgentNA=p.isTop10&&!p.nextAction;
+  const recTxt=getRec(p);
+
+  const atOpts=['深める','実験','役割明確化','距離を置く','手放す','維持'].map(a=>`<option${p.actionType===a?' selected':''}>${a}</option>`).join('');
+  const purOpts=PURPOSES.map(v=>`<option${p.relationshipPurpose===v?' selected':''}>${v}</option>`).join('');
+  const eOpts=['増える','普通','消耗'].map(v=>`<option${p.energyState===v?' selected':''}>${v}</option>`).join('');
+  const fOpts=['毎週〜隔週','月1〜年数回','半年に1回以下'].map(v=>`<option${p.frequency===v?' selected':''}>${v}</option>`).join('');
+  const vfOpts=[['◉','◉ もらい与える'],['〇','〇 もらっている'],['●','● 与えている'],['','— なし']].map(([v,l])=>`<option value="${v}"${p.valueFlow===v?' selected':''}>${l}</option>`).join('');
+
+  panel.innerHTML=`<div class="qap-card e-${ecls}">
+    <div class="qap-hdr">
+      <button class="qap-close" onclick="selectedId=null;renderMap()">✕</button>
+      <div class="qap-name">${isDrain?'⚠ ':''}${esc(p.name)}<span id="qapSaved" class="qap-saved">✓ 保存</span></div>
+      <div class="qap-badges">
+        <span class="bd bd-${ecls}">${p.energyState}</span>
+        <span class="bd bd-${PUR_CLS[p.relationshipPurpose]||'biz'}">${p.relationshipPurpose}</span>
+        <span class="bd" style="background:var(--s100);color:var(--s600)">${p.relationshipType}</span>
+        ${p.isTop10?'<span class="bd bd-t10">⭐ Top10</span>':''}
+        ${p.isDraining?'<span class="bd bd-draining">⚠ 消耗</span>':''}
+        ${p.isDormant?'<span class="bd bd-dorm">🌿 余白</span>':''}
+      </div>
+      <div class="qap-meta">頻度：${p.frequency}　インパクト：${p.impact}　流れ：${p.valueFlow||'—'}</div>
+    </div>
+    <div class="qap-body">
+      ${isDrain?`<div class="qap-drain-warn"><span>⚠</span>消耗フラグあり。距離・接点・テーマを再設計してください。</div>`:''}
+      <div class="qap-rec">
+        <div class="qap-rec-ttl">💡 推奨アクション</div>
+        <div class="qap-rec-txt">${recTxt}</div>
+        <button class="qap-rec-btn" onclick="applyRec('${p.id}')">↑ 次のアクションに反映</button>
+      </div>
+      <div><span class="qap-fl">今の関係の状態</span>
+        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','currentState',this.value)">${esc(p.currentState||'')}</textarea></div>
+      <div><span class="qap-fl">本来どうしたいか</span>
+        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','desiredState',this.value)">${esc(p.desiredState||'')}</textarea></div>
+      <div><span class="qap-fl">ズレ・課題</span>
+        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','gap',this.value)">${esc(p.gap||'')}</textarea></div>
+      <div><span class="qap-fl">次のアクション${urgentNA?' <span style="color:#dc2626;font-size:9px">⚠ 未入力（Top10必須）</span>':''}</span>
+        <textarea class="qap-inp${urgentNA?' urgent':''}" rows="3" id="qap-na" onblur="qapUp('${p.id}','nextAction',this.value)">${esc(p.nextAction||'')}</textarea></div>
+      <div class="qap-g2">
+        <div><span class="qap-fl">アクションタイプ</span>
+          <select class="qap-sel" onchange="qapUp('${p.id}','actionType',this.value)">${atOpts}</select></div>
+        <div><span class="qap-fl">期限</span>
+          <input type="date" class="qap-inp" value="${p.actionDueDate||''}" onchange="qapUp('${p.id}','actionDueDate',this.value)"></div>
+        <div><span class="qap-fl">関係の目的</span>
+          <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','relationshipPurpose',this.value)">${purOpts}</select></div>
+        <div><span class="qap-fl">エネルギー状態</span>
+          <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','energyState',this.value)">${eOpts}</select></div>
+        <div><span class="qap-fl">頻度</span>
+          <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','frequency',this.value)">${fOpts}</select></div>
+        <div><span class="qap-fl">価値の流れ</span>
+          <select class="qap-sel" onchange="qapUp('${p.id}','valueFlow',this.value)">${vfOpts}</select></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label class="qap-chk"><input type="checkbox" ${p.isDraining?'checked':''} style="accent-color:#dc2626" onchange="qapUpAndRedraw('${p.id}','isDraining',this.checked)"> ⚠ isDraining</label>
+      </div>
+      <div><span class="qap-fl">メモ</span>
+        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','memo',this.value)">${esc(p.memo||'')}</textarea></div>
+    </div>
+    <div class="qap-ftr">
+      <div class="qap-ftr-row">
+        <button class="qbtn qbtn-edit" onclick="openModal('${p.id}')">✏ 詳細編集</button>
+        <button class="qbtn qbtn-t10"  onclick="toggleT10('${p.id}')">${p.isTop10?'⭐ Top10から外す':'☆ Top10に追加'}</button>
+      </div>
+      <div class="qap-ftr-row">
+        <button class="qbtn qbtn-dorm" onclick="toggleDormant('${p.id}')">${p.isDormant?'📌 マップへ戻す':'🌿 余白へ移動'}</button>
+        <button class="qbtn qbtn-del"  onclick="qapDelete('${p.id}')">🗑 削除</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function qapUp(id,field,value){
+  const i=persons.findIndex(p=>p.id===id); if(i<0)return;
+  persons[i]={...persons[i],[field]:value,updatedAt:ts()};
+  sv(SK,persons);
+  const el=document.getElementById('qapSaved');
+  if(el){el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800);}
+}
+
+function qapUpAndRedraw(id,field,value){
+  qapUp(id,field,value);
+  renderMap();
+}
+
+function applyRec(id){
+  const p=persons.find(x=>x.id===id); if(!p) return;
+  const txt=getRec(p);
+  qapUp(id,'nextAction',txt);
+  const ta=document.getElementById('qap-na'); if(ta) ta.value=txt;
+}
+
+function toggleT10(id){
+  const i=persons.findIndex(p=>p.id===id); if(i<0) return;
+  if(!persons[i].isTop10&&persons.filter(p=>p.isTop10).length>=10){alert('Top10はすでに10名です。');return;}
+  persons[i]={...persons[i],isTop10:!persons[i].isTop10,updatedAt:ts()};
+  sv(SK,persons); renderMap();
+}
+
+function toggleDormant(id){
+  const i=persons.findIndex(p=>p.id===id); if(i<0) return;
+  const newDorm=!persons[i].isDormant;
+  if(newDorm&&persons[i].isTop10) persons[i]={...persons[i],isTop10:false};
+  persons[i]={...persons[i],isDormant:newDorm,updatedAt:ts()};
+  sv(SK,persons);
+  if(newDorm) selectedId=null;
+  renderMap();
+}
+
+function qapDelete(id){
+  const p=persons.find(x=>x.id===id);
+  if(!p||!confirm(`「${p.name}」を削除しますか？`)) return;
+  persons=persons.filter(x=>x.id!==id);
+  sv(SK,persons); selectedId=null; renderMap();
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  DORMANT SCREEN                                          ║
+// ╚══════════════════════════════════════════════════════════╝
+function openDormant(){ document.getElementById('dormScreen').classList.add('open'); renderDormant(); }
+function closeDormant(){ document.getElementById('dormScreen').classList.remove('open'); }
+
+function renderDormant(){
+  const q=(document.getElementById('dormSearch')?.value||'').trim().toLowerCase();
+  const dorms=persons.filter(p=>p.isDormant&&(!q||p.name.toLowerCase().includes(q)));
+  let h='';
+  if(!dorms.length){
+    h='<div style="text-align:center;padding:36px 0;color:var(--s400);font-size:13px">余白リストに人物はいません。</div>';
+  } else {
+    dorms.forEach(p=>{
+      h+=`<div class="dorm-card">
+        <div class="dorm-info">
+          <div class="dorm-nm">${esc(p.name)}</div>
+          <div class="dorm-meta">${p.relationshipType} ／ ${p.relationshipPurpose} ／ ${p.frequency}<br>更新：${p.updatedAt?p.updatedAt.split('T')[0]:'—'}</div>
+          ${p.memo?`<div class="dorm-memo">${esc(p.memo)}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="dorm-restore" onclick="restoreDormant('${p.id}')">📌 マップへ復活</button>
+          <button class="qbtn qbtn-edit" style="font-size:11px" onclick="closeDormant();openModal('${p.id}')">✏ 編集</button>
+        </div>
+      </div>`;
+    });
+  }
+  document.getElementById('dormList').innerHTML=h;
+}
+
+function restoreDormant(id){
+  const i=persons.findIndex(p=>p.id===id); if(i<0) return;
+  persons[i]={...persons[i],isDormant:false,updatedAt:ts()};
+  sv(SK,persons); renderDormant(); renderMap();
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  PERSON MODAL                                            ║
+// ╚══════════════════════════════════════════════════════════╝
+function openModal(id){
+  const p=id?persons.find(x=>x.id===id):null;
+  document.getElementById('moTitle').textContent=p?'人物を編集':'人物を追加';
+  document.getElementById('editId').value=p?p.id:'';
+  document.getElementById('delBtn').style.display=p?'':'none';
+  document.getElementById('fName').value=p?.name??'';
+  sel2('fPurpose',   p?.relationshipPurpose??'事業・成果');
+  sel2('fEnergy',    p?.energyState??'普通');
+  sel2('fType2',     p?.relationshipType??'チーム');
+  sel2('fFreq',      p?.frequency??'月1〜年数回');
+  sel2('fImpact',    p?.impact??'中');
+  sel2('fValueFlow', p?.valueFlow??'');
+  sel2('fActionType',p?.actionType??'維持');
+  document.getElementById('fCurrentState').value=p?.currentState??'';
+  document.getElementById('fDesiredState').value=p?.desiredState??'';
+  document.getElementById('fGap').value=p?.gap??'';
+  document.getElementById('fNextAction').value=p?.nextAction??'';
+  document.getElementById('fDueDate').value=p?.actionDueDate??'';
+  document.getElementById('fMemo').value=p?.memo??'';
+  document.getElementById('fIsTop10').checked=p?.isTop10??false;
+  document.getElementById('fIsDraining').checked=p?.isDraining??false;
+  document.getElementById('fIsDormant').checked=p?.isDormant??false;
+  document.getElementById('moOverlay').style.display='flex';
+  setTimeout(()=>document.getElementById('fName').focus(),50);
+}
+function closeModal(){ document.getElementById('moOverlay').style.display='none'; }
+
+function doSave(){
+  const name=document.getElementById('fName').value.trim();
+  if(!name){alert('名前を入力してください。');return;}
+  const id=document.getElementById('editId').value;
+  const f={
+    name,
+    relationshipPurpose:document.getElementById('fPurpose').value,
+    energyState:document.getElementById('fEnergy').value,
+    relationshipType:document.getElementById('fType2').value,
+    frequency:document.getElementById('fFreq').value,
+    impact:document.getElementById('fImpact').value,
+    valueFlow:document.getElementById('fValueFlow').value,
+    actionType:document.getElementById('fActionType').value,
+    currentState:document.getElementById('fCurrentState').value,
+    desiredState:document.getElementById('fDesiredState').value,
+    gap:document.getElementById('fGap').value,
+    nextAction:document.getElementById('fNextAction').value,
+    actionDueDate:document.getElementById('fDueDate').value,
+    memo:document.getElementById('fMemo').value,
+    isTop10:document.getElementById('fIsTop10').checked,
+    isDraining:document.getElementById('fIsDraining').checked,
+    isDormant:document.getElementById('fIsDormant').checked,
+    updatedAt:ts(),
+  };
+  if(id){
+    const i=persons.findIndex(p=>p.id===id);
+    if(i>=0) persons[i]={...persons[i],...f};
+  } else {
+    persons.push({id:crypto.randomUUID(),...f,x:50,y:50,createdAt:ts()});
+  }
+  sv(SK,persons); closeModal(); renderMap();
+}
+
+function doDelete(){
+  const id=document.getElementById('editId').value;
+  const p=persons.find(x=>x.id===id);
+  if(!p||!confirm(`「${p.name}」を削除しますか？`))return;
+  persons=persons.filter(x=>x.id!==id);
+  sv(SK,persons); closeModal(); selectedId=null; renderMap();
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  BACKUP                                                  ║
+// ╚══════════════════════════════════════════════════════════╝
+function openBackup(){
+  document.getElementById('bkDesc').textContent=`全データ（${persons.length}名）をJSONで保存します。`;
+  document.getElementById('jsonPreview').textContent=JSON.stringify({version:6,exportedAt:new Date().toISOString(),persons},null,2);
+  document.getElementById('backupOverlay').style.display='flex';
+}
+function closeBackup(){ document.getElementById('backupOverlay').style.display='none'; }
+
+function doExport(){
+  const blob=new Blob([JSON.stringify({version:6,exportedAt:new Date().toISOString(),persons},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url; a.download=`social-universe-${td()}.json`; a.click(); URL.revokeObjectURL(url);
+}
+
+async function doImport(e){
+  const file=e.target.files[0]; if(!file) return;
+  try{
+    const d=JSON.parse(await file.text());
+    const ip=d.persons??d;
+    if(!confirm(`${ip.length}名をインポートします。現在のデータは上書きされます。よろしいですか？`))return;
+    persons=ip; sv(SK,persons);
+    showBkSt('ok',`${ip.length}名をインポートしました。`); renderMap();
+  }catch(err){showBkSt('err','読み込みに失敗しました: '+err.message);}
+  e.target.value='';
+}
+
+function showBkSt(t,m){
+  const el=document.getElementById('backupStatus');
+  el.innerHTML=`<div class="st-box ${t==='ok'?'st-ok':'st-err'}">${t==='ok'?'✓':'✕'} ${m}</div>`;
+  setTimeout(()=>el.innerHTML='',5000);
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  PRINT                                                   ║
+// ╚══════════════════════════════════════════════════════════╝
+function buildPrint(){
+  const now=new Date();
+  document.getElementById('ppDate').textContent=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+
+  const printPersons=persons.filter(p=>!p.isDormant);
+  const PUR_HD={'事業・成果':'pp-col-hd-biz','視野・学び':'pp-col-hd-learn','安心・人生':'pp-col-hd-life'};
+
+  // Map columns
+  let mapH='';
+  PURPOSES.forEach(pur=>{
+    const ps=printPersons.filter(p=>p.relationshipPurpose===pur);
+    mapH+=`<div class="pp-col">
+      <div class="pp-col-hd ${PUR_HD[pur]}">${pur}</div>
+      <div class="pp-canvas" style="position:relative;">
+        <div class="pp-canvas-zone"><span class="pp-canvas-zone-lbl">増やす</span></div>
+        <div class="pp-canvas-zone"><span class="pp-canvas-zone-lbl">維持</span></div>
+        <div class="pp-canvas-zone"><span class="pp-canvas-zone-lbl">距離を置く</span></div>`;
+    ps.forEach(p=>{
+      const ecls=energyCls(p.energyState);
+      const scls=p.impact==='大'?'pp-pc-lg':p.impact==='中'?'pp-pc-md':'pp-pc-sm';
+      const fcls=p.frequency==='毎週〜隔週'?'pp-fq-h':p.frequency==='月1〜年数回'?'pp-fq-m':'pp-fq-l';
+      const vf=p.valueFlow, vfc=VF_COL[vf]||'';
+      const xPct=Math.max(5,Math.min(95,p.x??50));
+      const yPct=Math.max(5,Math.min(95,p.y??50));
+      mapH+=`<div class="pp-pc pp-pc-${ecls} ${scls} ${fcls}" style="left:${xPct}%;top:${yPct}%">
+        ${esc(p.name)}
+        ${p.isTop10?`<div class="pp-star">★</div>`:''}
+        ${p.isDraining?`<div class="pp-warn-p">!</div>`:''}
+        ${vf?`<div class="pp-vf-badge" style="position:absolute;bottom:-0.8mm;right:-0.8mm;font-size:5pt;width:2.8mm;height:2.8mm;border-radius:50%;background:white;border:0.4pt solid rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:${vfc}">${vf}</div>`:''}
+        <div class="pp-type-tag">${esc(p.relationshipType)}</div>
+      </div>`;
+    });
+    mapH+=`</div></div>`;
+  });
+  document.getElementById('ppMapCols').innerHTML=mapH;
+
+  // Top10
+  const top10=printPersons.filter(p=>p.isTop10&&p.nextAction).slice(0,10);
+  let t10h='';
+  if(!top10.length){
+    t10h='<div style="font-size:7pt;color:#94a3b8;padding:3mm 0">Top10アクション未設定</div>';
+  } else {
+    t10h=`<table class="pp-t10-tbl">`;
+    top10.forEach((p,i)=>{
+      t10h+=`<tr>
+        <td class="pp-t10-num">${i+1}</td>
+        <td class="pp-t10-name">${esc(p.name)}</td>
+        <td class="pp-t10-act">${esc(p.nextAction)}</td>
+      </tr>`;
+    });
+    t10h+=`</table><div class="pp-t10-note">※ Top10は次の行動を決めた人のみ</div>`;
+  }
+  document.getElementById('ppTop10').innerHTML=t10h;
+}
+
+function doPrint(){ buildPrint(); setTimeout(()=>window.print(),80); }
+
+// ── TOAST ──
+let _toastTimer=null;
+function showToast(msg){
+  const el=document.getElementById('toast'); if(!el) return;
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+// ── KEYBOARD ──
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ closeModal(); closeBackup(); closeDormant(); }
+});
+
+// ── INIT ──
+renderMap();
+</script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js")
+        .then(r => console.log("SW registered:", r))
+        .catch(e => console.log("SW error:", e));
+    }
+  </script>
+</body>
+</html>
