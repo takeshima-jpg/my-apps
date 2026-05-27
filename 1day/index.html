@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+  <link rel="icon" type="image/png" href="./icons/favicon.ico">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1day — 思考ログ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+:root {
+  --bg: #f5f5f7; --bg2: #ffffff; --bg3: #ebebee; --bg4: #e0e0e5;
+  --border: #d8d8e0; --border2: #c8c8d4;
+  --text: #1a1a22; --text2: #5a5a6e; --text3: #9898a8;
+  --accent: #7c6fff; --accent2: #5b51d8;
+  --sat-great: #3ecf8e; --sat-good: #4fa3ff; --sat-meh: #f5c842; --sat-bad: #ff5c5c;
+  --radius: 6px; --radius2: 10px;
+  --font-body: 'Noto Sans JP', sans-serif; --font-mono: 'JetBrains Mono', monospace;
+  --sidebar-w: 200px; --transition: 0.18s ease;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+.app { display: flex; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 28px 20px; position: sticky; top: 0; height: 100vh; }
+.logo { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 500; color: var(--text); letter-spacing: -0.04em; }
+.logo-sub { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text3); letter-spacing: 0.08em; margin-top: 2px; margin-bottom: 32px; }
+.side-nav { display: flex; flex-direction: column; gap: 4px; }
+.nav-item { background: none; border: none; color: var(--text2); font-family: var(--font-body); font-size: 0.85rem; padding: 9px 12px; border-radius: var(--radius); cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px; transition: background var(--transition), color var(--transition); }
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: var(--bg3); color: var(--text); }
+.nav-icon { font-size: 0.75rem; color: var(--accent); }
+.last-record-wrap { margin-top: auto; padding-top: 20px; }
+.last-record-label { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); letter-spacing: 0.06em; margin-bottom: 4px; }
+.last-record-date { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text2); }
+.side-bottom { padding-top: 12px; border-top: 1px solid var(--border); margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+.side-action { background: none; border: none; color: var(--text3); font-family: var(--font-mono); font-size: 0.72rem; padding: 6px 4px; cursor: pointer; text-align: left; transition: color var(--transition); letter-spacing: 0.02em; }
+.side-action:hover { color: var(--text); }
+
+/* MAIN */
+.main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; min-width: 0; }
+
+/* TOPBAR */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 32px; border-bottom: 1px solid var(--border); gap: 16px; position: sticky; top: 0; background: var(--bg); z-index: 10; }
+.week-display { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text3); letter-spacing: 0.04em; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.search-input { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--font-body); font-size: 0.85rem; padding: 7px 14px; width: 180px; outline: none; transition: border-color var(--transition); }
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--text3); }
+.btn-primary { background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-family: var(--font-body); font-size: 0.85rem; font-weight: 500; padding: 8px 18px; cursor: pointer; transition: background var(--transition), transform 0.1s; white-space: nowrap; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-primary:active { transform: scale(0.97); }
+.btn-review { background: none; border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text2); font-family: var(--font-body); font-size: 0.82rem; padding: 7px 14px; cursor: pointer; transition: border-color var(--transition), color var(--transition); white-space: nowrap; }
+.btn-review:hover { border-color: var(--accent); color: var(--accent); }
+
+/* FILTER BAR */
+.filter-bar { padding: 12px 32px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.filter-tags { display: flex; gap: 6px; flex-wrap: nowrap; }
+.filter-chip { background: none; border: 1px solid var(--border); border-radius: 20px; color: var(--text2); font-size: 0.75rem; padding: 4px 12px; cursor: pointer; white-space: nowrap; transition: all var(--transition); font-family: var(--font-body); }
+.filter-chip:hover { border-color: var(--border2); color: var(--text); }
+.filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ARCHIVE ACTION BAR */
+.archive-bar { display: none; align-items: center; gap: 12px; padding: 10px 32px; background: var(--bg3); border-bottom: 1px solid var(--border); font-size: 0.8rem; color: var(--text2); }
+.archive-bar.visible { display: flex; }
+.btn-archive { background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 0.8rem; padding: 6px 14px; cursor: pointer; font-family: var(--font-body); transition: background var(--transition); }
+.btn-archive:hover { background: var(--accent2); }
+.btn-deselect { background: none; border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text2); font-size: 0.8rem; padding: 5px 12px; cursor: pointer; font-family: var(--font-body); transition: all var(--transition); }
+.btn-deselect:hover { color: var(--text); }
+
+/* VISION AREA */
+.vision-area { padding: 14px 32px; border-bottom: 1px solid var(--border); }
+.vision-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius2); padding: 13px 18px; display: flex; align-items: baseline; gap: 14px; max-width: 760px; }
+.vision-type { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text3); letter-spacing: 0.1em; white-space: nowrap; min-width: 56px; line-height: 1.8; }
+.vision-body { font-size: 0.82rem; color: var(--text2); line-height: 1.7; }
+.vision-keyword { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text3); margin-right: 10px; }
+@media (max-width: 720px) { .vision-area { padding: 10px 16px; } }
+
+/* LOG LIST */
+.log-list { flex: 1; padding: 28px 32px; display: flex; flex-direction: column; gap: 12px; }
+.log-list.selectable { padding-left: 60px; }
+
+/* EMPTY STATE */
+.empty-state { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; gap: 10px; color: var(--text3); }
+.empty-state.show { display: flex; }
+.empty-icon { font-size: 2.5rem; color: var(--border2); margin-bottom: 8px; }
+.empty-text { font-size: 1rem; color: var(--text2); }
+.empty-sub { font-size: 0.8rem; }
+
+/* LOG CARD */
+.log-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2); padding: 18px 22px; display: flex; flex-direction: column; gap: 10px; transition: border-color var(--transition); cursor: default; animation: fadeIn 0.22s ease; position: relative; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.log-card:hover { border-color: var(--border2); }
+.log-card.selected { border-color: var(--accent); background: rgba(124,111,255,0.04); }
+
+/* チェックボックス */
+.card-check { position: absolute; top: 20px; left: -32px; width: 18px; height: 18px; border: 1.5px solid var(--border2); border-radius: 4px; cursor: pointer; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #fff; transition: all var(--transition); opacity: 0; }
+.log-card:hover .card-check { opacity: 1; }
+.log-card.selected .card-check { opacity: 1; border-color: var(--accent); background: var(--accent); }
+
+.log-card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.log-date { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text3); letter-spacing: 0.04em; }
+.log-card-meta { display: flex; align-items: center; gap: 8px; }
+.log-sat { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; }
+.log-sat.great { background: rgba(62,207,142,0.12); color: var(--sat-great); }
+.log-sat.good  { background: rgba(79,163,255,0.12); color: var(--sat-good); }
+.log-sat.meh   { background: rgba(245,200,66,0.12); color: var(--sat-meh); }
+.log-sat.bad   { background: rgba(255,92,92,0.12);  color: var(--sat-bad); }
+.log-events { font-size: 0.9rem; color: var(--text); line-height: 1.7; white-space: pre-wrap; cursor: pointer; }
+.log-events.truncated { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.log-unease { font-size: 0.8rem; color: var(--sat-meh); display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); }
+.log-footer { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tag-pill { font-size: 0.7rem; padding: 2px 9px; border-radius: 20px; background: var(--bg3); color: var(--text3); border: 1px solid var(--border); font-family: var(--font-mono); }
+.flag-pill { font-size: 0.72rem; padding: 2px 8px; border-radius: 20px; background: var(--bg4); color: var(--text2); }
+.log-card-actions { display: flex; gap: 8px; opacity: 0; transition: opacity var(--transition); }
+.log-card:hover .log-card-actions { opacity: 1; }
+.card-action-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text3); font-size: 0.72rem; padding: 3px 9px; cursor: pointer; font-family: var(--font-mono); transition: all var(--transition); }
+.card-action-btn:hover { border-color: var(--border2); color: var(--text); }
+.card-action-btn.delete:hover { border-color: var(--sat-bad); color: var(--sat-bad); }
+.sat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sat-dot.great { background: var(--sat-great); }
+.sat-dot.good  { background: var(--sat-good); }
+.sat-dot.meh   { background: var(--sat-meh); }
+.sat-dot.bad   { background: var(--sat-bad); }
+
+/* WEEK GROUP HEADER */
+.week-group-header { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text3); letter-spacing: 0.06em; padding: 6px 0 4px; border-bottom: 1px solid var(--border); margin-bottom: 4px; margin-top: 8px; }
+
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; backdrop-filter: blur(4px); }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; padding: 28px; display: flex; flex-direction: column; gap: 20px; transform: translateY(10px); transition: transform 0.22s ease; }
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-wide { max-width: 680px; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; }
+.modal-date { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text3); letter-spacing: 0.04em; }
+.modal-close { background: none; border: none; color: var(--text3); font-size: 1rem; cursor: pointer; padding: 4px 8px; border-radius: var(--radius); transition: color var(--transition), background var(--transition); }
+.modal-close:hover { color: var(--text); background: var(--bg3); }
+
+/* FIELDS */
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field-label { font-size: 0.78rem; color: var(--text3); font-family: var(--font-mono); letter-spacing: 0.04em; display: flex; align-items: center; gap: 8px; }
+.required { background: rgba(124,111,255,0.15); color: var(--accent); font-size: 0.65rem; padding: 1px 6px; border-radius: 3px; }
+.optional { color: var(--text3); font-size: 0.65rem; }
+textarea, input[type="text"], input[type="date"] { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--font-body); font-size: 0.9rem; padding: 10px 14px; outline: none; width: 100%; resize: vertical; transition: border-color var(--transition); line-height: 1.65; }
+textarea:focus, input[type="text"]:focus, input[type="date"]:focus { border-color: var(--accent); }
+textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.85rem; }
+
+/* SATISFACTION */
+.satisfaction-row { display: flex; gap: 8px; }
+.sat-btn { flex: 1; padding: 14px 0; background: var(--bg3); border: 2px solid var(--border); border-radius: var(--radius); font-size: 1.2rem; cursor: pointer; transition: all 0.15s ease; color: var(--text2); }
+.sat-btn:hover { border-color: var(--border2); }
+.sat-btn.selected[data-value="great"] { border-color: var(--sat-great); background: rgba(62,207,142,0.1); color: var(--sat-great); }
+.sat-btn.selected[data-value="good"]  { border-color: var(--sat-good);  background: rgba(79,163,255,0.1); color: var(--sat-good); }
+.sat-btn.selected[data-value="meh"]   { border-color: var(--sat-meh);   background: rgba(245,200,66,0.1); color: var(--sat-meh); }
+.sat-btn.selected[data-value="bad"]   { border-color: var(--sat-bad);   background: rgba(255,92,92,0.1);  color: var(--sat-bad); }
+
+/* TAGS & FLAGS */
+.tag-row, .flag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-chip { background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; color: var(--text2); font-size: 0.78rem; padding: 5px 13px; cursor: pointer; transition: all var(--transition); font-family: var(--font-body); }
+.tag-chip:hover { border-color: var(--border2); }
+.tag-chip.selected { background: rgba(124,111,255,0.15); border-color: var(--accent); color: var(--accent); }
+.flag-btn { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text2); font-size: 0.78rem; padding: 6px 12px; cursor: pointer; transition: all var(--transition); font-family: var(--font-body); }
+.flag-btn:hover { border-color: var(--border2); }
+.flag-btn.selected { background: var(--bg4); border-color: var(--border2); color: var(--text); }
+
+/* MODAL FOOTER */
+.modal-footer { display: flex; justify-content: flex-end; padding-top: 4px; border-top: 1px solid var(--border); }
+.btn-save { background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-family: var(--font-body); font-size: 0.9rem; font-weight: 500; padding: 10px 24px; cursor: pointer; transition: background var(--transition); }
+.btn-save:hover { background: var(--accent2); }
+
+/* WEEK REVIEW */
+.review-section { display: flex; flex-direction: column; gap: 12px; }
+.review-section-title { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text3); letter-spacing: 0.06em; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.review-insights { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.insight-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font-size: 0.8rem; color: var(--text2); line-height: 1.6; min-height: 56px; }
+.insight-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text3); margin-bottom: 4px; letter-spacing: 0.04em; }
+.insight-value { color: var(--text); font-size: 0.82rem; }
+.review-fields { display: flex; flex-direction: column; gap: 10px; }
+.field-hint { font-size: 0.7rem; color: var(--text3); font-family: var(--font-mono); margin-top: -4px; letter-spacing: 0.02em; }
+
+/* CONVICTION ROW */
+.conviction-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.conv-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text2); font-size: 0.8rem; padding: 8px 16px; cursor: pointer; font-family: var(--font-body); transition: all var(--transition); }
+.conv-btn:hover { border-color: var(--border2); color: var(--text); }
+.conv-btn.selected { border-color: var(--accent); background: rgba(124,111,255,0.1); color: var(--accent); }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
+
+/* RESPONSIVE */
+@media (max-width: 720px) {
+  .sidebar { display: none; }
+  .topbar { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
+  .topbar-right { flex-wrap: wrap; width: 100%; gap: 8px; }
+  .search-input { width: 100%; }
+  .log-list { padding: 16px; }
+  .log-list.selectable { padding-left: 40px; }
+  .filter-bar, .archive-bar { padding: 10px 16px; }
+  .review-insights { grid-template-columns: 1fr; }
+  .modal { padding: 20px; }
+}
+
+/* TOAST */
+.toast { position: fixed; bottom: 28px; right: 28px; background: var(--bg4); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text); font-size: 0.82rem; font-family: var(--font-mono); padding: 10px 18px; z-index: 999; opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
+/* DATE BUTTONS */
+.date-btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.date-btn { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text2); font-family: var(--font-mono); font-size: 0.78rem; padding: 6px 12px; cursor: pointer; transition: all var(--transition); }
+.date-btn:hover { border-color: var(--border2); color: var(--text); }
+.date-btn.selected { border-color: var(--accent); background: rgba(124,111,255,0.1); color: var(--accent); }
+.date-btn.today-btn { border-color: var(--border2); }
+.date-btn.recorded { color: var(--text3); border-color: var(--border); cursor: not-allowed; opacity: 0.45; }
+.date-btn.recorded:hover { border-color: var(--border); color: var(--text3); }
+
+/* FILTER SUB ROW */
+.filter-tags-sub { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+.filter-sub-label { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); padding: 4px 6px; letter-spacing: 0.06em; }
+
+.db-item-sub { font-size: 0.72rem; color: var(--text3); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* TAG DIST */
+.db-tag-dist { display: flex; flex-direction: column; gap: 6px; }
+.db-tag-bar-row { display: flex; align-items: center; gap: 10px; }
+.db-tag-name { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text2); width: 72px; flex-shrink: 0; }
+.db-tag-bar-wrap { flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.db-tag-bar { height: 100%; background: var(--accent); border-radius: 3px; opacity: 0.5; transition: width 0.3s ease; }
+.db-tag-count { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text3); width: 24px; text-align: right; }
+.db-section-sub { font-size: 0.62rem; color: var(--text3); font-weight: 300; margin-left: 6px; }
+.db-section-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.db-section-header .db-section-title { border-bottom: none; padding-bottom: 0; }
+.period-switcher { display: flex; gap: 4px; }
+.period-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text3); font-family: var(--font-mono); font-size: 0.68rem; padding: 3px 10px; cursor: pointer; transition: all var(--transition); }
+.period-btn:hover { border-color: var(--border2); color: var(--text2); }
+.period-btn.active { border-color: var(--accent); color: var(--accent); }
+.state-graphs { display: flex; flex-direction: column; gap: 20px; }
+.graph-block { display: flex; flex-direction: column; gap: 6px; }
+.graph-label { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text2); display: flex; align-items: baseline; gap: 10px; }
+.graph-desc { font-size: 0.65rem; color: var(--text3); font-weight: 300; }
+.graph-wrap { width: 100%; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.graph-wrap svg { display: block; width: 100%; }
+.graph-no-data { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text3); padding: 18px 20px; }
+
+/* DASHBOARD */
+.dashboard { flex: 1; padding: 28px 32px; display: flex; flex-direction: column; gap: 32px; overflow-y: auto; }
+.db-section { display: flex; flex-direction: column; gap: 12px; }
+.db-section-title { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text3); letter-spacing: 0.08em; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.db-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.db-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2); padding: 16px 20px; display: flex; flex-direction: column; gap: 6px; }
+.db-card-sm { min-width: 120px; }
+.db-card-wide { flex: 1; min-width: 220px; }
+.db-card-label { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); letter-spacing: 0.06em; }
+.db-card-value { font-size: 1rem; color: var(--text); font-weight: 500; }
+.db-sat-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2px; }
+.db-sat-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.db-sat-dot { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; }
+.db-sat-dot.great { background: rgba(62,207,142,0.12); color: var(--sat-great); }
+.db-sat-dot.good  { background: rgba(79,163,255,0.12); color: var(--sat-good); }
+.db-sat-dot.meh   { background: rgba(245,200,66,0.12);  color: var(--sat-meh); }
+.db-sat-dot.bad   { background: rgba(255,92,92,0.12);   color: var(--sat-bad); }
+.db-sat-date { font-family: var(--font-mono); font-size: 0.58rem; color: var(--text3); }
+
+.db-list { display: flex; flex-direction: column; gap: 8px; }
+.db-item { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 16px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; transition: border-color var(--transition); }
+.db-item:hover { border-color: var(--border2); }
+.db-item-date { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); }
+.db-item-text { font-size: 0.85rem; color: var(--text2); line-height: 1.55; }
+.db-item-text.expanded { color: var(--text); }
+.db-empty { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text3); padding: 8px 0; }
+
+.db-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.db-col-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text3); margin-bottom: 8px; letter-spacing: 0.04em; }
+
+.db-pattern-list { display: flex; flex-direction: column; gap: 6px; }
+.db-pattern-item { display: flex; align-items: center; justify-content: space-between; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 16px; }
+.db-pattern-text { font-size: 0.85rem; color: var(--text2); }
+.db-pattern-count { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text3); background: var(--bg3); padding: 2px 8px; border-radius: 10px; }
+
+.conviction-smooth { color: var(--sat-great); }
+.conviction-off    { color: var(--sat-meh); }
+.conviction-forced { color: var(--sat-bad); }
+.conviction-lost   { color: var(--text3); }
+
+@media (max-width: 720px) {
+  .dashboard { padding: 16px; gap: 24px; }
+  .db-two-col { grid-template-columns: 1fr; }
+}
+  </style>
+</head>
+<body>
+
+<!-- MODAL: 記録する -->
+<div class="modal-overlay" id="entryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-date" id="modalTitle">今週を記録</div>
+      <button class="modal-close" id="closeModal">✕</button>
+    </div>
+    <div class="field">
+      <div class="field-label">記録日</div>
+      <div class="date-btn-row" id="dateBtnRow"></div>
+      <input type="hidden" id="entryDate">
+    </div>
+    <div class="field">
+      <div class="field-label">今週は？</div>
+      <div class="satisfaction-row">
+        <button class="sat-btn" data-value="great">◎</button>
+        <button class="sat-btn" data-value="good">〇</button>
+        <button class="sat-btn" data-value="meh">△</button>
+        <button class="sat-btn" data-value="bad">×</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">できごと <span class="required">必須</span></div>
+      <textarea id="eventsInput" placeholder="今週起きたこと、気になったこと、誰かとの会話…&#10;箇条書きでもOK" rows="4"></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label">⚠ 違和感 <span class="optional">任意</span></div>
+      <input type="text" id="unease" placeholder="なんかモヤっとしたこと、一言で">
+    </div>
+    <div class="field">
+      <div class="field-label">タグ <span class="optional">任意</span></div>
+      <div class="field-hint">何についてのログか</div>
+      <div class="tag-row">
+        <button class="tag-chip" data-tag="経営">経営</button>
+        <button class="tag-chip" data-tag="組織">組織</button>
+        <button class="tag-chip" data-tag="人間関係">人間関係</button>
+        <button class="tag-chip" data-tag="家族">家族</button>
+        <button class="tag-chip" data-tag="健康">健康</button>
+        <button class="tag-chip" data-tag="感情">感情</button>
+        <button class="tag-chip" data-tag="学び">学び</button>
+        <button class="tag-chip" data-tag="お金">お金</button>
+        <button class="tag-chip" data-tag="未来">未来</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">フラグ <span class="optional">任意</span></div>
+      <div class="field-hint">後で拾いたいもの</div>
+      <div class="flag-row">
+        <button class="flag-btn" data-flag="unease">⚠ 違和感</button>
+        <button class="flag-btn" data-flag="energy">🔥 エネルギー高</button>
+        <button class="flag-btn" data-flag="blog">✍ ブログ候補</button>
+        <button class="flag-btn" data-flag="deep">⭐ 深掘り</button>
+        <button class="flag-btn" data-flag="vision">🧭 VISION関連</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-save" id="saveEntry">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 週次レビュー -->
+<div class="modal-overlay" id="reviewModal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <div class="modal-date">週次レビュー — <span id="reviewWeekLabel"></span></div>
+      <button class="modal-close" id="closeReview">✕</button>
+    </div>
+    <div class="review-section">
+      <div class="review-section-title">// 今週のパターン</div>
+      <div class="review-insights">
+        <div class="insight-card" id="insightUnease"></div>
+        <div class="insight-card" id="insightEnergy"></div>
+        <div class="insight-card" id="insightWords"></div>
+        <div class="insight-card" id="insightBlog"></div>
+      </div>
+    </div>
+    <div class="review-section">
+      <div class="review-section-title">// 観測ログ</div>
+      <div class="review-fields">
+        <div class="field">
+          <div class="field-label">今週の違和感</div>
+          <div class="field-hint">未整理でOK。言語化できなくてもOK。</div>
+          <textarea id="rv_unease" placeholder="なんか引っかかったこと、ズレたこと" rows="1"></textarea>
+        </div>
+        <div class="field">
+          <div class="field-label">今週のエネルギー源</div>
+          <div class="field-hint">人、会話、挑戦、未来、家族、学びなど</div>
+          <textarea id="rv_energy" placeholder="誰・何・どこで前に進めた？" rows="1"></textarea>
+        </div>
+        <div class="field">
+          <div class="field-label">繰り返しているパターン</div>
+          <div class="field-hint">良い悪いではなく、自分の癖を観測する。</div>
+          <textarea id="rv_pattern" placeholder="また説明しすぎた　また期待した　また頭で処理した　また抱えた　また遠慮した" rows="1"></textarea>
+        </div>
+        <div class="field">
+          <div class="field-label">来週の小さな実験</div>
+          <div class="field-hint">改善ではなく実験。</div>
+          <textarea id="rv_experiment" placeholder="小さく試すことを1つだけ" rows="1"></textarea>
+        </div>
+        <div class="field">
+          <div class="field-label">VISIONとズレた瞬間</div>
+          <div class="field-hint">責める場所ではなく、観測する場所。</div>
+          <textarea id="rv_vision_off" placeholder="忖度した　感情で判断した　ワクワクしないのに進めた　確信がないまま動いた　遠慮した" rows="1"></textarea>
+        </div>
+        <div class="field">
+          <div class="field-label">確信を感じた瞬間</div>
+          <div class="field-hint">頭だけではなく、心もYESだった瞬間。</div>
+          <textarea id="rv_vision_on" placeholder="未来を感じた　仲間感があった　腹落ちした　挑戦できた　自然に動けた" rows="1"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="review-section">
+      <div class="review-section-title">// 今週の確信度</div>
+      <div class="conviction-row" id="convictionRow">
+        <button class="conv-btn" data-value="smooth">○ スッと進めた</button>
+        <button class="conv-btn" data-value="off">○ 少しズレた</button>
+        <button class="conv-btn" data-value="forced">○ 無理していた</button>
+        <button class="conv-btn" data-value="lost">○ わからなくなった</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-save" id="saveReview">レビューを保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">1day</div>
+    <div class="logo-sub">思考ログ</div>
+    <nav class="side-nav">
+      <button class="nav-item" data-view="dashboard"><span class="nav-icon">◉</span> ダッシュボード</button>
+      <button class="nav-item active" data-view="log"><span class="nav-icon">◈</span> ログ</button>
+      <button class="nav-item" data-view="archive"><span class="nav-icon">◇</span> アーカイブ</button>
+    </nav>
+    <div class="last-record-wrap">
+      <div class="last-record-label">最終記録日</div>
+      <div class="last-record-date" id="lastRecordDate">—</div>
+    </div>
+    <div class="side-bottom">
+      <button class="side-action" id="exportBtn">↓ エクスポート</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="week-display" id="weekDisplay"></div>
+      <div class="topbar-right">
+        <input type="text" id="searchInput" placeholder="検索…" class="search-input">
+        <button class="btn-review" id="openReview">週次レビュー</button>
+        <button class="btn-primary" id="openEntry">記録する</button>
+      </div>
+    </div>
+
+    <div class="filter-bar" id="filter-bar-wrap">
+      <div class="filter-tags">
+        <button class="filter-chip active" data-filter="all">すべて</button>
+        <button class="filter-chip" data-filter="flag:unease">⚠ 違和感</button>
+        <button class="filter-chip" data-filter="flag:energy">🔥 エネルギー高</button>
+        <button class="filter-chip" data-filter="flag:deep">⭐ 深掘り</button>
+        <button class="filter-chip" data-filter="flag:vision">🧭 VISION</button>
+        <button class="filter-chip" data-filter="flag:blog">✍ ブログ候補</button>
+      </div>
+      <div class="filter-tags filter-tags-sub">
+        <span class="filter-sub-label">タグ</span>
+        <button class="filter-chip" data-filter="tag:経営">経営</button>
+        <button class="filter-chip" data-filter="tag:組織">組織</button>
+        <button class="filter-chip" data-filter="tag:人間関係">人間関係</button>
+        <button class="filter-chip" data-filter="tag:家族">家族</button>
+        <button class="filter-chip" data-filter="tag:健康">健康</button>
+        <button class="filter-chip" data-filter="tag:感情">感情</button>
+        <button class="filter-chip" data-filter="tag:学び">学び</button>
+        <button class="filter-chip" data-filter="tag:お金">お金</button>
+        <button class="filter-chip" data-filter="tag:未来">未来</button>
+      </div>
+    </div>
+
+    <!-- VISIONエリア -->
+    <div class="vision-area" id="visionArea"></div>
+
+    <!-- 選択時のみ表示されるアーカイブバー -->
+    <div class="archive-bar" id="archiveBar">
+      <span id="selectedCount">0件選択中</span>
+      <button class="btn-archive" id="doArchive">アーカイブする</button>
+      <button class="btn-deselect" id="doDeselect">選択解除</button>
+    </div>
+
+    <div class="log-list" id="logList">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">◈</div>
+        <div class="empty-text" id="emptyText">記録を始めよう</div>
+        <div class="empty-sub" id="emptySub">週1回でOK。完璧じゃなくていい。</div>
+      </div>
+    </div>
+
+    <!-- ダッシュボード -->
+    <div class="dashboard" id="dashboard" style="display:none;">
+
+      <!-- 状態計 -->
+      <div class="db-section">
+        <div class="db-section-header">
+          <div class="db-section-title">// 状態計</div>
+          <div class="period-switcher">
+            <button class="period-btn" data-weeks="4">4週</button>
+            <button class="period-btn active" data-weeks="12">12週</button>
+            <button class="period-btn" data-weeks="24">24週</button>
+          </div>
+        </div>
+        <div class="state-graphs">
+          <div class="graph-block">
+            <div class="graph-label">確信度 <span class="graph-desc">頭と心が一致していた感覚</span></div>
+            <div class="graph-wrap" id="graph_conviction"></div>
+          </div>
+          <div class="graph-block">
+            <div class="graph-label">満足度 <span class="graph-desc">今週の全体的な充実感</span></div>
+            <div class="graph-wrap" id="graph_satisfaction"></div>
+          </div>
+          <div class="graph-block">
+            <div class="graph-label">違和感検知数 <span class="graph-desc">ズレや違和感を感知した回数</span></div>
+            <div class="graph-wrap" id="graph_unease"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② 今週の状態 -->
+      <div class="db-section">
+        <div class="db-section-title">// 今週の状態</div>
+        <div class="db-row" id="db_this_week_row">
+          <div class="db-card db-card-sm">
+            <div class="db-card-label">確信度</div>
+            <div class="db-card-value" id="db_conviction_val">—</div>
+          </div>
+          <div class="db-card db-card-sm">
+            <div class="db-card-label">満足度平均</div>
+            <div class="db-card-value" id="db_sat_avg">—</div>
+          </div>
+          <div class="db-card db-card-sm">
+            <div class="db-card-label">⚠ 違和感検知</div>
+            <div class="db-card-value" id="db_unease_val">—</div>
+          </div>
+          <div class="db-card db-card-sm">
+            <div class="db-card-label">🔥 エネルギー高</div>
+            <div class="db-card-value" id="db_energy_count">—</div>
+          </div>
+          <div class="db-card db-card-sm">
+            <div class="db-card-label">⭐ 深掘り</div>
+            <div class="db-card-value" id="db_deep_count">—</div>
+          </div>
+          <div class="db-card db-card-sm">
+            <div class="db-card-label">🧭 VISION関連</div>
+            <div class="db-card-value" id="db_vision_count">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ 違和感ログ -->
+      <div class="db-section">
+        <div class="db-section-title">// 違和感ログ</div>
+        <div class="db-list" id="db_unease_list"></div>
+      </div>
+
+      <!-- ④ エネルギー源 -->
+      <div class="db-section">
+        <div class="db-section-title">// エネルギー源</div>
+        <div class="db-list" id="db_energy_list"></div>
+      </div>
+
+      <!-- ⑤ 深掘り候補 -->
+      <div class="db-section">
+        <div class="db-section-title">// 深掘り候補</div>
+        <div class="db-list" id="db_deep_list"></div>
+      </div>
+
+      <!-- ⑥ VISION関連 -->
+      <div class="db-section">
+        <div class="db-section-title">// VISIONとのズレ・確信</div>
+        <div class="db-two-col">
+          <div>
+            <div class="db-col-label">ズレた瞬間</div>
+            <div class="db-list" id="db_vision_off_list"></div>
+          </div>
+          <div>
+            <div class="db-col-label">確信を感じた瞬間</div>
+            <div class="db-list" id="db_vision_on_list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑦ ブログ・思想の種 -->
+      <div class="db-section">
+        <div class="db-section-title">// ブログ・思想の種</div>
+        <div class="db-list" id="db_blog_list"></div>
+      </div>
+
+      <!-- ⑧ タグ分布 -->
+      <div class="db-section">
+        <div class="db-section-title">// タグ分布 <span class="db-section-sub">直近12週</span></div>
+        <div class="db-tag-dist" id="db_tag_dist"></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+'use strict';
+
+const DB_KEY = 'oneday_logs_v1';
+const RV_KEY = 'oneday_reviews_v1';
+
+let state = { logs:[], reviews:[], filter:'all', search:'', editId:null, view:'log', selected:new Set() };
+const SAT_LABEL   = { great:'◎', good:'〇', meh:'△', bad:'×' };
+const SAT_CLASS   = { great:'great', good:'good', meh:'meh', bad:'bad' };
+const FLAG_LABELS = { unease:'⚠ 違和感', energy:'🔥 エネルギー高', blog:'✍ ブログ候補', deep:'⭐ 深掘り', vision:'🧭 VISION関連', learning:'🧠 学び', relation:'❤️ 人間関係' };
+
+// VISION 2026 DATA
+const VISION_DATA = {
+  vision: [
+    '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。',
+    '安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。',
+    '挑戦する人が成長できる社会をつくる。そのために、守りの総合支援がある。',
+  ],
+  principles: [
+    { title: '成長', text: '未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。' },
+    { title: '愛', text: '周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。' },
+    { title: '誠実', text: '自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。' },
+    { title: '寛容', text: '個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。' },
+  ],
+  directions: [
+    { title: '確信', text: '頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。油断せず備える。' },
+    { title: '仲間', text: '弱みも未来も共有し、自立し、責任を持って、前向きに、同じゴールに向かい仮説検証ができる人を大切にする。' },
+    { title: '健康', text: '心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。' },
+  ],
+};
+
+function renderVision() {
+  const area = document.getElementById('visionArea');
+  if (!area) return;
+  // 日付をシードにしてランダム選択（同じ日は同じ内容）
+  const seed = parseInt(today().replace(/-/g,'')) % 100;
+  const types = ['vision','principle','direction'];
+  const type = types[seed % 3];
+  let html = '';
+  if (type === 'vision') {
+    const item = VISION_DATA.vision[seed % VISION_DATA.vision.length];
+    html = `<div class="vision-card"><span class="vision-type">VISION</span><span class="vision-body">${item}</span></div>`;
+  } else if (type === 'principle') {
+    const item = VISION_DATA.principles[seed % VISION_DATA.principles.length];
+    html = `<div class="vision-card"><span class="vision-type">原則</span><span class="vision-body"><span class="vision-keyword">${item.title}</span>${item.text}</span></div>`;
+  } else {
+    const item = VISION_DATA.directions[seed % VISION_DATA.directions.length];
+    html = `<div class="vision-card"><span class="vision-type">指針</span><span class="vision-body"><span class="vision-keyword">${item.title}</span>${item.text}</span></div>`;
+  }
+  area.innerHTML = html;
+}
+
+// PERSISTENCE
+function loadData() {
+  try { state.logs    = JSON.parse(localStorage.getItem(DB_KEY)) || []; } catch { state.logs = []; }
+  try { state.reviews = JSON.parse(localStorage.getItem(RV_KEY)) || []; } catch { state.reviews = []; }
+  // archived フィールドがない古いデータに対応
+  state.logs.forEach(l => { if (l.archived === undefined) l.archived = false; });
+}
+function saveData()    { localStorage.setItem(DB_KEY, JSON.stringify(state.logs)); }
+function saveReviews() { localStorage.setItem(RV_KEY, JSON.stringify(state.reviews)); }
+
+// DATE HELPERS
+function today() { return new Date().toISOString().slice(0,10); }
+function formatDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  const days = ['日','月','火','水','木','金','土'];
+  return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} (${days[d.getDay()]})`;
+}
+function getWeekRange(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00'), dow = d.getDay();
+  const mon = new Date(d); mon.setDate(d.getDate() - ((dow+6)%7));
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  const fmt = x => `${x.getMonth()+1}/${x.getDate()}`;
+  return `${fmt(mon)} — ${fmt(sun)}`;
+}
+function currentWeekRange() { return getWeekRange(today()); }
+function isoWeek(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00'), dow = d.getDay();
+  const mon = new Date(d); mon.setDate(d.getDate() - ((dow+6)%7));
+  return mon.toISOString().slice(0,10);
+}
+function getThisWeekLogs() { return state.logs.filter(l => !l.archived && isoWeek(l.date) === isoWeek(today())); }
+
+// FILTER
+function filteredLogs() {
+  let logs = state.view === 'archive'
+    ? state.logs.filter(l => l.archived)
+    : state.logs.filter(l => !l.archived);
+  logs = [...logs].sort((a,b) => b.date.localeCompare(a.date));
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    logs = logs.filter(l =>
+      (l.events||'').toLowerCase().includes(q) ||
+      (l.unease||'').toLowerCase().includes(q) ||
+      (l.tags||[]).some(t => t.toLowerCase().includes(q))
+    );
+  }
+  const f = state.filter;
+  if (f === 'all') return logs;
+  if (f.startsWith('flag:')) { const flag = f.split(':')[1]; return logs.filter(l => (l.flags||[]).includes(flag)); }
+  if (f.startsWith('sat:'))  { const sat  = f.split(':')[1]; return logs.filter(l => l.satisfaction === sat); }
+  if (f.startsWith('tag:'))  { const tag  = f.split(':')[1]; return logs.filter(l => (l.tags||[]).includes(tag)); }
+  return logs;
+}
+
+// RENDER
+function render() {
+  document.getElementById('weekDisplay').textContent = `W ${currentWeekRange()}`;
+  renderVision();
+  // 最終記録日を更新
+  const activeLogs = state.logs.filter(l => !l.archived);
+  const lastDate = activeLogs.length
+    ? activeLogs.reduce((a, b) => a.date > b.date ? a : b).date
+    : null;
+  const lastEl = document.getElementById('lastRecordDate');
+  if (lastEl) lastEl.textContent = lastDate ? formatDate(lastDate) : '—';
+
+  if (state.view === 'dashboard') {
+    document.getElementById('logList').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'flex';
+    document.getElementById('filter-bar-wrap').style.display = 'none';
+    document.getElementById('visionArea').style.display = 'none';
+    document.getElementById('archiveBar').style.display = 'none';
+    renderDashboard();
+  } else {
+    document.getElementById('logList').style.display = 'flex';
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('filter-bar-wrap').style.display = '';
+    document.getElementById('visionArea').style.display = '';
+    renderLogList();
+    updateArchiveBar();
+  }
+}
+
+// DASHBOARD
+const CONVICTION_LABEL = { smooth:'スッと進めた', off:'少しズレた', forced:'無理していた', lost:'わからなくなった' };
+const CONVICTION_CLASS = { smooth:'conviction-smooth', off:'conviction-off', forced:'conviction-forced', lost:'conviction-lost' };
+const SAT_CLASS2 = { great:'great', good:'good', meh:'meh', bad:'bad' };
+const CONVICTION_SCORE = { smooth:4, off:3, forced:2, lost:1 };
+const SAT_SCORE = { great:4, good:3, meh:2, bad:1 };
+
+let graphWeeks = 12; // default
+
+// 対象期間の週開始日リストを生成（新→旧の逆順で最後にreverseして古→新）
+function getWeekStarts(n) {
+  const result = [];
+  let cur = isoWeek(today());
+  for (let i = 0; i < n; i++) {
+    result.push(cur);
+    const d = new Date(cur + 'T00:00:00');
+    d.setDate(d.getDate() - 7);
+    cur = d.toISOString().slice(0,10);
+  }
+  return result.reverse();
+}
+
+function buildGraphData(weekStarts) {
+  const logsByWeek = {}, reviewByWeek = {};
+  state.logs.forEach(l => {
+    const wk = isoWeek(l.date);
+    if (!logsByWeek[wk]) logsByWeek[wk] = [];
+    logsByWeek[wk].push(l);
+  });
+  state.reviews.forEach(r => { reviewByWeek[r.week] = r; });
+
+  return weekStarts.map(wk => {
+    const logs = logsByWeek[wk] || [];
+    const review = reviewByWeek[wk];
+
+    // 確信度
+    const conviction = review?.conviction ? CONVICTION_SCORE[review.conviction] : null;
+
+    // 満足度週平均
+    const satLogs = logs.filter(l => l.satisfaction);
+    const satisfaction = satLogs.length
+      ? satLogs.reduce((s, l) => s + (SAT_SCORE[l.satisfaction]||0), 0) / satLogs.length
+      : null;
+
+    // 違和感検知数
+    const uneaseCount = logs.filter(l => l.unease).length;
+
+    // X軸ラベル（月/日）
+    const d = new Date(wk + 'T00:00:00');
+    const label = `${d.getMonth()+1}/${d.getDate()}`;
+
+    return { wk, label, conviction, satisfaction, uneaseCount };
+  });
+}
+
+function drawLineGraph(containerId, data, key, color, minVal, maxVal, isCount) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const hasAny = data.some(d => d[key] !== null && d[key] !== undefined);
+  if (!hasAny) {
+    container.innerHTML = `<div class="graph-no-data">記録がまだありません</div>`;
+    return;
+  }
+
+  const W = container.clientWidth || 600;
+  const H = 80;
+  const padL = 28, padR = 12, padT = 10, padB = 22;
+  const gW = W - padL - padR;
+  const gH = H - padT - padB;
+  const n = data.length;
+  const xStep = n > 1 ? gW / (n - 1) : gW;
+
+  const range = maxVal - minVal;
+  const toY = v => padT + gH - ((v - minVal) / range) * gH;
+  const toX = i => padL + (n > 1 ? i * xStep : gW / 2);
+
+  // グリッド線
+  let gridLines = '';
+  const gridVals = isCount
+    ? [0, Math.ceil(maxVal / 2), maxVal].filter((v,i,a) => a.indexOf(v)===i)
+    : [1,2,3,4];
+  gridVals.forEach(v => {
+    if (v < minVal || v > maxVal) return;
+    const y = toY(v);
+    gridLines += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
+    gridLines += `<text x="${padL - 4}" y="${y + 3.5}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="JetBrains Mono, monospace">${isCount ? v : ['','×','△','○','◎'][v]||v}</text>`;
+  });
+
+  // X軸ラベル（間引き）
+  let xLabels = '';
+  const labelStep = Math.ceil(n / 8);
+  data.forEach((d, i) => {
+    if (i % labelStep !== 0 && i !== n - 1) return;
+    const x = toX(i);
+    xLabels += `<text x="${x}" y="${H - 4}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="JetBrains Mono, monospace">${d.label}</text>`;
+  });
+
+  // ポリライン（nullをスキップしてセグメント分割）
+  let pathD = '', dotsSvg = '';
+  let seg = [];
+  const flush = () => {
+    if (seg.length > 1) {
+      pathD += `<polyline points="${seg.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>`;
+    }
+    seg = [];
+  };
+  data.forEach((d, i) => {
+    const v = d[key];
+    if (v === null || v === undefined) { flush(); return; }
+    const x = toX(i); const y = toY(v);
+    seg.push([x.toFixed(1), y.toFixed(1)]);
+    dotsSvg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="${color}" opacity="0.7"/>`;
+  });
+  flush();
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" height="${H}" preserveAspectRatio="none">
+      ${gridLines}
+      ${pathD}
+      ${dotsSvg}
+      ${xLabels}
+    </svg>`;
+}
+
+function renderStateGraphs() {
+  const weekStarts = getWeekStarts(graphWeeks);
+  const data = buildGraphData(weekStarts);
+
+  // 違和感の最大値を動的に計算（最低4）
+  const maxUnease = Math.max(4, ...data.map(d => d.uneaseCount));
+
+  drawLineGraph('graph_conviction',   data, 'conviction',   '#7c6fff', 1, 4, false);
+  drawLineGraph('graph_satisfaction', data, 'satisfaction', '#4fa3ff', 1, 4, false);
+  drawLineGraph('graph_unease',       data, 'uneaseCount',  '#f5c842', 0, maxUnease, true);
+}
+
+function renderDashboard() {
+  renderStateGraphs();
+  const activeLogs = state.logs.filter(l => !l.archived);
+  const thisWeekLogs = activeLogs.filter(l => isoWeek(l.date) === isoWeek(today()));
+  const thisWeekReview = state.reviews.find(r => r.week === isoWeek(today()));
+  const recentReviews = [...state.reviews].sort((a,b) => b.week.localeCompare(a.week)).slice(0,6);
+
+  const cv = thisWeekReview?.conviction || '';
+  const cvEl = document.getElementById('db_conviction_val');
+  cvEl.textContent = cv ? CONVICTION_LABEL[cv] : '未記録';
+  cvEl.className = 'db-card-value ' + (CONVICTION_CLASS[cv] || '');
+
+  const satLogs = thisWeekLogs.filter(l => l.satisfaction);
+  const satAvg = satLogs.length
+    ? (satLogs.reduce((s,l) => s + (SAT_SCORE[l.satisfaction]||0), 0) / satLogs.length).toFixed(1)
+    : '—';
+  document.getElementById('db_sat_avg').textContent = satAvg !== '—' ? satAvg + ' / 4' : '—';
+
+  const uneaseCount = thisWeekLogs.filter(l => l.unease || (l.flags||[]).includes('unease')).length;
+  document.getElementById('db_unease_val').textContent   = uneaseCount || '0';
+  document.getElementById('db_energy_count').textContent = thisWeekLogs.filter(l => (l.flags||[]).includes('energy')).length || '0';
+  document.getElementById('db_deep_count').textContent   = thisWeekLogs.filter(l => (l.flags||[]).includes('deep')).length || '0';
+  document.getElementById('db_vision_count').textContent = thisWeekLogs.filter(l => (l.flags||[]).includes('vision')).length || '0';
+
+  const uneaseItems = activeLogs
+    .filter(l => l.unease || (l.flags||[]).includes('unease'))
+    .sort((a,b) => b.date.localeCompare(a.date)).slice(0,8);
+  renderDbList('db_unease_list', uneaseItems, l => l.events, '違和感の記録なし', l => l.unease ? '⚠ ' + escHtml(l.unease) : null);
+
+  const energyItems = activeLogs.filter(l => (l.flags||[]).includes('energy'))
+    .sort((a,b) => b.date.localeCompare(a.date)).slice(0,6);
+  renderDbList('db_energy_list', energyItems, l => l.events, 'エネルギー高の記録なし', l => tagsHtmlSmall(l.tags));
+
+  const deepItems = activeLogs.filter(l => (l.flags||[]).includes('deep'))
+    .sort((a,b) => b.date.localeCompare(a.date)).slice(0,6);
+  renderDbList('db_deep_list', deepItems, l => l.events, '深掘り候補の記録なし', l => l.unease ? '⚠ ' + escHtml(l.unease) : null);
+
+  const offItems = recentReviews.filter(r => r.vision_off).slice(0,5);
+  document.getElementById('db_vision_off_list').innerHTML = offItems.length
+    ? offItems.map(r => '<div class="db-item"><div class="db-item-date">' + getWeekRange(r.week) + '</div><div class="db-item-text">' + escHtml(r.vision_off) + '</div></div>').join('')
+    : '<div class="db-empty">記録なし</div>';
+  const onItems = recentReviews.filter(r => r.vision_on).slice(0,5);
+  document.getElementById('db_vision_on_list').innerHTML = onItems.length
+    ? onItems.map(r => '<div class="db-item"><div class="db-item-date">' + getWeekRange(r.week) + '</div><div class="db-item-text">' + escHtml(r.vision_on) + '</div></div>').join('')
+    : '<div class="db-empty">記録なし</div>';
+
+  const blogItems = activeLogs.filter(l => (l.flags||[]).includes('blog'))
+    .sort((a,b) => b.date.localeCompare(a.date)).slice(0,8);
+  renderDbList('db_blog_list', blogItems, l => l.events, 'ブログ候補の記録なし', l => tagsHtmlSmall(l.tags));
+
+  const oldest12 = getWeekStarts(12)[0];
+  const recentLogs12 = activeLogs.filter(l => l.date >= oldest12);
+  const TAG_LIST = ['経営','組織','人間関係','家族','健康','感情','学び','お金','未来'];
+  const tagFreq = {};
+  TAG_LIST.forEach(t => { tagFreq[t] = 0; });
+  recentLogs12.forEach(l => (l.tags||[]).forEach(t => { if (tagFreq[t] !== undefined) tagFreq[t]++; }));
+  const maxTag = Math.max(1, ...Object.values(tagFreq));
+  const sortedTags = TAG_LIST.filter(t => tagFreq[t] > 0).sort((a,b) => tagFreq[b]-tagFreq[a]);
+  document.getElementById('db_tag_dist').innerHTML = sortedTags.length
+    ? sortedTags.map(t => '<div class="db-tag-bar-row"><div class="db-tag-name">' + t + '</div><div class="db-tag-bar-wrap"><div class="db-tag-bar" style="width:' + (tagFreq[t]/maxTag*100).toFixed(0) + '%"></div></div><div class="db-tag-count">' + tagFreq[t] + '</div></div>').join('')
+    : '<div class="db-empty">タグの記録なし</div>';
+}
+
+function tagsHtmlSmall(tags) {
+  if (!tags || !tags.length) return null;
+  return tags.map(t => '<span class="tag-pill">' + t + '</span>').join('');
+}
+
+function renderDbList(containerId, items, textFn, emptyMsg, subFn) {
+  const el = document.getElementById(containerId);
+  if (!items.length) { el.innerHTML = '<div class="db-empty">' + emptyMsg + '</div>'; return; }
+  el.innerHTML = '';
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'db-item';
+    const fullText = textFn(item) || '';
+    const preview = fullText.slice(0, 80) + (fullText.length > 80 ? '…' : '');
+    const sub = subFn ? subFn(item) : null;
+    div.innerHTML = '<div class="db-item-date">' + formatDate(item.date) + '</div><div class="db-item-text">' + escHtml(preview) + '</div>' + (sub ? '<div class="db-item-sub">' + sub + '</div>' : '');
+    div.addEventListener('click', () => {
+      const textEl = div.querySelector('.db-item-text');
+      if (textEl.classList.contains('expanded')) {
+        textEl.innerHTML = escHtml(preview); textEl.classList.remove('expanded');
+      } else {
+        textEl.innerHTML = escHtml(fullText); textEl.classList.add('expanded');
+      }
+    });
+    el.appendChild(div);
+  });
+}
+function renderLogList() {
+  const container = document.getElementById('logList');
+  const logs = filteredLogs();
+  const empty = document.getElementById('emptyState');
+
+  // empty state
+  if (!logs.length) {
+    // カードを消してemptyを出す
+    Array.from(container.children).forEach(c => { if (c !== empty) c.remove(); });
+    empty.classList.add('show');
+    document.getElementById('emptyText').textContent = state.view === 'archive' ? 'アーカイブはまだありません' : '記録を始めよう';
+    document.getElementById('emptySub').textContent  = state.view === 'archive' ? 'ログ一覧でチェックしてアーカイブできます' : '週1回でOK。完璧じゃなくていい。';
+    container.classList.remove('selectable');
+    return;
+  }
+  empty.classList.remove('show');
+
+  // selectable margin
+  if (state.view === 'log') container.classList.add('selectable');
+  else container.classList.remove('selectable');
+
+  // group by week
+  const groups = {};
+  for (const log of logs) { const wk = isoWeek(log.date); if (!groups[wk]) groups[wk] = []; groups[wk].push(log); }
+  const weeks = Object.keys(groups).sort().reverse();
+
+  container.innerHTML = '';
+  container.appendChild(empty); // keep empty in DOM (hidden)
+
+  for (const wk of weeks) {
+    const header = document.createElement('div');
+    header.className = 'week-group-header';
+    header.textContent = getWeekRange(wk);
+    container.appendChild(header);
+    for (const log of groups[wk]) container.appendChild(buildCard(log));
+  }
+}
+
+function buildCard(log) {
+  const card = document.createElement('div');
+  card.className = 'log-card' + (state.selected.has(log.id) ? ' selected' : '');
+  card.dataset.id = log.id;
+
+  const sc = SAT_CLASS[log.satisfaction] || 'good';
+  const sl = SAT_LABEL[log.satisfaction] || '〇';
+  const tagsHtml  = (log.tags||[]).map(t => `<span class="tag-pill">${t}</span>`).join('');
+  const flagsHtml = (log.flags||[]).map(f => `<span class="flag-pill">${FLAG_LABELS[f]||f}</span>`).join('');
+  const uneaseHtml = log.unease ? `<div class="log-unease">⚠ ${escHtml(log.unease)}</div>` : '';
+  const checkHtml  = state.view === 'log'
+    ? `<div class="card-check">${state.selected.has(log.id) ? '✓' : ''}</div>`
+    : '';
+  const unarchiveBtn = state.view === 'archive'
+    ? `<button class="card-action-btn unarchive-btn">ログに戻す</button>` : '';
+
+  card.innerHTML = `
+    ${checkHtml}
+    <div class="log-card-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="sat-dot ${sc}"></div>
+        <div class="log-date">${formatDate(log.date)}</div>
+      </div>
+      <div class="log-card-meta">
+        <div class="log-sat ${sc}">${sl}</div>
+        <div class="log-card-actions">
+          <button class="card-action-btn edit-btn">編集</button>
+          ${unarchiveBtn}
+          <button class="card-action-btn delete delete-btn">削除</button>
+        </div>
+      </div>
+    </div>
+    <div class="log-events truncated">${escHtml(log.events||'')}</div>
+    ${uneaseHtml}
+    ${(tagsHtml||flagsHtml) ? `<div class="log-footer">${tagsHtml}${flagsHtml}</div>` : ''}
+  `;
+
+  // チェック切り替え
+  if (state.view === 'log') {
+    card.querySelector('.card-check').addEventListener('click', e => { e.stopPropagation(); toggleSelect(log.id); });
+  }
+  card.querySelector('.log-events').addEventListener('click', function() { this.classList.toggle('truncated'); });
+  card.querySelector('.edit-btn').addEventListener('click', e => { e.stopPropagation(); openEntryModal(log.id); });
+  card.querySelector('.delete-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    if (confirm('このログを削除しますか？')) {
+      state.logs = state.logs.filter(l => l.id !== log.id);
+      state.selected.delete(log.id);
+      saveData(); render(); toast('削除しました');
+    }
+  });
+  card.querySelector('.unarchive-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const idx = state.logs.findIndex(l => l.id === log.id);
+    if (idx >= 0) { state.logs[idx].archived = false; saveData(); render(); toast('ログに戻しました'); }
+  });
+
+  return card;
+}
+
+function toggleSelect(id) {
+  if (state.selected.has(id)) state.selected.delete(id);
+  else state.selected.add(id);
+  // カードのクラスだけ差分更新
+  const card = document.querySelector(`.log-card[data-id="${id}"]`);
+  if (card) {
+    const on = state.selected.has(id);
+    card.classList.toggle('selected', on);
+    const chk = card.querySelector('.card-check');
+    if (chk) chk.textContent = on ? '✓' : '';
+  }
+  updateArchiveBar();
+}
+
+function updateArchiveBar() {
+  const bar = document.getElementById('archiveBar');
+  if (state.selected.size > 0 && state.view === 'log') {
+    bar.classList.add('visible');
+    document.getElementById('selectedCount').textContent = `${state.selected.size}件選択中`;
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+function archiveSelected() {
+  if (!state.selected.size) return;
+  const count = state.selected.size;
+  state.logs.forEach(l => { if (state.selected.has(l.id)) l.archived = true; });
+  state.selected.clear();
+  saveData(); render(); toast(`${count}件をアーカイブしました ✓`);
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+}
+
+// ENTRY MODAL
+let selectedSat = '', selectedTags = new Set(), selectedFlags = new Set(), selectedConviction = '';
+
+function buildDateButtons(editDate = null) {
+  const row = document.getElementById('dateBtnRow');
+  const hiddenInput = document.getElementById('entryDate');
+  const activeLogs = state.logs.filter(l => !l.archived);
+  const lastDate = activeLogs.length
+    ? activeLogs.reduce((a, b) => a.date > b.date ? a : b).date
+    : null;
+
+  // 既に記録がある日付のセット（編集中のログは除外）
+  const recordedDates = new Set(
+    activeLogs
+      .filter(l => l.id !== state.editId)
+      .map(l => l.date)
+  );
+
+  // 最終記録日の翌日から今日までの日付リストを生成
+  const dates = [];
+  const end = new Date(today() + 'T00:00:00');
+  let start = new Date(end);
+  if (lastDate && lastDate < today()) {
+    const next = new Date(lastDate + 'T00:00:00');
+    next.setDate(next.getDate() + 1);
+    start = next;
+  }
+  // 最大14日分
+  const maxStart = new Date(end);
+  maxStart.setDate(maxStart.getDate() - 13);
+  if (start < maxStart) start = maxStart;
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    dates.push(d.toISOString().slice(0, 10));
+  }
+
+  const dayNames = ['日','月','火','水','木','金','土'];
+  row.innerHTML = '';
+
+  // デフォルト選択日：記録済みでない最新日
+  const defaultDate = editDate || dates.filter(d => !recordedDates.has(d)).slice(-1)[0] || today();
+  hiddenInput.value = defaultDate;
+
+  dates.forEach(dateStr => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const isToday = dateStr === today();
+    const isRecorded = recordedDates.has(dateStr);
+    const btn = document.createElement('button');
+
+    let cls = 'date-btn';
+    if (dateStr === defaultDate && !isRecorded) cls += ' selected';
+    if (isToday) cls += ' today-btn';
+    if (isRecorded) cls += ' recorded';
+
+    btn.className = cls;
+    btn.disabled = isRecorded;
+    btn.title = isRecorded ? '記録済み' : '';
+
+    const label = isToday ? `今日 (${d.getMonth()+1}/${d.getDate()})` : `${d.getMonth()+1}/${d.getDate()} (${dayNames[d.getDay()]})`;
+    btn.textContent = isRecorded ? label + ' ✓' : label;
+
+    if (!isRecorded) {
+      btn.addEventListener('click', () => {
+        row.querySelectorAll('.date-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        hiddenInput.value = dateStr;
+      });
+    }
+    row.appendChild(btn);
+  });
+}
+
+function openEntryModal(editId = null) {
+  state.editId = editId;
+  selectedSat = ''; selectedTags = new Set(); selectedFlags = new Set();
+  document.getElementById('modalTitle').textContent = editId ? '記録を編集' : '今週を記録';
+  document.getElementById('eventsInput').value = '';
+  document.getElementById('unease').value = '';
+  document.querySelectorAll('.sat-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.tag-chip').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.flag-btn').forEach(b => b.classList.remove('selected'));
+
+  if (editId) {
+    const log = state.logs.find(l => l.id === editId);
+    if (log) {
+      buildDateButtons(log.date);
+      document.getElementById('eventsInput').value = log.events || '';
+      document.getElementById('unease').value = log.unease || '';
+      selectedSat = log.satisfaction || '';
+      selectedTags = new Set(log.tags || []);
+      selectedFlags = new Set(log.flags || []);
+      if (selectedSat) document.querySelector(`.sat-btn[data-value="${selectedSat}"]`)?.classList.add('selected');
+      selectedTags.forEach(t => document.querySelector(`.tag-chip[data-tag="${t}"]`)?.classList.add('selected'));
+      selectedFlags.forEach(f => document.querySelector(`.flag-btn[data-flag="${f}"]`)?.classList.add('selected'));
+      // 既存データ互換：learning → 学びタグに移行
+      if ((log.flags||[]).includes('learning') && !selectedTags.has('学び')) {
+        selectedTags.add('学び');
+        document.querySelector('.tag-chip[data-tag="学び"]')?.classList.add('selected');
+      }
+    }
+  } else {
+    buildDateButtons();
+    // 既存データ互換チェック（新規は不要）
+  }
+
+  document.getElementById('entryModal').classList.add('open');
+  const modal = document.querySelector('#entryModal .modal');
+  if (modal) modal.scrollTop = 0;
+  setTimeout(() => document.getElementById('eventsInput').focus(), 200);
+}
+function closeEntryModal() { document.getElementById('entryModal').classList.remove('open'); }
+
+function saveEntry() {
+  const events = document.getElementById('eventsInput').value.trim();
+  if (!events) { alert('「できごと」を入力してください'); return; }
+  const entryDate = document.getElementById('entryDate').value || today();
+  // 既存データ互換：learning フラグがあれば学びタグを付与、flagsから除去しない（表示のみ除外済み）
+
+  if (state.editId) {
+    const idx = state.logs.findIndex(l => l.id === state.editId);
+    if (idx >= 0) state.logs[idx] = { ...state.logs[idx], date:entryDate, satisfaction:selectedSat, events, unease:document.getElementById('unease').value.trim(), tags:[...selectedTags], flags:[...selectedFlags], updatedAt:new Date().toISOString() };
+  } else {
+    state.logs.push({ id:Date.now().toString(), date:entryDate, satisfaction:selectedSat, events, unease:document.getElementById('unease').value.trim(), tags:[...selectedTags], flags:[...selectedFlags], archived:false, createdAt:new Date().toISOString() });
+  }
+  saveData(); closeEntryModal(); render();
+  toast(state.editId ? '更新しました ✓' : '記録しました ✓');
+  state.editId = null;
+}
+
+// REVIEW MODAL
+function openReviewModal() {
+  document.getElementById('reviewWeekLabel').textContent = currentWeekRange();
+  ['rv_unease','rv_energy','rv_pattern','rv_experiment','rv_vision_off','rv_vision_on'].forEach(id => { document.getElementById(id).value = ''; });
+  selectedConviction = '';
+  document.querySelectorAll('.conv-btn').forEach(b => b.classList.remove('selected'));
+  const existing = state.reviews.find(r => r.week === isoWeek(today()));
+  if (existing) {
+    document.getElementById('rv_unease').value      = existing.unease      || '';
+    document.getElementById('rv_energy').value       = existing.energy      || '';
+    document.getElementById('rv_pattern').value      = existing.pattern     || '';
+    document.getElementById('rv_experiment').value   = existing.experiment  || '';
+    document.getElementById('rv_vision_off').value   = existing.vision_off  || '';
+    document.getElementById('rv_vision_on').value    = existing.vision_on   || '';
+    selectedConviction = existing.conviction || '';
+    if (selectedConviction) document.querySelector(`.conv-btn[data-value="${selectedConviction}"]`)?.classList.add('selected');
+  }
+  buildReviewInsights();
+  document.getElementById('reviewModal').classList.add('open');
+}
+function closeReviewModal() { document.getElementById('reviewModal').classList.remove('open'); }
+
+function buildReviewInsights() {
+  const logs = getThisWeekLogs();
+  const uneases = logs.filter(l => l.unease).map(l => l.unease);
+  document.getElementById('insightUnease').innerHTML = uneases.length
+    ? `<div class="insight-label">⚠ 違和感 (${uneases.length}件)</div><div class="insight-value">${uneases.slice(0,2).map(u=>escHtml(u)).join('<br>')}</div>`
+    : `<div class="insight-label">⚠ 違和感</div><div class="insight-value" style="color:var(--text3)">今週は記録なし</div>`;
+
+  const energyDays = logs.filter(l => (l.flags||[]).includes('energy'));
+  const badDays    = logs.filter(l => l.satisfaction === 'bad');
+  document.getElementById('insightEnergy').innerHTML =
+    `<div class="insight-label">🔥 エネルギー</div><div class="insight-value">高: ${energyDays.length}件 / ×: ${badDays.length}件</div>`;
+
+  const words = getTopWords(logs.map(l => (l.events||'') + ' ' + (l.unease||'')).join(' '), 5);
+  document.getElementById('insightWords').innerHTML =
+    `<div class="insight-label">📝 頻出ワード</div><div class="insight-value">${words.length ? words.join('　') : '—'}</div>`;
+
+  const blogLogs = logs.filter(l => (l.flags||[]).includes('blog'));
+  document.getElementById('insightBlog').innerHTML = blogLogs.length
+    ? `<div class="insight-label">✍ ブログ候補 (${blogLogs.length}件)</div><div class="insight-value">${escHtml((blogLogs[0].events||'').slice(0,60))}…</div>`
+    : `<div class="insight-label">✍ ブログ候補</div><div class="insight-value" style="color:var(--text3)">今週は記録なし</div>`;
+}
+
+function getTopWords(text, n) {
+  const stop = new Set(['の','に','は','を','が','で','て','と','し','も','な','こと','した','いる','ある','これ','それ','から','って','たら','です','ます','ない','ため','など','いう','よう','その','この','という','でも','だった','だ','だと','れる','られ','なる','なった']);
+  const words = text.replace(/[、。！？\n「」『』【】()（）]/g,' ').split(/\s+/).filter(w => w.length >= 2 && !stop.has(w));
+  const freq = {};
+  for (const w of words) freq[w] = (freq[w]||0) + 1;
+  return Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,n).map(e=>e[0]);
+}
+
+function saveReview() {
+  const wk = isoWeek(today());
+  const data = {
+    week: wk,
+    unease:      document.getElementById('rv_unease').value.trim(),
+    energy:      document.getElementById('rv_energy').value.trim(),
+    pattern:     document.getElementById('rv_pattern').value.trim(),
+    experiment:  document.getElementById('rv_experiment').value.trim(),
+    vision_off:  document.getElementById('rv_vision_off').value.trim(),
+    vision_on:   document.getElementById('rv_vision_on').value.trim(),
+    conviction:  selectedConviction,
+    savedAt:     new Date().toISOString(),
+  };
+  const idx = state.reviews.findIndex(r => r.week === wk);
+  if (idx >= 0) state.reviews[idx] = data; else state.reviews.push(data);
+  saveReviews(); closeReviewModal(); toast('週次レビューを保存しました ✓');
+}
+
+// EXPORT
+function exportData() {
+  const blob = new Blob([JSON.stringify({ logs:state.logs, reviews:state.reviews, exportedAt:new Date().toISOString() }, null, 2)], { type:'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `1day-export-${today()}.json`; a.click();
+  toast('エクスポートしました');
+}
+
+// TOAST
+function toast(msg) {
+  let el = document.querySelector('.toast');
+  if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// SAMPLE DATA（週ごとのサンプル）
+function seedSampleData() {
+  if (state.logs.length > 0) return;
+  const w = n => { const d = new Date(); d.setDate(d.getDate() - n*7); return d.toISOString().slice(0,10); };
+  state.logs = [
+    { id:'1001', date:w(0), satisfaction:'great', events:'新しいプロジェクトが動き出した。チームの雰囲気が良く、自分も乗れている感覚。\n来週に向けて準備が整った。', unease:'', tags:['経営','組織'], flags:['energy'], archived:false, createdAt:new Date().toISOString() },
+    { id:'1002', date:w(1), satisfaction:'meh', events:'Aさんとのやりとりで違和感があった。言葉は通じているのに、何かがずれている。\n来週もう少し観察してみる。', unease:'Aさんとの関係が少しずつずれている気がする', tags:['人間関係','感情'], flags:['unease'], archived:false, createdAt:new Date(Date.now()-604800000).toISOString() },
+    { id:'1003', date:w(2), satisfaction:'good', events:'「システム思考」の本を読んだ。自分のビジネスに応用できそうな概念が多かった。\nブログに書けるかも。', unease:'', tags:['学び','経営'], flags:['learning','blog'], archived:false, createdAt:new Date(Date.now()-1209600000).toISOString() },
+  ];
+  saveData();
+}
+
+// EVENTS
+function bindEvents() {
+  document.getElementById('openEntry').addEventListener('click', () => openEntryModal());
+  document.getElementById('closeModal').addEventListener('click', closeEntryModal);
+  document.getElementById('entryModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeEntryModal(); });
+
+  document.querySelectorAll('.sat-btn').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.sat-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected'); selectedSat = btn.dataset.value;
+  }));
+  document.querySelectorAll('.tag-chip').forEach(chip => chip.addEventListener('click', () => {
+    const t = chip.dataset.tag;
+    if (selectedTags.has(t)) { selectedTags.delete(t); chip.classList.remove('selected'); }
+    else { selectedTags.add(t); chip.classList.add('selected'); }
+  }));
+  document.querySelectorAll('.flag-btn').forEach(btn => btn.addEventListener('click', () => {
+    const f = btn.dataset.flag;
+    if (selectedFlags.has(f)) { selectedFlags.delete(f); btn.classList.remove('selected'); }
+    else { selectedFlags.add(f); btn.classList.add('selected'); }
+  }));
+
+  document.getElementById('saveEntry').addEventListener('click', saveEntry);
+  document.getElementById('openReview').addEventListener('click', openReviewModal);
+  document.getElementById('closeReview').addEventListener('click', closeReviewModal);
+  document.getElementById('reviewModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeReviewModal(); });
+  document.getElementById('saveReview').addEventListener('click', saveReview);
+
+  // 確信度ボタン
+  document.querySelectorAll('.conv-btn').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.conv-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected'); selectedConviction = btn.dataset.value;
+  }));
+
+  document.getElementById('doArchive').addEventListener('click', archiveSelected);
+  document.getElementById('doDeselect').addEventListener('click', () => { state.selected.clear(); render(); });
+
+  document.querySelectorAll('.filter-chip').forEach(chip => chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active'); state.filter = chip.dataset.filter; renderLogList();
+  }));
+
+  let searchTimer;
+  document.getElementById('searchInput').addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { state.search = e.target.value.trim(); renderLogList(); }, 200);
+  });
+
+  // 状態計 期間切り替え
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.period-btn');
+    if (!btn) return;
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    graphWeeks = parseInt(btn.dataset.weeks);
+    renderStateGraphs();
+  });
+
+  // textarea 自動拡張
+  document.addEventListener('input', e => {
+    if (e.target.tagName === 'TEXTAREA') {
+      e.target.style.height = 'auto';
+      e.target.style.height = e.target.scrollHeight + 'px';
+    }
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', exportData);
+
+  document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    state.view = item.dataset.view;
+    state.selected.clear();
+    state.filter = 'all';
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    document.querySelector('.filter-chip[data-filter="all"]')?.classList.add('active');
+    render();
+  }));
+
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'n') { e.preventDefault(); openEntryModal(); }
+    if (e.key === 'Escape') { closeEntryModal(); closeReviewModal(); }
+  });
+}
+
+// INIT
+document.addEventListener('DOMContentLoaded', () => {
+  loadData(); seedSampleData(); bindEvents(); render();
+});
+</script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js")
+        .then(r => console.log("SW registered:", r))
+        .catch(e => console.log("SW error:", e));
+    }
+  </script>
+</body>
+</html>

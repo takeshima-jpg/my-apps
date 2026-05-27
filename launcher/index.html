@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="./icons/favicon.ico">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>自作システム Launcher</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, 'Hiragino Sans', 'Meiryo', sans-serif;
+      background: #F8FAFC;
+      color: #1E293B;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+    .subtitle { color: #64748B; font-size: 14px; margin-top: 4px; }
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94A3B8;
+      margin: 28px 0 12px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    a {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: white;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 18px 16px;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    }
+    a:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,.08);
+      border-color: transparent;
+    }
+    .app-icon { font-size: 28px; margin-bottom: 8px; }
+    .app-name { font-weight: 700; font-size: 15px; }
+    .app-desc { font-size: 12px; color: #64748B; margin-top: 4px; line-height: 1.5; }
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: 6px;
+    }
+    .tag-task { background: #ECFDF5; color: #059669; }
+    .tag-log  { background: #EFF6FF; color: #3B82F6; }
+    .tag-think{ background: #F5F3FF; color: #7C3AED; }
+    .tag-people{background: #FDF2F8; color: #DB2777; }
+    .tag-plan { background: #FEF2F2; color: #DC2626; }
+    footer { margin-top: 48px; font-size: 12px; color: #CBD5E1; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🗂 自作システム</h1>
+    <p class="subtitle">ローカルHTMLツール集 — PWA対応</p>
+  </header>
+
+  <div class="section-label">タスク・記録</div>
+  <div class="grid">
+    <a href="../task-os/index.html">
+      <div class="app-icon">✅</div>
+      <div class="app-name">Task OS</div>
+      <div class="app-desc">ショット・ルーチン・プロジェクト統合タスク管理</div>
+      <span class="badge tag-task">タスク</span>
+    </a>
+    <a href="../shot-task-os/index.html">
+      <div class="app-icon">🎯</div>
+      <div class="app-name">Shot Task OS</div>
+      <div class="app-desc">単発タスクに特化したシンプルな管理ツール</div>
+      <span class="badge tag-task">タスク</span>
+    </a>
+    <a href="../routine-os/index.html">
+      <div class="app-icon">🔁</div>
+      <div class="app-name">Routine OS</div>
+      <div class="app-desc">習慣・ルーティンの管理と記録</div>
+      <span class="badge tag-task">ルーティン</span>
+    </a>
+    <a href="../project-os/index.html">
+      <div class="app-icon">🚀</div>
+      <div class="app-name">Project OS</div>
+      <div class="app-desc">経営PJ・分岐点・マイルストーン管理</div>
+      <span class="badge tag-plan">プロジェクト</span>
+    </a>
+  </div>
+
+  <div class="section-label">日次・振り返り</div>
+  <div class="grid">
+    <a href="../1day/index.html">
+      <div class="app-icon">📝</div>
+      <div class="app-name">1day</div>
+      <div class="app-desc">日次の思考ログ・確認・記録</div>
+      <span class="badge tag-log">日次</span>
+    </a>
+    <a href="../reflect-os/index.html">
+      <div class="app-icon">🪞</div>
+      <div class="app-name">Reflect OS</div>
+      <div class="app-desc">内省・思想変化・気づきのログ</div>
+      <span class="badge tag-think">思考</span>
+    </a>
+    <a href="../koso-log/index.html">
+      <div class="app-icon">📊</div>
+      <div class="app-name">KOSOLog</div>
+      <div class="app-desc">行動・施策の効果を記録・分析</div>
+      <span class="badge tag-log">ログ</span>
+    </a>
+  </div>
+
+  <div class="section-label">リスト・人間関係</div>
+  <div class="grid">
+    <a href="../100list/index.html">
+      <div class="app-icon">🌟</div>
+      <div class="app-name">100list</div>
+      <div class="app-desc">やりたいこと・未来リスト100</div>
+      <span class="badge tag-think">ビジョン</span>
+    </a>
+    <a href="../social-universe/index.html">
+      <div class="app-icon">🌐</div>
+      <div class="app-name">Social Universe</div>
+      <div class="app-desc">人間関係の棚卸し・マッピング</div>
+      <span class="badge tag-people">人間関係</span>
+    </a>
+    <a href="../hitomemo/index.html">
+      <div class="app-icon">👤</div>
+      <div class="app-name">ヒトメモ</div>
+      <div class="app-desc">人物プロファイリング・メモシステム</div>
+      <span class="badge tag-people">人間関係</span>
+    </a>
+  </div>
+
+  <footer>python -m http.server 8000 で起動 → localhost:8000/launcher/</footer>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js");
+    }
+  </script>
+</body>
+</html>

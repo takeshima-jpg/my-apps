@@ -1,0 +1,1835 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <link rel="icon" type="image/png" href="./icons/favicon.ico">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ヒトメモ - 人物プロファイリングシステム</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .intro {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        
+        .search-box {
+            margin-bottom: 20px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            transition: border-color 0.3s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .sort-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        
+        .sort-label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .sort-select {
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .sort-select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .person-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .person-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        
+        .person-card.incomplete {
+            background: #FFFBEA;
+        }
+        
+        .person-card-content {
+            cursor: pointer;
+        }
+        
+        .person-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .person-card h3 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 20px;
+        }
+        
+        .person-card .position {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        
+        .person-card .core-message {
+            color: #34495e;
+            font-size: 14px;
+            font-style: italic;
+            border-left: 3px solid #3498db;
+            padding-left: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .person-card .metadata {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #ecf0f1;
+        }
+        
+        .person-card .update-date {
+            font-size: 12px;
+            color: #95a5a6;
+        }
+        
+        .person-card .completion-status {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .person-card .completion-status.incomplete {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .delete-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+            z-index: 10;
+        }
+        
+        .delete-button:hover {
+            background: #c0392b;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+        }
+        
+        .btn-info {
+            background: #9b59b6;
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background: #8e44ad;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .interview-container {
+            background: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #3498db;
+            transition: width 0.3s;
+        }
+        
+        .question {
+            margin-bottom: 30px;
+        }
+        
+        .question h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+        
+        .question textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        .question textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        .detail-container {
+            background: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        
+        .detail-section {
+            margin-bottom: 40px;
+        }
+        
+        .detail-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 22px;
+            border-left: 4px solid #3498db;
+            padding-left: 12px;
+        }
+        
+        .field-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .field-label {
+            display: block;
+            color: #555;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .field-input, .field-textarea {
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+        
+        .field-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .field-input:focus, .field-textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .field-empty {
+            background-color: #FFEBEE;
+        }
+        
+        .field-user {
+            background-color: #fff;
+        }
+        
+        .field-highlighted {
+            background-color: #E1F5FE;
+        }
+        
+        .highlight-button {
+            position: absolute;
+            right: 10px;
+            top: 35px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .highlight-button:hover {
+            background: #1976D2;
+        }
+        
+        .highlight-button.active {
+            background: #FF9800;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #95a5a6;
+        }
+        
+        .empty-state h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        
+        .import-container {
+            background: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .import-textarea {
+            width: 100%;
+            min-height: 400px;
+            padding: 15px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 20px;
+        }
+        
+        .import-textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .import-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .hidden-file-input {
+            display: none;
+        }
+        
+        .history-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #ecf0f1;
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        
+        .history-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .history-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .history-timestamp {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-bottom: 8px;
+        }
+        
+        .history-changes {
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .history-change-item {
+            margin-bottom: 5px;
+            padding-left: 10px;
+        }
+        
+        .history-field {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .history-value {
+            color: #7f8c8d;
+            font-size: 13px;
+        }
+        
+        .history-empty {
+            text-align: center;
+            color: #95a5a6;
+            padding: 40px;
+        }
+        
+        .meetings-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #ecf0f1;
+        }
+        
+        .meetings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .meetings-list {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .meeting-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #27ae60;
+        }
+        
+        .meeting-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .meeting-date {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .meeting-content {
+            color: #555;
+            line-height: 1.6;
+        }
+        
+        .meeting-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .meeting-form h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .meeting-form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .meeting-form textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        .meeting-form input:focus, .meeting-form textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .meeting-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .meetings-empty {
+            text-align: center;
+            color: #95a5a6;
+            padding: 40px;
+        }
+        
+        .delete-meeting-button {
+            float: right;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .delete-meeting-button:hover {
+            background: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // LocalStorage管理
+        const STORAGE_KEY = 'hitomemo_profiles_v1';
+
+        const loadProfiles = () => {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        };
+
+        const saveProfiles = (profiles) => {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+        };
+
+        // フィールド名の日本語マッピング
+        const FIELD_LABELS = {
+            name: '氏名（ふりがな）',
+            birthday: '誕生日',
+            position: '所属・役職',
+            business: '事業',
+            history: '経歴',
+            family: '家族構成',
+            location: '出身・現所在地',
+            goals: '目標・夢',
+            values: '価値観',
+            beliefs: '信条',
+            behavior: '行動傾向',
+            dislikes: '苦手なこと',
+            topics: 'よく話すテーマ',
+            skills: '特技・スキル',
+            memorable: '印象的な言葉',
+            impression: '話してみての印象',
+            drive: '欲求（ドライブ）',
+            other: 'その他',
+            coreMessage: '核となる一言',
+            insights: '補足・洞察'
+        };
+
+        // インタビュー質問リスト
+        const INTERVIEW_QUESTIONS = [
+            "お名前（ふりがな）を教えてください",
+            "誕生日を教えてください",
+            "ご所属や役職を教えてください",
+            "事業内容について教えてください",
+            "これまでの経歴を教えてください",
+            "ご家族構成について教えてください",
+            "ご出身地と現在の所在地を教えてください",
+            "今、最も実現したい目標や夢は何ですか",
+            "人生で大切にしている価値観は何ですか",
+            "信条や信念について教えてください",
+            "どのような行動パターンや傾向がありますか",
+            "苦手なことや避けたいと感じることはありますか",
+            "よく話すテーマや関心のある話題は何ですか",
+            "特技やスキルについて教えてください",
+            "最近印象に残った言葉や出来事はありますか",
+            "話してみての第一印象を教えてください",
+            "この方の行動の原動力（欲求・ドライブ）は何だと感じますか",
+            "その他、記録しておきたいことがあれば教えてください",
+            "この方を一言で表すとしたら、どのような言葉が当てはまりますか"
+        ];
+
+        // プロファイルの完成度チェック
+        const checkProfileCompletion = (profile) => {
+            const fields = [
+                'name', 'birthday', 'position', 'business', 'history', 'family', 'location',
+                'goals', 'values', 'beliefs', 'behavior', 'dislikes', 'topics', 'skills',
+                'memorable', 'impression', 'drive', 'other', 'coreMessage'
+            ];
+            
+            let userInputCount = 0;
+            fields.forEach(field => {
+                if (profile[field] && profile[field].value) {
+                    userInputCount++;
+                }
+            });
+            
+            return {
+                total: fields.length,
+                completed: userInputCount,
+                isComplete: userInputCount === fields.length
+            };
+        };
+
+        // 更新履歴を記録（イベント単位）
+        const addHistoryEntry = (profile, entry) => {
+            const history = profile.history_log || [];
+            const newEntry = {
+                timestamp: new Date().toISOString(),
+                ...entry
+            };
+            return [...history, newEntry];
+        };
+
+        // メモ形式でエクスポート
+        const exportAsMemo = (profile) => {
+            const memo = `
+【人物プロファイル】${profile.name.value}
+
+■基本情報
+氏名(ふりがな)：${profile.name.value}
+誕生日：${profile.birthday.value}
+所属・役職：${profile.position.value}
+事業：${profile.business.value}
+経歴：${profile.history.value}
+家族構成：${profile.family.value}
+出身・現所在地：${profile.location.value}
+
+■価値観・信条
+目標・夢：${profile.goals.value}
+価値観：${profile.values.value}
+信条：${profile.beliefs.value}
+
+■個性・傾向
+行動傾向：${profile.behavior.value}
+苦手なこと：${profile.dislikes.value}
+よく話すテーマ：${profile.topics.value}
+特技・スキル：${profile.skills.value}
+
+■洞察
+印象的な言葉：${profile.memorable.value}
+話してみての印象：${profile.impression.value}
+欲求(ドライブ)：${profile.drive.value}
+その他：${profile.other.value}
+核となる一言：${profile.coreMessage.value}
+
+■補足・洞察
+${profile.insights.value}
+
+作成日時：${new Date(profile.createdAt).toLocaleString('ja-JP')}
+            `.trim();
+
+            const blob = new Blob([memo], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${profile.name.value || '人物プロファイル'}_${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        // メモ形式からインポート
+        const importFromMemo = (memoText) => {
+            const extractValue = (text, label) => {
+                const regex = new RegExp(`${label}[：:](.*?)(?=\\n[■氏名誕生日所属事業経歴家族出身目標価値信条行動苦手よく特技印象話欲求その他核補足作成]|$)`, 's');
+                const match = text.match(regex);
+                return match ? match[1].trim() : "";
+            };
+
+            const profile = {
+                id: Date.now().toString(),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                history_log: [{ timestamp: new Date().toISOString(), type: 'import_memo', label: 'メモをインポートする' }],
+                meetings: [],
+                name: { value: extractValue(memoText, "氏名\\(ふりがな\\)"), highlighted: false },
+                birthday: { value: extractValue(memoText, "誕生日"), highlighted: false },
+                position: { value: extractValue(memoText, "所属・役職"), highlighted: false },
+                business: { value: extractValue(memoText, "事業"), highlighted: false },
+                history: { value: extractValue(memoText, "経歴"), highlighted: false },
+                family: { value: extractValue(memoText, "家族構成"), highlighted: false },
+                location: { value: extractValue(memoText, "出身・現所在地"), highlighted: false },
+                goals: { value: extractValue(memoText, "目標・夢"), highlighted: false },
+                values: { value: extractValue(memoText, "価値観"), highlighted: false },
+                beliefs: { value: extractValue(memoText, "信条"), highlighted: false },
+                behavior: { value: extractValue(memoText, "行動傾向"), highlighted: false },
+                dislikes: { value: extractValue(memoText, "苦手なこと"), highlighted: false },
+                topics: { value: extractValue(memoText, "よく話すテーマ"), highlighted: false },
+                skills: { value: extractValue(memoText, "特技・スキル"), highlighted: false },
+                memorable: { value: extractValue(memoText, "印象的な言葉"), highlighted: false },
+                impression: { value: extractValue(memoText, "話してみての印象"), highlighted: false },
+                drive: { value: extractValue(memoText, "欲求\\(ドライブ\\)"), highlighted: false },
+                other: { value: extractValue(memoText, "その他"), highlighted: false },
+                coreMessage: { value: extractValue(memoText, "核となる一言"), highlighted: false },
+                insights: { value: extractValue(memoText, "補足・洞察"), highlighted: false }
+            };
+
+            return profile;
+        };
+
+        // メインアプリ
+        const App = () => {
+            const [view, setView] = useState('list');
+            const [profiles, setProfiles] = useState([]);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [sortBy, setSortBy] = useState('newest');
+            const [currentProfile, setCurrentProfile] = useState(null);
+            const [interviewAnswers, setInterviewAnswers] = useState(Array(19).fill(''));
+            const [currentQuestion, setCurrentQuestion] = useState(0);
+            const [importText, setImportText] = useState('');
+            const [showHistory, setShowHistory] = useState(false);
+            const [showMeetings, setShowMeetings] = useState(false);
+            const [showMeetingForm, setShowMeetingForm] = useState(false);
+            const [meetingDate, setMeetingDate] = useState('');
+            const [meetingContent, setMeetingContent] = useState('');
+
+            useEffect(() => {
+                setProfiles(loadProfiles());
+            }, []);
+
+            const sortProfiles = (profilesList) => {
+                const sorted = [...profilesList];
+                
+                switch (sortBy) {
+                    case 'newest':
+                        return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    case 'oldest':
+                        return sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                    case 'recentlyUpdated':
+                        return sorted.sort((a, b) => {
+                            const dateA = new Date(a.updatedAt || a.createdAt);
+                            const dateB = new Date(b.updatedAt || b.createdAt);
+                            return dateB - dateA;
+                        });
+                    case 'nameAsc':
+                        return sorted.sort((a, b) => a.name.value.localeCompare(b.name.value, 'ja'));
+                    default:
+                        return sorted;
+                }
+            };
+
+            const filteredProfiles = sortProfiles(
+                profiles.filter(profile => {
+                    const query = searchQuery.toLowerCase();
+                    return (
+                        profile.name.value.toLowerCase().includes(query) ||
+                        profile.position.value.toLowerCase().includes(query) ||
+                        profile.coreMessage.value.toLowerCase().includes(query) ||
+                        profile.values.value.toLowerCase().includes(query)
+                    );
+                })
+            );
+
+            const startInterview = () => {
+                setInterviewAnswers(Array(19).fill(''));
+                setCurrentQuestion(0);
+                setView('interview');
+            };
+
+            const showImportScreen = () => {
+                setImportText('');
+                setView('import');
+            };
+
+            const handleAnswerChange = (value) => {
+                const newAnswers = [...interviewAnswers];
+                newAnswers[currentQuestion] = value;
+                setInterviewAnswers(newAnswers);
+            };
+
+            const nextQuestion = () => {
+                if (currentQuestion < INTERVIEW_QUESTIONS.length - 1) {
+                    setCurrentQuestion(currentQuestion + 1);
+                } else {
+                    processInterview();
+                }
+            };
+
+            const prevQuestion = () => {
+                if (currentQuestion > 0) {
+                    setCurrentQuestion(currentQuestion - 1);
+                }
+            };
+
+            const skipQuestion = () => {
+                nextQuestion();
+            };
+
+            const processInterview = () => {
+                const newProfile = {
+                    id: Date.now().toString(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    history_log: [],
+                    meetings: [],
+                    name: { value: interviewAnswers[0] || "", highlighted: false },
+                    birthday: { value: interviewAnswers[1] || "", highlighted: false },
+                    position: { value: interviewAnswers[2] || "", highlighted: false },
+                    business: { value: interviewAnswers[3] || "", highlighted: false },
+                    history: { value: interviewAnswers[4] || "", highlighted: false },
+                    family: { value: interviewAnswers[5] || "", highlighted: false },
+                    location: { value: interviewAnswers[6] || "", highlighted: false },
+                    goals: { value: interviewAnswers[7] || "", highlighted: false },
+                    values: { value: interviewAnswers[8] || "", highlighted: false },
+                    beliefs: { value: interviewAnswers[9] || "", highlighted: false },
+                    behavior: { value: interviewAnswers[10] || "", highlighted: false },
+                    dislikes: { value: interviewAnswers[11] || "", highlighted: false },
+                    topics: { value: interviewAnswers[12] || "", highlighted: false },
+                    skills: { value: interviewAnswers[13] || "", highlighted: false },
+                    memorable: { value: interviewAnswers[14] || "", highlighted: false },
+                    impression: { value: interviewAnswers[15] || "", highlighted: false },
+                    drive: { value: interviewAnswers[16] || "", highlighted: false },
+                    other: { value: interviewAnswers[17] || "", highlighted: false },
+                    coreMessage: { value: interviewAnswers[18] || "", highlighted: false },
+                    insights: { value: "", highlighted: false }
+                };
+                
+                const updatedProfiles = [...profiles, newProfile];
+                setProfiles(updatedProfiles);
+                saveProfiles(updatedProfiles);
+                
+                setCurrentProfile(newProfile);
+                setView('detail');
+            };
+
+            const handleImport = () => {
+                try {
+                    const importedProfile = importFromMemo(importText);
+                    const updatedProfiles = [...profiles, importedProfile];
+                    setProfiles(updatedProfiles);
+                    saveProfiles(updatedProfiles);
+                    setCurrentProfile(importedProfile);
+                    setView('detail');
+                } catch (error) {
+                    alert('インポートに失敗しました。メモの形式を確認してください。');
+                }
+            };
+
+            const handleFileImport = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        setImportText(e.target.result);
+                    };
+                    reader.readAsText(file);
+                }
+            };
+
+            const viewProfile = (profile) => {
+                setCurrentProfile(profile);
+                setShowHistory(false);
+                setShowMeetings(false);
+                setShowMeetingForm(false);
+                setView('detail');
+            };
+
+            const deleteProfileFromList = (profileId, event) => {
+                event.stopPropagation();
+                if (confirm('この人物プロファイルを削除してもよろしいですか？')) {
+                    const updatedProfiles = profiles.filter(p => p.id !== profileId);
+                    setProfiles(updatedProfiles);
+                    saveProfiles(updatedProfiles);
+                }
+            };
+
+            const updateProfile = (field, value) => {
+                const currentField = currentProfile[field];
+
+                const updated = {
+                    ...currentProfile,
+                    [field]: { 
+                        value, 
+                        highlighted: currentField.highlighted || false
+                    },
+                    updatedAt: new Date().toISOString()
+                };
+                setCurrentProfile(updated);
+
+                const updatedProfiles = profiles.map(p => 
+                    p.id === updated.id ? updated : p
+                );
+                setProfiles(updatedProfiles);
+                saveProfiles(updatedProfiles);
+            };
+
+
+            const toggleHighlight = (field) => {
+                const updated = {
+                    ...currentProfile,
+                    [field]: {
+                        ...currentProfile[field],
+                        highlighted: !currentProfile[field].highlighted
+                    }
+                };
+                setCurrentProfile(updated);
+                
+                const updatedProfiles = profiles.map(p => 
+                    p.id === updated.id ? updated : p
+                );
+                setProfiles(updatedProfiles);
+                saveProfiles(updatedProfiles);
+            };
+
+            const addMeeting = () => {
+                if (!meetingDate || !meetingContent) {
+                    alert('日付と内容を入力してください');
+                    return;
+                }
+
+                const newMeeting = {
+                    id: Date.now().toString(),
+                    date: meetingDate,
+                    content: meetingContent,
+                    createdAt: new Date().toISOString()
+                };
+
+                const updated = {
+                    ...currentProfile,
+                    meetings: [...(currentProfile.meetings || []), newMeeting],
+                    updatedAt: new Date().toISOString(),
+                    history_log: addHistoryEntry(currentProfile, {
+                        type: 'meeting_add',
+                        label: '会食・打合せ記録に記録が追加される',
+                        meeting: {
+                            date: meetingDate,
+                            content: meetingContent
+                        }
+                    })
+                };
+                
+                setCurrentProfile(updated);
+                
+                const updatedProfiles = profiles.map(p => 
+                    p.id === updated.id ? updated : p
+                );
+                setProfiles(updatedProfiles);
+                saveProfiles(updatedProfiles);
+
+                setMeetingDate('');
+                setMeetingContent('');
+                setShowMeetingForm(false);
+            };
+
+            const deleteMeeting = (meetingId) => {
+                if (!confirm('この会食・打合せ記録を削除してもよろしいですか？')) {
+                    return;
+                }
+
+                const updated = {
+                    ...currentProfile,
+                    meetings: currentProfile.meetings.filter(m => m.id !== meetingId),
+                    updatedAt: new Date().toISOString()
+                };
+                
+                setCurrentProfile(updated);
+                
+                const updatedProfiles = profiles.map(p => 
+                    p.id === updated.id ? updated : p
+                );
+                setProfiles(updatedProfiles);
+                saveProfiles(updatedProfiles);
+            };
+
+            const deleteProfile = () => {
+                if (confirm('この人物プロファイルを削除してもよろしいですか？')) {
+                    const updatedProfiles = profiles.filter(p => p.id !== currentProfile.id);
+                    setProfiles(updatedProfiles);
+                    saveProfiles(updatedProfiles);
+                    setView('list');
+                }
+            };
+
+            const backToList = () => {
+                setCurrentProfile(null);
+                setView('list');
+            };
+
+            // 「作成」ボタン：履歴を残して一覧へ戻る
+            const finalizeProfile = () => {
+                if (!currentProfile) return;
+
+                const updated = {
+                    ...currentProfile,
+                    updatedAt: new Date().toISOString(),
+                    history_log: addHistoryEntry(currentProfile, {
+                        type: 'create',
+                        label: '作成ボタンを押す'
+                    })
+                };
+
+                setCurrentProfile(updated);
+
+                const updatedProfiles = profiles.map(p =>
+                    p.id === updated.id ? updated : p
+                );
+                setProfiles(updatedProfiles);
+                saveProfiles(updatedProfiles);
+
+                // 一覧へ
+                setCurrentProfile(null);
+                setView('list');
+            };
+
+
+            const getFieldClass = (field) => {
+                if (!field) return 'field-empty';
+                if (field.highlighted) return 'field-highlighted';
+                if (!field.value) return 'field-empty';
+                return 'field-user';
+            };
+
+            const formatDate = (dateString) => {
+                const date = new Date(dateString);
+                return date.toLocaleString('ja-JP', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+
+            return (
+                <div className="container">
+                    {view === 'list' && (
+                        <>
+                            <header>
+                                <h1>ヒトメモ - 人物プロファイリングシステム</h1>
+                                <div className="intro">
+                                    会食や面談を通じて得た情報を、相手の個性・価値観・信条として記録するシステムです。<br/>
+                                    評価ではなく「理解」を目的とした人物プロファイルを作成できます。
+                                </div>
+                            </header>
+
+                            <div className="search-box">
+                                <input
+                                    type="text"
+                                    className="search-input"
+                                    placeholder="名前、所属、キーワードで検索..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="sort-controls">
+                                <span className="sort-label">並び替え:</span>
+                                <select 
+                                    className="sort-select"
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value)}
+                                >
+                                    <option value="newest">新しい順</option>
+                                    <option value="oldest">古い順</option>
+                                    <option value="recentlyUpdated">最終更新日順</option>
+                                    <option value="nameAsc">名前順（五十音）</option>
+                                </select>
+                            </div>
+
+                            <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+                                <button className="btn btn-primary" onClick={startInterview}>
+                                    新しい人物を記録する
+                                </button>
+                                <button className="btn btn-info" onClick={showImportScreen}>
+                                    メモからインポート
+                                </button>
+                            </div>
+
+                            {filteredProfiles.length === 0 ? (
+                                <div className="empty-state">
+                                    <h2>まだ人物が登録されていません</h2>
+                                    <p>「新しい人物を記録する」ボタンから、最初の記録を始めましょう</p>
+                                </div>
+                            ) : (
+                                <div className="person-grid">
+                                    {filteredProfiles.map(profile => {
+                                        const completion = checkProfileCompletion(profile);
+                                        return (
+                                            <div
+                                                key={profile.id}
+                                                className={`person-card ${!completion.isComplete ? 'incomplete' : ''}`}
+                                            >
+                                                <button 
+                                                    className="delete-button"
+                                                    onClick={(e) => deleteProfileFromList(profile.id, e)}
+                                                    title="削除"
+                                                >
+                                                    ×
+                                                </button>
+                                                <div 
+                                                    className="person-card-content"
+                                                    onClick={() => viewProfile(profile)}
+                                                >
+                                                    <h3>{profile.name.value || '名前未設定'}</h3>
+                                                    {profile.position.value && (
+                                                        <div className="position">{profile.position.value}</div>
+                                                    )}
+                                                    {profile.coreMessage.value && (
+                                                        <div className="core-message">{profile.coreMessage.value}</div>
+                                                    )}
+                                                    <div className="metadata">
+                                                        <div className="update-date">
+                                                            更新: {formatDate(profile.updatedAt || profile.createdAt)}
+                                                        </div>
+                                                        <div className={`completion-status ${!completion.isComplete ? 'incomplete' : ''}`}>
+                                                            {completion.completed}/{completion.total}項目
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {view === 'import' && (
+                        <div className="import-container">
+                            <h2 style={{ marginBottom: '20px' }}>メモからインポート</h2>
+                            <p style={{ marginBottom: '20px', color: '#666' }}>
+                                エクスポートしたメモをそのまま、または外部で整えた後に貼り付けてください。
+                            </p>
+                            <textarea
+                                className="import-textarea"
+                                value={importText}
+                                onChange={(e) => setImportText(e.target.value)}
+                                placeholder="エクスポートしたメモをここに貼り付けてください..."
+                            />
+                            <div className="import-buttons">
+                                <input
+                                    type="file"
+                                    accept=".txt"
+                                    onChange={handleFileImport}
+                                    className="hidden-file-input"
+                                    id="file-input"
+                                />
+                                <label htmlFor="file-input" className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                                    ファイルから読み込み
+                                </label>
+                                <button className="btn btn-primary" onClick={handleImport} disabled={!importText}>
+                                    インポート
+                                </button>
+                                <button className="btn btn-secondary" onClick={backToList}>
+                                    キャンセル
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {view === 'interview' && (
+                        <div className="interview-container">
+                            <div className="progress-bar">
+                                <div
+                                    className="progress-fill"
+                                    style={{ width: `${((currentQuestion + 1) / INTERVIEW_QUESTIONS.length) * 100}%` }}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '20px', color: '#7f8c8d', fontSize: '14px' }}>
+                                質問 {currentQuestion + 1} / {INTERVIEW_QUESTIONS.length}
+                            </div>
+
+                            <div className="question">
+                                <h2>{INTERVIEW_QUESTIONS[currentQuestion]}</h2>
+                                <textarea
+                                    value={interviewAnswers[currentQuestion]}
+                                    onChange={(e) => handleAnswerChange(e.target.value)}
+                                    placeholder="回答を入力してください（スキップも可能です）"
+                                />
+                            </div>
+
+                            <div className="navigation">
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={prevQuestion}
+                                    disabled={currentQuestion === 0}
+                                >
+                                    前へ
+                                </button>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={skipQuestion}
+                                >
+                                    スキップ
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={nextQuestion}
+                                >
+                                    {currentQuestion === INTERVIEW_QUESTIONS.length - 1 ? '完了' : '次へ'}
+                                </button>
+                            </div>
+
+                            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                                <button className="btn btn-secondary" onClick={backToList}>
+                                    一覧に戻る
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {view === 'detail' && currentProfile && (
+                        <div className="detail-container">
+                            <div className="detail-header">
+                                <h1>{currentProfile.name.value || '名前未設定'}</h1>
+                                <button className="btn btn-secondary" onClick={backToList}>
+                                    一覧に戻る
+                                </button>
+                            </div>
+
+                            <div className="legend">
+                                <div className="legend-item">
+                                    <div className="legend-color" style={{ background: '#fff' }}></div>
+                                    <span>入力済み</span>
+                                </div>
+                                <div className="legend-item">
+                                    <div className="legend-color" style={{ background: '#FFEBEE' }}></div>
+                                    <span>未入力</span>
+                                </div>
+                                <div className="legend-item">
+                                    <div className="legend-color" style={{ background: '#E1F5FE' }}></div>
+                                    <span>ハイライト（要注意）</span>
+                                </div>
+                            </div>
+
+                            <div className="detail-section">
+                                <h2>基本情報</h2>
+                                <div className="field-group">
+                                    <label className="field-label">氏名（ふりがな）</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.name.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('name')}
+                                    >
+                                        {currentProfile.name.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <input
+                                        type="text"
+                                        className={`field-input ${getFieldClass(currentProfile.name)}`}
+                                        value={currentProfile.name.value}
+                                        onChange={(e) => updateProfile('name', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">誕生日</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.birthday.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('birthday')}
+                                    >
+                                        {currentProfile.birthday.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <input
+                                        type="text"
+                                        className={`field-input ${getFieldClass(currentProfile.birthday)}`}
+                                        value={currentProfile.birthday.value}
+                                        onChange={(e) => updateProfile('birthday', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">所属・役職</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.position.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('position')}
+                                    >
+                                        {currentProfile.position.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <input
+                                        type="text"
+                                        className={`field-input ${getFieldClass(currentProfile.position)}`}
+                                        value={currentProfile.position.value}
+                                        onChange={(e) => updateProfile('position', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">事業</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.business.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('business')}
+                                    >
+                                        {currentProfile.business.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.business)}`}
+                                        value={currentProfile.business.value}
+                                        onChange={(e) => updateProfile('business', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">経歴</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.history.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('history')}
+                                    >
+                                        {currentProfile.history.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.history)}`}
+                                        value={currentProfile.history.value}
+                                        onChange={(e) => updateProfile('history', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">家族構成</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.family.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('family')}
+                                    >
+                                        {currentProfile.family.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.family)}`}
+                                        value={currentProfile.family.value}
+                                        onChange={(e) => updateProfile('family', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">出身・現所在地</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.location.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('location')}
+                                    >
+                                        {currentProfile.location.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <input
+                                        type="text"
+                                        className={`field-input ${getFieldClass(currentProfile.location)}`}
+                                        value={currentProfile.location.value}
+                                        onChange={(e) => updateProfile('location', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="detail-section">
+                                <h2>価値観・信条</h2>
+                                <div className="field-group">
+                                    <label className="field-label">目標・夢</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.goals.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('goals')}
+                                    >
+                                        {currentProfile.goals.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.goals)}`}
+                                        value={currentProfile.goals.value}
+                                        onChange={(e) => updateProfile('goals', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">価値観</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.values.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('values')}
+                                    >
+                                        {currentProfile.values.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.values)}`}
+                                        value={currentProfile.values.value}
+                                        onChange={(e) => updateProfile('values', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">信条</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.beliefs.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('beliefs')}
+                                    >
+                                        {currentProfile.beliefs.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.beliefs)}`}
+                                        value={currentProfile.beliefs.value}
+                                        onChange={(e) => updateProfile('beliefs', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="detail-section">
+                                <h2>個性・傾向</h2>
+                                <div className="field-group">
+                                    <label className="field-label">行動傾向</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.behavior.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('behavior')}
+                                    >
+                                        {currentProfile.behavior.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.behavior)}`}
+                                        value={currentProfile.behavior.value}
+                                        onChange={(e) => updateProfile('behavior', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">苦手なこと</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.dislikes.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('dislikes')}
+                                    >
+                                        {currentProfile.dislikes.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.dislikes)}`}
+                                        value={currentProfile.dislikes.value}
+                                        onChange={(e) => updateProfile('dislikes', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">よく話すテーマ</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.topics.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('topics')}
+                                    >
+                                        {currentProfile.topics.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.topics)}`}
+                                        value={currentProfile.topics.value}
+                                        onChange={(e) => updateProfile('topics', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">特技・スキル</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.skills.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('skills')}
+                                    >
+                                        {currentProfile.skills.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.skills)}`}
+                                        value={currentProfile.skills.value}
+                                        onChange={(e) => updateProfile('skills', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="detail-section">
+                                <h2>洞察</h2>
+                                <div className="field-group">
+                                    <label className="field-label">印象的な言葉</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.memorable.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('memorable')}
+                                    >
+                                        {currentProfile.memorable.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.memorable)}`}
+                                        value={currentProfile.memorable.value}
+                                        onChange={(e) => updateProfile('memorable', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">話してみての印象</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.impression.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('impression')}
+                                    >
+                                        {currentProfile.impression.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.impression)}`}
+                                        value={currentProfile.impression.value}
+                                        onChange={(e) => updateProfile('impression', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">欲求（ドライブ）</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.drive.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('drive')}
+                                    >
+                                        {currentProfile.drive.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.drive)}`}
+                                        value={currentProfile.drive.value}
+                                        onChange={(e) => updateProfile('drive', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">その他</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.other.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('other')}
+                                    >
+                                        {currentProfile.other.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.other)}`}
+                                        value={currentProfile.other.value}
+                                        onChange={(e) => updateProfile('other', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field-group">
+                                    <label className="field-label">核となる一言</label>
+                                    <button 
+                                        className={`highlight-button ${currentProfile.coreMessage.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('coreMessage')}
+                                    >
+                                        {currentProfile.coreMessage.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.coreMessage)}`}
+                                        value={currentProfile.coreMessage.value}
+                                        onChange={(e) => updateProfile('coreMessage', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="detail-section">
+                                <h2>補足・洞察</h2>
+                                <div className="field-group">
+                                    <button 
+                                        className={`highlight-button ${currentProfile.insights.highlighted ? 'active' : ''}`}
+                                        onClick={() => toggleHighlight('insights')}
+                                    >
+                                        {currentProfile.insights.highlighted ? '★' : '☆'}
+                                    </button>
+                                    <textarea
+                                        className={`field-textarea ${getFieldClass(currentProfile.insights)}`}
+                                        value={currentProfile.insights.value}
+                                        onChange={(e) => updateProfile('insights', e.target.value)}
+                                        style={{ minHeight: '150px' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="action-buttons">
+                                <button className="btn btn-success" onClick={finalizeProfile}>
+                                    作成
+                                </button>
+                                <button className="btn btn-primary" onClick={() => exportAsMemo(currentProfile)}>
+                                    メモとしてエクスポート
+                                </button>
+                                <button className="btn btn-warning" onClick={() => setShowHistory(!showHistory)}>
+                                    {showHistory ? '履歴を閉じる' : '更新履歴を見る'}
+                                </button>
+                                <button className="btn btn-info" onClick={() => setShowMeetings(!showMeetings)}>
+                                    {showMeetings ? '会食記録を閉じる' : '会食記録を見る'}
+                                </button>
+                                <button className="btn btn-danger" onClick={deleteProfile}>
+                                    削除
+                                </button>
+                            </div>
+
+                            {showHistory && (
+                                <div className="history-section">
+                                    <div className="history-header">
+                                        <h2>更新履歴</h2>
+                                    </div>
+                                    {currentProfile.history_log && currentProfile.history_log.length > 0 ? (
+                                        <div className="history-list">
+                                            {[...currentProfile.history_log].reverse().map((entry, index) => (
+                                                <div key={index} className="history-item">
+                                                    <div className="history-timestamp">
+                                                        {formatDate(entry.timestamp)}
+                                                    </div>
+                                                    <div className="history-changes">
+                                                        {entry.type ? (
+                                                            <div className="history-change-item">
+                                                                <span className="history-field">{entry.label || entry.type}</span>
+                                                                {entry.meeting && (
+                                                                    <div className="history-value">
+                                                                        {entry.meeting.date ? `${entry.meeting.date}：` : ''}{(entry.meeting.content || '').substring(0, 80)}{(entry.meeting.content || '').length > 80 ? '...' : ''}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            entry.changes.map((change, changeIndex) => (
+                                                                <div key={changeIndex} className="history-change-item">
+                                                                    <span className="history-field">{change.fieldLabel}</span>
+                                                                    {change.oldValue && (
+                                                                        <div className="history-value">
+                                                                            変更前: {change.oldValue.substring(0, 50)}{change.oldValue.length > 50 ? '...' : ''}
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="history-value">
+                                                                        変更後: {change.newValue.substring(0, 50)}{change.newValue.length > 50 ? '...' : ''}
+                                                                    </div>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="history-empty">
+                                            まだ更新履歴がありません
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {showMeetings && (
+                                <div className="meetings-section">
+                                    <div className="meetings-header">
+                                        <h2>会食・打合せ記録</h2>
+                                        <button 
+                                            className="btn btn-success btn-small" 
+                                            onClick={() => setShowMeetingForm(!showMeetingForm)}
+                                        >
+                                            {showMeetingForm ? 'フォームを閉じる' : '新規記録'}
+                                        </button>
+                                    </div>
+
+                                    {showMeetingForm && (
+                                        <div className="meeting-form">
+                                            <h3>新しい会食・打合せを記録</h3>
+                                            <input
+                                                type="date"
+                                                value={meetingDate}
+                                                onChange={(e) => setMeetingDate(e.target.value)}
+                                                placeholder="日付"
+                                            />
+                                            <textarea
+                                                value={meetingContent}
+                                                onChange={(e) => setMeetingContent(e.target.value)}
+                                                placeholder="会食や打合せの内容、印象に残った出来事を記録してください"
+                                            />
+                                            <div className="meeting-buttons">
+                                                <button className="btn btn-primary btn-small" onClick={addMeeting}>
+                                                    記録を追加
+                                                </button>
+                                                <button 
+                                                    className="btn btn-secondary btn-small" 
+                                                    onClick={() => {
+                                                        setShowMeetingForm(false);
+                                                        setMeetingDate('');
+                                                        setMeetingContent('');
+                                                    }}
+                                                >
+                                                    キャンセル
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {currentProfile.meetings && currentProfile.meetings.length > 0 ? (
+                                        <div className="meetings-list">
+                                            {[...currentProfile.meetings].reverse().map((meeting) => (
+                                                <div key={meeting.id} className="meeting-item">
+                                                    <button 
+                                                        className="delete-meeting-button"
+                                                        onClick={() => deleteMeeting(meeting.id)}
+                                                    >
+                                                        削除
+                                                    </button>
+                                                    <div className="meeting-date">{meeting.date}</div>
+                                                    <div className="meeting-content">{meeting.content}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="meetings-empty">
+                                            まだ会食・打合せ記録がありません
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js")
+        .then(r => console.log("SW registered:", r))
+        .catch(e => console.log("SW error:", e));
+    }
+  </script>
+</body>
+</html>
