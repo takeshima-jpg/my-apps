@@ -222,6 +222,9 @@ select,input,textarea{font-family:inherit;}
     <div class="tb-t" id="vt">ダッシュボード</div>
     <div class="tb-a">
       <button class="btn" onclick="showAdd()">＋ タスク追加</button>
+      <button class="btn" onclick="exportBackup()" style="background:#2d3748;color:#e2e8f0;margin-left:6px">💾 バックアップ</button>
+      <button class="btn" onclick="document.getElementById('routine-import-input').click()" style="background:#2d3748;color:#e2e8f0;margin-left:4px">📥 復元</button>
+      <input type="file" id="routine-import-input" accept=".json" style="display:none" onchange="importBackup(event)">
     </div>
   </div>
   <div class="vision-area" id="visionArea"></div>
@@ -1160,6 +1163,35 @@ function exportBackup(){
   a.click();
   URL.revokeObjectURL(a.href);
 }
+function importBackup(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      if (!data.tasks && !data.taskLogs) throw new Error('無効なフォーマットです');
+      if (!confirm('タスク: ' + (data.tasks||[]).length + '件、ログ: ' + (data.taskLogs||[]).length + '件を復元します。\n現在のデータは上書きされます。続けますか？')) return;
+      if (data.tasks) {
+        tasks = data.tasks;
+        localStorage.setItem('routineOS_tasks', JSON.stringify(tasks));
+        if (data.tasks.length > 0) {
+          var maxId = Math.max.apply(null, data.tasks.map(function(t){return t.id||0;}));
+          nid = maxId + 1;
+          localStorage.setItem('routineOS_nid', String(nid));
+        }
+      }
+      if (data.taskLogs) {
+        taskLogs = data.taskLogs;
+        localStorage.setItem('routineOS_logs', JSON.stringify(taskLogs));
+      }
+      alert('復元しました（' + (data.tasks||[]).length + '件）');
+      render();
+    } catch(err) { alert('インポートに失敗しました: ' + err.message); }
+  };
+  reader.readAsText(file, 'utf-8');
+  e.target.value = '';
+}
+
 function runMonthlyMaintenance(){
   // 完了・スキップ履歴を直近300件に制限
   if(Array.isArray(taskLogs)&&taskLogs.length>300){
