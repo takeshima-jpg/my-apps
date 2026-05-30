@@ -679,7 +679,6 @@
         // LocalStorage管理
         const STORAGE_KEY = 'hitomemo_profiles_v1';
 
-        // JSON バックアップ
         const backupJSON = (profilesList) => {
             const data = JSON.stringify({ profiles: profilesList, exportedAt: new Date().toISOString() }, null, 2);
             const blob = new Blob([data], { type: 'application/json' });
@@ -691,8 +690,7 @@
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         };
 
-        // JSON 復元
-        const restoreJSON = () => {
+        const restoreJSON = (saveProfiles, setProfiles, setView) => {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
@@ -707,7 +705,6 @@
                         if (!confirm(list.length + '件のプロフィールを復元します。現在のデータは上書きされます。続けますか？')) return;
                         saveProfiles(list);
                         setProfiles(list);
-                        setView('list');
                         alert('復元しました（' + list.length + '件）');
                     } catch(err) { alert('インポートに失敗しました: ' + err.message); }
                 };
@@ -1249,20 +1246,25 @@ ${profile.insights.value}
                                 </select>
                             </div>
 
-                            <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            <div style={{ marginBottom: '8px', display: 'flex', gap: '10px' }}>
                                 <button className="btn btn-primary" onClick={startInterview}>
                                     新しい人物を記録する
                                 </button>
                                 <button className="btn btn-info" onClick={showImportScreen}>
                                     メモからインポート
                                 </button>
-                                <button className="btn btn-secondary" onClick={() => backupJSON(profiles)}
-                                    style={{ background: '#2d3748', color: '#e2e8f0', border: 'none' }}>
+                            </div>
+                            <div style={{ marginBottom: '20px', display: 'flex', gap: '8px' }}>
+                                <button
+                                    onClick={() => backupJSON(profiles)}
+                                    style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '12px', cursor: 'pointer', padding: '2px 0', textDecoration: 'underline' }}>
                                     💾 JSONバックアップ
                                 </button>
-                                <button className="btn btn-secondary" onClick={restoreJSON}
-                                    style={{ background: '#4a5568', color: '#e2e8f0', border: 'none' }}>
-                                    📥 JSON復元
+                                <span style={{ color: '#cbd5e0', fontSize: '12px' }}>|</span>
+                                <button
+                                    onClick={() => restoreJSON(saveProfiles, setProfiles, setView)}
+                                    style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '12px', cursor: 'pointer', padding: '2px 0', textDecoration: 'underline' }}>
+                                    📥 JSONから復元
                                 </button>
                             </div>
 
