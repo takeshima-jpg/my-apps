@@ -440,6 +440,8 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.85
     </div>
     <div class="side-bottom">
       <button class="side-action" id="exportBtn">↓ エクスポート</button>
+      <button class="side-action" id="importBtn" style="margin-top:4px;background:var(--bg3);color:var(--text2)">↑ インポート</button>
+      <input type="file" id="importFileInput" accept=".json" style="display:none">
     </div>
   </aside>
 
@@ -1305,6 +1307,28 @@ function exportData() {
   toast('エクスポートしました');
 }
 
+// IMPORT
+function importData() {
+  document.getElementById('importFileInput').click();
+}
+function handleImport(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.logs && !data.reviews) throw new Error('無効なフォーマットです');
+      if (!confirm(`ログ: ${(data.logs||[]).length}件、レビュー: ${(data.reviews||[]).length}件\nを復元します。現在のデータは上書きされます。\n続けますか？`)) return;
+      if (data.logs) { state.logs = data.logs; saveData(); }
+      if (data.reviews) { state.reviews = data.reviews; saveReviews(); }
+      render();
+      toast('インポートしました ✓');
+    } catch(err) { alert('インポートに失敗しました: ' + err.message); }
+  };
+  reader.readAsText(file, 'utf-8');
+  e.target.value = '';
+}
+
 // TOAST
 function toast(msg) {
   let el = document.querySelector('.toast');
@@ -1391,6 +1415,8 @@ function bindEvents() {
   });
 
   document.getElementById('exportBtn').addEventListener('click', exportData);
+  document.getElementById('importBtn').addEventListener('click', importData);
+  document.getElementById('importFileInput').addEventListener('change', handleImport);
 
   document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
