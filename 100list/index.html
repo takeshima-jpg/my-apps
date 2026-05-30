@@ -288,6 +288,8 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
   <div id="page-settings" style="display:none"></div>
 </div>
 
+<input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importJSON(event)">
+<input type="file" id="import-csv-input" accept=".csv" style="display:none" onchange="importCSV(event)">
 <div id="modal-overlay">
   <div id="modal-box">
     <h3 id="modal-title">新規登録</h3>
