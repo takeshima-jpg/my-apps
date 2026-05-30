@@ -679,6 +679,40 @@
         // LocalStorage管理
         const STORAGE_KEY = 'hitomemo_profiles_v1';
 
+        // JSON バックアップ
+        const backupJSON = (profilesList) => {
+            const data = JSON.stringify({ profiles: profilesList, exportedAt: new Date().toISOString() }, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hitomemo-backup-' + new Date().toISOString().slice(0,10) + '.json';
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        };
+
+        // JSON 復元
+        const restoreJSON = (callback) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        const list = data.profiles || data;
+                        if (!Array.isArray(list)) throw new Error('無効なフォーマット');
+                        if (!confirm(`${list.length}件のプロフィールを復元します。現在のデータは上書きされます。続けますか？`)) return;
+                        callback(list);
+                    } catch(err) { alert('インポートに失敗しました: ' + err.message); }
+                };
+                reader.readAsText(file, 'utf-8');
+            };
+            input.click();
+        };
+
         const loadProfiles = () => {
             const data = localStorage.getItem(STORAGE_KEY);
             return data ? JSON.parse(data) : [];
@@ -1218,6 +1252,12 @@ ${profile.insights.value}
                                 </button>
                                 <button className="btn btn-info" onClick={showImportScreen}>
                                     メモからインポート
+                                </button>
+                                <button className="btn" style={{background:'#2d3748',color:'#e2e8f0',marginLeft:'8px'}} onClick={() => backupJSON(profiles)}>
+                                    💾 JSONバックアップ
+                                </button>
+                                <button className="btn" style={{background:'#2d3748',color:'#e2e8f0',marginLeft:'8px'}} onClick={() => restoreJSON((list) => { saveProfiles(list); setProfiles(list); setView('list'); })}>
+                                    📥 JSON復元
                                 </button>
                             </div>
 
