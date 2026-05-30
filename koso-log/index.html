@@ -723,6 +723,10 @@ textarea.form-control { resize: vertical; min-height: 56px; }
     <button class="btn-side" onclick="document.getElementById('file-input').click()">↑ CSVインポート</button>
     <input id="file-input" type="file" accept=".csv,.tsv,.txt" style="display:none" onchange="doImport(event)">
     <button class="btn-side" onclick="doReset()" style="font-size:10px">↺ サンプルリセット</button>
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:6px 0">
+    <button class="btn-side" onclick="backupJSON()" style="background:#2d3748;color:#e2e8f0">💾 JSONバックアップ</button>
+    <button class="btn-side" onclick="document.getElementById('json-import-input').click()" style="background:#2d3748;color:#e2e8f0">📥 JSON復元</button>
+    <input id="json-import-input" type="file" accept=".json" style="display:none" onchange="restoreJSON(event)">
   </div>
   <div class="sidebar-footer" id="sidebar-count">0件登録</div>
 </div>
@@ -1670,6 +1674,36 @@ function saveItem() {
 // ═══════════════════════════════════════════════════════
 // CSV
 // ═══════════════════════════════════════════════════════
+// JSON バックアップ
+function backupJSON() {
+  const data = { items: items, archives: archives, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = 'koso-log-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('JSONバックアップを保存しました');
+}
+
+function restoreJSON(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.items && !data.archives) throw new Error('無効なフォーマット');
+      if (!confirm(`施策: ${(data.items||[]).length}件、アーカイブ: ${(data.archives||[]).length}件\nを復元します。現在のデータは上書きされます。続けますか？`)) return;
+      if (data.items) items = data.items;
+      if (data.archives) archives = data.archives;
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch(e) {}
+      try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archives)); } catch(e) {}
+      render(); showToast('復元しました');
+    } catch(err) { alert('インポートに失敗しました: ' + err.message); }
+  };
+  reader.readAsText(file, 'utf-8');
+  e.target.value = '';
+}
+
 function doExport() {
   const header=['ID','種別','親ID','タイトル','目的/概要','成功条件','実行トリガー','前提条件','ステータス','PJ化','戦略優先順位','最終レビュー日'];
   const rows=items.map(i=>[i.id,i.type,i.parentId,i.title,i.purpose,i.success,i.trigger,i.prereq,i.status,i.pj,i.priority||'A',i.review]
