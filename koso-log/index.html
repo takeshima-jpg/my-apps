@@ -8,1035 +8,1303 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ヒトメモ</title>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Serif+Display&display=swap');
+  <title>KOSO Log</title>
+<style>
+/* ─── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg: #F7F6F3;
-      --surface: #FFFFFF;
-      --surface2: #F0EEE9;
-      --border: #E5E2DB;
-      --text1: #1A1814;
-      --text2: #5C5852;
-      --text3: #9C988F;
-      --accent: #2D5A3D;
-      --accent-light: #EAF2EC;
-      --accent2: #8B6914;
-      --accent2-light: #FBF4E3;
-      --star: #E8A020;
-      --danger: #C0392B;
-      --danger-light: #FDECEA;
-    }
+:root {
+  --bg:        #ffffff;
+  --bg2:       #f9fafb;
+  --bg3:       #f3f4f6;
+  --bg4:       #e5e7eb;
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+  --text:      #111827;
+  --text2:     #374151;
+  --text3:     #6b7280;
+  --text4:     #9ca3af;
+  --blue:      #2563eb;
+  --blue-lt:   #eff6ff;
+  --sidebar:   220px;
+  --radius:    10px;
+  --shadow:    0 1px 3px rgba(0,0,0,.07);
+}
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg3);
+  color: var(--text);
+  font-family: 'Hiragino Kaku Gothic ProN','Hiragino Sans','Meiryo',sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
 
-    body {
-      font-family: 'Noto Sans JP', sans-serif;
-      background: var(--bg);
-      color: var(--text1);
-      font-size: 14px;
-      line-height: 1.6;
-    }
+button { font-family: inherit; cursor: pointer; border: none; outline: none; }
+input, select, textarea { font-family: inherit; outline: none; }
 
-    /* ── LAYOUT ── */
-    .app { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
+/* ─── Layout ─────────────────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar);
+  flex-shrink: 0;
+  background: #1e2230;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  min-width: 0;
+  background: var(--bg3);
+}
 
-    /* ── TOPBAR ── */
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .topbar-logo {
-      font-family: 'DM Serif Display', serif;
-      font-size: 20px;
-      color: var(--accent);
-      letter-spacing: 0.02em;
-    }
-    .topbar-actions { display: flex; gap: 8px; align-items: center; }
+/* ─── Sidebar ────────────────────────────────────────────── */
+.sidebar-logo {
+  padding: 16px 14px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.logo-text { font-weight: 800; font-size: 14px; color: #fff; line-height: 1.1; letter-spacing: -.01em; }
+.logo-sub  { font-size: 9px; color: rgba(255,255,255,.3); letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
 
-    /* ── BUTTONS ── */
-    .btn {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      font-family: inherit;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: #234830; }
-    .btn-ghost { background: none; border: 1px solid var(--border); color: var(--text2); }
-    .btn-ghost:hover { background: var(--surface2); }
-    .btn-danger { background: var(--danger-light); color: var(--danger); border: 1px solid #f5c6c0; }
-    .btn-danger:hover { background: #fbd5d0; }
-    .btn-sm { padding: 5px 12px; font-size: 12px; }
+.sidebar-section-label {
+  padding: 14px 14px 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255,255,255,.25);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
 
-    /* ── SEARCH ── */
-    .search-wrap { position: relative; margin: 20px 0 16px; }
-    .search-input {
-      width: 100%;
-      padding: 10px 16px 10px 38px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      font-size: 14px;
-      font-family: inherit;
-      background: var(--surface);
-      transition: border-color 0.2s;
-    }
-    .search-input:focus { outline: none; border-color: var(--accent); }
-    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 15px; }
+nav { padding: 4px 8px; display: flex; flex-direction: column; gap: 1px; }
+.nav-btn {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: none;
+  color: rgba(255,255,255,.5);
+  font-size: 12px;
+  font-weight: 500;
+  transition: background .12s, color .12s;
+  text-align: left;
+  width: 100%;
+}
+.nav-btn:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.85); }
+.nav-btn.active { background: rgba(37,99,235,.4); color: #93c5fd; font-weight: 700; }
+.nav-btn .nav-icon { width: 16px; text-align: center; font-size: 12px; opacity: .8; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto;
+  font-size: 9px; font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  min-width: 18px; text-align: center;
+  background: rgba(255,255,255,.2); color: rgba(255,255,255,.7);
+}
 
-    /* ── FILTER ROW ── */
-    .filter-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-    .filter-label { font-size: 12px; color: var(--text3); }
-    .filter-chip {
-      padding: 4px 12px;
-      border-radius: 20px;
-      border: 1.5px solid var(--border);
-      background: var(--surface);
-      font-size: 12px;
-      color: var(--text2);
-      cursor: pointer;
-      font-family: inherit;
-      transition: all 0.15s;
-    }
-    .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .sort-select {
-      padding: 4px 10px;
-      border: 1.5px solid var(--border);
-      border-radius: 6px;
-      font-size: 12px;
-      font-family: inherit;
-      background: var(--surface);
-      color: var(--text2);
-      margin-left: auto;
-    }
-    .sort-select:focus { outline: none; }
+.sidebar-footer { padding: 6px 14px 10px; color: rgba(255,255,255,.2); font-size: 10px; margin-top: auto; }
 
-    /* ── SECTION TITLE ── */
-    .section-title {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text3);
-      margin: 24px 0 12px;
-    }
+/* ─── Badges ─────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px; font-weight: 700;
+  white-space: nowrap; letter-spacing: .02em;
+}
+.badge-検討中 { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.badge-待機   { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
+.badge-実行中 { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.badge-完了   { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+.badge-廃棄   { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.badge-pri-S  { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; }
+.badge-pri-A  { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 800; }
+.badge-pri-B  { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; font-weight: 800; }
+.badge-pri-C  { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; font-weight: 700; }
 
-    /* ── STAR GRID ── */
-    .star-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-    .star-card {
-      background: var(--accent2-light);
-      border: 1.5px solid #e8d9a0;
-      border-radius: 10px;
-      padding: 16px;
-      cursor: pointer;
-      transition: all 0.15s;
-      position: relative;
-    }
-    .star-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-    .star-badge { position: absolute; top: 12px; right: 12px; font-size: 14px; }
+/* ─── Page Header ────────────────────────────────────────── */
+.page-header { margin-bottom: 20px; }
+.page-title { font-size: 20px; font-weight: 800; color: var(--text); letter-spacing: -.02em; }
+.page-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
 
-    /* ── PERSON GRID ── */
-    .person-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 10px;
-    }
-    .person-card {
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      cursor: pointer;
-      transition: all 0.15s;
-      position: relative;
-    }
-    .person-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(45,90,61,0.08); }
-    .person-card.is-star { border-color: #d4b86a; }
-    .person-card.dragging { opacity: 0.4; cursor: grabbing; }
-    .person-card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); transform: scale(1.02); }
-    .person-card[draggable="true"] { cursor: grab; }
-    .star-card.dragging { opacity: 0.4; cursor: grabbing; }
-    .star-card.drag-over { border-color: var(--accent2); box-shadow: 0 0 0 2px var(--accent2); transform: scale(1.02); }
-    .star-card[draggable="true"] { cursor: grab; }
+/* ─── HOME ───────────────────────────────────────────────── */
+.home-priority-section { margin-bottom: 20px; }
+.home-priority-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0 8px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+}
+.home-priority-label {
+  font-size: 11px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.home-priority-count {
+  font-size: 10px; color: var(--text3); font-weight: 500;
+}
+.home-pri-s .home-priority-label { color: #b91c1c; }
+.home-pri-s .home-priority-header { border-color: #fecaca; }
+.home-pri-a .home-priority-label { color: #1d4ed8; }
+.home-pri-a .home-priority-header { border-color: #bfdbfe; }
+.home-pri-b .home-priority-label { color: #6d28d9; }
+.home-pri-b .home-priority-header { border-color: #ddd6fe; }
+.home-pri-c .home-priority-label { color: #6b7280; }
+.home-pri-c .home-priority-header { border-color: #e5e7eb; }
 
-    .card-name { font-weight: 700; font-size: 16px; margin-bottom: 3px; }
-    .card-position { font-size: 12px; color: var(--text3); margin-bottom: 8px; }
-    .card-core {
-      font-size: 13px;
-      color: var(--text2);
-      font-style: italic;
-      border-left: 2px solid var(--accent);
-      padding-left: 8px;
-      margin-bottom: 10px;
-      line-height: 1.5;
-    }
-    .card-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: var(--text3);
-      border-top: 1px solid var(--border);
-      padding-top: 8px;
-      margin-top: 4px;
-    }
-    .card-delete {
-      position: absolute;
-      top: 8px; right: 8px;
-      width: 24px; height: 24px;
-      border-radius: 50%;
-      background: transparent;
-      border: none;
-      color: var(--text3);
-      font-size: 16px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0;
-      transition: all 0.15s;
-    }
-    .person-card:hover .card-delete,
-    .star-card:hover .card-delete { opacity: 1; background: var(--danger-light); color: var(--danger); }
+.home-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: box-shadow .12s, border-color .12s;
+  box-shadow: var(--shadow);
+}
+.home-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.09); border-color: var(--border2); }
+.home-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.home-card-id { font-family: monospace; font-size: 10px; font-weight: 700; color: #2563eb; }
+.home-card-title { font-size: 13px; font-weight: 700; color: var(--text); flex: 1; }
+.home-card-purpose { font-size: 11px; color: var(--text3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-card-children { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--bg3); display: none; }
+.home-card.expanded .home-card-children { display: block; }
+.home-child-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--bg3);
+  font-size: 11px; color: var(--text2);
+}
+.home-child-row:last-child { border-bottom: none; }
+.home-child-indent { color: #d1d5db; font-size: 10px; flex-shrink: 0; }
+.home-child-id { font-family: monospace; font-size: 10px; color: #7c3aed; }
+.home-child-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-empty { padding: 12px 0; color: var(--text4); font-size: 11px; font-style: italic; }
+.home-toggle-arrow { font-size: 9px; color: var(--text4); margin-left: auto; transition: transform .15s; }
+.home-card.expanded .home-toggle-arrow { transform: rotate(90deg); }
 
-    /* ── SUMMARY ── */
-    .summary-box {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px 20px;
-      margin-top: 28px;
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .summary-item { text-align: center; }
-    .summary-num { font-size: 22px; font-weight: 700; color: var(--accent); line-height: 1; }
-    .summary-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
-    .summary-divider { width: 1px; height: 36px; background: var(--border); }
+/* ─── 構想ログ一覧 ───────────────────────────────────────── */
+.log-list { display: flex; flex-direction: column; gap: 6px; }
+.log-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.log-item-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background .1s;
+}
+.log-item-header:hover { background: #f8f9ff; }
+.log-toggle { font-size: 9px; color: var(--text4); transition: transform .15s; flex-shrink: 0; }
+.log-item.open .log-toggle { transform: rotate(90deg); }
+.log-id { font-family: monospace; font-size: 10px; font-weight: 700; color: #2563eb; flex-shrink: 0; }
+.log-title { font-size: 13px; font-weight: 700; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.log-item-body {
+  display: none;
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--bg3);
+}
+.log-item.open .log-item-body { display: block; }
+.log-detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 12px 0 10px; }
+.log-detail-item { display: flex; flex-direction: column; gap: 3px; }
+.log-detail-label { font-size: 9px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; }
+.log-detail-value { font-size: 12px; color: var(--text2); }
+.log-detail-value.empty { color: var(--text4); font-style: italic; }
 
-    /* ── EMPTY ── */
-    .empty { text-align: center; padding: 60px 20px; color: var(--text3); }
-    .empty-icon { font-size: 40px; margin-bottom: 12px; }
-    .empty-title { font-size: 16px; color: var(--text2); margin-bottom: 6px; }
+.log-children { margin-top: 10px; }
+.log-children-label { font-size: 9px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+.log-child-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  margin-bottom: 4px;
+}
+.log-child-item:last-child { margin-bottom: 0; }
+.log-child-marker { color: #d1d5db; font-size: 10px; margin-top: 2px; flex-shrink: 0; }
+.log-child-body { flex: 1; min-width: 0; }
+.log-child-head { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.log-child-id { font-family: monospace; font-size: 10px; color: #7c3aed; font-weight: 700; }
+.log-child-title { font-size: 12px; font-weight: 600; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-child-purpose { font-size: 10px; color: var(--text4); }
 
-    /* ── BACKUP LINKS ── */
-    .backup-row {
-      display: flex;
-      gap: 12px;
-      margin-top: 8px;
-      padding-top: 8px;
-    }
-    .backup-link {
-      background: none; border: none;
-      color: var(--text3); font-size: 11px;
-      cursor: pointer; font-family: inherit;
-      text-decoration: underline;
-      padding: 0;
-    }
-    .backup-link:hover { color: var(--text2); }
+.log-actions { display: flex; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--bg3); }
+.btn-edit {
+  padding: 4px 10px; border-radius: 6px;
+  font-size: 11px; font-weight: 700;
+  background: var(--bg3); color: var(--text2);
+  border: 1px solid var(--border2);
+  transition: background .1s;
+}
+.btn-edit:hover { background: var(--bg4); }
+.btn-del {
+  padding: 4px 10px; border-radius: 6px;
+  font-size: 11px; font-weight: 700;
+  background: #fee2e2; color: #b91c1c;
+  border: 1px solid #fecaca;
+  transition: background .1s;
+}
+.btn-del:hover { background: #fecaca; }
 
-    /* ── PAGE CONTAINER ── */
-    .page { max-width: 720px; margin: 0 auto; padding: 24px 20px 60px; }
+/* ─── Filter Bar ─────────────────────────────────────────── */
+.filter-bar {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  margin-bottom: 14px;
+}
+.filter-input {
+  flex: 1; min-width: 160px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-size: 12px;
+  transition: border-color .12s;
+}
+.filter-input:focus { border-color: var(--blue); }
+.filter-select {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  padding: 6px 8px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.filter-select:focus { border-color: var(--blue); }
 
-    /* ── INTERVIEW ── */
-    .interview-box {
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 32px;
-    }
-    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 24px; overflow: hidden; }
-    .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
-    .q-count { font-size: 12px; color: var(--text3); margin-bottom: 12px; }
-    .q-text { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text1); }
-    .q-textarea {
-      width: 100%; min-height: 120px;
-      padding: 12px; font-size: 14px;
-      border: 1.5px solid var(--border); border-radius: 8px;
-      font-family: inherit; resize: vertical;
-      transition: border-color 0.2s;
-    }
-    .q-textarea:focus { outline: none; border-color: var(--accent); }
-    .nav-row { display: flex; gap: 10px; justify-content: space-between; margin-top: 20px; }
+/* ─── AI Import ──────────────────────────────────────────── */
+.ai-import-wrap {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  max-width: 760px;
+}
+.ai-import-desc { font-size: 12px; color: var(--text2); margin-bottom: 14px; line-height: 1.6; }
+.ai-textarea {
+  width: 100%;
+  min-height: 280px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color .12s;
+  font-family: inherit;
+}
+.ai-textarea:focus { border-color: var(--blue); background: var(--bg); outline: none; }
+.ai-btn-row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+.btn-primary {
+  padding: 8px 18px;
+  background: var(--blue); color: #fff;
+  border-radius: 7px;
+  font-size: 12px; font-weight: 700;
+  transition: background .12s;
+}
+.btn-primary:hover { background: #1d4ed8; }
+.btn-secondary {
+  padding: 8px 18px;
+  background: #16a34a; color: #fff;
+  border-radius: 7px;
+  font-size: 12px; font-weight: 700;
+  transition: background .12s;
+}
+.btn-secondary:hover { background: #15803d; }
+.btn-secondary:disabled { background: var(--bg4); color: var(--text3); cursor: not-allowed; }
+.ai-preview {
+  margin-top: 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+.ai-preview-title { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+.ai-preview-g {
+  background: var(--bg);
+  border: 1px solid #bfdbfe;
+  border-left: 3px solid #2563eb;
+  border-radius: 7px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.ai-preview-g-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.ai-preview-g-meta { font-size: 10px; color: var(--text3); }
+.ai-preview-e {
+  background: #faf5ff;
+  border: 1px solid #ddd6fe;
+  border-left: 3px solid #7c3aed;
+  border-radius: 6px;
+  padding: 7px 10px;
+  margin: 4px 0 4px 16px;
+  font-size: 11px; color: var(--text2);
+}
+.ai-parse-status { font-size: 11px; color: var(--text3); }
+.ai-parse-status.ok { color: #15803d; font-weight: 600; }
+.ai-parse-status.err { color: #b91c1c; font-weight: 600; }
 
-    /* ── IMPORT ── */
-    .import-box {
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 32px;
-    }
-    .import-textarea {
-      width: 100%; min-height: 360px;
-      padding: 14px; font-size: 13px;
-      border: 1.5px solid var(--border); border-radius: 8px;
-      font-family: 'Courier New', monospace;
-      resize: vertical; margin-bottom: 16px;
-    }
-    .import-textarea:focus { outline: none; border-color: var(--accent); }
+/* ─── Archive ────────────────────────────────────────────── */
+.archive-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid #dc2626;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+}
+.archive-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.archive-id { font-family: monospace; font-size: 10px; font-weight: 700; color: #2563eb; }
+.archive-title { font-weight: 700; font-size: 13px; color: var(--text); flex: 1; }
+.archive-date { font-size: 10px; color: var(--text3); font-family: monospace; white-space: nowrap; }
+.archive-section-label { font-size: 9px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px; margin-top: 8px; }
+.archive-reason { font-size: 12px; color: #b91c1c; background: #fee2e2; padding: 6px 10px; border-radius: 6px; border: 1px solid #fecaca; }
+.archive-learn { font-size: 12px; color: var(--text2); background: var(--bg3); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); }
 
-    /* ── DETAIL ── */
-    .detail-hero {
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 24px 28px;
-      margin-bottom: 20px;
-    }
-    .hero-name { font-family: 'DM Serif Display', serif; font-size: 28px; margin-bottom: 4px; }
-    .hero-position { font-size: 13px; color: var(--text3); margin-bottom: 12px; }
-    .hero-core {
-      font-size: 15px; color: var(--text2);
-      font-style: italic;
-      border-left: 3px solid var(--accent);
-      padding-left: 12px;
-      margin-bottom: 16px;
-      line-height: 1.6;
-    }
-    .hero-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-    .star-toggle {
-      display: flex; align-items: center; gap: 6px;
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 1.5px solid var(--border);
-      background: var(--surface);
-      font-size: 13px; font-family: inherit;
-      cursor: pointer; transition: all 0.15s;
-      font-weight: 500;
-    }
-    .star-toggle.active { background: var(--accent2-light); border-color: #d4b86a; color: var(--accent2); }
+/* ─── Modal ──────────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.4);
+  backdrop-filter: blur(2px);
+  z-index: 100;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 26px;
+  width: 100%; max-width: 580px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.modal-title { font-size: 16px; font-weight: 800; color: var(--text); }
+.modal-close {
+  background: var(--bg3); color: var(--text3);
+  font-size: 18px; line-height: 1; padding: 4px 8px;
+  border-radius: 6px; transition: background .12s;
+}
+.modal-close:hover { background: var(--bg4); color: var(--text); }
 
-    .detail-section {
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 20px 24px;
-      margin-bottom: 14px;
-    }
-    .detail-section-title {
-      font-size: 12px; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--text3); margin-bottom: 16px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-    }
-    .field-group { margin-bottom: 14px; }
-    .field-label { display: block; font-size: 12px; color: var(--text3); font-weight: 500; margin-bottom: 5px; }
-    .field-input, .field-textarea {
-      width: 100%; padding: 9px 12px;
-      font-size: 14px; font-family: inherit;
-      border: 1.5px solid var(--border); border-radius: 7px;
-      transition: border-color 0.2s;
-      background: var(--surface);
-    }
-    .field-textarea { min-height: 80px; resize: vertical; }
-    .field-input:focus, .field-textarea:focus { outline: none; border-color: var(--accent); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-col2 { grid-column: span 2; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 9px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; }
+.form-control {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  padding: 7px 10px;
+  color: var(--text); font-size: 12px;
+  transition: border-color .12s, background .12s;
+  width: 100%;
+}
+.form-control:focus { border-color: var(--blue); background: var(--bg); }
+textarea.form-control { resize: vertical; min-height: 56px; }
 
-    /* ── MEETINGS ── */
-    .meeting-item {
-      background: var(--surface2);
-      border-left: 3px solid #27ae60;
-      border-radius: 0 7px 7px 0;
-      padding: 12px 14px;
-      margin-bottom: 10px;
-      position: relative;
-    }
-    .meeting-date { font-weight: 600; font-size: 13px; margin-bottom: 5px; }
-    .meeting-content { font-size: 13px; color: var(--text2); line-height: 1.6; }
-    .meeting-delete {
-      position: absolute; top: 8px; right: 8px;
-      background: none; border: none;
-      font-size: 11px; color: var(--text3);
-      cursor: pointer; padding: 2px 6px;
-      border-radius: 4px;
-    }
-    .meeting-delete:hover { background: var(--danger-light); color: var(--danger); }
+/* Discard modal */
+.discard-box {
+  background: #fff5f5; border: 1px solid #fecaca;
+  border-radius: 10px; padding: 14px; margin-bottom: 16px;
+}
+.discard-box-title { font-size: 12px; font-weight: 700; color: #991b1b; margin-bottom: 8px; }
+.discard-form-group { margin-bottom: 10px; }
+.discard-label { font-size: 9px; font-weight: 700; color: #b91c1c; text-transform: uppercase; letter-spacing: .08em; display: block; margin-bottom: 4px; }
+.discard-control {
+  width: 100%; background: #fff;
+  border: 1px solid #fecaca; border-radius: 6px;
+  padding: 7px 10px; color: var(--text); font-size: 12px;
+  font-family: inherit; transition: border-color .12s;
+}
+.discard-control:focus { border-color: #ef4444; outline: none; }
 
-    /* ── AI SUMMARY ── */
-    .ai-summary-box {
-      background: var(--accent-light);
-      border: 1.5px solid #b8d9c2;
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin-bottom: 14px;
-    }
-    .ai-summary-label { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
-    .ai-summary-field { margin-bottom: 8px; font-size: 13px; }
-    .ai-field-key { color: var(--text3); font-weight: 500; }
-    .ai-field-val { color: var(--text1); margin-left: 4px; }
-    .ai-summary-textarea {
-      width: 100%; min-height: 110px;
-      padding: 10px 12px; font-size: 13px;
-      border: 1.5px solid #b8d9c2; border-radius: 7px;
-      font-family: inherit; resize: vertical;
-      background: rgba(255,255,255,0.7);
-    }
-    .ai-summary-textarea:focus { outline: none; border-color: var(--accent); }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.btn-cancel {
+  padding: 8px 16px;
+  background: var(--bg3); color: var(--text2);
+  border-radius: 7px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border2);
+  transition: background .12s;
+}
+.btn-cancel:hover { background: var(--bg4); }
+.btn-save {
+  padding: 8px 20px;
+  background: var(--blue); color: #fff;
+  border-radius: 7px; font-size: 12px; font-weight: 800;
+  transition: background .12s;
+}
+.btn-save:hover { background: #1d4ed8; }
+.btn-discard-confirm {
+  padding: 8px 20px;
+  background: #dc2626; color: #fff;
+  border-radius: 7px; font-size: 12px; font-weight: 800;
+  transition: background .12s;
+}
+.btn-discard-confirm:hover { background: #b91c1c; }
 
-    /* ── ACTION ROW ── */
-    .action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+/* ─── Toast ──────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 20px; right: 20px;
+  background: #1e2230; color: #fff;
+  padding: 10px 16px; border-radius: 8px;
+  font-size: 12px; font-weight: 600;
+  z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .2s, transform .2s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
 
-    /* ── PAGE HEADER ── */
-    .page-header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
-    .page-back {
-      background: none; border: 1px solid var(--border);
-      color: var(--text2); padding: 6px 14px;
-      border-radius: 6px; font-family: inherit;
-      font-size: 13px; cursor: pointer;
-    }
-    .page-back:hover { background: var(--surface2); }
-    .page-title { font-size: 20px; font-weight: 700; }
-  </style>
+/* ─── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg3); }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border2); }
+
+/* ─── Sidebar add btn ────────────────────────────────────── */
+.sidebar-add {
+  padding: 10px 8px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+.btn-add {
+  width: 100%;
+  padding: 9px;
+  background: var(--blue);
+  color: #fff;
+  border-radius: 7px;
+  font-weight: 700;
+  font-size: 12px;
+  transition: background .12s;
+}
+.btn-add:hover { background: #1d4ed8; }
+
+/* ─── Misc ───────────────────────────────────────────────── */
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 12px; }
+.empty-icon { font-size: 32px; margin-bottom: 10px; }
+.priority-inherited { font-size: 9px; color: var(--text4); font-style: italic; }
+</style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="topbar-logo">ヒトメモ</div>
-  <div class="topbar-actions" id="topbar-actions"></div>
+<!-- ─── Sidebar ──────────────────────────────────────────────── -->
+<div id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">KOSO Log</div>
+    <div class="logo-sub">構想保管ログ</div>
+  </div>
+
+  <div class="sidebar-section-label">メニュー</div>
+  <nav>
+    <button class="nav-btn active" data-view="home" onclick="setView('home')">
+      <span class="nav-icon">◼</span> HOME
+    </button>
+    <button class="nav-btn" data-view="list" onclick="setView('list')">
+      <span class="nav-icon">☰</span> 構想ログ
+    </button>
+    <button class="nav-btn" data-view="archive" onclick="setView('archive')">
+      <span class="nav-icon">✕</span> 廃棄アーカイブ
+      <span class="nav-badge" id="badge-archive" style="display:none"></span>
+    </button>
+    <button class="nav-btn" data-view="ai-import" onclick="setView('ai-import')">
+      <span class="nav-icon">⬇</span> AIインポート
+    </button>
+  </nav>
+
+  <div class="sidebar-add">
+    <button class="btn-add" onclick="openModal(null)">＋ 新規追加</button>
+  </div>
+
+  <div class="sidebar-footer" id="sidebar-count">0件登録</div>
 </div>
 
-<div id="root"></div>
+<!-- ─── Main ──────────────────────────────────────────────────── -->
+<div id="main">
+  <div id="view-home"></div>
+  <div id="view-list" style="display:none"></div>
+  <div id="view-archive" style="display:none"></div>
+  <div id="view-ai-import" style="display:none"></div>
+</div>
 
-<script type="text/babel">
-const { useState, useEffect, useRef } = React;
-
-const STORAGE_KEY = 'hitomemo_profiles_v1';
-
-const loadProfiles = () => {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
-};
-const saveProfiles = (list) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-};
-
-// JSON バックアップ
-const backupJSON = (list) => {
-  const blob = new Blob([JSON.stringify({ profiles: list, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'hitomemo-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-};
-
-const restoreJSON = (onDone) => {
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = '.json';
-  input.onchange = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        const list = data.profiles || data;
-        if (!Array.isArray(list)) throw new Error('無効なフォーマット');
-        if (!confirm(list.length + '件を復元します。現在のデータは上書きされます。続けますか？')) return;
-        saveProfiles(list); onDone(list);
-        alert('復元しました（' + list.length + '件）');
-      } catch(err) { alert('復元に失敗しました: ' + err.message); }
-    };
-    reader.readAsText(file, 'utf-8');
-  };
-  input.click();
-};
-
-// 人脈サマリー分類
-const classifyProfile = (p) => {
-  const pos = ((p.position && p.position.value) || '').toLowerCase();
-  const biz = ((p.business && p.business.value) || '').toLowerCase();
-  const text = pos + ' ' + biz;
-  if (/代表|社長|ceo|coo|cto|創業|オーナー|経営/.test(text)) return '経営者';
-  if (/投資|vc|ファンド|エンジェル/.test(text)) return '投資家';
-  if (/弁護士|税理士|会計士|社労士|司法書士|士業/.test(text)) return '士業';
-  if (/m&a|merger|acquisition|買収|合併/.test(text)) return 'M&A';
-  if (/採用|recruit|hr|人事/.test(text)) return '採用候補';
-  return 'その他';
-};
-
-const formatDate = (s) => {
-  if (!s) return '';
-  const d = new Date(s);
-  return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
-};
-
-// メモ形式インポート
-const importFromMemo = (text) => {
-  const extract = (label) => {
-    const r = new RegExp(label + '[：:](.*?)(?=\\n[■氏誕所事経家出目価信行苦よ特印話欲そ核補作]|$)', 's');
-    const m = text.match(r);
-    return m ? m[1].trim() : '';
-  };
-  return {
-    id: Date.now().toString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    relationFlag: 'normal',
-    meetings: [],
-    meetingSummary: '',
-    name:       { value: extract('氏名\\(ふりがな\\)') },
-    birthday:   { value: extract('誕生日') },
-    position:   { value: extract('所属・役職') },
-    business:   { value: extract('事業') },
-    history:    { value: extract('経歴') },
-    family:     { value: extract('家族構成') },
-    location:   { value: extract('出身・現所在地') },
-    goals:      { value: extract('目標・夢') },
-    values:     { value: extract('価値観') },
-    beliefs:    { value: extract('信条') },
-    behavior:   { value: extract('行動傾向') },
-    dislikes:   { value: extract('苦手なこと') },
-    topics:     { value: extract('よく話すテーマ') },
-    skills:     { value: extract('特技・スキル') },
-    memorable:  { value: extract('印象的な言葉') },
-    impression: { value: extract('話してみての印象') },
-    drive:      { value: extract('欲求\\(ドライブ\\)') },
-    other:      { value: extract('その他') },
-    coreMessage:{ value: extract('核となる一言') },
-    insights:   { value: extract('補足・洞察') },
-  };
-};
-
-// メモエクスポート
-const exportAsMemo = (p) => {
-  const v = (f) => (p[f] && p[f].value) ? p[f].value : '';
-  const text = `【人物プロファイル】${v('name')}\n\n■基本情報\n氏名(ふりがな)：${v('name')}\n誕生日：${v('birthday')}\n所属・役職：${v('position')}\n事業：${v('business')}\n経歴：${v('history')}\n家族構成：${v('family')}\n出身・現所在地：${v('location')}\n\n■価値観・信条\n目標・夢：${v('goals')}\n価値観：${v('values')}\n信条：${v('beliefs')}\n\n■個性・傾向\n行動傾向：${v('behavior')}\n苦手なこと：${v('dislikes')}\nよく話すテーマ：${v('topics')}\n特技・スキル：${v('skills')}\n\n■洞察\n印象的な言葉：${v('memorable')}\n話してみての印象：${v('impression')}\n欲求(ドライブ)：${v('drive')}\nその他：${v('other')}\n核となる一言：${v('coreMessage')}\n\n■補足・洞察\n${v('insights')}\n\n作成日時：${new Date(p.createdAt).toLocaleString('ja-JP')}`;
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = (v('name') || '人物プロファイル') + '_' + new Date().toISOString().slice(0,10) + '.txt';
-  a.click(); URL.revokeObjectURL(url);
-};
-
-// ── INTERVIEW QUESTIONS ──
-const QUESTIONS = [
-  "お名前（ふりがな）",
-  "誕生日",
-  "所属・役職",
-  "事業内容",
-  "これまでの経歴",
-  "ご家族構成",
-  "出身地・現在の所在地",
-  "今、最も実現したい目標や夢",
-  "人生で大切にしている価値観",
-  "信条・信念",
-  "行動傾向・パターン",
-  "苦手なこと・避けたいこと",
-  "よく話すテーマ・関心事",
-  "特技・スキル",
-  "最近印象に残った言葉や出来事",
-  "話してみての第一印象",
-  "行動の原動力（欲求・ドライブ）",
-  "その他、記録しておきたいこと",
-  "この方を一言で表すと"
-];
-const FIELDS = ['name','birthday','position','business','history','family','location','goals','values','beliefs','behavior','dislikes','topics','skills','memorable','impression','drive','other','coreMessage'];
-
-// ── APP ──
-const App = () => {
-  const [view, setView] = useState('list');
-  const [profiles, setProfiles] = useState([]);
-  const [query, setQuery] = useState('');
-  const [filterStar, setFilterStar] = useState(false);
-  const [current, setCurrent] = useState(null);
-  const [answers, setAnswers] = useState(Array(19).fill(''));
-  const [qIdx, setQIdx] = useState(0);
-  const [importText, setImportText] = useState('');
-  const [showMeetingForm, setShowMeetingForm] = useState(false);
-  const [meetDate, setMeetDate] = useState('');
-  const [meetContent, setMeetContent] = useState('');
-  const [dragSrcId, setDragSrcId] = useState(null);
-  const [dragSection, setDragSection] = useState(null); // 'star' | 'all'
-  const [manualOrder, setManualOrder] = useState(null);   // 全員の手動順
-  const [starOrder, setStarOrder] = useState(null);       // ★の手動順
-
-  useEffect(() => { setProfiles(loadProfiles()); }, []);
-
-  const updateList = (list) => { setProfiles(list); saveProfiles(list); };
-
-  // 手動順でソート（初回はcreatedAt降順）
-  const applyOrder = (list, order) => {
-    if (!order) return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const orderMap = {};
-    order.forEach((id, i) => { orderMap[id] = i; });
-    return [...list].sort((a, b) => {
-      const ai = orderMap[a.id] !== undefined ? orderMap[a.id] : 9999;
-      const bi = orderMap[b.id] !== undefined ? orderMap[b.id] : 9999;
-      return ai - bi;
-    });
-  };
-
-  const sorted = applyOrder(profiles, manualOrder);
-
-  const filtered = sorted.filter(p => {
-    if (filterStar && p.relationFlag !== 'star') return false;
-    if (!query) return true;
-    const q = query.toLowerCase();
-    const fields = ['name','position','values','coreMessage','insights'];
-    if (fields.some(f => (p[f] && p[f].value || '').toLowerCase().includes(q))) return true;
-    if ((p.meetingSummary || '').toLowerCase().includes(q)) return true;
-    if ((p.meetings || []).some(m => m.content.toLowerCase().includes(q))) return true;
-    return false;
-  });
-
-  const starProfilesAll = profiles.filter(p => p.relationFlag === 'star');
-  const starProfiles = applyOrder(starProfilesAll, starOrder);
-
-  // サマリー集計
-  const summary = (() => {
-    const cats = {};
-    profiles.forEach(p => {
-      const c = classifyProfile(p);
-      cats[c] = (cats[c] || 0) + 1;
-    });
-    return cats;
-  })();
-
-  // ── LIST VIEW ──
-  if (view === 'list') {
-    return (
-      <div className="app">
-        {/* 検索 */}
-        <div className="search-wrap">
-          <span className="search-icon">🔍</span>
-          <input className="search-input" placeholder="氏名・所属・価値観・会食の学びで検索..."
-            value={query} onChange={e => setQuery(e.target.value)} />
-        </div>
-
-        {/* フィルタ行 */}
-        <div className="filter-row">
-          <span className="filter-label">表示:</span>
-          <button className={`filter-chip ${!filterStar ? 'active' : ''}`} onClick={() => setFilterStar(false)}>すべて</button>
-          <button className={`filter-chip ${filterStar ? 'active' : ''}`} onClick={() => setFilterStar(true)}>★ 深めたい</button>
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>✥ ドラッグで並び替え</span>
-        </div>
-
-        {/* アクションボタン */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={() => { setAnswers(Array(19).fill('')); setQIdx(0); setView('interview'); }}>
-            ＋ 新しい人物を記録
-          </button>
-          <button className="btn btn-ghost" onClick={() => { setImportText(''); setView('import'); }}>
-            メモからインポート
-          </button>
-        </div>
-        <div className="backup-row">
-          <button className="backup-link" onClick={() => backupJSON(profiles)}>💾 JSONバックアップ</button>
-          <span style={{ color: '#ccc', fontSize: 11 }}>|</span>
-          <button className="backup-link" onClick={() => restoreJSON((list) => { setProfiles(list); })}>📥 JSONから復元</button>
-        </div>
-
-        {/* ★ 深めたい人 */}
-        {!filterStar && starProfiles.length > 0 && (
-          <>
-            <div className="section-title">★ 深めたい人</div>
-            <div className="star-grid">
-              {starProfiles.map(p => (
-                <div key={p.id}
-                  className={`star-card ${dragSrcId === p.id && dragSection === 'star' ? 'dragging' : ''}`}
-                  draggable={true}
-                  onClick={() => { if (dragSrcId) return; setCurrent(p); setView('detail'); }}
-                  onDragStart={e => { setDragSrcId(p.id); setDragSection('star'); e.dataTransfer.effectAllowed = 'move'; }}
-                  onDragEnd={() => { setDragSrcId(null); setDragSection(null); }}
-                  onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }}
-                  onDragLeave={e => e.currentTarget.classList.remove('drag-over')}
-                  onDrop={e => {
-                    e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-                    if (!dragSrcId || dragSrcId === p.id || dragSection !== 'star') return;
-                    const base = starOrder || starProfiles.map(x => x.id);
-                    const srcIdx = base.indexOf(dragSrcId);
-                    const dstIdx = base.indexOf(p.id);
-                    if (srcIdx === -1 || dstIdx === -1) return;
-                    const next = [...base];
-                    next.splice(srcIdx, 1); next.splice(dstIdx, 0, dragSrcId);
-                    setStarOrder(next); setDragSrcId(null); setDragSection(null);
-                  }}
-                >
-                  <span className="star-badge">★</span>
-                  <button className="card-delete" onClick={e => { e.stopPropagation(); if(confirm('削除しますか？')) updateList(profiles.filter(x => x.id !== p.id)); }}>×</button>
-                  <div className="card-name">{p.name.value || '名前未設定'}</div>
-                  <div className="card-position">{p.position.value}</div>
-                  {p.coreMessage.value && <div className="card-core">{p.coreMessage.value}</div>}
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>更新 {formatDate(p.updatedAt || p.createdAt)}</div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* 人物一覧 */}
-        <div className="section-title">
-          {filterStar ? '★ 深めたい人' : '人物一覧'} — {filtered.length}人
-        </div>
-
-        {filtered.length === 0 ? (
-          <div className="empty">
-            <div className="empty-icon">👤</div>
-            <div className="empty-title">{query ? '検索結果がありません' : 'まだ人物が登録されていません'}</div>
-            <div style={{ fontSize: 13 }}>「＋ 新しい人物を記録」から始めましょう</div>
-          </div>
-        ) : (
-          <div className="person-grid">
-            {filtered.map(p => (
-              <div key={p.id}
-                className={`person-card ${p.relationFlag === 'star' ? 'is-star' : ''} ${dragSrcId === p.id && dragSection === 'all' ? 'dragging' : ''}`}
-                draggable={!query}
-                onClick={() => { if (dragSrcId) return; setCurrent(p); setView('detail'); }}
-                onDragStart={e => { setDragSrcId(p.id); setDragSection('all'); e.dataTransfer.effectAllowed = 'move'; }}
-                onDragEnd={() => { setDragSrcId(null); setDragSection(null); }}
-                onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }}
-                onDragLeave={e => e.currentTarget.classList.remove('drag-over')}
-                onDrop={e => {
-                  e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-                  if (!dragSrcId || dragSrcId === p.id || dragSection !== 'all') return;
-                  const base = manualOrder || sorted.map(x => x.id);
-                  const srcIdx = base.indexOf(dragSrcId);
-                  const dstIdx = base.indexOf(p.id);
-                  if (srcIdx === -1 || dstIdx === -1) return;
-                  const next = [...base];
-                  next.splice(srcIdx, 1); next.splice(dstIdx, 0, dragSrcId);
-                  setManualOrder(next); setDragSrcId(null); setDragSection(null);
-                }}
-              >
-                  <button className="card-delete" onClick={e => { e.stopPropagation(); if(confirm('削除しますか？')) updateList(profiles.filter(x => x.id !== p.id)); }}>×</button>
-                  <div className="card-name">
-                    {p.relationFlag === 'star' && <span style={{ color: 'var(--star)', marginRight: 4 }}>★</span>}
-                    {p.name.value || '名前未設定'}
-                  </div>
-                  <div className="card-position">{p.position.value}</div>
-                  {p.coreMessage.value && <div className="card-core">{p.coreMessage.value}</div>}
-                  <div className="card-meta">
-                    <span>更新 {formatDate(p.updatedAt || p.createdAt)}</span>
-                    {(p.meetings || []).length > 0 && <span>会食 {p.meetings.length}回</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* 人脈サマリー */}
-        {profiles.length > 0 && (
-          <div className="summary-box">
-            <div className="summary-item">
-              <div className="summary-num">{profiles.length}</div>
-              <div className="summary-lbl">登録人数</div>
-            </div>
-            {Object.entries(summary).filter(([k]) => k !== 'その他').map(([k, v], i) => (
-              <React.Fragment key={k}>
-                <div className="summary-divider" />
-                <div className="summary-item">
-                  <div className="summary-num">{v}</div>
-                  <div className="summary-lbl">{k}</div>
-                </div>
-              </React.Fragment>
-            ))}
-            {summary['その他'] > 0 && (
-              <>
-                <div className="summary-divider" />
-                <div className="summary-item">
-                  <div className="summary-num">{summary['その他']}</div>
-                  <div className="summary-lbl">その他</div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+<!-- ─── Item Modal ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">新規追加</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">種別</label>
+        <select class="form-control" id="f-type" onchange="onTypeChange()">
+          <option value="構想">構想 (G)</option>
+          <option value="実行">実行 (E)</option>
+        </select>
       </div>
-    );
-  }
-
-  // ── INTERVIEW ──
-  if (view === 'interview') {
-    const pct = ((qIdx + 1) / QUESTIONS.length) * 100;
-    const isLast = qIdx === QUESTIONS.length - 1;
-    const finish = () => {
-      const p = {
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        relationFlag: 'normal',
-        meetings: [],
-        meetingSummary: '',
-      };
-      FIELDS.forEach((f, i) => { p[f] = { value: answers[i] || '' }; });
-      const next = [...profiles, p];
-      updateList(next);
-      setCurrent(p); setView('detail');
-    };
-    return (
-      <div className="page">
-        <div className="page-header">
-          <button className="page-back" onClick={() => setView('list')}>← 一覧</button>
-          <div className="page-title">新しい人物を記録</div>
-        </div>
-        <div className="interview-box">
-          <div className="progress-bar"><div className="progress-fill" style={{ width: pct + '%' }} /></div>
-          <div className="q-count">{qIdx + 1} / {QUESTIONS.length}</div>
-          <div className="q-text">{QUESTIONS[qIdx]}</div>
-          <textarea className="q-textarea" value={answers[qIdx]}
-            onChange={e => { const a = [...answers]; a[qIdx] = e.target.value; setAnswers(a); }}
-            placeholder="（スキップ可）" />
-          <div className="nav-row">
-            <button className="btn btn-ghost" onClick={() => qIdx > 0 && setQIdx(qIdx - 1)} disabled={qIdx === 0}>前へ</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => isLast ? finish() : setQIdx(qIdx + 1)}>スキップ</button>
-            <button className="btn btn-primary" onClick={() => isLast ? finish() : setQIdx(qIdx + 1)}>
-              {isLast ? '完了' : '次へ'}
-            </button>
-          </div>
-        </div>
+      <div class="form-group" id="f-priority-group">
+        <label class="form-label">戦略優先順位</label>
+        <select class="form-control" id="f-priority">
+          <option value="A">A：重要</option>
+          <option value="S">S：今期コア</option>
+          <option value="B">B：探索</option>
+          <option value="C">C：保留</option>
+        </select>
       </div>
-    );
-  }
-
-  // ── IMPORT ──
-  if (view === 'import') {
-    const doImport = () => {
-      try {
-        const p = importFromMemo(importText);
-        const next = [...profiles, p];
-        updateList(next);
-        setCurrent(p); setView('detail');
-      } catch { alert('インポートに失敗しました。形式を確認してください。'); }
-    };
-    return (
-      <div className="page">
-        <div className="page-header">
-          <button className="page-back" onClick={() => setView('list')}>← 一覧</button>
-          <div className="page-title">メモからインポート</div>
-        </div>
-        <div className="import-box">
-          <p style={{ color: 'var(--text2)', marginBottom: 16, fontSize: 13 }}>エクスポートしたメモを貼り付けてください。</p>
-          <textarea className="import-textarea" value={importText}
-            onChange={e => setImportText(e.target.value)}
-            placeholder="エクスポートしたメモをここに貼り付け..." />
-          <div style={{ display: 'flex', gap: 10 }}>
-            <label style={{ cursor: 'pointer' }}>
-              <input type="file" accept=".txt" style={{ display: 'none' }}
-                onChange={e => { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ev => setImportText(ev.target.result); r.readAsText(f); }} />
-              <span className="btn btn-ghost">ファイルから読み込み</span>
-            </label>
-            <button className="btn btn-primary" onClick={doImport} disabled={!importText}>インポート</button>
-            <button className="btn btn-ghost" onClick={() => setView('list')}>キャンセル</button>
-          </div>
-        </div>
+      <div class="form-group" id="f-parent-group">
+        <label class="form-label">親構想 (G)</label>
+        <select class="form-control" id="f-parent">
+          <option value="-">-</option>
+        </select>
       </div>
-    );
-  }
-
-  // ── DETAIL ──
-  if (view === 'detail' && current) {
-    const upd = (field, val) => {
-      const updated = { ...current, [field]: { value: val }, updatedAt: new Date().toISOString() };
-      setCurrent(updated);
-      updateList(profiles.map(p => p.id === updated.id ? updated : p));
-    };
-    const updDirect = (field, val) => {
-      const updated = { ...current, [field]: val, updatedAt: new Date().toISOString() };
-      setCurrent(updated);
-      updateList(profiles.map(p => p.id === updated.id ? updated : p));
-    };
-    const toggleStar = () => {
-      const flag = current.relationFlag === 'star' ? 'normal' : 'star';
-      updDirect('relationFlag', flag);
-    };
-    const addMeeting = () => {
-      if (!meetDate || !meetContent) { alert('日付と内容を入力してください'); return; }
-      const m = { id: Date.now().toString(), date: meetDate, content: meetContent, createdAt: new Date().toISOString() };
-      const updated = { ...current, meetings: [...(current.meetings || []), m], updatedAt: new Date().toISOString() };
-      setCurrent(updated);
-      updateList(profiles.map(p => p.id === updated.id ? updated : p));
-      setMeetDate(''); setMeetContent(''); setShowMeetingForm(false);
-    };
-    const delMeeting = (id) => {
-      if (!confirm('この記録を削除しますか？')) return;
-      const updated = { ...current, meetings: (current.meetings || []).filter(m => m.id !== id), updatedAt: new Date().toISOString() };
-      setCurrent(updated); updateList(profiles.map(p => p.id === updated.id ? updated : p));
-    };
-    const delProfile = () => {
-      if (!confirm('このプロフィールを削除しますか？')) return;
-      updateList(profiles.filter(p => p.id !== current.id));
-      setCurrent(null); setView('list');
-    };
-    const fv = (f) => (current[f] && current[f].value) || '';
-
-    // AI要約テキストをパース
-    const parseSummary = (text) => {
-      if (!text) return null;
-      const lines = text.split('\n').filter(Boolean);
-      return lines.map((line, i) => {
-        const m = line.match(/^(.+?)：(.+)$/);
-        if (m) return <div key={i} className="ai-summary-field"><span className="ai-field-key">{m[1]}：</span><span className="ai-field-val">{m[2]}</span></div>;
-        return <div key={i} className="ai-summary-field"><span className="ai-field-val">{line}</span></div>;
-      });
-    };
-
-    const Field = ({ label, field, multi }) => (
-      <div className="field-group">
-        <label className="field-label">{label}</label>
-        {multi
-          ? <textarea className="field-textarea" value={fv(field)} onChange={e => upd(field, e.target.value)} />
-          : <input type="text" className="field-input" value={fv(field)} onChange={e => upd(field, e.target.value)} />
-        }
+      <div class="form-group">
+        <label class="form-label">ステータス</label>
+        <select class="form-control" id="f-status">
+          <option>検討中</option><option>待機</option><option>実行中</option><option>完了</option><option>廃棄</option>
+        </select>
       </div>
-    );
-
-    return (
-      <div className="page">
-        <div className="page-header">
-          <button className="page-back" onClick={() => setView('list')}>← 一覧</button>
-        </div>
-
-        {/* HERO */}
-        <div className="detail-hero">
-          <div className="hero-name">{fv('name') || '名前未設定'}</div>
-          <div className="hero-position">{fv('position')}</div>
-          {fv('coreMessage') && <div className="hero-core">{fv('coreMessage')}</div>}
-          <div className="hero-meta">
-            <button className={`star-toggle ${current.relationFlag === 'star' ? 'active' : ''}`} onClick={toggleStar}>
-              {current.relationFlag === 'star' ? '★ 深めたい' : '☆ 通常'}
-            </button>
-            <span style={{ fontSize: 12, color: 'var(--text3)' }}>更新 {formatDate(current.updatedAt || current.createdAt)}</span>
-          </div>
-        </div>
-
-        {/* 会食からの学び（優先表示） */}
-        <div className="detail-section">
-          <div className="detail-section-title">会食からの学び</div>
-          {current.meetingSummary ? parseSummary(current.meetingSummary) : (
-            <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>
-              会食履歴をもとにAIで要約した内容を保存できます。<br/>
-              形式例：この人が大切にしていること： 〇〇
-            </p>
-          )}
-          <textarea className="ai-summary-textarea"
-            value={current.meetingSummary || ''}
-            onChange={e => updDirect('meetingSummary', e.target.value)}
-            placeholder={'この人が大切にしていること： \nこの人が嫌うこと： \n最近の関心： \n接し方： '} />
-        </div>
-
-        {/* 会食履歴 */}
-        <div className="detail-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div className="detail-section-title" style={{ margin: 0 }}>会食・打合せ履歴</div>
-            <button className="btn btn-ghost btn-sm" onClick={() => setShowMeetingForm(!showMeetingForm)}>
-              {showMeetingForm ? '閉じる' : '＋ 追加'}
-            </button>
-          </div>
-          {showMeetingForm && (
-            <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: 14, marginBottom: 14 }}>
-              <input type="date" style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--border)', borderRadius: 6, fontFamily: 'inherit', fontSize: 14, marginBottom: 8 }}
-                value={meetDate} onChange={e => setMeetDate(e.target.value)} />
-              <textarea style={{ width: '100%', minHeight: 80, padding: '8px 10px', border: '1.5px solid var(--border)', borderRadius: 6, fontFamily: 'inherit', fontSize: 13, resize: 'vertical', marginBottom: 8 }}
-                value={meetContent} onChange={e => setMeetContent(e.target.value)} placeholder="内容・気づき" />
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-primary btn-sm" onClick={addMeeting}>追加</button>
-                <button className="btn btn-ghost btn-sm" onClick={() => { setShowMeetingForm(false); setMeetDate(''); setMeetContent(''); }}>キャンセル</button>
-              </div>
-            </div>
-          )}
-          {(current.meetings || []).length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center', padding: '20px 0' }}>まだ記録がありません</p>
-          ) : (
-            [...(current.meetings || [])].reverse().map(m => (
-              <div key={m.id} className="meeting-item">
-                <button className="meeting-delete" onClick={() => delMeeting(m.id)}>削除</button>
-                <div className="meeting-date">{m.date}</div>
-                <div className="meeting-content">{m.content}</div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* 基本情報 */}
-        <div className="detail-section">
-          <div className="detail-section-title">基本情報</div>
-          <Field label="氏名（ふりがな）" field="name" />
-          <Field label="誕生日" field="birthday" />
-          <Field label="所属・役職" field="position" />
-          <Field label="事業" field="business" multi />
-          <Field label="経歴" field="history" multi />
-          <Field label="家族構成" field="family" multi />
-          <Field label="出身・現所在地" field="location" />
-        </div>
-
-        {/* 価値観 */}
-        <div className="detail-section">
-          <div className="detail-section-title">価値観・信条</div>
-          <Field label="目標・夢" field="goals" multi />
-          <Field label="価値観" field="values" multi />
-          <Field label="信条" field="beliefs" multi />
-        </div>
-
-        {/* 個性 */}
-        <div className="detail-section">
-          <div className="detail-section-title">個性・傾向</div>
-          <Field label="行動傾向" field="behavior" multi />
-          <Field label="苦手なこと" field="dislikes" multi />
-          <Field label="よく話すテーマ" field="topics" multi />
-          <Field label="特技・スキル" field="skills" multi />
-        </div>
-
-        {/* 洞察 */}
-        <div className="detail-section">
-          <div className="detail-section-title">洞察</div>
-          <Field label="印象的な言葉" field="memorable" multi />
-          <Field label="話してみての印象" field="impression" multi />
-          <Field label="欲求（ドライブ）" field="drive" multi />
-          <Field label="その他" field="other" multi />
-          <Field label="核となる一言" field="coreMessage" multi />
-          <Field label="補足・洞察" field="insights" multi />
-        </div>
-
-        {/* アクション */}
-        <div className="action-row">
-          <button className="btn btn-ghost" onClick={() => exportAsMemo(current)}>メモとしてエクスポート</button>
-          <button className="btn btn-ghost" onClick={() => { setCurrent(null); setView('list'); }}>一覧に戻る</button>
-          <button className="btn btn-danger" onClick={delProfile}>削除</button>
-        </div>
+      <div class="form-group form-col2">
+        <label class="form-label">タイトル *</label>
+        <input class="form-control" id="f-title" type="text" placeholder="タイトルを入力...">
       </div>
-    );
-  }
+      <div class="form-group form-col2">
+        <label class="form-label">目的/概要</label>
+        <textarea class="form-control" id="f-purpose" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">成功条件</label>
+        <input class="form-control" id="f-success" type="text">
+      </div>
+      <div class="form-group" id="f-trigger-group">
+        <label class="form-label">実行トリガー</label>
+        <input class="form-control" id="f-trigger" type="text">
+      </div>
+      <div class="form-group" id="f-prereq-group">
+        <label class="form-label">前提条件</label>
+        <input class="form-control" id="f-prereq" type="text">
+      </div>
+      <div class="form-group" id="f-review-group">
+        <label class="form-label">最終レビュー日</label>
+        <input class="form-control" id="f-review" type="date">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveItem()">保存する</button>
+    </div>
+  </div>
+</div>
 
-  return null;
-};
+<!-- ─── Discard Modal ────────────────────────────────────────── -->
+<div class="modal-overlay" id="discard-modal" onclick="closeDiscardOutside(event)">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title" style="color:#dc2626">⚠ 廃棄アーカイブに記録</div>
+      <button class="modal-close" onclick="closeDiscardModal()">×</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px">
+      「<strong id="discard-item-title"></strong>」を廃棄します。<br>
+      この意思決定を記録として残してください。
+    </div>
+    <div class="discard-box">
+      <div class="discard-box-title">廃棄記録</div>
+      <div class="discard-form-group">
+        <label class="discard-label">廃棄理由 *</label>
+        <textarea class="discard-control" id="d-reason" rows="3" placeholder="なぜやらないのか…"></textarea>
+      </div>
+      <div class="discard-form-group" style="margin-bottom:0">
+        <label class="discard-label">学び（任意）</label>
+        <textarea class="discard-control" id="d-learn" rows="2" placeholder="この判断から得られた洞察…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeDiscardModal()">キャンセル（ステータスを戻す）</button>
+      <button class="btn-discard-confirm" onclick="confirmDiscard()">廃棄として記録する</button>
+    </div>
+  </div>
+</div>
 
-ReactDOM.render(<App />, document.getElementById('root'));
-</script>
+<!-- ─── Toast ────────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
 
 <script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./service-worker.js")
-      .then(r => console.log("SW registered:", r))
-      .catch(e => console.log("SW error:", e));
+// ═══════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════
+const STORAGE_KEY = 'kouso_backlog_v1';
+const ARCHIVE_KEY = 'kouso_archive_v1';
+const STATUSES    = ['検討中','待機','実行中','完了','廃棄'];
+const PRIORITIES  = ['S','A','B','C'];
+const PRI_LABEL   = {S:'今期コア',A:'重要',B:'探索',C:'保留'};
+const PRI_COLOR   = {S:'#b91c1c',A:'#1d4ed8',B:'#6d28d9',C:'#6b7280'};
+
+const SAMPLE = [
+  {id:"G01",type:"構想",parentId:"-",title:"挑戦プラットフォーム",purpose:"挑戦の可視化→評価→資本化の仕組み",success:"支援発生数10件/月",trigger:"コミュニティ初期メンバー10名",prereq:"評価軸設計完了",status:"検討中",priority:"A",review:"2026/04/22"},
+  {id:"E01",type:"実行",parentId:"G01",title:"挑戦登録機能",purpose:"挑戦内容・価値・VISION・進捗を公開",success:"投稿数100件",trigger:"",prereq:"",status:"待機",priority:"A",review:"2026/04/22"},
+  {id:"E02",type:"実行",parentId:"G01",title:"挑戦評価機能",purpose:"自律性・社会価値・学習性・誠実さでプロセス評価",success:"評価数100件/月",trigger:"",prereq:"",status:"待機",priority:"A",review:"2026/04/22"},
+  {id:"E03",type:"実行",parentId:"G01",title:"挑戦資本マッチング",purpose:"投資・寄付・スキル・人材の支援接続",success:"支援発生10件",trigger:"",prereq:"",status:"待機",priority:"A",review:"2026/04/22"},
+  {id:"G02",type:"構想",parentId:"-",title:"日本国防産業ビルダー",purpose:"戦略産業を創出する仕組み",success:"事業創出1件",trigger:"戦略テーマ確定",prereq:"初期領域選定",status:"検討中",priority:"S",review:"2026/04/22"},
+  {id:"E04",type:"実行",parentId:"G02",title:"戦略テーマ設計",purpose:"サイバー等の重点領域を定義",success:"テーマ3件",trigger:"",prereq:"",status:"待機",priority:"S",review:"2026/04/22"},
+  {id:"E05",type:"実行",parentId:"G02",title:"産業ビルダー構築",purpose:"テーマ→会社設立→投資→回収の仕組み",success:"1社設立",trigger:"",prereq:"",status:"待機",priority:"S",review:"2026/04/22"},
+  {id:"G03",type:"構想",parentId:"-",title:"認証信頼性向上に向けた業界団体構想（JAGO）",purpose:"認証の信頼インフラ再構築（透明化・標準化・監督）",success:"ガイドライン公開＋有識者3名＋行政面談1回",trigger:"不正事例・市場歪みの整理完了",prereq:"中立性設計・外部理事候補確保",status:"検討中",priority:"A",review:"2026/04/22"},
+  {id:"E07",type:"実行",parentId:"G03",title:"ガイドライン策定",purpose:"審査品質・利益相反ルール定義",success:"ガイドラインver1.0公開",trigger:"",prereq:"",status:"待機",priority:"A",review:"2026/04/22"},
+  {id:"G04",type:"構想",parentId:"-",title:"挑戦・自律インフラ構想（ループ設計）",purpose:"自律→挑戦→成長→信頼→影響力の好循環を社会に実装",success:"ループ設計定義＋実装プロトタイプ1件",trigger:"挑戦プラットフォーム初期運用開始",prereq:"自律・挑戦の定義明確化",status:"検討中",priority:"B",review:"2026/04/22"},
+  {id:"E13",type:"実行",parentId:"G04",title:"概念定義（自律・挑戦）",purpose:"自律・挑戦の数式/定義を明文化",success:"定義ドキュメント完成",trigger:"",prereq:"",status:"待機",priority:"B",review:"2026/04/22"},
+];
+
+let items    = [];
+let archives = [];
+let currentView = 'home';
+let editingId   = null;
+let expandedHome = new Set();
+let expandedLog  = new Set();
+let filterSearch = '';
+let filterPriority = '';
+let filterStatus   = '';
+
+let discardPendingId  = '';
+let discardPrevStatus = '';
+
+// ─── migrate pj field if exists (compatibility) ───────────
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    items = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SAMPLE));
+    items.forEach(i => {
+      if (!i.priority) i.priority = 'A';
+      if (!i.prereq) i.prereq = '';
+      if (!i.trigger) i.trigger = '';
+    });
+  } catch { items = JSON.parse(JSON.stringify(SAMPLE)); }
+  try {
+    const raw2 = localStorage.getItem(ARCHIVE_KEY);
+    archives = raw2 ? JSON.parse(raw2) : [];
+  } catch { archives = []; }
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch(e) {}
+  try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archives)); } catch(e) {}
+}
+
+// ─── Utils ────────────────────────────────────────────────
+function today() { return new Date().toISOString().slice(0,10).replace(/-/g,'/'); }
+function todayInput() { return new Date().toISOString().slice(0,10); }
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function priOrder(p) { return {S:0,A:1,B:2,C:3}[p]??9; }
+function genId(type) {
+  const prefix = type==='構想'?'G':'E';
+  const nums = items.filter(i=>i.id.startsWith(prefix)).map(i=>parseInt(i.id.slice(1))||0);
+  return prefix + String((nums.length?Math.max(...nums):0)+1).padStart(2,'0');
+}
+
+function statusBadge(s) { return `<span class="badge badge-${esc(s)}">${esc(s)}</span>`; }
+function priBadge(p) {
+  return `<span class="badge badge-pri-${esc(p)}">${esc(p)} ${esc(PRI_LABEL[p]||p)}</span>`;
+}
+
+// ─── View routing ─────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  ['home','list','archive','ai-import'].forEach(name => {
+    document.getElementById('view-'+name).style.display = name===v?'':'none';
+  });
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view===v);
+  });
+  renderCurrentView();
+}
+function renderCurrentView() {
+  updateBadges();
+  if (currentView==='home')      renderHome();
+  else if (currentView==='list') renderList();
+  else if (currentView==='archive') renderArchive();
+  else if (currentView==='ai-import') renderAiImport();
+  const kousoCount = items.filter(i=>i.type==='構想').length;
+  const jikkoCount = items.filter(i=>i.type==='実行').length;
+  document.getElementById('sidebar-count').textContent = `G:${kousoCount} E:${jikkoCount}`;
+}
+function updateBadges() {
+  const arCount = archives.length;
+  const bar = document.getElementById('badge-archive');
+  bar.textContent = arCount; bar.style.display = arCount?'':'none';
+}
+
+// ─── HOME ─────────────────────────────────────────────────
+function renderHome() {
+  const el = document.getElementById('view-home');
+  const kousos = items.filter(i=>i.type==='構想'&&i.status!=='廃棄'&&i.status!=='完了');
+  const groups = [
+    { key:'S', label:'S — 今期コア', cls:'home-pri-s', items: kousos.filter(i=>i.priority==='S').sort((a,b)=>a.id.localeCompare(b.id)) },
+    { key:'A', label:'A — 重要',     cls:'home-pri-a', items: kousos.filter(i=>i.priority==='A').sort((a,b)=>a.id.localeCompare(b.id)) },
+    { key:'B', label:'B — 探索',     cls:'home-pri-b', items: kousos.filter(i=>i.priority==='B').sort((a,b)=>a.id.localeCompare(b.id)) },
+    { key:'C', label:'C — 保留',     cls:'home-pri-c', items: kousos.filter(i=>i.priority==='C').sort((a,b)=>a.id.localeCompare(b.id)) },
+  ];
+
+  let html = `
+    <div class="page-header">
+      <div class="page-title">HOME</div>
+      <div class="page-sub">今どの構想に集中するか — クリックで詳細を展開</div>
+    </div>`;
+
+  groups.forEach(g => {
+    if (g.items.length === 0) return;
+    html += `<div class="home-priority-section ${g.cls}">
+      <div class="home-priority-header">
+        <span class="home-priority-label">${esc(g.label)}</span>
+        <span class="home-priority-count">${g.items.length}件</span>
+      </div>`;
+    g.items.forEach(k => {
+      const children = items.filter(i=>i.type==='実行'&&i.parentId===k.id&&i.status!=='廃棄');
+      const isExpanded = expandedHome.has(k.id);
+      const childrenHtml = children.map(e => `
+        <div class="home-child-row">
+          <span class="home-child-indent">└</span>
+          <span class="home-child-id">${esc(e.id)}</span>
+          <span class="home-child-title">${esc(e.title)}</span>
+          ${statusBadge(e.status)}
+        </div>`).join('');
+
+      html += `
+        <div class="home-card${isExpanded?' expanded':''}" onclick="toggleHomeCard('${esc(k.id)}')">
+          <div class="home-card-header">
+            <span class="home-card-id">${esc(k.id)}</span>
+            <span class="home-card-title">${esc(k.title)}</span>
+            ${statusBadge(k.status)}
+            <span class="home-toggle-arrow">▶</span>
+          </div>
+          ${k.purpose?`<div class="home-card-purpose">${esc(k.purpose)}</div>`:''}
+          <div class="home-card-children">
+            ${children.length===0
+              ? '<div class="home-empty">実行単位なし</div>'
+              : childrenHtml}
+            <div style="margin-top:8px;display:flex;gap:6px">
+              <button class="btn-edit" onclick="event.stopPropagation();openModal('${esc(k.id)}')">編集</button>
+            </div>
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+  });
+
+  if (kousos.length === 0) {
+    html += `<div class="empty-state"><div class="empty-icon">📭</div>構想がありません。<br>AIインポートまたは新規追加で登録してください。</div>`;
   }
+
+  el.innerHTML = html;
+}
+
+function toggleHomeCard(id) {
+  if (expandedHome.has(id)) expandedHome.delete(id);
+  else expandedHome.add(id);
+  renderHome();
+}
+
+// ─── LIST VIEW ────────────────────────────────────────────
+function renderList() {
+  const el = document.getElementById('view-list');
+  let filtered = items.filter(i=>i.type==='構想');
+
+  if (filterSearch) {
+    const q = filterSearch.toLowerCase();
+    filtered = filtered.filter(k =>
+      [k.id,k.title,k.purpose,k.success].some(v=>(v||'').toLowerCase().includes(q)) ||
+      items.filter(e=>e.type==='実行'&&e.parentId===k.id).some(e=>
+        [e.id,e.title,e.purpose].some(v=>(v||'').toLowerCase().includes(q))
+      )
+    );
+  }
+  if (filterPriority) filtered = filtered.filter(k=>k.priority===filterPriority);
+  if (filterStatus)   filtered = filtered.filter(k=>k.status===filterStatus);
+
+  filtered.sort((a,b)=>priOrder(a.priority)-priOrder(b.priority)||a.id.localeCompare(b.id));
+
+  const listHtml = filtered.map(k => {
+    const children = items.filter(i=>i.type==='実行'&&i.parentId===k.id);
+    const isOpen = expandedLog.has(k.id);
+
+    const detailFields = [
+      {label:'目的/概要', value:k.purpose},
+      {label:'成功条件', value:k.success},
+      {label:'実行トリガー', value:k.trigger},
+      {label:'前提条件', value:k.prereq},
+    ];
+    const detailHtml = detailFields.filter(f=>f.value).map(f=>`
+      <div class="log-detail-item">
+        <span class="log-detail-label">${esc(f.label)}</span>
+        <span class="log-detail-value">${esc(f.value)}</span>
+      </div>`).join('');
+
+    const childrenHtml = children.map(e => {
+      const parentPri = k.priority;
+      return `
+        <div class="log-child-item">
+          <span class="log-child-marker">└</span>
+          <div class="log-child-body">
+            <div class="log-child-head">
+              <span class="log-child-id">${esc(e.id)}</span>
+              <span class="log-child-title">${esc(e.title)}</span>
+              ${statusBadge(e.status)}
+              <span class="priority-inherited">継承: ${esc(parentPri)}</span>
+            </div>
+            ${e.purpose?`<div class="log-child-purpose">${esc(e.purpose)}</div>`:''}
+          </div>
+          <div style="flex-shrink:0;display:flex;gap:4px">
+            <button class="btn-edit" onclick="openModal('${esc(e.id)}')">編集</button>
+            <button class="btn-del" onclick="deleteItem('${esc(e.id)}')">削除</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="log-item${isOpen?' open':''}">
+        <div class="log-item-header" onclick="toggleLog('${esc(k.id)}')">
+          <span class="log-toggle">▶</span>
+          <span class="log-id">${esc(k.id)}</span>
+          <span class="log-title">${esc(k.title)}</span>
+          <div class="log-meta">
+            ${priBadge(k.priority||'A')}
+            ${statusBadge(k.status)}
+            ${children.length>0?`<span style="font-size:10px;color:var(--text4)">E:${children.length}</span>`:''}
+          </div>
+        </div>
+        <div class="log-item-body">
+          ${detailHtml?`<div class="log-detail-grid">${detailHtml}</div>`:''}
+          ${k.review?`<div style="font-size:10px;color:var(--text3);margin-bottom:8px">最終レビュー: ${esc(k.review)}</div>`:''}
+          ${children.length>0?`<div class="log-children">
+            <div class="log-children-label">実行単位 (${children.length})</div>
+            ${childrenHtml}
+          </div>`:'<div style="font-size:11px;color:var(--text4);margin:6px 0">実行単位なし</div>'}
+          <div class="log-actions">
+            <button class="btn-edit" onclick="openModal('${esc(k.id)}')">編集</button>
+            <button class="btn-del" onclick="deleteItem('${esc(k.id)}')">削除</button>
+            <button class="btn-edit" onclick="openModal(null,'${esc(k.id)}')" style="background:#ede9fe;color:#5b21b6;border-color:#ddd6fe">＋ 実行追加</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">構想ログ</div>
+      <div class="page-sub">構想 (G) ${filtered.length}件 — クリックで開閉</div>
+    </div>
+    <div class="filter-bar">
+      <input class="filter-input" type="text" placeholder="🔍 キーワード検索..."
+        value="${esc(filterSearch)}" oninput="filterSearch=this.value;renderList()">
+      <select class="filter-select" onchange="filterPriority=this.value;renderList()">
+        <option value="" ${!filterPriority?'selected':''}>全優先度</option>
+        ${PRIORITIES.map(p=>`<option value="${p}" ${filterPriority===p?'selected':''}>${p}：${PRI_LABEL[p]}</option>`).join('')}
+      </select>
+      <select class="filter-select" onchange="filterStatus=this.value;renderList()">
+        <option value="" ${!filterStatus?'selected':''}>全ステータス</option>
+        ${STATUSES.map(s=>`<option value="${s}" ${filterStatus===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    <div class="log-list">
+      ${listHtml||'<div class="empty-state"><div class="empty-icon">🔍</div>該当する構想がありません</div>'}
+    </div>`;
+}
+
+function toggleLog(id) {
+  if (expandedLog.has(id)) expandedLog.delete(id);
+  else expandedLog.add(id);
+  renderList();
+}
+
+// ─── ARCHIVE VIEW ─────────────────────────────────────────
+function renderArchive() {
+  const el = document.getElementById('view-archive');
+  const sorted = [...archives].sort((a,b)=>b.date.localeCompare(a.date));
+
+  const cardsHtml = sorted.length===0
+    ? `<div class="empty-state"><div class="empty-icon">📂</div>廃棄アーカイブはありません</div>`
+    : sorted.map(a=>`
+        <div class="archive-card">
+          <div class="archive-header">
+            ${priBadge(a.priority||'A')}
+            <span class="archive-id">${esc(a.id)}</span>
+            <span class="archive-title">${esc(a.title)}</span>
+            <span class="archive-date">${esc(a.date)}</span>
+          </div>
+          <div class="archive-section-label">廃棄理由</div>
+          <div class="archive-reason">${esc(a.reason)}</div>
+          ${a.learn?`
+            <div class="archive-section-label">学び</div>
+            <div class="archive-learn">${esc(a.learn)}</div>`:''}
+        </div>`).join('');
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">廃棄アーカイブ</div>
+      <div class="page-sub">やらない判断を資産化する — ${archives.length}件</div>
+    </div>
+    ${cardsHtml}`;
+}
+
+// ─── AI IMPORT VIEW ───────────────────────────────────────
+function renderAiImport() {
+  const el = document.getElementById('view-ai-import');
+  el.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">AIインポート</div>
+      <div class="page-sub">AIと壁打ちして整理した構想を一括登録</div>
+    </div>
+    <div class="ai-import-wrap">
+      <div class="ai-import-desc">
+        AIとの壁打ちで整理した内容を貼り付けて「登録」してください。
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;line-height:1.8">
+        <strong>入力フォーマット例：</strong><br>
+        【構想】<br>
+        タイトル：〇〇〇<br>
+        目的/概要：〇〇〇<br>
+        成功条件：〇〇〇<br>
+        実行トリガー：〇〇〇<br>
+        前提条件：〇〇〇<br>
+        戦略優先順位：A<br>
+        <br>
+        【実行単位】<br>
+        1. タイトル：〇〇〇　目的/概要：〇〇〇　成功条件：〇〇〇<br>
+        2. タイトル：〇〇〇　目的/概要：〇〇〇　成功条件：〇〇〇
+      </div>
+      <textarea class="ai-textarea" id="ai-input" placeholder="ここにAIとの壁打ち結果を貼り付けてください..."></textarea>
+      <div class="ai-btn-row">
+        <button class="btn-secondary" onclick="registerAiInput()">登録</button>
+        <span class="ai-parse-status" id="ai-parse-status"></span>
+      </div>
+    </div>`;
+}
+
+function parseAiText(text) {
+  const result = { title:'', purpose:'', success:'', trigger:'', prereq:'', priority:'A', executions:[] };
+
+  // Find 【構想】section
+  const kousoMatch = text.match(/【構想】([\s\S]*?)(?=【実行単位】|【実行】|$)/i);
+  if (!kousoMatch) return null;
+  const kousoBlock = kousoMatch[1];
+
+  function extractField(block, ...keys) {
+    for (const key of keys) {
+      const re = new RegExp(key + '[：:：]\\s*(.+?)(?=\\n|$)', 'i');
+      const m = block.match(re);
+      if (m && m[1].trim()) return m[1].trim();
+    }
+    return '';
+  }
+
+  result.title    = extractField(kousoBlock, 'タイトル', 'title');
+  result.purpose  = extractField(kousoBlock, '目的/概要', '目的・概要', '概要', '目的');
+  result.success  = extractField(kousoBlock, '成功条件');
+  result.trigger  = extractField(kousoBlock, '実行トリガー', 'トリガー');
+  result.prereq   = extractField(kousoBlock, '前提条件', '前提');
+  const rawPri    = extractField(kousoBlock, '戦略優先順位', '優先順位', '優先度');
+  result.priority = ['S','A','B','C'].includes(rawPri.slice(0,1).toUpperCase())
+    ? rawPri.slice(0,1).toUpperCase() : 'A';
+
+  if (!result.title) return null;
+
+  // Find 【実行単位】section
+  const execMatch = text.match(/【実行単位】([\s\S]*?)(?=【|$)/i) ||
+                    text.match(/【実行】([\s\S]*?)(?=【|$)/i);
+  if (execMatch) {
+    const execBlock = execMatch[1];
+    // Split by numbered lines
+    const execItems = execBlock.split(/\n\s*\d+[.\)、。]/);
+    execItems.forEach(block => {
+      if (!block.trim()) return;
+      // Try "タイトル：xxx" style
+      let title   = extractField(block, 'タイトル', 'title');
+      let purpose = extractField(block, '目的/概要', '目的・概要', '概要', '目的');
+      let success = extractField(block, '成功条件');
+      // Fallback: first non-empty line is title
+      if (!title) {
+        const firstLine = block.trim().split('\n')[0].trim();
+        if (firstLine) title = firstLine.replace(/^[-・＊\*]\s*/, '');
+      }
+      if (title) {
+        result.executions.push({ title, purpose, success });
+      }
+    });
+  }
+
+  return result;
+}
+
+function registerAiInput() {
+  const text = document.getElementById('ai-input').value.trim();
+  const statusEl = document.getElementById('ai-parse-status');
+  if (!text) {
+    statusEl.textContent = '入力が空です';
+    statusEl.className = 'ai-parse-status err';
+    return;
+  }
+  let d;
+  try {
+    d = parseAiText(text);
+  } catch(err) {
+    statusEl.textContent = `解析エラー: ${err.message}`;
+    statusEl.className = 'ai-parse-status err';
+    return;
+  }
+  if (!d || !d.title) {
+    statusEl.textContent = '【構想】セクションが見つかりません';
+    statusEl.className = 'ai-parse-status err';
+    return;
+  }
+  const gId = genId('構想');
+  items.push({
+    id: gId, type: '構想', parentId: '-',
+    title: d.title, purpose: d.purpose, success: d.success,
+    trigger: d.trigger, prereq: d.prereq,
+    priority: d.priority, status: '検討中',
+    review: today(),
+  });
+  d.executions.forEach(e => {
+    items.push({
+      id: genId('実行'), type: '実行', parentId: gId,
+      title: e.title, purpose: e.purpose, success: e.success,
+      trigger: '', prereq: '',
+      priority: d.priority, status: '検討中',
+      review: today(),
+    });
+  });
+  save();
+  document.getElementById('ai-input').value = '';
+  statusEl.textContent = '';
+  showToast(`登録しました：G1件 E${d.executions.length}件`);
+  setView('list');
+}
+
+// ─── CRUD ─────────────────────────────────────────────────
+function updateField(id, field, val) {
+  const item = items.find(i=>i.id===id);
+  if (!item) return;
+  item[field] = val; save(); renderCurrentView();
+}
+
+function deleteItem(id) {
+  const item = items.find(i=>i.id===id);
+  if (!item) return;
+  if (!confirm(`「${item.title}」を削除しますか？`)) return;
+  items = items.filter(i=>i.id!==id&&i.parentId!==id);
+  save(); showToast('削除しました'); renderCurrentView();
+}
+
+// ─── STATUS CHANGE + DISCARD FLOW ─────────────────────────
+function changeStatus(id, newStatus) {
+  const item = items.find(i=>i.id===id);
+  if (!item) return;
+  if (newStatus==='廃棄') {
+    discardPendingId = id;
+    discardPrevStatus = item.status;
+    item.status = '廃棄';
+    save();
+    openDiscardModal(item);
+  } else {
+    item.status = newStatus;
+    save();
+    renderCurrentView();
+  }
+}
+
+function openDiscardModal(item) {
+  document.getElementById('discard-item-title').textContent = item.title;
+  document.getElementById('d-reason').value = '';
+  document.getElementById('d-learn').value = '';
+  document.getElementById('discard-modal').classList.add('open');
+}
+function closeDiscardModal() {
+  if (discardPendingId) {
+    const item = items.find(i=>i.id===discardPendingId);
+    if (item) item.status = discardPrevStatus;
+    save();
+    discardPendingId=''; discardPrevStatus='';
+  }
+  document.getElementById('discard-modal').classList.remove('open');
+  renderCurrentView();
+}
+function closeDiscardOutside(e) {
+  if (e.target===document.getElementById('discard-modal')) closeDiscardModal();
+}
+function confirmDiscard() {
+  const reason = document.getElementById('d-reason').value.trim();
+  if (!reason) { alert('廃棄理由を入力してください'); return; }
+  const item = items.find(i=>i.id===discardPendingId);
+  if (item) {
+    archives.push({
+      id: item.id, title: item.title,
+      priority: item.priority||'A', type: item.type,
+      reason,
+      learn: document.getElementById('d-learn').value.trim(),
+      date: today(),
+    });
+    save();
+  }
+  document.getElementById('discard-modal').classList.remove('open');
+  discardPendingId=''; discardPrevStatus='';
+  showToast('廃棄アーカイブに記録しました');
+  renderCurrentView();
+}
+
+// ─── MODAL ────────────────────────────────────────────────
+function openModal(id, defaultParentId) {
+  editingId = id;
+  const item = id ? items.find(i=>i.id===id) : null;
+  document.getElementById('modal-title').textContent = item ? '編集' : '新規追加';
+  document.getElementById('f-type').value = item ? item.type : (defaultParentId?'実行':'構想');
+  document.getElementById('f-priority').value = item ? (item.priority||'A') : 'A';
+  document.getElementById('f-title').value = item ? item.title : '';
+  document.getElementById('f-purpose').value = item ? item.purpose : '';
+  document.getElementById('f-success').value = item ? item.success : '';
+  document.getElementById('f-trigger').value = item ? item.trigger : '';
+  document.getElementById('f-prereq').value  = item ? item.prereq  : '';
+  document.getElementById('f-status').value = item ? item.status : '検討中';
+  document.getElementById('f-review').value = item
+    ? (item.review||'').replace(/\//g,'-')
+    : todayInput();
+  rebuildParentOpts(
+    item ? item.type : (defaultParentId?'実行':'構想'),
+    item ? item.parentId : (defaultParentId||'-')
+  );
+  updateFormForType();
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('f-title').focus(), 50);
+}
+
+function rebuildParentOpts(type, selected) {
+  const sel = document.getElementById('f-parent');
+  const parents = items.filter(i=>i.type==='構想'&&(editingId?i.id!==editingId:true));
+  sel.innerHTML = '<option value="-">-</option>' +
+    parents.map(p=>`<option value="${esc(p.id)}"${p.id===selected?' selected':''}>${esc(p.id+': '+p.title)}</option>`).join('');
+  sel.disabled = type==='構想';
+}
+
+function onTypeChange() {
+  const type = document.getElementById('f-type').value;
+  rebuildParentOpts(type, '-');
+  updateFormForType();
+}
+
+function updateFormForType() {
+  const type = document.getElementById('f-type').value;
+  const isG  = type === '構想';
+  // 構想のみ: priority, trigger, prereq, review
+  // 実行のみ: parent
+  document.getElementById('f-priority-group').style.display = isG ? '' : 'none';
+  document.getElementById('f-parent-group').style.display   = isG ? 'none' : '';
+  document.getElementById('f-trigger-group').style.display  = isG ? '' : 'none';
+  document.getElementById('f-prereq-group').style.display   = isG ? '' : 'none';
+  document.getElementById('f-review-group').style.display   = isG ? '' : 'none';
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); editingId = null; }
+function closeModalOutside(e) { if(e.target===document.getElementById('modal')) closeModal(); }
+
+function saveItem() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { alert('タイトルを入力してください'); return; }
+  const type = document.getElementById('f-type').value;
+  const newStatus = document.getElementById('f-status').value;
+  const isG = type === '構想';
+
+  // Inherit priority for 実行 from parent
+  let priority = 'A';
+  if (isG) {
+    priority = document.getElementById('f-priority').value || 'A';
+  } else {
+    const parentId = document.getElementById('f-parent').value;
+    const parent = items.find(i=>i.id===parentId);
+    priority = parent ? (parent.priority||'A') : 'A';
+  }
+
+  const data = {
+    id: editingId || genId(type),
+    type,
+    parentId: isG ? '-' : (document.getElementById('f-parent').value||'-'),
+    title,
+    priority,
+    purpose: document.getElementById('f-purpose').value.trim(),
+    success: document.getElementById('f-success').value.trim(),
+    trigger: isG ? document.getElementById('f-trigger').value.trim() : '',
+    prereq:  isG ? document.getElementById('f-prereq').value.trim()  : '',
+    status: newStatus,
+    review:  isG ? document.getElementById('f-review').value.replace(/-/g,'/') : '',
+  };
+
+  const prevItem = editingId ? items.find(i=>i.id===editingId) : null;
+  const wasDiscard = newStatus==='廃棄' && (!prevItem||prevItem.status!=='廃棄');
+
+  if (editingId) {
+    const idx = items.findIndex(i=>i.id===editingId);
+    if(idx>=0) items[idx] = data;
+  } else {
+    items.push(data);
+  }
+  save();
+  closeModal();
+
+  if (wasDiscard) {
+    discardPendingId = data.id;
+    discardPrevStatus = prevItem ? prevItem.status : '検討中';
+    openDiscardModal(data);
+  } else {
+    showToast(editingId?'保存しました':'追加しました');
+    renderCurrentView();
+  }
+}
+
+// ─── TOAST ────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = '✓ ' + msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2400);
+}
+
+// ─── KEYBOARD ─────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') { closeModal(); closeDiscardModal(); }
+  if ((e.metaKey||e.ctrlKey) && e.key==='Enter') {
+    if (document.getElementById('modal').classList.contains('open')) saveItem();
+    if (document.getElementById('discard-modal').classList.contains('open')) confirmDiscard();
+  }
+});
+
+// ─── INIT ─────────────────────────────────────────────────
+load();
+setView('home');
 </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js")
+        .then(r => console.log("SW registered:", r))
+        .catch(e => console.log("SW error:", e));
+    }
+  </script>
 </body>
 </html>
