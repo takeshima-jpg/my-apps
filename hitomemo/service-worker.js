@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hitomemo-v1';
+const CACHE_NAME = 'hitomemo-v2';
 const ASSETS = [
   './',
   './index.html'
