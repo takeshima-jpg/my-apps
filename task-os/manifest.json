@@ -1,20 +1,19 @@
 {
   "name": "Task OS",
-  "short_name": "task-os",
+  "short_name": "Task OS",
+  "description": "意思決定ダッシュボード — HOME / TODAY / 横断検索",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ECFDF5",
-  "theme_color": "#10B981",
+  "orientation": "portrait-primary",
+  "background_color": "#18243E",
+  "theme_color": "#18243E",
+  "lang": "ja",
   "icons": [
-    {
-      "src": "./icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "./icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icons/icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "./icons/icon-128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "./icons/icon-64.png",  "sizes": "64x64",   "type": "image/png" }
   ]
 }
