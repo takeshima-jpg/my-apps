@@ -1458,7 +1458,9 @@ function bindEvents() {
   document.getElementById('importBtn').addEventListener('click', importData);
   document.getElementById('importFileInput').addEventListener('change', handleImport);
 
-  document.function toggleSidebar(){
+
+
+function toggleSidebar(){
   document.querySelector('.sidebar').classList.toggle('open');
   document.getElementById('sbOverlay').classList.toggle('open');
 }
@@ -1466,7 +1468,7 @@ function closeSidebar(){
   document.querySelector('.sidebar').classList.remove('open');
   document.getElementById('sbOverlay').classList.remove('open');
 }
-querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => {
+  document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => {
     closeSidebar();
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     item.classList.add('active');
