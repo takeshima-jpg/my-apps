@@ -301,7 +301,14 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.85
   .dashboard { padding: 16px; gap: 24px; }
   .db-two-col { grid-template-columns: 1fr; }
 }
-  </style>
+  
+/* モバイル用データ管理ボタン */
+.mob-data-bar { display: none; gap: 8px; padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+.mob-data-btn { flex: 1; padding: 8px; font-size: 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); cursor: pointer; font-family: inherit; }
+@media (max-width: 720px) {
+  .mob-data-bar { display: flex; }
+}
+</style>
 </head>
 <body>
 
@@ -438,6 +445,10 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.85
   <div class="mob-logo">1day</div>
   <div class="mob-sub">思考ログ</div>
   <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
+</div>
+<div class="mob-data-bar">
+  <button class="mob-data-btn" onclick="exportData()">⬇ バックアップ</button>
+  <button class="mob-data-btn" onclick="document.getElementById('importFileInput').click()">⬆ 復元</button>
 </div>
 <div class="app">
   <aside class="sidebar">
