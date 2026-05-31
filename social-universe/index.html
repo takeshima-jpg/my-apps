@@ -380,11 +380,11 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
     <div class="h-sub">人間関係を意思決定の武器にする</div>
   </div>
   <div class="h-actions">
-    <button class="hbtn hbtn-ghost" onclick="openDormant()">🌿 余白リスト</button>
-    <button class="hbtn hbtn-ghost" onclick="openBackup()">💾 バックアップ</button>
-    <button class="hbtn hbtn-ghost" onclick="doPrint()">🖨 A3印刷</button>
-    <button class="hbtn hbtn-ghost" onclick="doSnapshot()" title="A3印刷プレビューをHTMLファイルで保存">📸 スナップショット</button>
-    <button class="hbtn hbtn-ghost" onclick="openSnapshotHistory()" id="snapHistBtn" title="保存済みスナップショット一覧">🗂 履歴</button>
+    <button class="hbtn hbtn-ghost" onclick="openDormant()">◇ 余白リスト</button>
+    <button class="hbtn hbtn-ghost" onclick="openBackup()">⬇ バックアップ</button>
+    <button class="hbtn hbtn-ghost" onclick="doPrint()">⊟ A3印刷</button>
+    <button class="hbtn hbtn-ghost" onclick="doSnapshot()" title="A3印刷プレビューをHTMLファイルで保存">◈ スナップショット</button>
+    <button class="hbtn hbtn-ghost" onclick="openSnapshotHistory()" id="snapHistBtn" title="保存済みスナップショット一覧">≡ 履歴</button>
     <button class="hbtn hbtn-add"   onclick="openModal(null)">＋ 人物を追加</button>
   </div>
 </header>
@@ -473,7 +473,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 <div class="dorm-screen" id="dormScreen">
   <div class="dorm-hdr">
     <div>
-      <div style="font-size:15px;font-weight:700">🌿 余白リスト（Dormant）</div>
+      <div style="font-size:15px;font-weight:700">◇ 余白リスト（Dormant）</div>
       <div style="font-size:11px;color:#94a3b8;margin-top:1px">今は積極的に関わらないが、人生から消さない人のリストです</div>
     </div>
     <button class="hbtn hbtn-ghost" onclick="closeDormant()">← 通常マップへ戻す</button>
@@ -581,7 +581,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 
 <div id="backupOverlay" style="display:none" class="mo" onclick="if(event.target===this)closeBackup()">
 <div class="md" onclick="event.stopPropagation()">
-  <div class="md-hd"><div class="md-ttl">💾 バックアップ</div><button class="md-cls" onclick="closeBackup()">✕</button></div>
+  <div class="md-hd"><div class="md-ttl">⬇ バックアップ</div><button class="md-cls" onclick="closeBackup()">✕</button></div>
   <div class="md-bd">
     <div id="backupStatus"></div>
     <div class="bk-grid">
@@ -1452,7 +1452,7 @@ function renderSnapshotGrid(){
   document.getElementById('snapCount').textContent = snaps.length+'件';
 
   if(!sorted.length){
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--s400);font-size:13px;">スナップショットはまだありません<br><span style="font-size:11px;">📸 スナップショットボタンで保存してください</span></div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--s400);font-size:13px;">スナップショットはまだありません<br><span style="font-size:11px;">◈ スナップショットボタンで保存してください</span></div>';
     return;
   }
 
@@ -1536,7 +1536,7 @@ function clearAllSnapshots(){
 function updateSnapBadge(){
   const count = getSnapshots().length;
   const btn = document.getElementById('snapHistBtn');
-  if(btn) btn.textContent = count > 0 ? `🗂 履歴 ${count}` : '🗂 履歴';
+  if(btn) btn.textContent = count > 0 ? `≡ 履歴 ${count}` : '≡ 履歴';
 }
 
 function doSnapshot(){
@@ -1610,7 +1610,7 @@ ${printHTML}
   a.download = `social-universe-snapshot-${label}-${dateStr}.html`;
   a.click();
   URL.revokeObjectURL(a.href);
-  showToast(`📸 スナップショット保存 (${label}) · 履歴に追加しました`);
+  showToast(`◈ スナップショット保存 (${label}) · 履歴に追加しました`);
 }
 
 // ── TOAST ──
