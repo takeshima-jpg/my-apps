@@ -251,10 +251,31 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 .vision-type{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.58rem;color:#5a6478;letter-spacing:0.12em;white-space:nowrap;min-width:48px;flex-shrink:0}
 .vision-body{font-size:0.78rem;color:#7a8499;line-height:1.65}
 .vision-keyword{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.66rem;color:#5a6478;margin-right:8px}
+
+/* ── MOBILE RESPONSIVE ── */
+.mob-header{display:none;align-items:center;gap:10px;padding:0 14px;height:48px;background:var(--sidebar-bg);position:sticky;top:0;z-index:200;flex-shrink:0;}
+.mob-logo{font-size:16px;font-weight:800;color:#fff;letter-spacing:.05em;}
+.mob-menu-btn{background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:4px 8px;margin-left:auto;line-height:1;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:299;}
+#layout{display:flex;min-height:100vh;}
+@media(max-width:720px){
+  .mob-header{display:flex;}
+  #layout{flex-direction:column;}
+  #sidebar{position:fixed;left:-100%;top:0;height:100%;min-height:unset;z-index:300;transition:left .25s ease;}
+  #sidebar.open{left:0;}
+  .sidebar-overlay.open{display:block;}
+  #main{padding:16px 14px;max-width:100%;}
+  .card, [class*="card"]{margin-bottom:10px;}
+}
 </style>
 </head>
 <body>
-
+<div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+<div class="mob-header">
+  <div class="mob-logo">100LIST</div>
+  <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
+</div>
+<div id="layout">
 <div id="sidebar">
   <div id="sidebar-logo" onclick="navigate('dashboard')">
     <span id="app-name-logo" style="font-size:18px;font-weight:800;letter-spacing:0.05em">100LIST</span>
@@ -1003,7 +1024,15 @@ function duplicateForYear(id, year){
 
 // ===== ROUTER =====
 let currentPage = 'dashboard';
-function navigate(page){
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sbOverlay').classList.toggle('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sbOverlay').classList.remove('open');
+}
+function navigate(page){closeSidebar();
   document.querySelectorAll('#nav button').forEach(b=>{
     b.classList.toggle('active', b.dataset.page===page);
   });
@@ -2277,5 +2306,6 @@ updateUncatBadge();
 renderVision();
 navigate('dashboard');
 </script>
+</div>
 </body>
 </html>
