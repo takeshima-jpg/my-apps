@@ -83,7 +83,7 @@ input, select, textarea { font-family: var(--f0); }
   transition: all .15s; user-select: none;
 }
 .sb-link:hover { color: rgba(255,255,255,.8); background: rgba(255,255,255,.05); }
-.sb-link.on { color: #fff; border-left-color: #fff; background: rgba(255,255,255,.09); }
+.sb-link.on { color: #fff; font-weight: 600; border-left-color: #fff; border-left-width: 3px; background: rgba(255,255,255,0.12); }
 .sb-link-ic { font-size: .85rem; width: 16px; text-align: center; }
 .sb-badge {
   margin-left: auto; background: var(--red);
@@ -718,8 +718,8 @@ textarea.fc.tall { min-height: 130px; }
   </div>
   <div class="sb-nav" id="sb-nav"></div>
   <div class="sb-foot">
-    <button class="sb-foot-btn" onclick="doExport()">↓ 保存</button>
-    <button class="sb-foot-btn" onclick="doImport()">↑ 復元</button>
+    <button class="sb-foot-btn" onclick="doExport()">⬇ バックアップ</button>
+    <button class="sb-foot-btn" onclick="doImport()">⬆ 復元</button>
   </div>
 </nav>
 
@@ -861,7 +861,7 @@ textarea.fc.tall { min-height: 130px; }
     <div class="modal-body" id="m-body"></div>
     <div class="modal-foot">
       <button class="btn btn-outline btn-sm" onclick="closeModal()">キャンセル</button>
-      <button class="btn btn-navy  btn-sm" id="m-ok">保存する</button>
+      <button class="btn btn-navy  btn-sm" id="m-ok">保存</button>
     </div>
   </div>
 </div>
@@ -1008,9 +1008,9 @@ function badge(t,c){ return '<span class="bd '+esc(c)+'">'+esc(t)+'</span>'; }
 ══════════════════════════════════ */
 const PAGES = [
   { id:'dash',   label:'コックピット', ic:'◉' },
-  { id:'projs',  label:'プロジェクト',  ic:'⬡' },
+  { id:'projs',  label:'プロジェクト',  ic:'◫' },
   { id:'import', label:'取り込む',       ic:'⬇' },
-  { id:'set',    label:'設定',           ic:'◇' }
+  { id:'set',    label:'設定',           ic:'⚙' }
 ];
 
 function nav(p, id) {
