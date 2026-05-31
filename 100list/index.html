@@ -21,33 +21,33 @@
   --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
   --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.05);
 }
-body{font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','BIZ UDPGothic','Meiryo',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;display:flex;min-height:100vh}
+body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;background:var(--bg);color:var(--text);font-size:17px;line-height:1.6;display:flex;min-height:100vh}
 
 /* SIDEBAR */
 #sidebar{width:228px;min-height:100vh;background:var(--sidebar-bg);color:#e2e8f0;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto}
-#sidebar-logo{padding:22px 18px 18px;border-bottom:1px solid #2d3748;font-size:16px;font-weight:700;line-height:1.4;cursor:pointer}
-#sidebar-logo span{font-size:11px;font-weight:400;color:#a0aec0;display:block;margin-top:3px}
+#sidebar-logo{padding:22px 18px 18px;border-bottom:1px solid #2d3748;font-size:18px;font-weight:700;line-height:1.4;cursor:pointer}
+#sidebar-logo span{font-size:13px;font-weight:400;color:#a0aec0;display:block;margin-top:3px}
 #sidebar nav{flex:1;padding:10px 8px}
-#sidebar nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 13px;border-radius:8px;border:none;background:none;color:#cbd5e0;font-size:13px;font-weight:500;cursor:pointer;margin-bottom:2px;transition:background .15s,color .15s}
+#sidebar nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 13px;border-radius:8px;border:none;background:none;color:#cbd5e0;font-size:15px;font-weight:500;cursor:pointer;margin-bottom:2px;transition:background .15s,color .15s}
 #sidebar nav button:hover{background:var(--sidebar-hover);color:#fff}
 #sidebar nav button.active{background:rgba(246,173,85,0.15);color:#f6ad55;font-weight:600;border-left:3px solid #f6ad55;padding-left:10px}
-#sidebar nav button .nav-icon{font-size:15px;flex-shrink:0;width:18px;text-align:center;opacity:.8}
+#sidebar nav button .nav-icon{font-size:17px;flex-shrink:0;width:18px;text-align:center;opacity:.8}
 .nav-badge{background:#fc8181;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:auto}
 #sidebar-footer{padding:10px 8px 18px;border-top:1px solid #2d3748}
-#sidebar-footer button{display:block;width:100%;text-align:center;padding:9px;border-radius:8px;border:none;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:5px;transition:background .15s}
-.btn-new{background:var(--accent);color:#1a202c;font-size:13px!important;padding:11px!important}
+#sidebar-footer button{display:block;width:100%;text-align:center;padding:9px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:5px;transition:background .15s}
+.btn-new{background:var(--accent);color:#1a202c;font-size:15px!important;padding:11px!important}
 .btn-new:hover{background:var(--accent-dark)!important}
 .btn-sm-side{background:#2d3748;color:#cbd5e0}
 .btn-sm-side:hover{background:#4a5568!important}
 
 /* MAIN */
 #main{flex:1;overflow:auto;padding:30px 34px;max-width:1180px}
-h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px}
-.page-sub{color:var(--text-sub);font-size:13px;margin-bottom:24px}
+h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px}
+.page-sub{color:var(--text-sub);font-size:15px;margin-bottom:24px}
 
 /* CARDS */
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);padding:20px 22px;margin-bottom:16px}
-.card-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.card-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:7px}
 
 /* STATS */
 .stat-grid{display:grid;gap:12px;margin-bottom:16px}
@@ -55,9 +55,9 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 .stat-grid-5{grid-template-columns:repeat(5,1fr)}
 .stat-grid-3{grid-template-columns:repeat(3,1fr)}
 .stat-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);padding:16px 18px}
-.stat-label{font-size:12px;color:var(--text-sub);margin-bottom:4px}
+.stat-label{font-size:14px;color:var(--text-sub);margin-bottom:4px}
 .stat-value{font-size:32px;font-weight:800;line-height:1}
-.stat-sub{font-size:11px;color:var(--text-light);margin-top:3px}
+.stat-sub{font-size:13px;color:var(--text-light);margin-top:3px}
 .stat-green .stat-value{color:#276749}
 .stat-red .stat-value{color:#c53030}
 .stat-blue .stat-value{color:#2b6cb0}
@@ -67,7 +67,7 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 .stat-warn .stat-value{color:#c53030}
 
 /* PROGRESS */
-.progress-header{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.progress-header{display:flex;justify-content:space-between;font-size:15px;margin-bottom:6px}
 .progress-bar-bg{background:#edf2f7;border-radius:999px;height:10px;overflow:hidden}
 .progress-bar{height:100%;border-radius:999px;transition:width .5s}
 .progress-bar.green{background:var(--green)}
@@ -83,16 +83,16 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 
 /* LIST */
 .filter-bar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;align-items:center}
-.filter-bar input[type=text],.filter-bar select{border:1px solid var(--border);border-radius:8px;padding:7px 11px;font-size:13px;color:var(--text);background:#fff;min-width:110px}
+.filter-bar input[type=text],.filter-bar select{border:1px solid var(--border);border-radius:8px;padding:7px 11px;font-size:15px;color:var(--text);background:#fff;min-width:110px}
 .filter-bar input[type=text]{min-width:190px}
 .filter-bar input[type=text]:focus,.filter-bar select:focus{outline:none;border-color:var(--accent)}
-.toggle-btn{padding:6px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--text-sub);transition:all .15s}
+.toggle-btn{padding:6px 12px;border-radius:20px;border:1px solid var(--border);font-size:14px;font-weight:600;cursor:pointer;background:#fff;color:var(--text-sub);transition:all .15s}
 .toggle-btn.on{background:var(--accent);border-color:var(--accent);color:#1a202c}
 
 .list-table{width:100%;border-collapse:collapse}
-.list-table th{padding:10px 13px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);background:#f7fafc;border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+.list-table th{padding:10px 13px;text-align:left;font-size:13px;font-weight:700;color:var(--text-sub);background:#f7fafc;border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
 .list-table th:hover{color:var(--text)}
-.list-table td{padding:11px 13px;border-bottom:1px solid #f0f4f8;font-size:13px;vertical-align:top}
+.list-table td{padding:11px 13px;border-bottom:1px solid #f0f4f8;font-size:15px;vertical-align:top}
 .list-table tr:hover td{background:#fafcff}
 .list-table tr.done td{opacity:.55}
 .list-table tr.done .item-title{text-decoration:line-through}
@@ -108,7 +108,7 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 .tag-uncat{background:#fed7d7;color:#c53030}
 
 /* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
 .btn-primary{background:var(--accent);color:#1a202c}
 .btn-primary:hover{background:var(--accent-dark)}
 .btn-success{background:var(--green);color:#fff}
@@ -121,29 +121,29 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 .btn-blue:hover{background:#4299e1}
 .btn-outline{background:#fff;border:1px solid var(--border);color:var(--text)}
 .btn-outline:hover{background:#f7fafc}
-.btn-sm{padding:4px 10px;font-size:11px}
-.btn-lg{padding:11px 20px;font-size:14px}
+.btn-sm{padding:4px 10px;font-size:13px}
+.btn-lg{padding:11px 20px;font-size:16px}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 
 /* COMPLETE BUTTON */
-.complete-btn{width:30px;height:30px;border-radius:50%;border:2px solid #cbd5e0;background:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.complete-btn{width:30px;height:30px;border-radius:50%;border:2px solid #cbd5e0;background:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
 .complete-btn:hover{border-color:var(--green);background:var(--green-bg)}
 .complete-btn.done{background:var(--green);border-color:var(--green);color:#fff}
 
 /* FORM */
 .form-group{margin-bottom:16px}
-.form-label{display:block;font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:5px}
-.form-input,.form-select,.form-textarea{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:14px;color:var(--text);background:#fff;transition:border-color .15s;font-family:inherit}
+.form-label{display:block;font-size:14px;font-weight:700;color:var(--text-sub);margin-bottom:5px}
+.form-input,.form-select,.form-textarea{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:16px;color:var(--text);background:#fff;transition:border-color .15s;font-family:inherit}
 .form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(246,173,85,.2)}
 .form-input.error{border-color:var(--red)}
 .form-textarea{resize:vertical;min-height:72px}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
 .form-check-group{display:flex;gap:18px;flex-wrap:wrap}
-.form-check{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:500}
+.form-check{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:15px;font-weight:500}
 .form-check input{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
 .priority-btns{display:flex;gap:7px}
-.priority-btn{flex:1;padding:8px;border-radius:8px;border:2px solid var(--border);text-align:center;font-size:12px;font-weight:700;cursor:pointer;background:#fff;transition:all .15s}
+.priority-btn{flex:1;padding:8px;border-radius:8px;border:2px solid var(--border);text-align:center;font-size:14px;font-weight:700;cursor:pointer;background:#fff;transition:all .15s}
 .priority-btn.sel-high{border-color:#fc8181;background:var(--red-bg);color:#c53030}
 .priority-btn.sel-medium{border-color:#f6ad55;background:var(--orange-bg);color:#c05621}
 .priority-btn.sel-low{border-color:#cbd5e0;background:#f7fafc;color:#4a5568}
@@ -152,21 +152,21 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 #modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
 #modal-overlay.show{display:flex}
 #modal-box{background:#fff;border-radius:16px;padding:28px;width:660px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
-#modal-box h3{font-size:18px;font-weight:800;margin-bottom:20px}
+#modal-box h3{font-size:20px;font-weight:800;margin-bottom:20px}
 
 /* COUNT PAGE */
 .count-group-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);padding:22px;margin-bottom:14px}
-.count-theme{font-size:18px;font-weight:800;margin-bottom:4px}
+.count-theme{font-size:20px;font-weight:800;margin-bottom:4px}
 .count-big{font-size:46px;font-weight:800;line-height:1}
 .count-controls{display:flex;align-items:center;gap:10px;margin-top:14px}
-.count-btn{width:42px;height:42px;border-radius:50%;border:2px solid var(--border);font-size:20px;font-weight:700;cursor:pointer;background:#fff;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit}
+.count-btn{width:42px;height:42px;border-radius:50%;border:2px solid var(--border);font-size:22px;font-weight:700;cursor:pointer;background:#fff;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit}
 .count-btn:hover{border-color:var(--accent);background:var(--orange-bg)}
 .count-btn.minus:hover{border-color:var(--red);background:var(--red-bg)}
-.count-note{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit}
+.count-note{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:15px;font-family:inherit}
 .count-note:focus{outline:none;border-color:var(--accent)}
 .milestone-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f4f8}
 .milestone-row:last-child{border-bottom:none}
-.milestone-num{font-size:15px;font-weight:700;width:60px;flex-shrink:0}
+.milestone-num{font-size:17px;font-weight:700;width:60px;flex-shrink:0}
 .milestone-bar-wrap{flex:1}
 .milestone-done{color:var(--green);font-weight:700}
 .milestone-undone{color:var(--text-light)}
@@ -183,7 +183,7 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 /* TOP100 */
 .focus-item{display:flex;align-items:center;gap:13px;padding:12px 14px;border-bottom:1px solid #f0f4f8}
 .focus-item:last-child{border-bottom:none}
-.focus-no{font-size:11px;color:var(--text-light);width:26px;flex-shrink:0}
+.focus-no{font-size:13px;color:var(--text-light);width:26px;flex-shrink:0}
 
 /* REVIEW */
 .review-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
@@ -197,10 +197,10 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 .month-label{font-size:10px;color:var(--text-light)}
 .month-count-lbl{font-size:10px;font-weight:700;color:var(--text-sub)}
 .cat-bar-row{display:flex;align-items:center;gap:9px;margin-bottom:8px}
-.cat-label{width:76px;font-size:12px;flex-shrink:0}
+.cat-label{width:76px;font-size:14px;flex-shrink:0}
 .cat-bar-bg{flex:1;height:9px;background:#edf2f7;border-radius:999px;overflow:hidden}
 .cat-bar-fill{height:100%;background:var(--blue);border-radius:999px}
-.cat-count{font-size:12px;font-weight:700;width:22px;text-align:right}
+.cat-count{font-size:14px;font-weight:700;width:22px;text-align:right}
 
 /* UNCAT PAGE */
 .uncat-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f4f8}
@@ -208,11 +208,11 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 
 /* SETTINGS */
 .settings-section{margin-bottom:24px}
-.settings-section h3{font-size:15px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.settings-section h3{font-size:17px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 .settings-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f7fafc}
 .settings-row:last-child{border-bottom:none}
-.settings-label{font-size:14px;font-weight:600}
-.settings-desc{font-size:12px;color:var(--text-sub);margin-top:2px}
+.settings-label{font-size:16px;font-weight:600}
+.settings-desc{font-size:14px;color:var(--text-sub);margin-top:2px}
 
 /* UTILS */
 .flex{display:flex}.flex-1{flex:1}.items-center{align-items:center}.items-start{align-items:flex-start}
@@ -220,19 +220,19 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 .justify-between{justify-content:space-between}.flex-wrap{flex-wrap:wrap}
 .text-green{color:#276749}.text-red{color:#c53030}.text-blue{color:#2b6cb0}
 .text-sub{color:var(--text-sub)}.text-light{color:var(--text-light)}
-.text-sm{font-size:13px}.text-xs{font-size:11px}.font-bold{font-weight:700}
+.text-sm{font-size:15px}.text-xs{font-size:13px}.font-bold{font-weight:700}
 .mt-8{margin-top:8px}.mt-12{margin-top:12px}.mt-16{margin-top:16px}
 .mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}
 .truncate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
 .empty-state{text-align:center;padding:50px 0;color:var(--text-light)}
 .empty-state .empty-icon{font-size:44px;margin-bottom:10px}
-.empty-state p{font-size:14px}
+.empty-state p{font-size:16px}
 .divider{border:none;border-top:1px solid var(--border);margin:16px 0}
 .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.section-head h3{font-size:15px;font-weight:700}
+.section-head h3{font-size:17px;font-weight:700}
 
 /* TOAST */
-#toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:#2d3748;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:var(--shadow-md);transform:translateY(70px);opacity:0;transition:all .25s;pointer-events:none}
+#toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:#2d3748;color:#fff;padding:11px 18px;border-radius:10px;font-size:15px;font-weight:600;box-shadow:var(--shadow-md);transform:translateY(70px);opacity:0;transition:all .25s;pointer-events:none}
 #toast.show{transform:translateY(0);opacity:1}
 #toast.success{background:#276749}
 #toast.error{background:#c53030}
@@ -249,13 +249,13 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
 .vision-area{padding:10px 10px 4px;border-bottom:1px solid #2d3748}
 .vision-card{background:#1e2533;border:1px solid #2d3748;border-radius:8px;padding:10px 14px;display:flex;align-items:baseline;gap:12px}
 .vision-type{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.58rem;color:#5a6478;letter-spacing:0.12em;white-space:nowrap;min-width:48px;flex-shrink:0}
-.vision-body{font-size:0.78rem;color:#7a8499;line-height:1.65}
+.vision-body{font-size:0.905rem;color:#7a8499;line-height:1.65}
 .vision-keyword{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.66rem;color:#5a6478;margin-right:8px}
 
 /* ── MOBILE RESPONSIVE ── */
 .mob-header{display:none;align-items:center;gap:10px;padding:0 14px;height:48px;background:var(--sidebar-bg);position:sticky;top:0;z-index:200;flex-shrink:0;}
-.mob-logo{font-size:16px;font-weight:800;color:#fff;letter-spacing:.05em;}
-.mob-menu-btn{background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:4px 8px;margin-left:auto;line-height:1;}
+.mob-logo{font-size:18px;font-weight:800;color:#fff;letter-spacing:.05em;}
+.mob-menu-btn{background:none;border:none;color:rgba(255,255,255,.7);font-size:22px;cursor:pointer;padding:4px 8px;margin-left:auto;line-height:1;}
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:299;}
 #layout{display:flex;min-height:100vh;}
 @media(max-width:720px){
@@ -267,6 +267,11 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
   #main{padding:16px 14px;max-width:100%;}
   .card, [class*="card"]{margin-bottom:10px;}
 }
+
+/* モバイル用データ管理バー */
+.mob-data-bar{display:none;gap:8px;padding:8px 14px;background:var(--sidebar-bg);}
+.mob-data-btn{flex:1;padding:8px;font-size:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#e2e8f0;cursor:pointer;font-family:inherit;}
+@media(max-width:720px){.mob-data-bar{display:flex;}}
 </style>
 </head>
 <body>
@@ -275,15 +280,19 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
   <div class="mob-logo">100LIST</div>
   <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
 </div>
+<div class="mob-data-bar">
+  <button class="mob-data-btn" onclick="backupJSON()">⬇ バックアップ</button>
+  <button class="mob-data-btn" onclick="document.getElementById('import-json-input').click()">⬆ 復元</button>
+</div>
 <div id="layout">
 <div id="sidebar">
   <div id="sidebar-logo" onclick="navigate('dashboard')">
-    <span id="app-name-logo" style="font-size:18px;font-weight:800;letter-spacing:0.05em">100LIST</span>
+    <span id="app-name-logo" style="font-size:20px;font-weight:800;letter-spacing:0.05em">100LIST</span>
     <span>リスト管理システム</span>
   </div>
   <div class="vision-area" id="visionArea"></div>
   <div style="padding:10px 10px 4px">
-    <button onclick="openForm(null)" style="width:100%;padding:13px;border-radius:8px;border:none;background:#38a169;color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#276749'" onmouseout="this.style.background='#38a169'">＋ 新規登録</button>
+    <button onclick="openForm(null)" style="width:100%;padding:13px;border-radius:8px;border:none;background:#38a169;color:#fff;font-size:16px;font-weight:700;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#276749'" onmouseout="this.style.background='#38a169'">＋ 新規登録</button>
   </div>
   <nav id="nav">
     <button class="active" data-page="dashboard"><span class="nav-icon">◉</span>ダッシュボード</button>
@@ -1144,16 +1153,16 @@ function buildMonthChart(activeItems, yr, mo){
     return '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;height:130px;justify-content:flex-end"'
       +' onclick="listF.month=\''+b.m+'\';listF.year=\''+yr+'\';navigate(\'list\')"'
       +' title="'+b.m+'月: '+b.total+'件（高'+b.high+' 中'+b.med+' 低'+b.low+'）">'
-      +'<div style="font-size:11px;font-weight:'+labelW+';color:'+labelColor+'">'+(b.total||'')+'</div>'
+      +'<div style="font-size:13px;font-weight:'+labelW+';color:'+labelColor+'">'+(b.total||'')+'</div>'
       +'<div style="width:100%;height:'+barH+'px;border-radius:4px 4px 0 0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end">'+innerBar+'</div>'
       +'<div style="font-size:10px;color:'+labelColor+';font-weight:'+labelW+'">'+b.m+'月</div>'
       +'</div>';
   });
   return '<div class="card" style="margin-bottom:0">'
     +'<div class="card-title">📆 月別タスク分布（'+yr+'年・未完了）'
-    +'<span style="font-size:11px;color:var(--text-sub);font-weight:400;margin-left:8px">クリックでその月のリストへ</span></div>'
+    +'<span style="font-size:13px;color:var(--text-sub);font-weight:400;margin-left:8px">クリックでその月のリストへ</span></div>'
     +'<div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;align-items:end;height:130px">'+bars.join('')+'</div>'
-    +'<div style="display:flex;gap:14px;margin-top:8px;font-size:11px;color:var(--text-sub)">'
+    +'<div style="display:flex;gap:14px;margin-top:8px;font-size:13px;color:var(--text-sub)">'
     +'<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#fc8181;border-radius:2px;display:inline-block"></span>高</span>'
     +'<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#fbd38d;border-radius:2px;display:inline-block"></span>中</span>'
     +'<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#e2e8f0;border-radius:2px;display:inline-block"></span>低</span>'
@@ -1227,19 +1236,19 @@ function renderDashboard(){
   <div class="stat-card" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start">
     <div>
       <div class="stat-label">未完了</div>
-      <div style="font-size:26px;font-weight:800;color:#c05621">${undone}</div>
+      <div style="font-size:28px;font-weight:800;color:#c05621">${undone}</div>
     </div>
     <div>
       <div class="stat-label">今月完了</div>
-      <div class="stat-value stat-green" style="font-size:26px">${thisMonthDone}</div>
+      <div class="stat-value stat-green" style="font-size:28px">${thisMonthDone}</div>
     </div>
     <div>
       <div class="stat-label" style="color:#c53030">期限切れ</div>
-      <div style="font-size:26px;font-weight:800;color:${overdue.length>0?'#c53030':'#276749'}">${overdue.length}</div>
+      <div style="font-size:28px;font-weight:800;color:${overdue.length>0?'#c53030':'#276749'}">${overdue.length}</div>
     </div>
     <div>
       <div class="stat-label">未分類</div>
-      <div style="font-size:26px;font-weight:800;color:${uncat>0?'#c53030':'var(--text)'}">
+      <div style="font-size:28px;font-weight:800;color:${uncat>0?'#c53030':'var(--text)'}">
         ${uncat}<a onclick="navigate('uncat')" style="font-size:10px;color:#2b6cb0;cursor:pointer;margin-left:4px">整理</a>
       </div>
     </div>
@@ -1253,9 +1262,9 @@ function renderDashboard(){
       monthItems.slice(0,5).map(i=>`
       <div class="flex items-center gap-8" style="padding:7px 0;border-bottom:1px solid #f0f4f8">
         <button class="complete-btn" onclick="toggleComplete('${i.id}');renderPage('dashboard')"></button>
-        <div class="flex-1 truncate" style="font-size:13px;font-weight:600">${esc(i.title)}</div>
+        <div class="flex-1 truncate" style="font-size:15px;font-weight:600">${esc(i.title)}</div>
         ${prioTag(i.priority)}
-        <button onclick="openForm('${i.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#a0aec0;font-size:14px;padding:2px 4px" title="編集">✏️</button>
+        <button onclick="openForm('${i.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#a0aec0;font-size:16px;padding:2px 4px" title="編集">✏️</button>
       </div>`).join('')
     }
   </div>
@@ -1266,10 +1275,10 @@ function renderDashboard(){
       <div class="flex items-center gap-8" style="padding:7px 0;border-bottom:1px solid #fff5f5">
         <button class="complete-btn" onclick="toggleComplete('${i.id}');renderPage('dashboard')" title="完了にする"></button>
         <div class="flex-1">
-          <div style="font-size:13px;font-weight:600">${esc(i.title)}</div>
+          <div style="font-size:15px;font-weight:600">${esc(i.title)}</div>
           <div class="text-xs" style="color:#c53030">${i.year}年${i.month?i.month+'月':''}</div>
         </div>
-        <button onclick="openForm('${i.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#a0aec0;font-size:14px;padding:2px 4px" title="編集">✏️</button>
+        <button onclick="openForm('${i.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#a0aec0;font-size:16px;padding:2px 4px" title="編集">✏️</button>
       </div>`).join('')
     }
   </div>
@@ -1280,10 +1289,10 @@ function renderDashboard(){
       <div class="flex items-center gap-8" style="padding:7px 0;border-bottom:1px solid #f0f4f8">
         <button class="complete-btn" onclick="toggleComplete('${i.id}');renderPage('dashboard')"></button>
         <div class="flex-1 min-width:0">
-          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">${esc(i.title)}</div>
+          <div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">${esc(i.title)}</div>
           <div class="text-xs" style="color:#718096">${i.year?i.year+'年':''} ${i.month?i.month+'月':'期日未定'}</div>
         </div>
-        <button onclick="openForm('${i.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#a0aec0;font-size:14px;padding:2px 4px" title="編集">✏️</button>
+        <button onclick="openForm('${i.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#a0aec0;font-size:16px;padding:2px 4px" title="編集">✏️</button>
       </div>`).join('')
     }
   </div>
@@ -1379,14 +1388,14 @@ function renderList(){
 </div>
 
 <div class="flex gap-8" style="margin-bottom:14px;align-items:center">
-  <button onclick="listTab='incomplete';renderList()" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${listTab==='incomplete'?'#f6ad55':'#e2e8f0'};background:${listTab==='incomplete'?'#fffaf0':'#fff'};font-size:14px;font-weight:700;cursor:pointer;color:${listTab==='incomplete'?'#c05621':'#718096'}">
-    📋 未完了リスト <span style="background:#f6ad55;color:#1a202c;border-radius:999px;padding:1px 10px;font-size:12px;margin-left:6px">${incompleteRows.length}</span>
+  <button onclick="listTab='incomplete';renderList()" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${listTab==='incomplete'?'#f6ad55':'#e2e8f0'};background:${listTab==='incomplete'?'#fffaf0':'#fff'};font-size:16px;font-weight:700;cursor:pointer;color:${listTab==='incomplete'?'#c05621':'#718096'}">
+    📋 未完了リスト <span style="background:#f6ad55;color:#1a202c;border-radius:999px;padding:1px 10px;font-size:14px;margin-left:6px">${incompleteRows.length}</span>
   </button>
-  <button onclick="listTab='complete';renderList()" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${listTab==='complete'?'#48bb78':'#e2e8f0'};background:${listTab==='complete'?'#f0fff4':'#fff'};font-size:14px;font-weight:700;cursor:pointer;color:${listTab==='complete'?'#276749':'#718096'}">
-    ✅ 完了リスト <span style="background:#48bb78;color:#fff;border-radius:999px;padding:1px 10px;font-size:12px;margin-left:6px">${completeRows.length}</span>
+  <button onclick="listTab='complete';renderList()" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${listTab==='complete'?'#48bb78':'#e2e8f0'};background:${listTab==='complete'?'#f0fff4':'#fff'};font-size:16px;font-weight:700;cursor:pointer;color:${listTab==='complete'?'#276749':'#718096'}">
+    ✅ 完了リスト <span style="background:#48bb78;color:#fff;border-radius:999px;padding:1px 10px;font-size:14px;margin-left:6px">${completeRows.length}</span>
   </button>
   <button onclick="renderList()" title="インライン編集した内容を期日順に並び替えます"
-    style="flex-shrink:0;padding:10px 18px;border-radius:10px;border:2px solid #63b3ed;background:#ebf8ff;font-size:13px;font-weight:700;cursor:pointer;color:#2b6cb0;white-space:nowrap">
+    style="flex-shrink:0;padding:10px 18px;border-radius:10px;border:2px solid #63b3ed;background:#ebf8ff;font-size:15px;font-weight:700;cursor:pointer;color:#2b6cb0;white-space:nowrap">
     🔃 並び替え確定
   </button>
 </div>
@@ -1417,7 +1426,7 @@ function renderList(){
         </td>
         <td class="text-light text-xs">${i.no}</td>
         <td>
-          <div class="item-title" style="font-weight:600;font-size:13px">${esc(i.title)}</div>
+          <div class="item-title" style="font-weight:600;font-size:15px">${esc(i.title)}</div>
           ${i.isCountGoal&&i.countTarget?`<div class="text-xs text-light">${i.countCurrent||0}/${i.countTarget}</div>`:''}
           ${i.memo?`<div class="text-xs text-light truncate">${esc(i.memo)}</div>`:''}
         </td>
@@ -1435,7 +1444,7 @@ function renderList(){
         ` : `
           <td style="padding:6px 8px">
             <select onchange="updateItemInline('${i.id}',{category:this.value})"
-              style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 6px;font-size:12px;width:100%;color:${!i.category||i.category==='未分類'?'#c53030':'#718096'}">
+              style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 6px;font-size:14px;width:100%;color:${!i.category||i.category==='未分類'?'#c53030':'#718096'}">
               <option value="">未分類</option>
               ${CATS.map(c=>`<option value="${c}" ${i.category===c?'selected':''}>${c}</option>`).join('')}
             </select>
@@ -1443,22 +1452,22 @@ function renderList(){
           <td style="padding:6px 8px">
             <div style="display:flex;gap:3px">
               <button onclick="updateItemInline('${i.id}',{priority:'High'})"
-                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='High'?'#c53030':'#e2e8f0'};background:${i.priority==='High'?'#fed7d7':'#fff'};color:${i.priority==='High'?'#c53030':'#a0aec0'};font-size:11px;font-weight:700;cursor:pointer">高</button>
+                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='High'?'#c53030':'#e2e8f0'};background:${i.priority==='High'?'#fed7d7':'#fff'};color:${i.priority==='High'?'#c53030':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">高</button>
               <button onclick="updateItemInline('${i.id}',{priority:'Medium'})"
-                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='Medium'?'#c05621':'#e2e8f0'};background:${i.priority==='Medium'?'#feebc8':'#fff'};color:${i.priority==='Medium'?'#c05621':'#a0aec0'};font-size:11px;font-weight:700;cursor:pointer">中</button>
+                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='Medium'?'#c05621':'#e2e8f0'};background:${i.priority==='Medium'?'#feebc8':'#fff'};color:${i.priority==='Medium'?'#c05621':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">中</button>
               <button onclick="updateItemInline('${i.id}',{priority:'Low'})"
-                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='Low'?'#718096':'#e2e8f0'};background:${i.priority==='Low'?'#edf2f7':'#fff'};color:${i.priority==='Low'?'#718096':'#a0aec0'};font-size:11px;font-weight:700;cursor:pointer">低</button>
+                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='Low'?'#718096':'#e2e8f0'};background:${i.priority==='Low'?'#edf2f7':'#fff'};color:${i.priority==='Low'?'#718096':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">低</button>
             </div>
           </td>
           <td style="padding:6px 8px">
             <div style="display:flex;gap:4px;align-items:center">
               <select onchange="updateItemInline('${i.id}',{year:this.value?parseInt(this.value):null})"
-                style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 4px;font-size:11px;width:60px">
+                style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 4px;font-size:13px;width:60px">
                 <option value="">年</option>
                 ${[2025,2026,2027,2028,2029].map(y=>`<option value="${y}" ${i.year===y?'selected':''}>${y}</option>`).join('')}
               </select>
               <select onchange="updateItemInline('${i.id}',{month:this.value?parseInt(this.value):null})"
-                style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 4px;font-size:11px;width:48px">
+                style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 4px;font-size:13px;width:48px">
                 <option value="">月</option>
                 ${Array.from({length:12},(_,k)=>`<option value="${k+1}" ${i.month===k+1?'selected':''}>${k+1}</option>`).join('')}
               </select>
@@ -1468,13 +1477,13 @@ function renderList(){
             <div style="display:flex;gap:4px;align-items:center">
               <button onclick="updateItemInline('${i.id}',{isFocus:!${i.isFocus}})"
                 title="${i.isFocus?'重点リストから外す':'重点リストに追加'}"
-                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isFocus?'#f6ad55':'#e2e8f0'};background:${i.isFocus?'#fffaf0':'#fff'};font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isFocus?'1':'0.35'}">⭐</button>
+                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isFocus?'#f6ad55':'#e2e8f0'};background:${i.isFocus?'#fffaf0':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isFocus?'1':'0.35'}">⭐</button>
               <button onclick="updateItemInline('${i.id}',{isCountGoal:!${i.isCountGoal}})"
                 title="${i.isCountGoal?'カウント系を外す':'カウント系にする'}"
-                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isCountGoal?'#9f7aea':'#e2e8f0'};background:${i.isCountGoal?'#faf5ff':'#fff'};font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isCountGoal?'1':'0.35'}">🎯</button>
+                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isCountGoal?'#9f7aea':'#e2e8f0'};background:${i.isCountGoal?'#faf5ff':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isCountGoal?'1':'0.35'}">🎯</button>
               <button onclick="updateItemInline('${i.id}',{isRecurringYearly:!${i.isRecurringYearly}})"
                 title="${i.isRecurringYearly?'毎年繰り返しを外す':'毎年繰り返しにする'}"
-                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isRecurringYearly?'#48bb78':'#e2e8f0'};background:${i.isRecurringYearly?'#f0fff4':'#fff'};font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isRecurringYearly?'1':'0.35'}">🔄</button>
+                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isRecurringYearly?'#48bb78':'#e2e8f0'};background:${i.isRecurringYearly?'#f0fff4':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isRecurringYearly?'1':'0.35'}">🔄</button>
             </div>
           </td>
         `}
@@ -1560,7 +1569,7 @@ function renderWeek(){
 <div class="flex gap-8 mb-16" style="margin-bottom:16px">
   ${['week','month','next30'].map(t=>`<button onclick="weekTab='${t}';renderWeek()" class="btn ${weekTab===t?'btn-primary':'btn-outline'}">${t==='week'?'今週':t==='month'?'今月':'次の30日'}</button>`).join('')}
 </div>
-<h3 style="font-size:17px;font-weight:700;margin-bottom:12px">${title}</h3>
+<h3 style="font-size:19px;font-weight:700;margin-bottom:12px">${title}</h3>
 <div class="flex items-center gap-12 mb-16">
   <span class="text-sub text-sm">${done} / ${total} 件完了</span>
   <div style="flex:1;min-width:180px">${progressBar(done,total,'green')}</div>
@@ -1570,9 +1579,9 @@ ${filteredItems.length===0
   :filteredItems.map(i=>`
   <div class="month-item ${i.priority.toLowerCase()} ${i.completed?'done':''}">
     <div class="month-item-header">
-      <button class="complete-btn ${i.completed?'done':''}" onclick="toggleComplete('${i.id}');renderWeek()" style="width:36px;height:36px;font-size:17px">${i.completed?'✓':''}</button>
+      <button class="complete-btn ${i.completed?'done':''}" onclick="toggleComplete('${i.id}');renderWeek()" style="width:36px;height:36px;font-size:19px">${i.completed?'✓':''}</button>
       <div class="flex-1">
-        <div style="font-size:16px;font-weight:700;${i.completed?'text-decoration:line-through;color:var(--text-light)':''}">${esc(i.title)}</div>
+        <div style="font-size:18px;font-weight:700;${i.completed?'text-decoration:line-through;color:var(--text-light)':''}">${esc(i.title)}</div>
         <div class="flex gap-8 mt-8 flex-wrap">
           <span class="text-sm text-sub">${i.category||'未分類'}</span>
           ${prioTag(i.priority)}
@@ -1606,7 +1615,7 @@ function renderFocus(){
 
   el.innerHTML = `
 <h2 class="page-title">◎ ${esc(focusName)}</h2>
-<p class="page-sub">重要な目標を管理します（<button onclick="navigate('settings')" style="background:none;border:none;color:#2b6cb0;cursor:pointer;font-size:13px">名称変更</button>）</p>
+<p class="page-sub">重要な目標を管理します（<button onclick="navigate('settings')" style="background:none;border:none;color:#2b6cb0;cursor:pointer;font-size:15px">名称変更</button>）</p>
 
 <div class="stat-grid stat-grid-3">
   <div class="stat-card"><div class="stat-label">登録件数</div><div class="stat-value">${focus.length}</div></div>
@@ -1697,21 +1706,21 @@ ${themes.map(theme=>{
         ${grp[0]?.year?`<span class="text-sm text-sub">・${grp[0].year}年</span>`:''}
       </div>
     </div>
-    ${p>=100?'<span style="background:var(--green-bg);color:var(--green);padding:4px 12px;border-radius:999px;font-weight:700;font-size:12px">✅ 最終達成！</span>':''}
+    ${p>=100?'<span style="background:var(--green-bg);color:var(--green);padding:4px 12px;border-radius:999px;font-weight:700;font-size:14px">✅ 最終達成！</span>':''}
   </div>
 
   <div class="flex items-end gap-12 mt-16" style="margin-bottom:10px">
     <div class="count-big" style="color:${p>=100?'#276749':p>=70?'#c05621':'#2b6cb0'}">${cur}</div>
-    <div style="font-size:19px;color:var(--text-light);margin-bottom:8px">/ ${maxTarget}</div>
+    <div style="font-size:21px;color:var(--text-light);margin-bottom:8px">/ ${maxTarget}</div>
     <div style="flex:1"></div>
     <div style="text-align:right">
-      <div style="font-size:24px;font-weight:800;color:${p>=100?'#276749':'var(--text-sub)'}">${p}%</div>
+      <div style="font-size:26px;font-weight:800;color:${p>=100?'#276749':'var(--text-sub)'}">${p}%</div>
       <div class="text-xs text-light">あと ${Math.max(0,maxTarget-cur)}</div>
     </div>
   </div>
   ${progressBar(cur,maxTarget,barColor)}
 
-  <div style="margin:14px 0 8px;font-size:12px;font-weight:700;color:var(--text-sub)">マイルストーン</div>
+  <div style="margin:14px 0 8px;font-size:14px;font-weight:700;color:var(--text-sub)">マイルストーン</div>
   ${grp.map(ms=>{
     const mp = pct(cur, ms.countTarget||1);
     const isDone = cur>=(ms.countTarget||Infinity);
@@ -1720,10 +1729,10 @@ ${themes.map(theme=>{
         ${isDone?'✅':'⬜'} ${ms.countTarget}
       </div>
       <div class="milestone-bar-wrap">${progressBar(cur,ms.countTarget||1,isDone?'green':'blue')}</div>
-      <div style="width:36px;text-align:right;font-size:12px;color:${isDone?'#276749':'var(--text-light)'}">
+      <div style="width:36px;text-align:right;font-size:14px;color:${isDone?'#276749':'var(--text-light)'}">
         ${isDone?'達成':'残'+Math.max(0,(ms.countTarget||0)-cur)}
       </div>
-      <div style="width:90px;font-size:11px;color:var(--text-sub);text-align:right">${esc(ms.title||'')}</div>
+      <div style="width:90px;font-size:13px;color:var(--text-sub);text-align:right">${esc(ms.title||'')}</div>
     </div>`;
   }).join('')}
 
@@ -1739,7 +1748,7 @@ ${themes.map(theme=>{
     <div style="margin-top:8px;max-height:140px;overflow-y:auto">
       ${hist.map(r=>`<div class="flex gap-10 text-sm" style="padding:4px 0;border-bottom:1px solid #f0f4f8">
         <span style="color:${r.delta>0?'#276749':'#c53030'};font-weight:700;width:22px">${r.delta>0?'+':''}</span>
-        <span class="text-sub" style="width:88px;font-size:12px">${r.date}</span>
+        <span class="text-sub" style="width:88px;font-size:14px">${r.date}</span>
         ${r.note?`<span class="text-sub text-xs">${esc(r.note)}</span>`:''}
       </div>`).join('')}
     </div>
@@ -1778,7 +1787,7 @@ function renderDiscard(){
 <p class="page-sub">削除せずにアーカイブした項目です。いつでも通常リストに戻せます。（${discarded.length}件）</p>
 
 ${discarded.length===0
-  ?`<div class="empty-state"><div class="empty-icon">🗑️</div><p>まだ捨てた項目はありません。</p><p style="margin-top:8px;font-size:13px;color:var(--text-light)">年始の100個選定時に、今年はやらないものをここに退避できます。</p></div>`
+  ?`<div class="empty-state"><div class="empty-icon">🗑️</div><p>まだ捨てた項目はありません。</p><p style="margin-top:8px;font-size:15px;color:var(--text-light)">年始の100個選定時に、今年はやらないものをここに退避できます。</p></div>`
   :`<div class="card" style="padding:0;overflow:hidden">
   <table class="list-table">
     <thead><tr>
@@ -1793,7 +1802,7 @@ ${discarded.length===0
     ${discarded.map(i=>`
     <tr style="opacity:.75">
       <td>
-        <div style="font-weight:600;font-size:13px;color:var(--text-sub)">${esc(i.title)}</div>
+        <div style="font-weight:600;font-size:15px;color:var(--text-sub)">${esc(i.title)}</div>
       </td>
       <td class="text-sm text-sub">${i.category||'未分類'}</td>
       <td class="text-sm text-sub">${i.year?i.year+'年':''} ${i.month?i.month+'月':''}</td>
@@ -1827,10 +1836,10 @@ ${uncat.length===0?`<div class="empty-state"><div class="empty-icon">✅</div><p
   ${uncat.map(i=>`
   <div class="uncat-row">
     <div class="flex-1">
-      <div style="font-weight:600;font-size:14px">${esc(i.title)}</div>
+      <div style="font-weight:600;font-size:16px">${esc(i.title)}</div>
       <div class="text-xs text-sub">${i.year?i.year+'年':''}${i.month?i.month+'月':''} ${i.priority}</div>
     </div>
-    <select onchange="setItemCat('${i.id}',this.value);renderUncat()" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--text)">
+    <select onchange="setItemCat('${i.id}',this.value);renderUncat()" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:15px;color:var(--text)">
       <option value="">-- カテゴリを選択 --</option>
       ${CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}
     </select>
@@ -2003,7 +2012,7 @@ function renderSettings(){
 
 
 <div class="card">
-  <h3 class="mb-12" style="font-size:14px;font-weight:700">📊 データ概要</h3>
+  <h3 class="mb-12" style="font-size:16px;font-weight:700">📊 データ概要</h3>
   <div class="flex gap-12 flex-wrap">
     <div class="text-sm"><span class="text-sub">総件数:</span> <strong>${items.length}件</strong></div>
     <div class="text-sm"><span class="text-sub">完了:</span> <strong>${items.filter(i=>i.completed).length}件</strong></div>
