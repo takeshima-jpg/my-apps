@@ -157,6 +157,20 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
   letter-spacing:.03em;user-select:none;white-space:nowrap;
 }
 
+/* ── SNAPSHOT HISTORY ── */
+.snap-card{background:#fff;border:1px solid var(--s200);border-radius:10px;overflow:hidden;cursor:pointer;transition:box-shadow .15s,transform .1s;display:flex;flex-direction:column;}
+.snap-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1);transform:translateY(-2px);}
+.snap-thumbnail{width:100%;aspect-ratio:297/210;background:#f1f5f9;overflow:hidden;position:relative;border-bottom:1px solid var(--s100);}
+.snap-thumbnail iframe{width:297mm;height:210mm;border:none;transform-origin:top left;pointer-events:none;}
+.snap-info{padding:8px 10px;}
+.snap-label{font-size:12px;font-weight:700;color:var(--s700);margin-bottom:2px;}
+.snap-meta{font-size:10px;color:var(--s400);}
+.snap-actions{display:flex;gap:5px;padding:0 10px 8px;}
+.snap-btn{padding:3px 10px;border-radius:5px;border:1px solid var(--s200);background:var(--s50);color:var(--s600);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;}
+.snap-btn:hover{background:var(--s100);}
+.snap-btn-del{border-color:#fca5a5;color:#dc2626;}
+.snap-btn-del:hover{background:#fee2e2;}
+
 /* ─── TOAST ─── */
 .toast{
   position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
@@ -369,6 +383,8 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
     <button class="hbtn hbtn-ghost" onclick="openDormant()">🌿 余白リスト</button>
     <button class="hbtn hbtn-ghost" onclick="openBackup()">💾 バックアップ</button>
     <button class="hbtn hbtn-ghost" onclick="doPrint()">🖨 A3印刷</button>
+    <button class="hbtn hbtn-ghost" onclick="doSnapshot()" title="A3印刷プレビューをHTMLファイルで保存">📸 スナップショット</button>
+    <button class="hbtn hbtn-ghost" onclick="openSnapshotHistory()" id="snapHistBtn" title="保存済みスナップショット一覧">🗂 履歴</button>
     <button class="hbtn hbtn-add"   onclick="openModal(null)">＋ 人物を追加</button>
   </div>
 </header>
@@ -533,6 +549,36 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 </div>
 
 <!-- ═══ BACKUP MODAL ════════════════════════════════════════ -->
+<!-- ═══ SNAPSHOT HISTORY MODAL ═══════════════════════════════ -->
+<div id="snapshotOverlay" style="display:none" class="mo" onclick="if(event.target===this)closeSnapshotHistory()">
+  <div class="md" style="width:min(92vw,860px);max-height:88vh;overflow:hidden;display:flex;flex-direction:column;">
+    <div class="md-hd">
+      <div class="md-ttl">🗂 スナップショット履歴</div>
+      <button class="md-cls" onclick="closeSnapshotHistory()">✕</button>
+    </div>
+    <div style="padding:10px 18px 6px;border-bottom:1px solid var(--s100);display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <span style="font-size:11px;color:var(--s400);" id="snapCount">0件</span>
+      <span style="font-size:11px;color:var(--s300);">— 最新順</span>
+      <div style="flex:1"></div>
+      <button class="sort-btn" onclick="clearAllSnapshots()" style="color:#dc2626;border-color:#fca5a5;font-size:11px;">全削除</button>
+    </div>
+    <div id="snapshotGrid" style="overflow-y:auto;flex:1;padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;"></div>
+  </div>
+</div>
+
+<!-- SNAPSHOT PREVIEW MODAL -->
+<div id="snapPreviewOverlay" style="display:none;position:fixed;inset:0;z-index:620;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)closeSnapPreview()">
+  <div style="background:#fff;border-radius:12px;overflow:hidden;width:min(96vw,1100px);max-height:94vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+    <div style="padding:10px 16px;background:#1e293b;display:flex;align-items:center;gap:10px;">
+      <span id="snapPreviewTitle" style="font-size:13px;font-weight:600;color:#fff;flex:1;"></span>
+      <button onclick="downloadCurrentSnap()" style="padding:4px 12px;border-radius:5px;background:#3b82f6;color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;">⬇ ダウンロード</button>
+      <button onclick="deleteCurrentSnap()" style="padding:4px 12px;border-radius:5px;background:#dc2626;color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;">🗑 削除</button>
+      <button onclick="closeSnapPreview()" style="padding:4px 10px;border-radius:5px;background:rgba(255,255,255,.15);color:#fff;border:none;font-size:13px;cursor:pointer;">✕</button>
+    </div>
+    <div id="snapPreviewBody" style="flex:1;overflow:auto;background:#f8fafc;"></div>
+  </div>
+</div>
+
 <div id="backupOverlay" style="display:none" class="mo" onclick="if(event.target===this)closeBackup()">
 <div class="md" onclick="event.stopPropagation()">
   <div class="md-hd"><div class="md-ttl">💾 バックアップ</div><button class="md-cls" onclick="closeBackup()">✕</button></div>
@@ -1383,6 +1429,190 @@ function buildPrint(){
 
 function doPrint(){ buildPrint(); setTimeout(()=>window.print(),80); }
 
+// ─── SNAPSHOT STORAGE ───────────────────────────────────────
+const SNAP_KEY = 'socialUniverse_snapshots';
+
+function getSnapshots(){
+  try{ return JSON.parse(localStorage.getItem(SNAP_KEY))||[]; }catch{ return []; }
+}
+function saveSnapshots(arr){ localStorage.setItem(SNAP_KEY, JSON.stringify(arr)); }
+
+function openSnapshotHistory(){
+  renderSnapshotGrid();
+  document.getElementById('snapshotOverlay').style.display='flex';
+}
+function closeSnapshotHistory(){
+  document.getElementById('snapshotOverlay').style.display='none';
+}
+
+function renderSnapshotGrid(){
+  const snaps = getSnapshots(); // 最新順（末尾が最新）
+  const sorted = [...snaps].reverse();
+  const grid = document.getElementById('snapshotGrid');
+  document.getElementById('snapCount').textContent = snaps.length+'件';
+
+  if(!sorted.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--s400);font-size:13px;">スナップショットはまだありません<br><span style="font-size:11px;">📸 スナップショットボタンで保存してください</span></div>';
+    return;
+  }
+
+  grid.innerHTML = sorted.map((snap,i) => {
+    const idx = snaps.length - 1 - i; // 元配列のindex
+    // サムネイル: iframeでレンダリング（縮小表示）
+    const blobUrl = URL.createObjectURL(new Blob([snap.html], {type:'text/html;charset=utf-8'}));
+    // スケール計算（カード幅240px想定、297mm≈1122px）
+    const scale = 240 / (297 * 3.7795);
+    return `<div class="snap-card">
+      <div class="snap-thumbnail" style="height:${Math.round(240*(210/297))}px;">
+        <iframe src="${blobUrl}" style="transform:scale(${scale.toFixed(4)});pointer-events:none;" onload="this.dataset.loaded='1'"></iframe>
+      </div>
+      <div class="snap-info">
+        <div class="snap-label">${snap.label}</div>
+        <div class="snap-meta">${snap.date} · ${snap.personCount}人</div>
+      </div>
+      <div class="snap-actions">
+        <button class="snap-btn" onclick="previewSnap(${idx})">👁 プレビュー</button>
+        <button class="snap-btn" onclick="downloadSnap(${idx})">⬇</button>
+        <button class="snap-btn snap-btn-del" onclick="deleteSnap(${idx},event)">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ヒストリー件数バッジ更新
+  updateSnapBadge();
+}
+
+let _previewIdx = null;
+function previewSnap(idx){
+  const snap = getSnapshots()[idx];
+  if(!snap) return;
+  _previewIdx = idx;
+  document.getElementById('snapPreviewTitle').textContent = `${snap.label} — ${snap.date}`;
+  const body = document.getElementById('snapPreviewBody');
+  const blob = new Blob([snap.html], {type:'text/html;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  body.innerHTML = `<iframe src="${url}" style="width:100%;height:calc(94vh - 80px);border:none;" onload="URL.revokeObjectURL(this.src)"></iframe>`;
+  document.getElementById('snapPreviewOverlay').style.display='flex';
+}
+function closeSnapPreview(){
+  document.getElementById('snapPreviewOverlay').style.display='none';
+  document.getElementById('snapPreviewBody').innerHTML='';
+  _previewIdx=null;
+}
+function downloadCurrentSnap(){
+  if(_previewIdx===null) return;
+  downloadSnap(_previewIdx);
+}
+function deleteCurrentSnap(){
+  if(_previewIdx===null) return;
+  deleteSnap(_previewIdx, null, true);
+  closeSnapPreview();
+}
+function downloadSnap(idx){
+  const snap = getSnapshots()[idx]; if(!snap) return;
+  const blob = new Blob([snap.html],{type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `social-universe-snapshot-${snap.label}-${snap.date}.html`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function deleteSnap(idx, e, skipConfirm=false){
+  if(e) e.stopPropagation();
+  const snap = getSnapshots()[idx]; if(!snap) return;
+  if(!skipConfirm && !confirm(`「${snap.label}」を削除しますか？`)) return;
+  const arr = getSnapshots();
+  arr.splice(idx,1);
+  saveSnapshots(arr);
+  renderSnapshotGrid();
+  showToast('🗑 削除しました');
+}
+function clearAllSnapshots(){
+  if(!confirm('全スナップショットを削除しますか？')) return;
+  saveSnapshots([]);
+  renderSnapshotGrid();
+  updateSnapBadge();
+  showToast('全削除しました');
+}
+function updateSnapBadge(){
+  const count = getSnapshots().length;
+  const btn = document.getElementById('snapHistBtn');
+  if(btn) btn.textContent = count > 0 ? `🗂 履歴 ${count}` : '🗂 履歴';
+}
+
+function doSnapshot(){
+  buildPrint();
+
+  // print CSS を抽出（@media print ブロックの中身をそのまま使う）
+  const allStyles = Array.from(document.styleSheets).map(ss=>{
+    try{
+      return Array.from(ss.cssRules).map(r=>{
+        // @media print ブロックの中身を取り出して直接適用
+        if(r.type===CSSRule.MEDIA_RULE && r.conditionText==='print'){
+          return Array.from(r.cssRules).map(rr=>rr.cssText).join('\n');
+        }
+        return r.cssText;
+      }).join('\n');
+    } catch(e){ return ''; }
+  }).join('\n');
+
+  const printEl = document.getElementById('printPage');
+  const printHTML = printEl.innerHTML;
+
+  // 日付ラベル生成（例: 2026Q2）
+  const now = new Date();
+  const q = Math.ceil((now.getMonth()+1)/3);
+  const label = `${now.getFullYear()}Q${q}`;
+  const dateStr = now.toISOString().slice(0,10);
+
+  const snapHTML = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Social Universe スナップショット ${label} (${dateStr})</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:420mm;height:297mm;background:white;overflow:visible;}
+${allStyles}
+/* スナップショット用: printPageを常に表示 */
+#printPage{display:block!important;width:100%;height:100%;}
+.pp-root{display:flex;flex-direction:column;justify-content:space-between;width:100%;height:100%;}
+</style>
+</head>
+<body>
+<div id="printPage">
+${printHTML}
+</div>
+<div style="position:fixed;bottom:4mm;right:6mm;font-size:7pt;color:#94a3b8;">
+  Social Universe スナップショット ${label} — ${dateStr}
+</div>
+</body>
+</html>`;
+
+  // localStorage に保存（サムネイル表示用）
+  const snaps = getSnapshots();
+  snaps.push({
+    label,
+    date: dateStr,
+    personCount: persons.filter(p=>!p.isDormant).length,
+    html: snapHTML,
+    savedAt: new Date().toISOString(),
+  });
+  // 最大12件保持（3ヶ月×3年分）
+  if(snaps.length > 12) snaps.splice(0, snaps.length - 12);
+  saveSnapshots(snaps);
+  updateSnapBadge();
+
+  // HTMLファイルもダウンロード
+  const blob = new Blob([snapHTML], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `social-universe-snapshot-${label}-${dateStr}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast(`📸 スナップショット保存 (${label}) · 履歴に追加しました`);
+}
+
 // ── TOAST ──
 let _toastTimer=null;
 function showToast(msg){
@@ -1394,11 +1624,12 @@ function showToast(msg){
 
 // ── KEYBOARD ──
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){ closeModal(); closeBackup(); closeDormant(); }
+  if(e.key==='Escape'){ closeModal(); closeBackup(); closeDormant(); closeSnapshotHistory(); closeSnapPreview(); }
 });
 
 // ── INIT ──
 renderMap();
+updateSnapBadge();
 </script>
   <script>
     if ("serviceWorker" in navigator) {
