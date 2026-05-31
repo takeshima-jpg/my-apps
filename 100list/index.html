@@ -30,8 +30,8 @@ body{font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','BIZ UDPGothic','Me
 #sidebar nav{flex:1;padding:10px 8px}
 #sidebar nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 13px;border-radius:8px;border:none;background:none;color:#cbd5e0;font-size:13px;font-weight:500;cursor:pointer;margin-bottom:2px;transition:background .15s,color .15s}
 #sidebar nav button:hover{background:var(--sidebar-hover);color:#fff}
-#sidebar nav button.active{background:var(--sidebar-active);color:#1a202c;font-weight:700}
-#sidebar nav button .nav-icon{font-size:17px;flex-shrink:0}
+#sidebar nav button.active{background:rgba(246,173,85,0.15);color:#f6ad55;font-weight:600;border-left:3px solid #f6ad55;padding-left:10px}
+#sidebar nav button .nav-icon{font-size:15px;flex-shrink:0;width:18px;text-align:center;opacity:.8}
 .nav-badge{background:#fc8181;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:auto}
 #sidebar-footer{padding:10px 8px 18px;border-top:1px solid #2d3748}
 #sidebar-footer button{display:block;width:100%;text-align:center;padding:9px;border-radius:8px;border:none;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:5px;transition:background .15s}
@@ -265,14 +265,14 @@ h2.page-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px
     <button onclick="openForm(null)" style="width:100%;padding:13px;border-radius:8px;border:none;background:#38a169;color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#276749'" onmouseout="this.style.background='#38a169'">＋ 新規登録</button>
   </div>
   <nav id="nav">
-    <button class="active" data-page="dashboard"><span class="nav-icon">🏠</span>ダッシュボード</button>
-    <button data-page="list"><span class="nav-icon">📋</span>リスト一覧</button>
-    <button data-page="week"><span class="nav-icon">🗓️</span>今週・今月</button>
-    <button data-page="focus"><span class="nav-icon">⭐</span><span id="nav-focus-label">重点リスト</span></button>
-    <button data-page="uncat"><span class="nav-icon">🏷️</span>未分類 <span class="nav-badge" id="uncat-badge" style="display:none">0</span></button>
-    <button data-page="discard"><span class="nav-icon">🗑️</span>捨てるリスト</button>
-    <button data-page="review"><span class="nav-icon">📊</span>振り返り</button>
-    <button data-page="settings"><span class="nav-icon">⚙️</span>設定</button>
+    <button class="active" data-page="dashboard"><span class="nav-icon">◉</span>ダッシュボード</button>
+    <button data-page="list"><span class="nav-icon">≡</span>リスト一覧</button>
+    <button data-page="week"><span class="nav-icon">◷</span>今週・今月</button>
+    <button data-page="focus"><span class="nav-icon">◎</span><span id="nav-focus-label">重点リスト</span></button>
+    <button data-page="uncat"><span class="nav-icon">≡</span>未分類 <span class="nav-badge" id="uncat-badge" style="display:none">0</span></button>
+    <button data-page="discard"><span class="nav-icon">⊘</span>捨てるリスト</button>
+    <button data-page="review"><span class="nav-icon">◈</span>振り返り</button>
+    <button data-page="settings"><span class="nav-icon">⚙</span>設定</button>
   </nav>
   <div id="sidebar-footer"></div>
 </div>
@@ -1325,7 +1325,7 @@ function renderList(){
   const years = [...new Set(items.map(i=>i.year).filter(Boolean))].sort();
 
   el.innerHTML = `
-<h2 class="page-title">📋 リスト一覧</h2>
+<h2 class="page-title">≡ リスト一覧</h2>
 <div class="card" style="padding:15px 18px;margin-bottom:14px">
   <div class="filter-bar">
     <input type="text" placeholder="🔍 タイトル・メモで検索" value="${esc(listF.search)}" oninput="listF.search=this.value;renderList()">
@@ -1343,7 +1343,7 @@ function renderList(){
     </select>
   </div>
   <div class="filter-bar">
-    <button class="toggle-btn ${listF.focus?'on':''}" onclick="listF.focus=!listF.focus;renderList()">⭐ ${esc(focusName)}のみ</button>
+    <button class="toggle-btn ${listF.focus?'on':''}" onclick="listF.focus=!listF.focus;renderList()">◎ ${esc(focusName)}のみ</button>
     <button class="toggle-btn ${listF.recurring?'on':''}" onclick="listF.recurring=!listF.recurring;renderList()">🔄 毎年繰り返し</button>
     <button class="toggle-btn ${listF.count?'on':''}" onclick="listF.count=!listF.count;renderList()">🎯 カウント系</button>
   </div>
@@ -1527,7 +1527,7 @@ function renderWeek(){
   const prioMap = {high:'高',medium:'中',low:'低'};
 
   el.innerHTML = `
-<h2 class="page-title">🗓️ スケジュール管理</h2>
+<h2 class="page-title">◷ スケジュール管理</h2>
 <div class="flex gap-8 mb-16" style="margin-bottom:16px">
   ${['week','month','next30'].map(t=>`<button onclick="weekTab='${t}';renderWeek()" class="btn ${weekTab===t?'btn-primary':'btn-outline'}">${t==='week'?'今週':t==='month'?'今月':'次の30日'}</button>`).join('')}
 </div>
@@ -1576,7 +1576,7 @@ function renderFocus(){
   const rate = focus.length?Math.round(done.length/focus.length*100):0;
 
   el.innerHTML = `
-<h2 class="page-title">⭐ ${esc(focusName)}</h2>
+<h2 class="page-title">◎ ${esc(focusName)}</h2>
 <p class="page-sub">重要な目標を管理します（<button onclick="navigate('settings')" style="background:none;border:none;color:#2b6cb0;cursor:pointer;font-size:13px">名称変更</button>）</p>
 
 <div class="stat-grid stat-grid-3">
@@ -1848,7 +1848,7 @@ function renderReview(){
 
   el.innerHTML = `
 <div class="flex justify-between items-center" style="margin-bottom:6px">
-  <h2 class="page-title">📊 振り返り</h2>
+  <h2 class="page-title">◈ 振り返り</h2>
   <button class="btn btn-gray no-print" onclick="window.print()">🖨️ 印刷 (A3)</button>
 </div>
 <p class="page-sub">${yr}年の振り返りレポート</p>
@@ -1929,7 +1929,7 @@ ${recurring.length>0?`
 function renderSettings(){
   const el = document.getElementById('page-settings');
   el.innerHTML = `
-<h2 class="page-title">⚙️ 設定</h2>
+<h2 class="page-title">⚙ 設定</h2>
 <p class="page-sub">システム全体の設定を管理します</p>
 
 <div class="card settings-section">
@@ -1952,7 +1952,7 @@ function renderSettings(){
 </div>
 
 <div class="card settings-section">
-  <h3>バックアップ / 復元</h3>
+  <h3>データ管理</h3>
   <div class="settings-row">
     <div><div class="settings-label">💾 JSONバックアップ</div><div class="settings-desc">全データをJSONファイルとして保存します（推奨）</div></div>
     <button class="btn btn-primary" onclick="backupJSON()">バックアップを作成</button>
@@ -2021,7 +2021,7 @@ function openForm(id){
 <div class="form-group">
   <label class="form-label">フラグ</label>
   <div class="form-check-group">
-    <label class="form-check"><input type="checkbox" id="f-focus" ${it&&it.isFocus?'checked':''}> ⭐ ${esc(focusName)}対象</label>
+    <label class="form-check"><input type="checkbox" id="f-focus" ${it&&it.isFocus?'checked':''}> ◎ ${esc(focusName)}対象</label>
     <label class="form-check"><input type="checkbox" id="f-count" ${isCount?'checked':''} onchange="toggleCountFields()"> 🎯 カウント系</label>
     <label class="form-check"><input type="checkbox" id="f-recurring" ${it&&it.isRecurringYearly?'checked':''}> 🔄 毎年繰り返す</label>
   </div>
