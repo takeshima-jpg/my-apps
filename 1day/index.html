@@ -197,11 +197,11 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
 
 /* RESPONSIVE */
-.mob-header { display: none; align-items: center; gap: 10px; padding: 0 16px; height: 48px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 200; flex-shrink: 0; }
+.mob-header { display: none; align-items: center; gap: 10px; padding: 0 16px; height: 48px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; flex-shrink: 0; }
 .mob-logo { font-size: 17px; font-weight: 800; color: var(--accent); letter-spacing: .03em; }
 .mob-sub { font-size: 13px; color: var(--text3); }
 .mob-menu-btn { background: none; border: none; color: var(--text2); font-size: 22px; cursor: pointer; padding: 4px 8px; margin-left: auto; line-height: 1; }
-.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 299; }
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 150; }
 @media (max-width: 720px) {
   .mob-header { display: flex; }
   .sidebar { position: fixed; left: -100%; top: 0; height: 100%; z-index: 300; transition: left .25s ease; width: 220px; }
