@@ -67,6 +67,12 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic ProN','Meiryo',sans-serif;
 /* ── FRAME ── */
 .os-frame-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 .os-frame{border:none;width:100%;height:100%;flex:1;}
+/* OS フルスクリーンオーバーレイ（サイドバーを隠してOS本来のUIを表示） */
+.os-fullscreen{position:fixed;inset:0;z-index:100;background:#fff;display:flex;flex-direction:column;}
+.os-fullscreen-bar{height:40px;background:var(--navy);display:flex;align-items:center;gap:10px;padding:0 14px;flex-shrink:0;}
+.os-fullscreen-back{color:rgba(255,255,255,0.7);background:none;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;padding:4px 10px;border-radius:5px;transition:background .1s;}
+.os-fullscreen-back:hover{background:rgba(255,255,255,0.1);color:#fff;}
+.os-fullscreen-title{color:rgba(255,255,255,0.5);font-size:12px;font-weight:600;letter-spacing:.05em;}
 .hid{display:none!important;}
 
 /* ── CONTENT ── */
@@ -379,7 +385,7 @@ select.fi{cursor:pointer;}
     <div id="search-results" style="overflow-y:auto;flex:1;padding:12px 22px;"></div>
   </div>
 
-  <!-- iframes -->
+  <!-- iframes（サイドバー内に残す、表示切替はopenOsFrame()で管理） -->
   <div id="view-routine" class="os-frame-wrap hid">
     <iframe class="os-frame" id="frame-routine" src="../routine-os/index.html"></iframe>
   </div>
@@ -388,50 +394,6 @@ select.fi{cursor:pointer;}
   </div>
   <div id="view-project" class="os-frame-wrap hid">
     <iframe class="os-frame" id="frame-project" src="../project-os/index.html"></iframe>
-  </div>
-
-  <!-- LAUNCHER OS iframes (lazy-loaded) -->
-  <div id="view-1day" class="os-frame-wrap hid">
-    <div class="topbar">
-      <span class="tb-title">1day</span>
-      <div class="tb-right"><button class="btn-nav" onclick="nav('home')">← Task OS</button></div>
-    </div>
-    <iframe class="os-frame" id="frame-1day"></iframe>
-  </div>
-  <div id="view-reflect" class="os-frame-wrap hid">
-    <div class="topbar">
-      <span class="tb-title">Reflect OS</span>
-      <div class="tb-right"><button class="btn-nav" onclick="nav('home')">← Task OS</button></div>
-    </div>
-    <iframe class="os-frame" id="frame-reflect"></iframe>
-  </div>
-  <div id="view-hitomemo" class="os-frame-wrap hid">
-    <div class="topbar">
-      <span class="tb-title">ヒトメモ</span>
-      <div class="tb-right"><button class="btn-nav" onclick="nav('home')">← Task OS</button></div>
-    </div>
-    <iframe class="os-frame" id="frame-hitomemo"></iframe>
-  </div>
-  <div id="view-social" class="os-frame-wrap hid">
-    <div class="topbar">
-      <span class="tb-title">Social Universe</span>
-      <div class="tb-right"><button class="btn-nav" onclick="nav('home')">← Task OS</button></div>
-    </div>
-    <iframe class="os-frame" id="frame-social"></iframe>
-  </div>
-  <div id="view-100list" class="os-frame-wrap hid">
-    <div class="topbar">
-      <span class="tb-title">100list</span>
-      <div class="tb-right"><button class="btn-nav" onclick="nav('home')">← Task OS</button></div>
-    </div>
-    <iframe class="os-frame" id="frame-100list"></iframe>
-  </div>
-  <div id="view-kosolog" class="os-frame-wrap hid">
-    <div class="topbar">
-      <span class="tb-title">KOSOLog</span>
-      <div class="tb-right"><button class="btn-nav" onclick="nav('home')">← Task OS</button></div>
-    </div>
-    <iframe class="os-frame" id="frame-kosolog"></iframe>
   </div>
 
 </div>
@@ -490,6 +452,15 @@ select.fi{cursor:pointer;}
   <div id="launcherList"></div>
 </div>
 
+<!-- OS フルスクリーンオーバーレイ（サイドバーを覆う） -->
+<div id="os-overlay" class="os-fullscreen hid">
+  <div class="os-fullscreen-bar">
+    <button class="os-fullscreen-back" onclick="closeOsOverlay()">← Task OS</button>
+    <span class="os-fullscreen-title" id="os-overlay-title"></span>
+  </div>
+  <iframe class="os-frame" id="os-overlay-frame"></iframe>
+</div>
+
 <!-- WAITING LIST MODAL -->
 <div class="modal-bg hid" id="waitingModal">
   <div class="modal" style="width:420px;max-height:75vh;overflow-y:auto;">
@@ -533,17 +504,54 @@ let pjTarget = null;
 const done = {}; // TODAY session checks
 
 // ── NAV ──
+// OS別の設定
+const OS_OVERLAY_MAP = {
+  routine: { src: '../routine-os/index.html',    title: 'ROUTINE OS' },
+  shot:    { src: '../shot-task-os/index.html',   title: 'SHOT OS' },
+  project: { src: '../project-os/index.html',     title: 'PROJECT OS' },
+};
+const LAUNCHER_OVERLAY_MAP = {
+  '1day':    { src: '../1day/index.html',           title: '1day' },
+  reflect:   { src: '../reflect-os/index.html',     title: 'Reflect OS' },
+  hitomemo:  { src: '../hitomemo/index.html',        title: 'ヒトメモ' },
+  social:    { src: '../social-universe/index.html', title: 'Social Universe' },
+  '100list': { src: '../100list/index.html',         title: '100list' },
+  kosolog:   { src: '../koso-log/index.html',        title: 'KOSOLog' },
+};
+
 function nav(v){
+  // Routine/Shot/Project/ランチャーOSはフルスクリーンオーバーレイで開く
+  const osConf = OS_OVERLAY_MAP[v] || LAUNCHER_OVERLAY_MAP[v];
+  if(osConf){ openOsOverlay(osConf.src, osConf.title); return; }
+
   curView = v;
   document.querySelectorAll('.ni').forEach(n => {
     n.classList.toggle('act', n.getAttribute('onclick') === `nav('${v}')`);
   });
-  ['home','today','search','routine','shot','project','1day','reflect','hitomemo','social','100list','kosolog'].forEach(id =>
+  ['home','today','search'].forEach(id =>
     document.getElementById('view-'+id)?.classList.toggle('hid', id !== v)
   );
   if(v==='home')   renderHome();
   if(v==='today')  renderToday();
   if(v==='search') { document.getElementById('searchInput').focus(); doSearch(); }
+}
+
+// フルスクリーンオーバーレイでOSを開く（サイドバーを隠す）
+const _osFrameCache = {};
+function openOsOverlay(src, title){
+  const overlay = document.getElementById('os-overlay');
+  const frame   = document.getElementById('os-overlay-frame');
+  const titleEl = document.getElementById('os-overlay-title');
+  titleEl.textContent = title;
+  // 同じsrcなら再ロードしない（キャッシュ）
+  if(frame.src !== location.origin + '/' + src && frame.getAttribute('data-src') !== src){
+    frame.setAttribute('data-src', src);
+    frame.src = src;
+  }
+  overlay.classList.remove('hid');
+}
+function closeOsOverlay(){
+  document.getElementById('os-overlay').classList.add('hid');
 }
 
 // ── STORAGE ──
@@ -917,23 +925,13 @@ function renderLauncherList(q){
   el.innerHTML = h;
 }
 
-// iframe OS をレイジーロードして表示
+// ランチャーからOS起動（オーバーレイ経由）
 function openFrameOS(viewId, frameId, frameSrc){
-  // nav() で他ビューを非表示にしてから対象ビューを表示
-  ['home','today','search','routine','shot','project','1day','reflect','hitomemo','social','100list','kosolog'].forEach(id => {
-    document.getElementById('view-'+id)?.classList.add('hid');
-  });
-  const view = document.getElementById(viewId);
-  if(!view) return;
-  view.classList.remove('hid');
-  // サイドバーのact解除
-  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('act'));
-  // iframe の src をまだ設定していなければ初回ロード（レイジー）
-  const frame = document.getElementById(frameId);
-  if(frame && !frame.src){
-    frame.src = frameSrc;
-  }
-  curView = viewId.replace('view-','');
+  // LAUNCHER_OVERLAY_MAP から title を探す
+  const key = viewId.replace('view-','');
+  const conf = LAUNCHER_OVERLAY_MAP[key];
+  const title = conf ? conf.title : key;
+  openOsOverlay(frameSrc, title);
 }
 
 // ── 今週 折りたたみ状態（デフォルト: 閉じ）
@@ -1449,11 +1447,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
 })();
 </script>
 <script>
-if('serviceWorker' in navigator){
+if('serviceWorker' in navigator && !location.hostname.includes('claudeusercontent.com')){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('./service-worker.js')
       .then(r => console.log('SW registered:', r.scope))
-      .catch(e => console.warn('SW failed:', e));
+      .catch(()=>{});
   });
 }
 </script>
