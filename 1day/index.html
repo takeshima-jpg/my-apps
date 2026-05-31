@@ -197,8 +197,16 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.85
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
 
 /* RESPONSIVE */
+.mob-header { display: none; align-items: center; gap: 10px; padding: 0 16px; height: 48px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 200; flex-shrink: 0; }
+.mob-logo { font-size: 15px; font-weight: 800; color: var(--accent); letter-spacing: .03em; }
+.mob-sub { font-size: 11px; color: var(--text3); }
+.mob-menu-btn { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; padding: 4px 8px; margin-left: auto; line-height: 1; }
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 299; }
 @media (max-width: 720px) {
-  .sidebar { display: none; }
+  .mob-header { display: flex; }
+  .sidebar { position: fixed; left: -100%; top: 0; height: 100%; z-index: 300; transition: left .25s ease; width: 220px; }
+  .sidebar.open { left: 0; }
+  .sidebar-overlay.open { display: block; }
   .topbar { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
   .topbar-right { flex-wrap: wrap; width: 100%; gap: 8px; }
   .search-input { width: 100%; }
@@ -425,6 +433,12 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.85
 </div>
 
 <!-- MAIN -->
+<div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+<div class="mob-header">
+  <div class="mob-logo">1day</div>
+  <div class="mob-sub">思考ログ</div>
+  <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
+</div>
 <div class="app">
   <aside class="sidebar">
     <div class="logo">1day</div>
@@ -1418,7 +1432,16 @@ function bindEvents() {
   document.getElementById('importBtn').addEventListener('click', importData);
   document.getElementById('importFileInput').addEventListener('change', handleImport);
 
-  document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => {
+  document.function toggleSidebar(){
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.getElementById('sbOverlay').classList.toggle('open');
+}
+function closeSidebar(){
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sbOverlay').classList.remove('open');
+}
+querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => {
+    closeSidebar();
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     item.classList.add('active');
     state.view = item.dataset.view;
