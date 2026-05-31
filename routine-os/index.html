@@ -33,7 +33,7 @@ body{font-family:'Meiryo','メイリオ','Hiragino Kaku Gothic ProN','Yu Gothic'
 .sb-nav{padding:6px 0;flex:1;overflow-y:auto;}
 .ni{display:flex;align-items:center;gap:8px;padding:11px 16px;cursor:pointer;color:var(--text2);font-size:14px;border-left:3px solid transparent;transition:background .1s;}
 .ni:hover{background:var(--bg);}
-.ni.act{color:var(--text);background:var(--bg);border-left-color:var(--blue);font-weight:600;}
+.ni.act{color:var(--blue);background:rgba(59,130,246,0.1);border-left-color:var(--blue);border-left-width:3px;font-weight:600;}
 .ni-ico{font-size:13px;width:16px;text-align:center;}
 .sb-ft{padding:10px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);}
 
@@ -209,11 +209,11 @@ select,input,textarea{font-family:inherit;}
     <div class="sb-title">意思決定システム</div>
   </div>
   <nav class="sb-nav">
-    <div class="ni act" data-v="dashboard" onclick="sv(this,'dashboard')"><span class="ni-ico">⊞</span>ダッシュボード</div>
+    <div class="ni act" data-v="dashboard" onclick="sv(this,'dashboard')"><span class="ni-ico">◉</span>ダッシュボード</div>
     <div class="ni" data-v="list" onclick="sv(this,'list')"><span class="ni-ico">≡</span>タスク一覧</div>
-    <div class="ni" data-v="calendar" onclick="sv(this,'calendar')"><span class="ni-ico">◻</span>カレンダー</div>
+    <div class="ni" data-v="calendar" onclick="sv(this,'calendar')"><span class="ni-ico">◷</span>カレンダー</div>
     <div class="ni" data-v="monthly" onclick="sv(this,'monthly')"><span class="ni-ico">↺</span>月次レビュー</div>
-    <div class="ni" data-v="holidays" onclick="sv(this,'holidays')"><span class="ni-ico">□</span>祝日管理</div>
+    <div class="ni" data-v="holidays" onclick="sv(this,'holidays')"><span class="ni-ico">◇</span>祝日管理</div>
   </nav>
   <div class="sb-sep" style="margin:4px 14px;height:1px;background:var(--border);"></div>
   <div style="padding:6px 0 4px;">
