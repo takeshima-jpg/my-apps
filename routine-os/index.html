@@ -199,9 +199,32 @@ select,input,textarea{font-family:inherit;}
 .saved-toast{position:fixed;bottom:20px;right:20px;background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:var(--r);font-size:13px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;}
 .saved-toast.show{opacity:1;}
 .memo-area{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;font-family:inherit;resize:vertical;min-height:70px;}
+
+/* ── MOBILE RESPONSIVE ── */
+.mob-header{display:none;align-items:center;gap:10px;padding:0 16px;height:48px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;flex-shrink:0;}
+.mob-logo{font-size:12px;font-weight:700;color:var(--gray);letter-spacing:.05em;}
+.mob-title{font-size:14px;font-weight:700;color:var(--text);}
+.mob-menu-btn{background:none;border:none;color:var(--gray);font-size:20px;cursor:pointer;padding:4px 8px;margin-left:auto;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:299;}
+@media(max-width:680px){
+  .mob-header{display:flex;}
+  .app{flex-direction:column;}
+  .sidebar{position:fixed;left:-100%;top:0;height:100%;width:220px;z-index:300;transition:left .25s ease;overflow-y:auto;}
+  .sidebar.open{left:0;}
+  .sidebar-overlay.open{display:block;}
+  .main{width:100%;height:calc(100vh - 48px);}
+  .pg-content{padding:16px 12px;}
+  .card{margin-bottom:10px;}
+}
 </style>
 </head>
 <body>
+<div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+<div class="mob-header">
+  <div class="mob-logo">Routine OS v2</div>
+  <div class="mob-title">意思決定システム</div>
+  <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
+</div>
 <div class="app">
 <div class="sidebar">
   <div class="sb-hd">
@@ -567,7 +590,15 @@ function addLog(taskId,action,opts){
 }
 
 // ========== VIEW SWITCHING ==========
-function sv(el,v){
+function toggleSidebar(){
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.getElementById('sbOverlay').classList.toggle('open');
+}
+function closeSidebar(){
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sbOverlay').classList.remove('open');
+}
+function sv(el,v){closeSidebar();
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('act');});
   document.querySelectorAll('[id^="v-"]').forEach(function(n){n.classList.add('hid');});
   if(el)el.classList.add('act');
