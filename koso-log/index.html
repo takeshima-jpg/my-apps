@@ -94,7 +94,7 @@ nav { padding: 4px 8px; display: flex; flex-direction: column; gap: 1px; }
   width: 100%;
 }
 .nav-btn:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.85); }
-.nav-btn.active { background: rgba(37,99,235,.4); color: #93c5fd; font-weight: 700; }
+.nav-btn.active { background: rgba(37,99,235,0.2); color: #93c5fd; font-weight: 600; border-left: 3px solid #93c5fd; padding-left: 11px; }
 .nav-btn .nav-icon { width: 16px; text-align: center; font-size: 12px; opacity: .8; flex-shrink: 0; }
 .nav-badge {
   margin-left: auto;
@@ -519,17 +519,17 @@ textarea.form-control { resize: vertical; min-height: 56px; }
   <div class="sidebar-section-label">メニュー</div>
   <nav>
     <button class="nav-btn active" data-view="home" onclick="setView('home')">
-      <span class="nav-icon">◼</span> HOME
+      <span class="nav-icon">◉</span> ホーム
     </button>
     <button class="nav-btn" data-view="list" onclick="setView('list')">
-      <span class="nav-icon">☰</span> 構想ログ
+      <span class="nav-icon">≡</span> 構想ログ
     </button>
     <button class="nav-btn" data-view="archive" onclick="setView('archive')">
-      <span class="nav-icon">✕</span> 廃棄アーカイブ
+      <span class="nav-icon">⊘</span> 廃棄アーカイブ
       <span class="nav-badge" id="badge-archive" style="display:none"></span>
     </button>
     <button class="nav-btn" data-view="ai-import" onclick="setView('ai-import')">
-      <span class="nav-icon">⬇</span> AIインポート
+      <span class="nav-icon">⬇</span> 取り込む
     </button>
   </nav>
 
@@ -611,7 +611,7 @@ textarea.form-control { resize: vertical; min-height: 56px; }
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
-      <button class="btn-save" onclick="saveItem()">保存する</button>
+      <button class="btn-save" onclick="saveItem()">保存</button>
     </div>
   </div>
 </div>
