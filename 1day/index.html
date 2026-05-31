@@ -206,7 +206,7 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .mob-menu-btn { background: none; border: none; color: var(--text2); font-size: 22px; cursor: pointer; padding: 4px 8px; margin-left: auto; line-height: 1; }
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 150; }
 @media (max-width: 720px) {
-  .mob-header { display: flex; }
+  .mob-header { display: flex; } .app { flex-direction: column; }
   .sidebar { position: fixed; left: -100%; top: 0; height: 100%; z-index: 300; transition: left .25s ease; width: 220px; }
   .sidebar.open { left: 0; }
   .sidebar-overlay.open { display: block; }
@@ -353,13 +353,13 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
       <textarea id="eventsInput" placeholder="今週起きたこと、気になったこと、誰かとの会話…&#10;箇条書きでもOK" rows="4"></textarea>
     </div>
     <div class="field">
-      <div class="field-label">⚠ 違和感 <span class="optional">任意</span></div>
+      <div class="field-label">△ 違和感 <span class="optional">任意</span></div>
       <input type="text" id="unease" placeholder="なんかモヤっとしたこと、一言で">
     </div>
     <div class="field">
       <div class="field-label">タグ <span class="optional">任意</span></div>
       <div class="field-hint">何についてのログか</div>
-      <div class="tag-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+      <div class="tag-row" style="display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:6px!important;overflow:visible!important;">
         <button class="tag-chip" data-tag="経営">経営</button>
         <button class="tag-chip" data-tag="組織">組織</button>
         <button class="tag-chip" data-tag="人間関係">人間関係</button>
@@ -375,11 +375,11 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
       <div class="field-label">フラグ <span class="optional">任意</span></div>
       <div class="field-hint">後で拾いたいもの</div>
       <div class="flag-row">
-        <button class="flag-btn" data-flag="unease">⚠ 違和感</button>
-        <button class="flag-btn" data-flag="energy">🔥 エネルギー高</button>
-        <button class="flag-btn" data-flag="blog">✍ ブログ候補</button>
-        <button class="flag-btn" data-flag="deep">⭐ 深掘り</button>
-        <button class="flag-btn" data-flag="vision">🧭 VISION関連</button>
+        <button class="flag-btn" data-flag="unease">△ 違和感</button>
+        <button class="flag-btn" data-flag="energy">◉ エネルギー高</button>
+        <button class="flag-btn" data-flag="blog">≡ ブログ候補</button>
+        <button class="flag-btn" data-flag="deep">◎ 深掘り</button>
+        <button class="flag-btn" data-flag="vision">◈ VISION関連</button>
       </div>
     </div>
     <div class="modal-footer">
@@ -498,11 +498,11 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
     <div class="filter-bar" id="filter-bar-wrap">
       <div class="filter-tags">
         <button class="filter-chip active" data-filter="all">すべて</button>
-        <button class="filter-chip" data-filter="flag:unease">⚠ 違和感</button>
-        <button class="filter-chip" data-filter="flag:energy">🔥 エネルギー高</button>
-        <button class="filter-chip" data-filter="flag:deep">⭐ 深掘り</button>
-        <button class="filter-chip" data-filter="flag:vision">🧭 VISION</button>
-        <button class="filter-chip" data-filter="flag:blog">✍ ブログ候補</button>
+        <button class="filter-chip" data-filter="flag:unease">△ 違和感</button>
+        <button class="filter-chip" data-filter="flag:energy">◉ エネルギー高</button>
+        <button class="filter-chip" data-filter="flag:deep">◎ 深掘り</button>
+        <button class="filter-chip" data-filter="flag:vision">◈ VISION</button>
+        <button class="filter-chip" data-filter="flag:blog">≡ ブログ候補</button>
       </div>
       <div class="filter-tags filter-tags-sub">
         <span class="filter-sub-label">タグ</span>
@@ -578,19 +578,19 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
             <div class="db-card-value" id="db_sat_avg">—</div>
           </div>
           <div class="db-card db-card-sm">
-            <div class="db-card-label">⚠ 違和感検知</div>
+            <div class="db-card-label">△ 違和感検知</div>
             <div class="db-card-value" id="db_unease_val">—</div>
           </div>
           <div class="db-card db-card-sm">
-            <div class="db-card-label">🔥 エネルギー高</div>
+            <div class="db-card-label">◉ エネルギー高</div>
             <div class="db-card-value" id="db_energy_count">—</div>
           </div>
           <div class="db-card db-card-sm">
-            <div class="db-card-label">⭐ 深掘り</div>
+            <div class="db-card-label">◎ 深掘り</div>
             <div class="db-card-value" id="db_deep_count">—</div>
           </div>
           <div class="db-card db-card-sm">
-            <div class="db-card-label">🧭 VISION関連</div>
+            <div class="db-card-label">◈ VISION関連</div>
             <div class="db-card-value" id="db_vision_count">—</div>
           </div>
         </div>
@@ -654,7 +654,7 @@ const RV_KEY = 'oneday_reviews_v1';
 let state = { logs:[], reviews:[], filter:'all', search:'', editId:null, view:'log', selected:new Set() };
 const SAT_LABEL   = { great:'◎', good:'〇', meh:'△', bad:'×' };
 const SAT_CLASS   = { great:'great', good:'good', meh:'meh', bad:'bad' };
-const FLAG_LABELS = { unease:'⚠ 違和感', energy:'🔥 エネルギー高', blog:'✍ ブログ候補', deep:'⭐ 深掘り', vision:'🧭 VISION関連', learning:'🧠 学び', relation:'❤️ 人間関係' };
+const FLAG_LABELS = { unease:'△ 違和感', energy:'◉ エネルギー高', blog:'≡ ブログ候補', deep:'◎ 深掘り', vision:'◈ VISION関連', learning:'🧠 学び', relation:'❤️ 人間関係' };
 
 // VISION 2026 DATA
 const VISION_DATA = {
@@ -1296,8 +1296,8 @@ function buildReviewInsights() {
   const logs = getThisWeekLogs();
   const uneases = logs.filter(l => l.unease).map(l => l.unease);
   document.getElementById('insightUnease').innerHTML = uneases.length
-    ? `<div class="insight-label">⚠ 違和感 (${uneases.length}件)</div><div class="insight-value">${uneases.slice(0,2).map(u=>escHtml(u)).join('<br>')}</div>`
-    : `<div class="insight-label">⚠ 違和感</div><div class="insight-value" style="color:var(--text3)">今週は記録なし</div>`;
+    ? `<div class="insight-label">△ 違和感 (${uneases.length}件)</div><div class="insight-value">${uneases.slice(0,2).map(u=>escHtml(u)).join('<br>')}</div>`
+    : `<div class="insight-label">△ 違和感</div><div class="insight-value" style="color:var(--text3)">今週は記録なし</div>`;
 
   const energyDays = logs.filter(l => (l.flags||[]).includes('energy'));
   const badDays    = logs.filter(l => l.satisfaction === 'bad');
@@ -1310,8 +1310,8 @@ function buildReviewInsights() {
 
   const blogLogs = logs.filter(l => (l.flags||[]).includes('blog'));
   document.getElementById('insightBlog').innerHTML = blogLogs.length
-    ? `<div class="insight-label">✍ ブログ候補 (${blogLogs.length}件)</div><div class="insight-value">${escHtml((blogLogs[0].events||'').slice(0,60))}…</div>`
-    : `<div class="insight-label">✍ ブログ候補</div><div class="insight-value" style="color:var(--text3)">今週は記録なし</div>`;
+    ? `<div class="insight-label">≡ ブログ候補 (${blogLogs.length}件)</div><div class="insight-value">${escHtml((blogLogs[0].events||'').slice(0,60))}…</div>`
+    : `<div class="insight-label">≡ ブログ候補</div><div class="insight-value" style="color:var(--text3)">今週は記録なし</div>`;
 }
 
 function getTopWords(text, n) {
