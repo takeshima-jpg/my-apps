@@ -273,6 +273,12 @@ select.fi{cursor:pointer;}
 </style>
 </head>
 <body>
+<div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+<div class="mob-header">
+  <div class="sb-logo">Unified OS</div>
+  <div class="sb-name">Task OS</div>
+  <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
+</div>
 <div class="app">
 
 <!-- SIDEBAR -->
@@ -1335,6 +1341,22 @@ document.addEventListener('DOMContentLoaded', ()=>{
   box-shadow:0 8px 32px rgba(0,0,0,.14);
   overflow:hidden;
   animation:launcherIn .15s ease;
+}
+
+/* ── MOBILE RESPONSIVE ── */
+.mob-header{display:none;align-items:center;gap:12px;padding:0 16px;height:48px;background:var(--navy);position:sticky;top:0;z-index:200;flex-shrink:0;}
+.mob-header .sb-logo{color:#fff;font-size:13px;font-weight:700;letter-spacing:.05em;opacity:.5;}
+.mob-header .sb-name{color:#fff;font-size:14px;font-weight:700;}
+.mob-menu-btn{background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:4px 8px;margin-left:auto;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:299;}
+@media(max-width:680px){
+  .mob-header{display:flex;}
+  .app{flex-direction:column;}
+  .sidebar{position:fixed;left:-100%;top:0;height:100%;width:240px;z-index:300;transition:left .25s ease;}
+  .sidebar.open{left:0;}
+  .sidebar-overlay.open{display:block;}
+  .main{width:100%;height:calc(100vh - 48px);}
+  .launcher-drawer{width:88vw;right:0;top:48px;border-radius:0 0 0 12px;}
 }
 @media(max-width:600px){
   .launcher-drawer{width:82vw;right:0;top:48px;border-radius:0 0 0 12px;}
