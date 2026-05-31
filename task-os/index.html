@@ -51,7 +51,7 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic ProN','Meiryo',sans-serif;
   cursor:pointer;border-left:2px solid transparent;transition:all .12s;letter-spacing:.03em;}
 .ni:hover{color:rgba(255,255,255,0.75);background:rgba(255,255,255,0.04);}
 .ni.act{color:#fff;background:rgba(255,255,255,0.08);border-left-color:var(--accent);}
-.ni-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.ni-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}.ni-ico{font-size:14px;width:18px;text-align:center;flex-shrink:0;opacity:.75}.ni-ico-r{color:#D94F4F}.ni-ico-s{color:#3A7FD9}.ni-ico-p{color:#4EA86B}
 .ni-dot-r{background:var(--r);} .ni-dot-s{background:var(--s);} .ni-dot-p{background:var(--p);}
 .ni-dot-g{background:rgba(255,255,255,0.2);}
 .sb-sep{margin:6px 18px;height:1px;background:rgba(255,255,255,0.05);}
@@ -282,15 +282,15 @@ select.fi{cursor:pointer;}
     <div class="sb-name">Task OS</div>
   </div>
   <nav class="sb-nav">
-    <div class="ni act" onclick="nav('home')"><div class="ni-dot ni-dot-g"></div>HOME</div>
-    <div class="ni" onclick="nav('today')"><div class="ni-dot ni-dot-g"></div>TODAY</div>
+    <div class="ni act" onclick="nav('home')"><span class="ni-ico">◉</span>ホーム</div>
+    <div class="ni" onclick="nav('today')"><span class="ni-ico">◷</span>今日</div>
     <div class="sb-sep"></div>
-    <div class="ni" onclick="nav('routine')"><div class="ni-dot ni-dot-r"></div>ROUTINE</div>
-    <div class="ni" onclick="nav('shot')"><div class="ni-dot ni-dot-s"></div>SHOT</div>
-    <div class="ni" onclick="nav('project')"><div class="ni-dot ni-dot-p"></div>PROJECT</div>
+    <div class="ni" onclick="nav('routine')"><span class="ni-ico ni-ico-r">↺</span>ルーティン</div>
+    <div class="ni" onclick="nav('shot')"><span class="ni-ico ni-ico-s">≡</span>ショット</div>
+    <div class="ni" onclick="nav('project')"><span class="ni-ico ni-ico-p">◫</span>プロジェクト</div>
     <div class="sb-sep"></div>
-    <div class="ni" onclick="nav('search')"><div class="ni-dot ni-dot-g"></div>検索</div>
-    <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><div class="ni-dot" style="background:#9B7FD9;"></div>WAITING <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
+    <div class="ni" onclick="nav('search')"><span class="ni-ico">⌕</span>検索</div>
+    <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
   </nav>
   <div class="sb-ft" id="sbDate"></div>
 </div>
@@ -455,7 +455,7 @@ select.fi{cursor:pointer;}
 <!-- OS フルスクリーンオーバーレイ（サイドバーを覆う） -->
 <div id="os-overlay" class="os-fullscreen hid">
   <div class="os-fullscreen-bar">
-    <button class="os-fullscreen-back" onclick="closeOsOverlay()">← Task OS</button>
+    <button class="os-fullscreen-back" onclick="closeOsOverlay()">← 戻る</button>
     <span class="os-fullscreen-title" id="os-overlay-title"></span>
   </div>
   <iframe class="os-frame" id="os-overlay-frame"></iframe>
