@@ -101,7 +101,7 @@ header {
   transition: all 0.15s;
 }
 .nav-btn:hover { color: var(--text); background: var(--surface2); }
-.nav-btn.active { color: var(--accent); border-color: var(--border2); background: var(--surface2); }
+.nav-btn.active { color: var(--accent); border-color: var(--accent); background: var(--surface2); border-bottom: 2px solid var(--accent); font-weight: 600; }
 .header-date {
   margin-left: auto;
   font-family: var(--font-mono);
@@ -859,8 +859,8 @@ input[type=checkbox] {
       <div class="divider"></div>
 
       <button class="btn-panel" onclick="openReview()">▸ 月次棚卸レビュー</button>
-      <button class="btn-panel" onclick="exportJSON()">▸ JSONバックアップ</button>
-      <button class="btn-panel" onclick="importJSON()">▸ JSONインポート</button>
+      <button class="btn-panel" onclick="exportJSON()">⬇ バックアップ</button>
+      <button class="btn-panel" onclick="importJSON()">⬆ 復元</button>
       <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="handleImportFile(event)">
     </div>
   </div>
@@ -980,7 +980,7 @@ input[type=checkbox] {
 
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeReview()">閉じる</button>
-      <button class="btn-save" onclick="exportAndClose()">バックアップ保存</button>
+      <button class="btn-save" onclick="exportAndClose()">バックアップ</button>
     </div>
   </div>
 </div>
