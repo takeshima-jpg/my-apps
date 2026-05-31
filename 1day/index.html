@@ -133,7 +133,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .week-group-header { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text3); letter-spacing: 0.06em; padding: 6px 0 4px; border-bottom: 1px solid var(--border); margin-bottom: 4px; margin-top: 8px; }
 
 /* MODAL */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; backdrop-filter: blur(4px); }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 400; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; backdrop-filter: blur(4px); }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
 .modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; padding: 28px; display: flex; flex-direction: column; gap: 20px; transform: translateY(10px); transition: transform 0.22s ease; }
 .modal-overlay.open .modal { transform: translateY(0); }
@@ -307,6 +307,18 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .mob-data-btn { flex: 1; padding: 8px; font-size: 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); cursor: pointer; font-family: inherit; }
 @media (max-width: 720px) {
   .mob-data-bar { display: flex; }
+}
+
+/* モバイル: タグをグリッド表示 */
+@media (max-width: 720px) {
+  div.tag-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .tag-chip { text-align: center; padding: 8px 4px; font-size: 0.82rem; }
+}
+
+/* モバイル: モーダルをボトムシート型に */
+@media (max-width: 720px) {
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal { border-radius: 16px 16px 0 0; max-height: 92vh; max-width: 100%; padding: 20px 18px 32px; }
 }
 </style>
 </head>
