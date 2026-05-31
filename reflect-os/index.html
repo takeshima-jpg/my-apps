@@ -38,8 +38,8 @@ button{cursor:pointer;font-family:var(--serif);border:none;border-radius:3px;tra
 #hdr{border-bottom:1px solid var(--bd);padding:14px 28px;display:flex;align-items:center;gap:16px;background:var(--bg)}
 .logo{font-size:11px;color:var(--di);letter-spacing:.22em;flex-shrink:0}.logo b{color:var(--go);font-weight:400}
 nav{display:flex;gap:2px}
-.nb{padding:5px 13px;font-size:11px;letter-spacing:.05em;background:transparent;color:var(--di);border:1px solid transparent;border-radius:3px;cursor:pointer;font-family:var(--serif)}
-.nb.on{background:var(--sf);color:var(--tx);border-color:var(--bd)}
+.nb{padding:5px 13px;font-size:11px;letter-spacing:.05em;background:transparent;color:var(--di);border:1px solid transparent;border-radius:3px;cursor:pointer;font-family:var(--serif);display:inline-flex;align-items:center;gap:5px}.nb .nav-icon{font-size:13px;opacity:.7}
+.nb.on{background:var(--sf);color:var(--tx);border-color:var(--bd);border-bottom:2px solid var(--tx);font-weight:600}
 .hdr-r{margin-left:auto;display:flex;gap:6px}
 #v26{padding:8px 28px;border-bottom:1px solid var(--bd);background:var(--bg)}
 .v26c{display:flex;align-items:baseline;gap:14px;max-width:var(--max);margin:0 auto}
@@ -216,14 +216,14 @@ nav{display:flex;gap:2px}
 <div id="hdr">
   <div class="logo">REFLECT <b>OS</b></div>
   <nav id="nav">
-    <button class="nb on" data-tab="home">HOME</button>
-    <button class="nb" data-tab="log">ログ</button>
-    <button class="nb" data-tab="exp">実験</button>
-    <button class="nb" data-tab="dash">分析</button>
-    <button class="nb" data-tab="search">検索</button>
+    <button class="nb on" data-tab="home"><span class="nav-icon">◉</span> ホーム</button>
+    <button class="nb" data-tab="log"><span class="nav-icon">≡</span> ログ</button>
+    <button class="nb" data-tab="exp"><span class="nav-icon">◇</span> 実験</button>
+    <button class="nb" data-tab="dash"><span class="nav-icon">◈</span> 分析</button>
+    <button class="nb" data-tab="search"><span class="nav-icon">⌕</span> 検索</button>
   </nav>
   <div class="hdr-r">
-    <button class="btn-g" id="btn-exp">⬇ export</button>
+    <button class="btn-g" id="btn-exp">⬇ エクスポート</button>
     <label class="btn-g" style="cursor:pointer">⬆ import<input type="file" accept=".json" id="imp" style="display:none"></label>
   </div>
 </div>
