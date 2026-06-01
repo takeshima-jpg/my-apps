@@ -849,7 +849,7 @@ function loadData() {
   // archived フィールドがない古いデータに対応
   state.logs.forEach(l => { if (l.archived === undefined) l.archived = false; });
 }
-function saveData()    { localStorage.setItem(DB_KEY, JSON.stringify(state.logs)); gdriveAutoSave(); }
+function saveData()    { localStorage.setItem(DB_KEY, JSON.stringify(state.logs)); if (typeof gdriveAutoSave === "function") gdriveAutoSave(); }
 function saveReviews() { localStorage.setItem(RV_KEY, JSON.stringify(state.reviews)); }
 
 // DATE HELPERS
