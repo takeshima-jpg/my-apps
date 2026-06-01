@@ -112,7 +112,7 @@ header {
 /* LAYOUT */
 .layout {
   display: grid;
-  grid-template-columns: 180px 1fr 240px;
+  grid-template-columns: 1fr 240px;
   flex: 1;
 }
 
@@ -125,7 +125,7 @@ header {
   overflow-y: auto;
   padding: 16px 14px;
 }
-.left-panel { border-right: 1px solid var(--border); }
+
 .right-panel { border-left: 1px solid var(--border); }
 
 .panel-label {
@@ -203,21 +203,11 @@ select option { background: var(--surface); }
 .divider { height: 1px; background: var(--border); margin: 14px 0; }
 
 /* CAT FILTER */
-.cat-list { display: flex; flex-direction: column; gap: 1px; }
-.cat-item {
-  padding: 6px 8px;
-  cursor: pointer;
-  border-radius: 4px;
-  color: var(--text2);
-  font-size: 14px;
-  transition: all 0.1s;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.cat-item:hover { background: var(--surface2); color: var(--text); }
-.cat-item.active { background: rgba(154,116,64,0.1); color: var(--accent); font-weight: 500; }
-.cat-count { font-family: var(--font-mono); font-size: 10px; color: var(--text3); }
+
+
+
+
+
 
 /* CENTER */
 .center { padding: 16px 20px; min-height: calc(100vh - 48px); }
@@ -705,92 +695,28 @@ input[type=checkbox] {
 .tbl-filter-btn.active { border-color: var(--green); color: var(--green); background: var(--green-bg); }
 
 /* カテゴリ管理 */
-.cat-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-.cat-edit-toggle {
-  background: none;
-  border: 1px solid var(--border2);
-  color: var(--text3);
-  font-size: 10px;
-  font-family: var(--font-mono);
-  padding: 2px 7px;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: all 0.1s;
-}
-.cat-edit-toggle:hover { border-color: var(--accent); color: var(--accent); }
-.cat-edit-toggle.active { border-color: var(--accent); color: var(--accent); background: rgba(154,116,64,0.08); }
+
+
+
+
 
 /* 編集モード：カテゴリ行 */
-.cat-item-wrap {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 2px;
-}
-.cat-drag-handle {
-  color: var(--text3);
-  font-size: 14px;
-  cursor: grab;
-  padding: 4px 2px;
-  flex-shrink: 0;
-  user-select: none;
-}
-.cat-drag-handle:active { cursor: grabbing; }
-.cat-item-wrap .cat-item {
-  flex: 1;
-  margin-bottom: 0;
-}
-.cat-item-wrap.dragging { opacity: 0.4; }
-.cat-item-wrap.drag-over { border-top: 2px solid var(--accent); }
 
-.cat-del-btn {
-  background: none;
-  border: none;
-  color: var(--text3);
-  font-size: 15px;
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 3px;
-  flex-shrink: 0;
-  transition: color 0.1s;
-}
-.cat-del-btn:hover { color: var(--red); }
+
+.cat-drag-handle:active { cursor: grabbing; }
+
+
+
+
+
+
 
 /* カテゴリ追加フォーム */
-.cat-add-row {
-  display: none;
-  gap: 4px;
-  margin-top: 8px;
-}
+
 .cat-add-row.visible { display: flex; }
-.cat-add-input {
-  flex: 1;
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  color: var(--text);
-  padding: 5px 8px;
-  font-size: 14px;
-  font-family: var(--font-body);
-  border-radius: 4px;
-  outline: none;
-}
-.cat-add-input:focus { border-color: var(--accent); }
-.cat-add-submit {
-  background: var(--accent);
-  border: none;
-  color: #fff;
-  padding: 5px 10px;
-  font-size: 14px;
-  font-family: var(--font-mono);
-  border-radius: 4px;
-  cursor: pointer;
-  white-space: nowrap;
-}
+
+
+
 
 /* ── MOBILE RESPONSIVE ── */
 .mob-panel-btns{display:none;gap:4px;margin-left:auto;}
@@ -832,25 +758,14 @@ input[type=checkbox] {
   <div class="layout">
 
     <!-- LEFT -->
-    <div class="left-panel">
-      <button class="btn-add" onclick="openAddModal()" style="margin-bottom:14px">＋ タスク追加</button>
-      <div class="cat-section-header">
-        <div class="panel-label" style="margin-bottom:0">カテゴリ</div>
-        <button class="cat-edit-toggle" id="catEditToggle" onclick="toggleCatEdit()">編集</button>
-      </div>
-      <div class="cat-list" id="catList"></div>
-      <div class="cat-add-row" id="catAddRow">
-        <input class="cat-add-input" id="catAddInput" placeholder="新しいカテゴリ名"
-          onkeydown="if(event.key==='Enter')addCategory()">
-        <button class="cat-add-submit" onclick="addCategory()">追加</button>
-      </div>
-    </div>
+    
 
     <!-- CENTER -->
     <div class="center" id="mainCenter">
       <div class="view-header">
         <div class="view-title" id="viewTitle">実行判断ビュー</div>
         <div class="task-count-badge" id="taskCountBadge">0件</div>
+        <button class="btn-add" onclick="openAddModal()" style="padding:4px 14px;font-size:13px;">＋ タスク追加</button>
       </div>
       <div id="taskList"></div>
     </div>
@@ -1309,7 +1224,6 @@ function getSortKey(t) {
 // ── RENDER MAIN ──
 function render() {
   updateSummary();
-  renderCatList();
   populateSelect('addCategory', CATEGORIES[0]);
 
   const filtered = (selectedCat ? tasks.filter(t => t.category === selectedCat) : tasks)
@@ -1547,7 +1461,6 @@ function toggleCatEdit() {
   btn.classList.toggle('active', catEditMode);
   btn.textContent = catEditMode ? '完了' : '編集';
   addRow.classList.toggle('visible', catEditMode);
-  renderCatList();
 }
 
 function addCategory() {
@@ -1558,7 +1471,6 @@ function addCategory() {
   CATEGORIES.push(name);
   saveCategories();
   input.value = '';
-  renderCatList();
   // addModalのselectも更新
   populateSelect('addCategory', name);
 }
@@ -1591,24 +1503,10 @@ function onDragStart(e, idx) {
 function onDragOver(e, idx) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
-  document.querySelectorAll('.cat-item-wrap').forEach(el => el.classList.remove('drag-over'));
-  const el = document.getElementById('cat-wrap-' + idx);
-  if (el && idx !== dragSrcIndex) el.classList.add('drag-over');
-}
-function onDrop(e, idx) {
-  e.preventDefault();
-  if (dragSrcIndex === null || dragSrcIndex === idx) return;
-  const moved = CATEGORIES.splice(dragSrcIndex, 1)[0];
-  CATEGORIES.splice(idx, 0, moved);
-  saveCategories();
-  dragSrcIndex = null;
-  renderCatList();
-}
+  document.querySelectorAll('
 function onDragEnd(e) {
   dragSrcIndex = null;
-  document.querySelectorAll('.cat-item-wrap').forEach(el => {
-    el.classList.remove('dragging', 'drag-over');
-  });
+  document.querySelectorAll(');
 }
 
 
