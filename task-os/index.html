@@ -1156,19 +1156,19 @@ function renderHome(){
           evtRows = evts.map(e => {
             const d = e.date ? e.date.replace(/^\d{4}-/,'').replace('-','/') : '';
             const isOver = e.date && e.date < TODAY;
-            const rowStyle = isOver ? 'background:rgba(220,50,50,0.08);border-left:3px solid var(--r);' : '';
+            const overStyle = isOver ? 'background:rgba(220,50,50,0.08);border-left:3px solid var(--r);' : '';
             const dateColor = isOver ? 'var(--r)' : 'var(--text3)';
-            return '<div class="trow" style="padding:4px 6px;'+rowStyle+'">'
-              +'<div class="trow-title" style="font-size:12px;">'+esc(e.title||'')+'</div>'
-              +'<div class="trow-meta"><span style="font-size:11px;color:'+dateColor+';">'+d+'</span></div>'
+            return '<div class="trow" style="'+overStyle+'">'
+              +'<div class="trow-title">'+esc(e.title||'')+'</div>'
+              +'<div class="trow-date" style="color:'+dateColor+';">'+d+'</div>'
               +'<button class="btn-open" data-nav="project" onclick="nav(this.dataset.nav)">開く</button>'
               +'</div>';
           }).join('');
         } else {
           evtRows = '<div style="font-size:12px;color:var(--text3);padding:4px 8px;">直近イベントなし</div>';
         }
-        h += '<div style="margin-bottom:8px;">'
-          +'<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;font-weight:600;font-size:13px;border-bottom:1px solid var(--border);">'
+        h += '<div style="margin-bottom:6px;">'
+          +'<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;font-weight:600;font-size:15px;border-bottom:1px solid var(--border);color:var(--text1);">'
           +esc(p.name||p.title||'')
           +'<button class="btn-open" style="margin-left:auto;" data-nav="project" onclick="nav(this.dataset.nav)">開く</button>'
           +'</div>'
