@@ -35,18 +35,32 @@ textarea{resize:vertical;line-height:1.8}
 button{cursor:pointer;font-family:var(--serif);border:none;border-radius:3px;transition:all .15s}
 
 /* ── Layout ── */
-#hdr{border-bottom:1px solid var(--bd);padding:14px 28px;display:flex;align-items:center;gap:16px;background:var(--bg)}
-.logo{font-size:13px;color:var(--di);letter-spacing:.22em;flex-shrink:0}.logo b{color:var(--go);font-weight:400}
-nav{display:flex;gap:2px}
-.nb{padding:5px 13px;font-size:13px;letter-spacing:.05em;background:transparent;color:var(--di);border:1px solid transparent;border-radius:3px;cursor:pointer;font-family:var(--serif);display:inline-flex;align-items:center;gap:5px}.nb .nav-icon{font-size:15px;opacity:.7}
-.nb.on{background:var(--sf);color:var(--tx);border-color:var(--bd);border-bottom:2px solid var(--tx);font-weight:600}
-.hdr-r{margin-left:auto;display:flex;gap:6px}
-#v26{padding:8px 28px;border-bottom:1px solid var(--bd);background:var(--bg)}
-.v26c{display:flex;align-items:baseline;gap:14px;max-width:var(--max);margin:0 auto}
-.v26t{font-family:var(--mono);font-size:9px;color:var(--di);letter-spacing:.14em;min-width:38px}
-.v26b{font-size:13px;color:var(--mu);line-height:1.7}
-.v26k{font-family:var(--mono);font-size:9px;color:var(--di);margin-right:8px}
-#body{max-width:var(--max);margin:0 auto;padding:32px 28px 80px}
+.app{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:200px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+.sb-hd{padding:14px 16px;border-bottom:1px solid var(--bd);}
+.sb-logo{display:flex;align-items:center;gap:8px;}
+.sb-logo img{width:28px;height:28px;border-radius:7px;flex-shrink:0;}
+.sb-logo span{font-size:15px;font-weight:700;color:var(--tx);}
+.sb-nav{padding:6px 0;flex:0 0 auto;}
+nav{display:flex;flex-direction:column;gap:0;}
+.nb{padding:10px 16px;font-size:15px;letter-spacing:.02em;background:transparent;color:var(--mu);border:none;border-left:3px solid transparent;border-radius:0;cursor:pointer;font-family:var(--serif);display:flex;align-items:center;gap:8px;text-align:left;width:100%;transition:background .1s;}
+.nb:hover{background:var(--bg);}
+.nb .nav-icon{font-size:14px;width:16px;text-align:center;}
+.nb.on{color:var(--go);background:var(--go-lt);border-left-color:var(--go);font-weight:600;}
+.sb-rec{padding:10px 16px;border-top:1px solid var(--bd);flex:0 0 auto;}
+.sb-rec-lbl{font-size:9px;color:var(--di);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px;}
+.sb-rec-btn{display:block;width:100%;padding:7px 10px;margin-bottom:4px;font-size:13px;text-align:left;background:transparent;border:1px solid var(--bd);border-radius:3px;color:var(--mu);cursor:pointer;font-family:var(--serif);transition:all .1s;}
+.sb-rec-btn:hover{border-color:var(--go);color:var(--go);background:var(--go-lt);}
+.sb-ft{padding:10px 16px;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:4px;flex:0 0 auto;}
+.sb-ft button,.sb-ft label{display:block;width:100%;padding:6px 8px;font-size:12px;text-align:left;background:transparent;border:1px solid var(--bd);border-radius:3px;color:var(--di);cursor:pointer;font-family:var(--serif);}
+.sb-ft button:hover,.sb-ft label:hover{border-color:var(--mu);color:var(--mu);}
+#main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+#v26{padding:8px 20px;border-bottom:1px solid var(--bd);background:var(--bg);flex-shrink:0;}
+.v26c{display:flex;align-items:baseline;gap:14px;}
+.v26t{font-family:var(--mono);font-size:9px;color:var(--di);letter-spacing:.14em;min-width:38px;}
+.v26b{font-size:13px;color:var(--mu);line-height:1.7;}
+.v26k{font-family:var(--mono);font-size:9px;color:var(--di);margin-right:8px;}
+#body{flex:1;max-width:var(--max);padding:32px 28px 80px;}
 
 /* ── Buttons ── */
 .btn-p{background:var(--go);color:#fff;padding:9px 20px;font-size:15px}
@@ -213,22 +227,34 @@ nav{display:flex;gap:2px}
 </style>
 </head>
 <body>
-<div id="hdr">
-  <div class="logo" style="display:flex;align-items:center;gap:8px;"><img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;flex-shrink:0;"><span style="font-size:15px;font-weight:700;letter-spacing:.01em;">Reflect OS</span></div>
-  <nav id="nav">
-    <button class="nb on" data-tab="home"><span class="nav-icon">◉</span> ホーム</button>
-    <button class="nb" data-tab="log"><span class="nav-icon">≡</span> ログ</button>
-    <button class="nb" data-tab="exp"><span class="nav-icon">◇</span> 実験</button>
-    <button class="nb" data-tab="dash"><span class="nav-icon">◈</span> 分析</button>
-    <button class="nb" data-tab="search"><span class="nav-icon">⌕</span> 検索</button>
-  </nav>
-  <div class="hdr-r">
-    <button class="btn-g" id="btn-exp">⬇ エクスポート</button>
-    <label class="btn-g" style="cursor:pointer">⬆ import<input type="file" accept=".json" id="imp" style="display:none"></label>
+<div class="app">
+<div class="sidebar">
+  <div class="sb-hd">
+    <div class="sb-logo"><img src="icons/icon-32.png"><span>Reflect OS</span></div>
+  </div>
+  <div class="sb-nav">
+    <nav id="nav">
+      <button class="nb on" data-tab="home"><span class="nav-icon">◉</span> ホーム</button>
+      <button class="nb" data-tab="log"><span class="nav-icon">≡</span> ログ</button>
+      <button class="nb" data-tab="exp"><span class="nav-icon">◇</span> 実験</button>
+      <button class="nb" data-tab="dash"><span class="nav-icon">◈</span> 分析</button>
+      <button class="nb" data-tab="search"><span class="nav-icon">⌕</span> 検索</button>
+    </nav>
+  </div>
+  <div class="sb-rec">
+    <div class="sb-rec-lbl">記録する</div>
+    <div id="sb-rec-btns"></div>
+  </div>
+  <div class="sb-ft">
+    <button id="btn-exp">⬇ エクスポート</button>
+    <label style="cursor:pointer">⬆ インポート<input type="file" accept=".json" id="imp" style="display:none"></label>
   </div>
 </div>
-<div id="v26"></div>
-<div id="body"><div style="color:var(--di);padding:40px;font-size:14px;letter-spacing:.1em">loading...</div></div>
+<div id="main">
+  <div id="v26"></div>
+  <div id="body"><div style="color:var(--di);padding:40px;font-size:14px;letter-spacing:.1em">loading...</div></div>
+</div>
+</div>
 
 <script>
 /* ── DB ── */
@@ -504,17 +530,7 @@ function renderHome(){
   }
   f.appendChild(tsec);
 
-  // Record buttons
-  f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:12px'},'記録する'));
-  const rec=D({cls:'rec-grid',css:'margin-bottom:32px'});
-  Object.entries(TM).forEach(([id,meta])=>{
-    const b=D({cls:'rec-btn'});
-    b.appendChild(Sp({cls:'rec-btn-lbl'},meta.label));
-    b.appendChild(Sp({cls:'rec-btn-desc'},'記録'));
-    b.addEventListener('click',()=>{S.forming=id;S.fd={id:uid(),type:id,date:tod()};ra();});
-    rec.appendChild(b);
-  });
-  f.appendChild(rec);
+  // Record buttons moved to sidebar
 
   // Recent logs
   if(pub.length){
@@ -706,6 +722,17 @@ async function seedDefaultThemes(){const existing=await dball('themes');if(exist
     const lg=await dball('logs');
     S.logs=lg.sort((a,b)=>b.date.localeCompare(a.date));
   }catch(e){console.warn(e);}
+  // サイドバーの記録ボタンを生成
+  const sbRec = document.getElementById('sb-rec-btns');
+  if(sbRec){
+    Object.entries(TM).forEach(([id,meta])=>{
+      const b = document.createElement('button');
+      b.className = 'sb-rec-btn';
+      b.textContent = meta.label;
+      b.addEventListener('click',()=>{S.forming=id;S.fd={id:uid(),type:id,date:tod()};S.editing=null;ra();});
+      sbRec.appendChild(b);
+    });
+  }
   renderV26();ra();
 })();
 </script>
