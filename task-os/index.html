@@ -1142,7 +1142,7 @@ function renderHome(){
     const pjData = activePj.map(p => {
       const evts = (p.events||[])
         .filter(e => e.date && e.date >= from30)
-        .sort((a,b) => (b.date||'').localeCompare(a.date||''))
+        .sort((a,b) => (a.date||'').localeCompare(b.date||''))
         .slice(0,3);
       const hasOver = evts.some(e => e.date && e.date < TODAY);
       return {p, evts, hasOver};
