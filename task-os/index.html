@@ -1202,8 +1202,6 @@ function topActions(t){
     <button class="btn-ghost" onclick="postponeRt('${t.rawId}')">↗ 翌日</button>
     <button class="btn-open" onclick="nav('routine')">Routine で開く</button>`;
   return `
-    <button class="btn-done" onclick="completePj('${t.pId}','${t.kind}','${t.rawId}')">✓ 完了</button>
-    <button class="btn-open" onclick="openPjEdit('${t.pId}','${t.kind}','${t.rawId}',${J(t.title)},${J(t.status||'')},${J(t.due||'')})">期限変更</button>
     <button class="btn-open" onclick="nav('project')">Project で開く</button>`;
 }
 
