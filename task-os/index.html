@@ -1082,21 +1082,6 @@ function renderHome(){
     </div>`;
   }
 
-  // ─ Shot 実務タスク（期限未設定・折りたたみ）
-  if(noDue.length){
-    const sOpen = !!homeShotOpen;
-    h += `<div class="week-wrap">
-      <div class="week-hd" onclick="toggleShot()">
-        <span class="week-hd-label">⚡ Shot — 実務タスク</span>
-        <span class="week-hd-count">${noDue.length}</span>
-        <span class="week-hd-arrow${sOpen?' open':''}" id="shot-arrow">▶</span>
-      </div>
-      ${sOpen ? `<div class="week-body">
-        ${noDue.slice(0,10).map(t=>trowHtml(t)).join('')}
-        ${noDue.length>10?`<div style="font-size:13px;color:var(--text3);padding:6px 6px 2px;">他 ${noDue.length-10}件 → <button class="btn-open" onclick="nav('shot')" style="font-size:13px;">Shot で確認</button></div>`:''}
-      </div>` : ''}
-    </div>`;
-  }
 
   // 100リスト（期限切れ・当月、折りたたみ）
   const allList = get100ListItems().filter(function(i){ return !i.completed; });
