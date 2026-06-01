@@ -1146,7 +1146,7 @@ function renderHome(){
           return '<div class="trow" style="padding:4px 6px;">'
             +'<div class="trow-title" style="font-size:12px;">'+esc(e.title||'')+'</div>'
             +'<div class="trow-meta"><span style="font-size:11px;color:var(--text3);">'+d+'</span></div>'
-            +'<button class="btn-open" onclick="nav('project')">開く</button>'
+            +'<button class="btn-open" data-nav="project" onclick="nav(this.dataset.nav)">開く</button>'
             +'</div>';
         }).join('');
       } else {
@@ -1155,7 +1155,7 @@ function renderHome(){
       h += '<div class="pj-row" style="flex-direction:column;align-items:stretch;gap:4px;">'
         +'<div style="display:flex;align-items:center;gap:8px;">'
         +'<div class="pj-name">'+esc(p.name||p.title||'')+'</div>'
-        +'<button class="btn-open" style="margin-left:auto;" onclick="nav('project')">開く</button>'
+        +'<button class="btn-open" style="margin-left:auto;" data-nav="project" onclick="nav(this.dataset.nav)">開く</button>'
         +'</div>'
         +evtRows
         +'</div>';
