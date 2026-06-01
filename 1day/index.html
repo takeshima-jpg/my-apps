@@ -1162,10 +1162,14 @@ function importData() {
   document.getElementById('importFileInput').click();
 }
 function handleImport(e) {
-  const file = e.target.files[0]; if (!file) return;
+  alert('handleImport開始');
+  const file = e.target.files[0];
+  alert('ファイル: ' + (file ? file.name : 'なし'));
+  if (!file) return;
   const reader = new FileReader();
   reader.onerror = () => alert('ファイルの読み込みに失敗しました');
   reader.onload = ev => {
+    alert('読み込み完了、サイズ: ' + ev.target.result.length);
     try {
       const raw = ev.target.result;
       let data;
