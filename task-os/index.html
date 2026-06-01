@@ -1022,7 +1022,8 @@ function renderHome(){
   const tasks = allTasks();
   const ov    = tasks.filter(t=>isOv(t.due));
   const td    = tasks.filter(t=>isTd(t.due));
-  const noDue = tasks.filter(t=>!t.due && t.src==='shot');
+  const routineUrgent = tasks.filter(t=>t.src==='routine' && (isOv(t.due)||isTd(t.due)));
+  const shotUrgent    = tasks.filter(t=>t.src==='shot'    && (isOv(t.due)||isTd(t.due)));
   // 今週（明日〜7日以内の期日あり、日付順）
   const thisWeek = tasks.filter(t=>{
     if(!t.due||isOv(t.due)||isTd(t.due)) return false;
@@ -1056,7 +1057,8 @@ function renderHome(){
   h += `<div class="status-row">
     <div class="snum ov"><div class="snum-v">${ov.length}</div><div class="snum-l">期限超過</div></div>
     <div class="snum td"><div class="snum-v">${td.length}</div><div class="snum-l">今日期限</div></div>
-    <div class="snum wk"><div class="snum-v">${noDue.length}</div><div class="snum-l">Shot未設定</div></div>
+    <div class="snum wk"><div class="snum-v">${routineUrgent.length}</div><div class="snum-l">ルーチン緊急</div></div>
+    <div class="snum ov"><div class="snum-v">${shotUrgent.length}</div><div class="snum-l">Shot緊急</div></div>
   </div>`;
 
   // ─ 今やる（期限超過 + 今日）
