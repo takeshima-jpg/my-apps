@@ -1127,21 +1127,38 @@ function renderHome(){
     h += '</div>' + body + '</div>';
   }
 
-  // ─ Project 進行
+  // ─ Project 進行（当月イベント）
   if(activePj.length){
     h += secLabel('◈ Project', activePj.length);
+    const yrP = new Date().getFullYear();
+    const moP = String(new Date().getMonth()+1).padStart(2,'0');
+    const moPrefix = yrP+'-'+moP;
     activePj.forEach(p => {
-      const all=[...(p.forks||[]),...(p.events||[])];
-      const doneC=all.filter(i=>i.status==='完了'||i.status==='past'||i.status==='done').length;
-      const pct=all.length?Math.round(doneC/all.length*100):0;
-      const ovC=all.filter(i=>i.date&&i.date<TODAY&&i.status!=='完了'&&i.status!=='past').length;
-      h += `<div class="pj-row">
-        <div class="pj-name">${esc(p.name||p.title||'')}</div>
-        ${ovC?`<span style="font-size:10px;color:var(--r);font-weight:700;">${ovC}超過</span>`:''}
-        <div class="pj-bar-bg"><div class="pj-bar" style="width:${pct}%"></div></div>
-        <div class="pj-pct">${pct}%</div>
-        <button class="btn-open" onclick="nav('project')">開く</button>
-      </div>`;
+      // 当月のイベントを日付降順で取得（最新3件）
+      const evts = (p.events||[])
+        .filter(e => e.date && e.date.startsWith(moPrefix))
+        .sort((a,b) => (b.date||'').localeCompare(a.date||''))
+        .slice(0,3);
+      let evtRows = '';
+      if(evts.length){
+        evtRows = evts.map(e => {
+          const d = e.date ? e.date.replace(/^\d{4}-/,'').replace('-','/') : '';
+          return '<div class="trow" style="padding:4px 6px;">'
+            +'<div class="trow-title" style="font-size:12px;">'+esc(e.title||'')+'</div>'
+            +'<div class="trow-meta"><span style="font-size:11px;color:var(--text3);">'+d+'</span></div>'
+            +'<button class="btn-open" onclick="nav('project')">開く</button>'
+            +'</div>';
+        }).join('');
+      } else {
+        evtRows = '<div style="font-size:12px;color:var(--text3);padding:4px 8px;">当月のイベントなし</div>';
+      }
+      h += '<div class="pj-row" style="flex-direction:column;align-items:stretch;gap:4px;">'
+        +'<div style="display:flex;align-items:center;gap:8px;">'
+        +'<div class="pj-name">'+esc(p.name||p.title||'')+'</div>'
+        +'<button class="btn-open" style="margin-left:auto;" onclick="nav('project')">開く</button>'
+        +'</div>'
+        +evtRows
+        +'</div>';
     });
   }
 
