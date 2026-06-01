@@ -1132,29 +1132,25 @@ function renderHome(){
     h += '</div>' + body + '</div>';
   }
 
-  // ─ Project 進行（直近30日イベント）
+  // ─ Project 進行（直近30日イベント、折りたたみ）
   if(activePj.length){
-    // 直近30日の範囲
     const d30 = new Date(); d30.setDate(d30.getDate()-30);
     const from30 = d30.toISOString().slice(0,10);
 
-    // プロジェクトごとにイベント抽出・期限切れ判定
-    const pjData = activePj.map(p => {
-      const evts = (p.events||[])
-        .filter(e => e.date && e.date >= from30)
-        .sort((a,b) => (a.date||'').localeCompare(b.date||''))
-        .slice(0,3);
-      const hasOver = evts.some(e => e.date && e.date < TODAY);
-      return {p, evts, hasOver};
-    });
-
-    // 期限切れありは常時表示、なしは折りたたみ
-    const overPjs  = pjData.filter(x => x.hasOver);
-    const otherPjs = pjData.filter(x => !x.hasOver);
-
-    function renderPjRows(items){
-      let r = '';
-      items.forEach(({p, evts}) => {
+    const pjOpen = !!homePjOpen;
+    const pjArrowCls = 'week-hd-arrow' + (pjOpen ? ' open' : '');
+    h += '<div class="week-wrap"><div class="week-hd" onclick="togglePj()">'
+      +'<span class="week-hd-label">◈ Project — 直近30日</span>'
+      +'<span class="week-hd-count">'+activePj.length+'</span>'
+      +'<span class="'+pjArrowCls+'">▶</span>'
+      +'</div>';
+    if(pjOpen){
+      h += '<div class="week-body">';
+      activePj.forEach(p => {
+        const evts = (p.events||[])
+          .filter(e => e.date && e.date >= from30)
+          .sort((a,b) => (a.date||'').localeCompare(b.date||''))
+          .slice(0,3);
         let evtRows = '';
         if(evts.length){
           evtRows = evts.map(e => {
@@ -1171,7 +1167,7 @@ function renderHome(){
         } else {
           evtRows = '<div style="font-size:12px;color:var(--text3);padding:4px 8px;">直近イベントなし</div>';
         }
-        r += '<div style="margin-bottom:8px;">'
+        h += '<div style="margin-bottom:8px;">'
           +'<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;font-weight:600;font-size:13px;border-bottom:1px solid var(--border);">'
           +esc(p.name||p.title||'')
           +'<button class="btn-open" style="margin-left:auto;" data-nav="project" onclick="nav(this.dataset.nav)">開く</button>'
@@ -1179,29 +1175,9 @@ function renderHome(){
           +evtRows
           +'</div>';
       });
-      return r;
-    }
-
-    // 期限切れあり → 常時表示
-    if(overPjs.length){
-      h += secLabel('◈ Project — 期限切れあり', overPjs.length);
-      h += '<div class="week-body">'+renderPjRows(overPjs)+'</div>';
-    }
-
-    // 期限切れなし → 折りたたみ
-    if(otherPjs.length){
-      const pjOpen = !!homePjOpen;
-      const pjArrowCls = 'week-hd-arrow' + (pjOpen ? ' open' : '');
-      h += '<div class="week-wrap"><div class="week-hd" onclick="togglePj()">'
-        +'<span class="week-hd-label">◈ Project — 直近30日</span>'
-        +'<span class="week-hd-count">'+otherPjs.length+'</span>'
-        +'<span class="'+pjArrowCls+'">▶</span>'
-        +'</div>';
-      if(pjOpen){
-        h += '<div class="week-body">'+renderPjRows(otherPjs)+'</div>';
-      }
       h += '</div>';
     }
+    h += '</div>';
   }
 
   /* TIMELINE-DISABLED (将来復活可)
