@@ -608,7 +608,7 @@ function allTasks(){
   // ── Shot: status は 'todo'/'doing'/'pending'/'done'。'done' のみ除外
   //    dueDate なしのタスクも表示対象（期限未設定として扱う）
   getSh().forEach(t => {
-    if(t.status==='done') return;
+    if(t.status==='done'||t.status==='pending') return;
     tasks.push({ id:'s_'+t.id, rawId:t.id, src:'shot',
       title:t.title||'', due:t.dueDate||null,
       status:t.status||'todo', updAt:t.updatedAt||null,
