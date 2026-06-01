@@ -28,20 +28,20 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 17px; }
 body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; -webkit-font-smoothing: antialiased; }
-.app { display: flex; min-height: 100vh; }
+.app { display: flex; flex-direction: column; min-height: 100vh; }
 
 /* SIDEBAR */
-.sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 28px 20px; position: sticky; top: 0; height: 100vh; }
-.logo { font-family: var(--font-mono); font-size: 1.625rem; font-weight: 500; color: var(--text); letter-spacing: -0.04em; }
-.logo-sub { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text3); letter-spacing: 0.08em; margin-top: 2px; margin-bottom: 32px; }
-.side-nav { display: flex; flex-direction: column; gap: 4px; }
-.nav-item { background: none; border: none; color: var(--text2); font-family: var(--font-body); font-size: 0.975rem; padding: 9px 12px; border-radius: var(--radius); cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px; transition: background var(--transition), color var(--transition); }
-.nav-item:hover { background: var(--bg3); color: var(--text); }
-.nav-item.active { background: rgba(124,111,255,0.12); color: var(--accent); font-weight: 600; border-left: 3px solid var(--accent); padding-left: 9px; }
+
+
+
+
+
+
+
 .nav-icon { font-size: 0.875rem; color: var(--accent); }
-.last-record-wrap { margin-top: auto; padding-top: 20px; }
-.last-record-label { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); letter-spacing: 0.06em; margin-bottom: 4px; }
-.last-record-date { font-family: var(--font-mono); font-size: 0.925rem; color: var(--text2); }
+
+
+
 .side-bottom { padding-top: 12px; border-top: 1px solid var(--border); margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
 .side-action { background: none; border: none; color: var(--text3); font-family: var(--font-mono); font-size: 0.845rem; padding: 6px 4px; cursor: pointer; text-align: left; transition: color var(--transition); letter-spacing: 0.02em; }
 .side-action:hover { color: var(--text); }
@@ -70,8 +70,8 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 /* ARCHIVE ACTION BAR */
-.archive-bar { display: none; align-items: center; gap: 12px; padding: 10px 32px; background: var(--bg3); border-bottom: 1px solid var(--border); font-size: 0.925rem; color: var(--text2); }
-.archive-bar.visible { display: flex; }
+
+
 .btn-archive { background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 0.925rem; padding: 6px 14px; cursor: pointer; font-family: var(--font-body); transition: background var(--transition); }
 .btn-archive:hover { background: var(--accent2); }
 .btn-deselect { background: none; border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text2); font-size: 0.925rem; padding: 5px 12px; cursor: pointer; font-family: var(--font-body); transition: all var(--transition); }
@@ -189,7 +189,7 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .field-hint { font-size: 0.7rem; color: var(--text3); font-family: var(--font-mono); margin-top: -4px; letter-spacing: 0.02em; }
 
 /* CONVICTION ROW */
-.conviction-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
 .conv-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text2); font-size: 0.925rem; padding: 8px 16px; cursor: pointer; font-family: var(--font-body); transition: all var(--transition); }
 .conv-btn:hover { border-color: var(--border2); color: var(--text); }
 .conv-btn.selected { border-color: var(--accent); background: rgba(124,111,255,0.1); color: var(--accent); }
@@ -200,22 +200,22 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
 
 /* RESPONSIVE */
-.mob-header { display: none; align-items: center; gap: 10px; padding: 0 16px; height: 48px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; flex-shrink: 0; }
+.mob-header { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 48px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; flex-shrink: 0; }
 .mob-logo { font-size: 17px; font-weight: 800; color: var(--accent); letter-spacing: .03em; }
 .mob-sub { font-size: 13px; color: var(--text3); }
 .mob-menu-btn { background: none; border: none; color: var(--text2); font-size: 22px; cursor: pointer; padding: 4px 8px; margin-left: auto; line-height: 1; }
-.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 150; }
+
 @media (max-width: 720px) {
-  .mob-header { display: flex; } .app { flex-direction: column; }
-  .sidebar { position: fixed; left: -100%; top: 0; height: 100%; z-index: 300; transition: left .25s ease; width: 220px; }
-  .sidebar.open { left: 0; }
-  .sidebar-overlay.open { display: block; }
+  .mob-header { display: flex; }
+  
+  
+  
   .topbar { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
   .topbar-right { flex-wrap: wrap; width: 100%; gap: 8px; }
   .search-input { width: 100%; }
   .log-list { padding: 16px; }
   .log-list.selectable { padding-left: 40px; }
-  .filter-bar, .archive-bar { padding: 10px 16px; }
+  .filter-bar, 
   .review-insights { grid-template-columns: 1fr; }
   .modal { padding: 20px; }
 }
@@ -236,75 +236,8 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .filter-tags-sub { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
 .filter-sub-label { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); padding: 4px 6px; letter-spacing: 0.06em; }
 
-.db-item-sub { font-size: 0.845rem; color: var(--text3); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px; }
 
-/* TAG DIST */
-.db-tag-dist { display: flex; flex-direction: column; gap: 6px; }
-.db-tag-bar-row { display: flex; align-items: center; gap: 10px; }
-.db-tag-name { font-family: var(--font-mono); font-size: 0.845rem; color: var(--text2); width: 72px; flex-shrink: 0; }
-.db-tag-bar-wrap { flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
-.db-tag-bar { height: 100%; background: var(--accent); border-radius: 3px; opacity: 0.5; transition: width 0.3s ease; }
-.db-tag-count { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text3); width: 24px; text-align: right; }
-.db-section-sub { font-size: 0.62rem; color: var(--text3); font-weight: 300; margin-left: 6px; }
-.db-section-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-.db-section-header .db-section-title { border-bottom: none; padding-bottom: 0; }
-.period-switcher { display: flex; gap: 4px; }
-.period-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text3); font-family: var(--font-mono); font-size: 0.68rem; padding: 3px 10px; cursor: pointer; transition: all var(--transition); }
-.period-btn:hover { border-color: var(--border2); color: var(--text2); }
-.period-btn.active { border-color: var(--accent); color: var(--accent); }
-.state-graphs { display: flex; flex-direction: column; gap: 20px; }
-.graph-block { display: flex; flex-direction: column; gap: 6px; }
-.graph-label { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text2); display: flex; align-items: baseline; gap: 10px; }
-.graph-desc { font-size: 0.65rem; color: var(--text3); font-weight: 300; }
-.graph-wrap { width: 100%; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.graph-wrap svg { display: block; width: 100%; }
-.graph-no-data { font-family: var(--font-mono); font-size: 0.845rem; color: var(--text3); padding: 18px 20px; }
 
-/* DASHBOARD */
-.dashboard { flex: 1; padding: 28px 32px; display: flex; flex-direction: column; gap: 32px; overflow-y: auto; }
-.db-section { display: flex; flex-direction: column; gap: 12px; }
-.db-section-title { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text3); letter-spacing: 0.08em; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-.db-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.db-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2); padding: 16px 20px; display: flex; flex-direction: column; gap: 6px; }
-.db-card-sm { min-width: 120px; }
-.db-card-wide { flex: 1; min-width: 220px; }
-.db-card-label { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); letter-spacing: 0.06em; }
-.db-card-value { font-size: 1.125rem; color: var(--text); font-weight: 500; }
-.db-sat-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2px; }
-.db-sat-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.db-sat-dot { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.905rem; font-weight: 700; }
-.db-sat-dot.great { background: rgba(62,207,142,0.12); color: var(--sat-great); }
-.db-sat-dot.good  { background: rgba(79,163,255,0.12); color: var(--sat-good); }
-.db-sat-dot.meh   { background: rgba(245,200,66,0.12);  color: var(--sat-meh); }
-.db-sat-dot.bad   { background: rgba(255,92,92,0.12);   color: var(--sat-bad); }
-.db-sat-date { font-family: var(--font-mono); font-size: 0.58rem; color: var(--text3); }
-
-.db-list { display: flex; flex-direction: column; gap: 8px; }
-.db-item { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 16px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; transition: border-color var(--transition); }
-.db-item:hover { border-color: var(--border2); }
-.db-item-date { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); }
-.db-item-text { font-size: 0.975rem; color: var(--text2); line-height: 1.55; }
-.db-item-text.expanded { color: var(--text); }
-.db-empty { font-family: var(--font-mono); font-size: 0.875rem; color: var(--text3); padding: 8px 0; }
-
-.db-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.db-col-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text3); margin-bottom: 8px; letter-spacing: 0.04em; }
-
-.db-pattern-list { display: flex; flex-direction: column; gap: 6px; }
-.db-pattern-item { display: flex; align-items: center; justify-content: space-between; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 16px; }
-.db-pattern-text { font-size: 0.975rem; color: var(--text2); }
-.db-pattern-count { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text3); background: var(--bg3); padding: 2px 8px; border-radius: 10px; }
-
-.conviction-smooth { color: var(--sat-great); }
-.conviction-off    { color: var(--sat-meh); }
-.conviction-forced { color: var(--sat-bad); }
-.conviction-lost   { color: var(--text3); }
-
-@media (max-width: 720px) {
-  .dashboard { padding: 16px; gap: 24px; }
-  .db-two-col { grid-template-columns: 1fr; }
-}
-  
 /* モバイル用データ管理ボタン */
 .mob-data-bar { display: none; gap: 8px; padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); }
 .mob-data-btn { flex: 1; padding: 8px; font-size: 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); cursor: pointer; font-family: inherit; }
@@ -617,24 +550,7 @@ function gdriveAutoSave() {
   <button class="gdrive-btn" id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none">⬇ 読込</button>
 </div>
 <div class="app">
-  <aside class="sidebar">
-    <div class="logo">1day</div>
-    <div class="logo-sub">思考ログ</div>
-    <nav class="side-nav">
-      <button class="nav-item" data-view="dashboard"><span class="nav-icon">◉</span> ダッシュボード</button>
-      <button class="nav-item active" data-view="log"><span class="nav-icon">◈</span> ログ</button>
-      <button class="nav-item" data-view="archive"><span class="nav-icon">◇</span> アーカイブ</button>
-    </nav>
-    <div class="last-record-wrap">
-      <div class="last-record-label">最終記録日</div>
-      <div class="last-record-date" id="lastRecordDate">—</div>
-    </div>
-    <div class="side-bottom">
-      <button class="side-action" id="exportBtn">↓ エクスポート</button>
-      <button class="side-action" id="importBtn" style="margin-top:4px;background:var(--bg3);color:var(--text2)">↑ インポート</button>
-      <input type="file" id="importFileInput" accept=".json" style="display:none">
-    </div>
-  </aside>
+
 
   <main class="main">
     <div class="topbar">
@@ -673,11 +589,7 @@ function gdriveAutoSave() {
     <div class="vision-area" id="visionArea"></div>
 
     <!-- 選択時のみ表示されるアーカイブバー -->
-    <div class="archive-bar" id="archiveBar">
-      <span id="selectedCount">0件選択中</span>
-      <button class="btn-archive" id="doArchive">アーカイブする</button>
-      <button class="btn-deselect" id="doDeselect">選択解除</button>
-    </div>
+    
 
     <div class="log-list" id="logList">
       <div class="empty-state" id="emptyState">
@@ -688,112 +600,9 @@ function gdriveAutoSave() {
     </div>
 
     <!-- ダッシュボード -->
-    <div class="dashboard" id="dashboard" style="display:none;">
-
-      <!-- 状態計 -->
-      <div class="db-section">
-        <div class="db-section-header">
-          <div class="db-section-title">// 状態計</div>
-          <div class="period-switcher">
-            <button class="period-btn" data-weeks="4">4週</button>
-            <button class="period-btn active" data-weeks="12">12週</button>
-            <button class="period-btn" data-weeks="24">24週</button>
-          </div>
-        </div>
-        <div class="state-graphs">
-          <div class="graph-block">
-            <div class="graph-label">確信度 <span class="graph-desc">頭と心が一致していた感覚</span></div>
-            <div class="graph-wrap" id="graph_conviction"></div>
-          </div>
-          <div class="graph-block">
-            <div class="graph-label">満足度 <span class="graph-desc">今週の全体的な充実感</span></div>
-            <div class="graph-wrap" id="graph_satisfaction"></div>
-          </div>
-          <div class="graph-block">
-            <div class="graph-label">違和感検知数 <span class="graph-desc">ズレや違和感を感知した回数</span></div>
-            <div class="graph-wrap" id="graph_unease"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ② 今週の状態 -->
-      <div class="db-section">
-        <div class="db-section-title">// 今週の状態</div>
-        <div class="db-row" id="db_this_week_row">
-          <div class="db-card db-card-sm">
-            <div class="db-card-label">確信度</div>
-            <div class="db-card-value" id="db_conviction_val">—</div>
-          </div>
-          <div class="db-card db-card-sm">
-            <div class="db-card-label">満足度平均</div>
-            <div class="db-card-value" id="db_sat_avg">—</div>
-          </div>
-          <div class="db-card db-card-sm">
-            <div class="db-card-label">△ 違和感検知</div>
-            <div class="db-card-value" id="db_unease_val">—</div>
-          </div>
-          <div class="db-card db-card-sm">
-            <div class="db-card-label">◉ エネルギー高</div>
-            <div class="db-card-value" id="db_energy_count">—</div>
-          </div>
-          <div class="db-card db-card-sm">
-            <div class="db-card-label">◎ 深掘り</div>
-            <div class="db-card-value" id="db_deep_count">—</div>
-          </div>
-          <div class="db-card db-card-sm">
-            <div class="db-card-label">◈ VISION関連</div>
-            <div class="db-card-value" id="db_vision_count">—</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ③ 違和感ログ -->
-      <div class="db-section">
-        <div class="db-section-title">// 違和感ログ</div>
-        <div class="db-list" id="db_unease_list"></div>
-      </div>
-
-      <!-- ④ エネルギー源 -->
-      <div class="db-section">
-        <div class="db-section-title">// エネルギー源</div>
-        <div class="db-list" id="db_energy_list"></div>
-      </div>
-
-      <!-- ⑤ 深掘り候補 -->
-      <div class="db-section">
-        <div class="db-section-title">// 深掘り候補</div>
-        <div class="db-list" id="db_deep_list"></div>
-      </div>
-
-      <!-- ⑥ VISION関連 -->
-      <div class="db-section">
-        <div class="db-section-title">// VISIONとのズレ・確信</div>
-        <div class="db-two-col">
-          <div>
-            <div class="db-col-label">ズレた瞬間</div>
-            <div class="db-list" id="db_vision_off_list"></div>
-          </div>
-          <div>
-            <div class="db-col-label">確信を感じた瞬間</div>
-            <div class="db-list" id="db_vision_on_list"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ⑦ ブログ・思想の種 -->
-      <div class="db-section">
-        <div class="db-section-title">// ブログ・思想の種</div>
-        <div class="db-list" id="db_blog_list"></div>
-      </div>
-
-      <!-- ⑧ タグ分布 -->
-      <div class="db-section">
-        <div class="db-section-title">// タグ分布 <span class="db-section-sub">直近12週</span></div>
-        <div class="db-tag-dist" id="db_tag_dist"></div>
-      </div>
-
-    </div>
-  </main>
+    
+    <input type="file" id="importFileInput" accept=".json" style="display:none">
+</main>
 </div>
 
 <script>
@@ -802,7 +611,7 @@ function gdriveAutoSave() {
 const DB_KEY = 'oneday_logs_v1';
 const RV_KEY = 'oneday_reviews_v1';
 
-let state = { logs:[], reviews:[], filter:'all', search:'', editId:null, view:'log', selected:new Set() };
+let state = { logs:[], reviews:[], filter:'all', search:'', editId:null, view: 'log', selected:new Set() };
 const SAT_LABEL   = { great:'◎', good:'〇', meh:'△', bad:'×' };
 const SAT_CLASS   = { great:'great', good:'good', meh:'meh', bad:'bad' };
 const FLAG_LABELS = { unease:'△ 違和感', energy:'◉ エネルギー高', blog:'≡ ブログ候補', deep:'◎ 深掘り', vision:'◈ VISION関連', learning:'🧠 学び', relation:'❤️ 人間関係' };
@@ -827,28 +636,6 @@ const VISION_DATA = {
   ],
 };
 
-function renderVision() {
-  const area = document.getElementById('visionArea');
-  if (!area) return;
-  // 日付をシードにしてランダム選択（同じ日は同じ内容）
-  const seed = parseInt(today().replace(/-/g,'')) % 100;
-  const types = ['vision','principle','direction'];
-  const type = types[seed % 3];
-  let html = '';
-  if (type === 'vision') {
-    const item = VISION_DATA.vision[seed % VISION_DATA.vision.length];
-    html = `<div class="vision-card"><span class="vision-type">VISION</span><span class="vision-body">${item}</span></div>`;
-  } else if (type === 'principle') {
-    const item = VISION_DATA.principles[seed % VISION_DATA.principles.length];
-    html = `<div class="vision-card"><span class="vision-type">原則</span><span class="vision-body"><span class="vision-keyword">${item.title}</span>${item.text}</span></div>`;
-  } else {
-    const item = VISION_DATA.directions[seed % VISION_DATA.directions.length];
-    html = `<div class="vision-card"><span class="vision-type">指針</span><span class="vision-body"><span class="vision-keyword">${item.title}</span>${item.text}</span></div>`;
-  }
-  area.innerHTML = html;
-}
-
-// PERSISTENCE
 function loadData() {
   try { state.logs    = JSON.parse(localStorage.getItem(DB_KEY)) || []; } catch { state.logs = []; }
   try { state.reviews = JSON.parse(localStorage.getItem(RV_KEY)) || []; } catch { state.reviews = []; }
@@ -878,13 +665,8 @@ function isoWeek(dateStr) {
   const mon = new Date(d); mon.setDate(d.getDate() - ((dow+6)%7));
   return mon.toISOString().slice(0,10);
 }
-function getThisWeekLogs() { return state.logs.filter(l => !l.archived && isoWeek(l.date) === isoWeek(today())); }
-
-// FILTER
 function filteredLogs() {
-  let logs = state.view === 'archive'
-    ? state.logs.filter(l => l.archived)
-    : state.logs.filter(l => !l.archived);
+  let logs = state.logs.filter(l => !l.archived);
   logs = [...logs].sort((a,b) => b.date.localeCompare(a.date));
   if (state.search) {
     const q = state.search.toLowerCase();
@@ -905,42 +687,9 @@ function filteredLogs() {
 // RENDER
 function render() {
   document.getElementById('weekDisplay').textContent = `W ${currentWeekRange()}`;
-  renderVision();
-  // 最終記録日を更新
-  const activeLogs = state.logs.filter(l => !l.archived);
-  const lastDate = activeLogs.length
-    ? activeLogs.reduce((a, b) => a.date > b.date ? a : b).date
-    : null;
-  const lastEl = document.getElementById('lastRecordDate');
-  if (lastEl) lastEl.textContent = lastDate ? formatDate(lastDate) : '—';
-
-  if (state.view === 'dashboard') {
-    document.getElementById('logList').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'flex';
-    document.getElementById('filter-bar-wrap').style.display = 'none';
-    document.getElementById('visionArea').style.display = 'none';
-    document.getElementById('archiveBar').style.display = 'none';
-    renderDashboard();
-  } else {
-    document.getElementById('logList').style.display = 'flex';
-    document.getElementById('dashboard').style.display = 'none';
-    document.getElementById('filter-bar-wrap').style.display = '';
-    document.getElementById('visionArea').style.display = '';
-    renderLogList();
-    updateArchiveBar();
-  }
+  renderLogList();
 }
 
-// DASHBOARD
-const CONVICTION_LABEL = { smooth:'スッと進めた', off:'少しズレた', forced:'無理していた', lost:'わからなくなった' };
-const CONVICTION_CLASS = { smooth:'conviction-smooth', off:'conviction-off', forced:'conviction-forced', lost:'conviction-lost' };
-const SAT_CLASS2 = { great:'great', good:'good', meh:'meh', bad:'bad' };
-const CONVICTION_SCORE = { smooth:4, off:3, forced:2, lost:1 };
-const SAT_SCORE = { great:4, good:3, meh:2, bad:1 };
-
-let graphWeeks = 12; // default
-
-// 対象期間の週開始日リストを生成（新→旧の逆順で最後にreverseして古→新）
 function getWeekStarts(n) {
   const result = [];
   let cur = isoWeek(today());
@@ -1068,69 +817,6 @@ function renderStateGraphs() {
   drawLineGraph('graph_unease',       data, 'uneaseCount',  '#f5c842', 0, maxUnease, true);
 }
 
-function renderDashboard() {
-  renderStateGraphs();
-  const activeLogs = state.logs.filter(l => !l.archived);
-  const thisWeekLogs = activeLogs.filter(l => isoWeek(l.date) === isoWeek(today()));
-  const thisWeekReview = state.reviews.find(r => r.week === isoWeek(today()));
-  const recentReviews = [...state.reviews].sort((a,b) => b.week.localeCompare(a.week)).slice(0,6);
-
-  const cv = thisWeekReview?.conviction || '';
-  const cvEl = document.getElementById('db_conviction_val');
-  cvEl.textContent = cv ? CONVICTION_LABEL[cv] : '未記録';
-  cvEl.className = 'db-card-value ' + (CONVICTION_CLASS[cv] || '');
-
-  const satLogs = thisWeekLogs.filter(l => l.satisfaction);
-  const satAvg = satLogs.length
-    ? (satLogs.reduce((s,l) => s + (SAT_SCORE[l.satisfaction]||0), 0) / satLogs.length).toFixed(1)
-    : '—';
-  document.getElementById('db_sat_avg').textContent = satAvg !== '—' ? satAvg + ' / 4' : '—';
-
-  const uneaseCount = thisWeekLogs.filter(l => l.unease || (l.flags||[]).includes('unease')).length;
-  document.getElementById('db_unease_val').textContent   = uneaseCount || '0';
-  document.getElementById('db_energy_count').textContent = thisWeekLogs.filter(l => (l.flags||[]).includes('energy')).length || '0';
-  document.getElementById('db_deep_count').textContent   = thisWeekLogs.filter(l => (l.flags||[]).includes('deep')).length || '0';
-  document.getElementById('db_vision_count').textContent = thisWeekLogs.filter(l => (l.flags||[]).includes('vision')).length || '0';
-
-  const uneaseItems = activeLogs
-    .filter(l => l.unease || (l.flags||[]).includes('unease'))
-    .sort((a,b) => b.date.localeCompare(a.date)).slice(0,8);
-  renderDbList('db_unease_list', uneaseItems, l => l.events, '違和感の記録なし', l => l.unease ? '⚠ ' + escHtml(l.unease) : null);
-
-  const energyItems = activeLogs.filter(l => (l.flags||[]).includes('energy'))
-    .sort((a,b) => b.date.localeCompare(a.date)).slice(0,6);
-  renderDbList('db_energy_list', energyItems, l => l.events, 'エネルギー高の記録なし', l => tagsHtmlSmall(l.tags));
-
-  const deepItems = activeLogs.filter(l => (l.flags||[]).includes('deep'))
-    .sort((a,b) => b.date.localeCompare(a.date)).slice(0,6);
-  renderDbList('db_deep_list', deepItems, l => l.events, '深掘り候補の記録なし', l => l.unease ? '⚠ ' + escHtml(l.unease) : null);
-
-  const offItems = recentReviews.filter(r => r.vision_off).slice(0,5);
-  document.getElementById('db_vision_off_list').innerHTML = offItems.length
-    ? offItems.map(r => '<div class="db-item"><div class="db-item-date">' + getWeekRange(r.week) + '</div><div class="db-item-text">' + escHtml(r.vision_off) + '</div></div>').join('')
-    : '<div class="db-empty">記録なし</div>';
-  const onItems = recentReviews.filter(r => r.vision_on).slice(0,5);
-  document.getElementById('db_vision_on_list').innerHTML = onItems.length
-    ? onItems.map(r => '<div class="db-item"><div class="db-item-date">' + getWeekRange(r.week) + '</div><div class="db-item-text">' + escHtml(r.vision_on) + '</div></div>').join('')
-    : '<div class="db-empty">記録なし</div>';
-
-  const blogItems = activeLogs.filter(l => (l.flags||[]).includes('blog'))
-    .sort((a,b) => b.date.localeCompare(a.date)).slice(0,8);
-  renderDbList('db_blog_list', blogItems, l => l.events, 'ブログ候補の記録なし', l => tagsHtmlSmall(l.tags));
-
-  const oldest12 = getWeekStarts(12)[0];
-  const recentLogs12 = activeLogs.filter(l => l.date >= oldest12);
-  const TAG_LIST = ['経営','組織','人間関係','家族','健康','感情','学び','お金','未来'];
-  const tagFreq = {};
-  TAG_LIST.forEach(t => { tagFreq[t] = 0; });
-  recentLogs12.forEach(l => (l.tags||[]).forEach(t => { if (tagFreq[t] !== undefined) tagFreq[t]++; }));
-  const maxTag = Math.max(1, ...Object.values(tagFreq));
-  const sortedTags = TAG_LIST.filter(t => tagFreq[t] > 0).sort((a,b) => tagFreq[b]-tagFreq[a]);
-  document.getElementById('db_tag_dist').innerHTML = sortedTags.length
-    ? sortedTags.map(t => '<div class="db-tag-bar-row"><div class="db-tag-name">' + t + '</div><div class="db-tag-bar-wrap"><div class="db-tag-bar" style="width:' + (tagFreq[t]/maxTag*100).toFixed(0) + '%"></div></div><div class="db-tag-count">' + tagFreq[t] + '</div></div>').join('')
-    : '<div class="db-empty">タグの記録なし</div>';
-}
-
 function tagsHtmlSmall(tags) {
   if (!tags || !tags.length) return null;
   return tags.map(t => '<span class="tag-pill">' + t + '</span>').join('');
@@ -1148,10 +834,7 @@ function renderDbList(containerId, items, textFn, emptyMsg, subFn) {
     const sub = subFn ? subFn(item) : null;
     div.innerHTML = '<div class="db-item-date">' + formatDate(item.date) + '</div><div class="db-item-text">' + escHtml(preview) + '</div>' + (sub ? '<div class="db-item-sub">' + sub + '</div>' : '');
     div.addEventListener('click', () => {
-      const textEl = div.querySelector('.db-item-text');
-      if (textEl.classList.contains('expanded')) {
-        textEl.innerHTML = escHtml(preview); textEl.classList.remove('expanded');
-      } else {
+      const textEl = div.querySelector(' else {
         textEl.innerHTML = escHtml(fullText); textEl.classList.add('expanded');
       }
     });
@@ -1168,9 +851,7 @@ function renderLogList() {
     // カードを消してemptyを出す
     Array.from(container.children).forEach(c => { if (c !== empty) c.remove(); });
     empty.classList.add('show');
-    document.getElementById('emptyText').textContent = state.view === 'archive' ? 'アーカイブはまだありません' : '記録を始めよう';
-    document.getElementById('emptySub').textContent  = state.view === 'archive' ? 'ログ一覧でチェックしてアーカイブできます' : '週1回でOK。完璧じゃなくていい。';
-    container.classList.remove('selectable');
+    document.getElementById('emptyText').textContent =     document.getElementById('emptySub').textContent  =     container.classList.remove('selectable');
     return;
   }
   empty.classList.remove('show');
@@ -1268,24 +949,6 @@ function toggleSelect(id) {
     if (chk) chk.textContent = on ? '✓' : '';
   }
   updateArchiveBar();
-}
-
-function updateArchiveBar() {
-  const bar = document.getElementById('archiveBar');
-  if (state.selected.size > 0 && state.view === 'log') {
-    bar.classList.add('visible');
-    document.getElementById('selectedCount').textContent = `${state.selected.size}件選択中`;
-  } else {
-    bar.classList.remove('visible');
-  }
-}
-
-function archiveSelected() {
-  if (!state.selected.size) return;
-  const count = state.selected.size;
-  state.logs.forEach(l => { if (state.selected.has(l.id)) l.archived = true; });
-  state.selected.clear();
-  saveData(); render(); toast(`${count}件をアーカイブしました ✓`);
 }
 
 function escHtml(str) {
@@ -1579,9 +1242,7 @@ function bindEvents() {
     btn.classList.add('selected'); selectedConviction = btn.dataset.value;
   }));
 
-  document.getElementById('doArchive').addEventListener('click', archiveSelected);
-  document.getElementById('doDeselect').addEventListener('click', () => { state.selected.clear(); render(); });
-
+  document.  document.
   document.querySelectorAll('.filter-chip').forEach(chip => chip.addEventListener('click', () => {
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active'); state.filter = chip.dataset.filter; renderLogList();
@@ -1595,65 +1256,10 @@ function bindEvents() {
 
   // 状態計 期間切り替え
   document.addEventListener('click', e => {
-    const btn = e.target.closest('.period-btn');
-    if (!btn) return;
-    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    graphWeeks = parseInt(btn.dataset.weeks);
-    renderStateGraphs();
+    const btn = e.target.closest('
   });
 
-  // textarea 自動拡張
-  document.addEventListener('input', e => {
-    if (e.target.tagName === 'TEXTAREA') {
-      e.target.style.height = 'auto';
-      e.target.style.height = e.target.scrollHeight + 'px';
-    }
-  });
-
-  document.getElementById('exportBtn').addEventListener('click', exportData);
-  document.getElementById('importBtn').addEventListener('click', importData);
-  document.getElementById('importFileInput').addEventListener('change', handleImport);
+  document.  document.  document.getElementById('importFileInput').addEventListener('change', handleImport);
 
 
 
-function toggleSidebar(){
-  document.querySelector('.sidebar').classList.toggle('open');
-  document.getElementById('sbOverlay').classList.toggle('open');
-}
-function closeSidebar(){
-  document.querySelector('.sidebar').classList.remove('open');
-  document.getElementById('sbOverlay').classList.remove('open');
-}
-  document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => {
-    closeSidebar();
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    item.classList.add('active');
-    state.view = item.dataset.view;
-    state.selected.clear();
-    state.filter = 'all';
-    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-    document.querySelector('.filter-chip[data-filter="all"]')?.classList.add('active');
-    render();
-  }));
-
-  document.addEventListener('keydown', e => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'n') { e.preventDefault(); openEntryModal(); }
-    if (e.key === 'Escape') { closeEntryModal(); closeReviewModal(); }
-  });
-}
-
-// INIT
-document.addEventListener('DOMContentLoaded', () => {
-  loadData(); seedSampleData(); bindEvents(); render();
-});
-</script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./service-worker.js")
-        .then(r => console.log("SW registered:", r))
-        .catch(e => console.log("SW error:", e));
-    }
-  </script>
-</body>
-</html>
