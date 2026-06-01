@@ -1499,15 +1499,21 @@ function importData() {
 function handleImport(e) {
   const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
+  reader.onerror = () => alert('ファイルの読み込みに失敗しました');
   reader.onload = ev => {
     try {
-      const data = JSON.parse(ev.target.result);
-      if (!data.logs && !data.reviews) throw new Error('無効なフォーマットです');
-      if (!confirm(`ログ: ${(data.logs||[]).length}件、レビュー: ${(data.reviews||[]).length}件\nを復元します。現在のデータは上書きされます。\n続けますか？`)) return;
+      const raw = ev.target.result;
+      let data;
+      try { data = JSON.parse(raw); }
+      catch(pe) { alert('JSONの解析に失敗しました: ' + pe.message); return; }
+      if (!data.logs && !data.reviews) throw new Error('logsまたはreviewsキーが見つかりません');
+      const logCount = (data.logs||[]).length;
+      const rvCount = (data.reviews||[]).length;
+      if (!confirm(`ログ: ${logCount}件、レビュー: ${rvCount}件\nを復元します。現在のデータは上書きされます。\n続けますか？`)) return;
       if (data.logs) { state.logs = data.logs; saveData(); }
       if (data.reviews) { state.reviews = data.reviews; saveReviews(); }
       render();
-      toast('インポートしました ✓');
+      toast('インポートしました（' + logCount + '件）');
     } catch(err) { alert('インポートに失敗しました: ' + err.message); }
   };
   reader.readAsText(file, 'utf-8');
