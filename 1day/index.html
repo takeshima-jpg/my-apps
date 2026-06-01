@@ -352,7 +352,7 @@ async function gdriveSave() {
     await gdriveFetch(url, { method: fileId ? 'PATCH' : 'POST', body: form });
     dot.className = 'gdrive-dot connected';
     status.textContent = 'Googleドライブに保存済み (' + new Date().toLocaleTimeString('ja-JP') + ')';
-    showToast('Googleドライブに保存しました');
+    toast('Googleドライブに保存しました');
   } catch(e) {
     dot.className = 'gdrive-dot connected';
     status.textContent = '保存エラー: ' + e.message;
@@ -372,7 +372,7 @@ async function gdriveLoad() {
       state.reviews = data.reviews || [];
       save();
       render();
-      showToast('Googleドライブから読み込みました');
+      toast('Googleドライブから読み込みました');
     }
   } catch(e) {
     alert('読込エラー: ' + e.message);
