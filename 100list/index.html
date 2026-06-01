@@ -277,7 +277,7 @@ h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px
 <body>
 <div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
 <div class="mob-header">
-  <div class="mob-logo">100LIST</div>
+  <div style="display:flex;align-items:center;gap:8px;"><img src="icons/icon-32x32.png" style="width:28px;height:28px;border-radius:7px;"><span style="font-size:15px;font-weight:700;color:#fff;">100LIST</span></div>
   <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
 </div>
 <div class="mob-data-bar">
@@ -287,8 +287,10 @@ h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px
 <div id="layout">
 <div id="sidebar">
   <div id="sidebar-logo" onclick="navigate('dashboard')">
-    <span id="app-name-logo" style="font-size:20px;font-weight:800;letter-spacing:0.05em">100LIST</span>
-    <span>リスト管理システム</span>
+    <div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
+    <img src="icons/icon-32x32.png" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
+    <span style="font-size:16px;font-weight:700;color:#fff;letter-spacing:.01em;">100LIST</span>
+  </div>
   </div>
   <div class="vision-area" id="visionArea"></div>
   <div style="padding:10px 10px 4px">

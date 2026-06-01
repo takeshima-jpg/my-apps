@@ -275,8 +275,7 @@ select.fi{cursor:pointer;}
 <body>
 <div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
 <div class="mob-header">
-  <div class="sb-logo">Unified OS</div>
-  <div class="sb-name">Task OS</div>
+  <div style="display:flex;align-items:center;gap:8px;"><img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;"><span style="font-size:15px;font-weight:700;color:#fff;">Task OS</span></div>
   <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
 </div>
 <div class="app">
@@ -284,8 +283,10 @@ select.fi{cursor:pointer;}
 <!-- SIDEBAR -->
 <div class="sidebar">
   <div class="sb-brand">
-    <div class="sb-logo">Unified OS</div>
-    <div class="sb-name">Task OS</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
+    <img src="icons/icon-32.png" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
+    <span style="font-size:16px;font-weight:700;color:#fff;letter-spacing:.01em;">Task OS</span>
+  </div>
   </div>
   <nav class="sb-nav">
     <div class="ni act" onclick="nav('home')"><span class="ni-ico">◉</span>ホーム</div>

@@ -221,15 +221,16 @@ select,input,textarea{font-family:inherit;}
 <body>
 <div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
 <div class="mob-header">
-  <div class="mob-logo">Routine OS v2</div>
-  <div class="mob-title">意思決定システム</div>
+  <div style="display:flex;align-items:center;gap:8px;"><img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;"><span style="font-size:15px;font-weight:700;color:#fff;">Routine OS</span></div>
   <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
 </div>
 <div class="app">
 <div class="sidebar">
   <div class="sb-hd">
-    <div class="sb-logo">Routine OS v2</div>
-    <div class="sb-title">意思決定システム</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
+    <img src="icons/icon-32.png" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
+    <span style="font-size:16px;font-weight:700;color:#fff;letter-spacing:.01em;">Routine OS</span>
+  </div>
   </div>
   <nav class="sb-nav">
     <div class="ni act" data-v="dashboard" onclick="sv(this,'dashboard')"><span class="ni-ico">◉</span>ダッシュボード</div>
