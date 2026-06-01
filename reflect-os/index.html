@@ -62,6 +62,20 @@ nav{display:flex;flex-direction:column;gap:0;}
 .v26k{font-family:var(--mono);font-size:9px;color:var(--di);margin-right:8px;}
 #body{flex:1;max-width:var(--max);padding:32px 28px 80px;}
 
+/* ── AI Import ── */
+.ai-import-wrap{max-width:var(--max);padding:32px 28px 80px;}
+.ai-import-title{font-size:20px;font-weight:700;color:var(--tx);margin-bottom:4px;}
+.ai-import-sub{font-size:13px;color:var(--mu);margin-bottom:24px;}
+.ai-format-box{font-size:13px;color:var(--mu);background:var(--bg);border:1px solid var(--bd);border-radius:5px;padding:14px 16px;line-height:2;margin-bottom:16px;}
+.ai-format-box strong{color:var(--tx);}
+.ai-format-box code{font-family:var(--mono);font-size:12px;background:#f0ede8;padding:0 3px;border-radius:2px;}
+.ai-textarea{width:100%;min-height:220px;padding:14px 16px;font-size:15px;line-height:1.8;border:1px solid var(--bd);border-radius:5px;font-family:var(--serif);background:var(--sf);color:var(--tx);resize:vertical;outline:none;display:block;}
+.ai-textarea:focus{border-color:var(--go);}
+.ai-btn-row{display:flex;align-items:center;gap:12px;margin-top:12px;}
+.ai-status{font-size:13px;color:var(--mu);}
+.ai-status.ok{color:var(--go);}
+.ai-status.err{color:#b05050;}
+
 /* ── Buttons ── */
 .btn-p{background:var(--go);color:#fff;padding:9px 20px;font-size:15px}
 .btn-p:hover{background:#1e4a2a}
@@ -239,6 +253,7 @@ nav{display:flex;flex-direction:column;gap:0;}
       <button class="nb" data-tab="exp"><span class="nav-icon">◇</span> 実験</button>
       <button class="nb" data-tab="dash"><span class="nav-icon">◈</span> 分析</button>
       <button class="nb" data-tab="search"><span class="nav-icon">⌕</span> 検索</button>
+      <button class="nb" data-tab="ai-import"><span class="nav-icon">⬇</span> 取り込む</button>
     </nav>
   </div>
   <div class="sb-rec">
@@ -679,6 +694,108 @@ function renderSearch(){
 
 /* ── VISION2026 strip ── */
 const VD={vision:['守りの総合支援を通して、挑戦する人が成長できる社会をつくる。','安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。'],principles:[{title:'成長',text:'未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。'},{title:'愛',text:'周囲の成長と可能性を気にかけ、信頼して渡す。たくさん与えて心でつながる。'},{title:'誠実',text:'自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。'},{title:'寛容',text:'個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。'}],directions:[{title:'確信',text:'頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。'},{title:'仲間',text:'弱みも未来も共有し、自立し、責任を持って、同じゴールに向かい仮説検証ができる人を大切にする。'},{title:'健康',text:'心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。'}]};
+/* ── AI Import ── */
+function renderAiImport(){
+  const wrap = document.createElement('div');
+  wrap.className = 'ai-import-wrap fu';
+  const fmt = [
+    '<strong>入力フォーマット</strong>（複数エントリーを連続貼り付け可）<br><br>',
+    '<code>【振り返り / モヤモヤ / VISION点検 / 戦略テーマ / 思想変化】</code><br>',
+    '<code>タイトル：</code>〇〇〇<br>',
+    '<code>日付：</code>2026-06-01（省略可・省略時は今日）<br>',
+    '<code>内容：</code>〇〇〇<br>',
+    '<code>気づき・学び：</code>〇〇〇（任意）<br>',
+    '<code>問い：</code>〇〇〇（任意）<br>',
+    '<code>次のアクション：</code>〇〇〇（任意）<br>',
+    '<br>※タイプは行頭の【】で判定。複数エントリーを続けて貼り付けOK。',
+  ].join('');
+  wrap.innerHTML =
+    '<div class="ai-import-title">⬇ 取り込む</div>' +
+    '<div class="ai-import-sub">AIとの壁打ち・思考整理の結果を貼り付けて一括登録</div>' +
+    '<div class="ai-format-box">' + fmt + '</div>' +
+    '<textarea class="ai-textarea" id="ai-input" placeholder="ここにAIとの対話結果・思考整理テキストを貼り付けてください..."></textarea>' +
+    '<div class="ai-btn-row">' +
+      '<button class="btn-p" onclick="registerAiInput()">登録する</button>' +
+      '<span class="ai-status" id="ai-parse-status"></span>' +
+    '</div>';
+  return wrap;
+}
+
+const TYPE_MAP = {
+  '振り返り':'note','振り返':'note','note':'note',
+  'モヤモヤ':'moya','もやもや':'moya','moya':'moya',
+  'VISION点検':'vision','vision点検':'vision','vision':'vision','ビジョン':'vision',
+  '戦略テーマ':'strategy','戦略':'strategy','strategy':'strategy',
+  '思想変化':'philosophy','philosophy':'philosophy',
+};
+
+function extractField(block, keys){
+  for(const key of keys){
+    const re = new RegExp(key + '[：:：]\\s*([\\s\\S]+?)(?=\\n[^\\n\\s]|$)', 'i');
+    const m = block.match(re);
+    if(m && m[1].trim()) return m[1].trim().split('\n')[0].trim();
+  }
+  return '';
+}
+
+function parseAiReflect(text){
+  const entries = [];
+  const blocks = text.split(/(?=【[^】]+】)/);
+  blocks.forEach(block => {
+    const hm = block.match(/^【([^】]+)】/);
+    if(!hm) return;
+    const rawType = hm[1].trim();
+    const typKey = TYPE_MAP[rawType] || TYPE_MAP[rawType.toLowerCase()] || null;
+    if(!typKey) return;
+
+    const title      = extractField(block, ['タイトル','title']);
+    const rawDate    = extractField(block, ['日付','date']);
+    const date       = (rawDate.match(/\d{4}-\d{2}-\d{2}/) || [tod()])[0];
+    const body       = extractField(block, ['内容','本文','body']);
+    const learned    = extractField(block, ['気づき・学び','気づき','学び','learned']);
+    const question   = extractField(block, ['問い','question']);
+    const next_action= extractField(block, ['次のアクション','ネクスト','next_action','next']);
+
+    if(!title && !body) return;
+    const entry = {
+      id:uid(), type:typKey, date, status:'published',
+      title: title || body.slice(0,40),
+      body, learned, question, next_action
+    };
+    if(typKey==='moya')        entry.moya_what    = extractField(block, ['何にモヤモヤ','モヤモヤ詳細']);
+    if(typKey==='vision')      entry.vision_change= extractField(block, ['VISIONの変化','変化']);
+    if(typKey==='strategy')    entry.progress     = extractField(block, ['進捗','progress']);
+    if(typKey==='philosophy'){
+      entry.old_belief   = extractField(block, ['当時の思想','以前の考え']);
+      entry.what_changed = extractField(block, ['何が変わったか','変化']);
+      entry.new_belief   = extractField(block, ['今の理解','新しい考え']);
+      entry.pivot        = extractField(block, ['転換点']);
+    }
+    entries.push(entry);
+  });
+  return entries;
+}
+
+async function registerAiInput(){
+  const text = document.getElementById('ai-input').value.trim();
+  const statusEl = document.getElementById('ai-parse-status');
+  if(!text){ statusEl.textContent='入力が空です'; statusEl.className='ai-status err'; return; }
+  let entries;
+  try { entries = parseAiReflect(text); }
+  catch(err){ statusEl.textContent='解析エラー: '+err.message; statusEl.className='ai-status err'; return; }
+  if(!entries.length){
+    statusEl.textContent='【振り返り】などのタイプ行が見つかりません'; statusEl.className='ai-status err'; return;
+  }
+  for(const r of entries){
+    await dbput('logs', r);
+    const i = S.logs.findIndex(x=>x.id===r.id);
+    if(i>=0) S.logs[i]=r; else S.logs.unshift(r);
+  }
+  S.logs.sort((a,b)=>b.date.localeCompare(a.date));
+  statusEl.textContent = entries.length+'件を登録しました ✓'; statusEl.className='ai-status ok';
+  document.getElementById('ai-input').value='';
+}
+
 function renderV26(){const area=document.getElementById('v26');if(!area)return;const seed=parseInt(new Date().toLocaleDateString('sv').replace(/-/g,''))%100;const types=['vision','principle','direction'];const type=types[seed%3];let inner='';if(type==='vision'){const item=VD.vision[seed%VD.vision.length];inner=`<span class="v26t">VISION</span><span class="v26b">${item}</span>`;}else if(type==='principle'){const item=VD.principles[seed%VD.principles.length];inner=`<span class="v26t">原則</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}else{const item=VD.directions[seed%VD.directions.length];inner=`<span class="v26t">指針</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}area.innerHTML=`<div class="v26c">${inner}</div>`;}
 
 /* ── Main render ── */
@@ -691,6 +808,7 @@ function ra(){
   else if(S.tab==='exp')wrap.appendChild(renderExp());
   else if(S.tab==='dash')wrap.appendChild(renderDash());
   else if(S.tab==='search')wrap.appendChild(renderSearch());
+  else if(S.tab==='ai-import')wrap.appendChild(renderAiImport());
   main.appendChild(wrap);
 }
 function updateNav(){document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));}
