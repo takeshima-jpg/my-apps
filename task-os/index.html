@@ -291,12 +291,13 @@ select.fi{cursor:pointer;}
     <div class="ni act" onclick="nav('home')"><span class="ni-ico">◉</span>ホーム</div>
     <div class="ni" onclick="nav('today')"><span class="ni-ico">◷</span>今日</div>
     <div class="sb-sep"></div>
-    <div class="ni" onclick="nav('routine')"><span class="ni-ico ni-ico-r">↺</span>ルーティン</div>
     <div class="ni" onclick="nav('shot')"><span class="ni-ico ni-ico-s">≡</span>ショット</div>
+    <div class="ni" onclick="nav('routine')"><span class="ni-ico ni-ico-r">↺</span>ルーチンOS</div>
     <div class="ni" onclick="nav('project')"><span class="ni-ico ni-ico-p">◫</span>プロジェクト</div>
     <div class="sb-sep"></div>
-    <div class="ni" onclick="nav('search')"><span class="ni-ico">⌕</span>検索</div>
-    <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:13px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
+    <div class="ni" onclick="nav('100list')"><span class="ni-ico" style="color:#f6ad55;">≡</span>100リスト</div>
+    <div class="sb-sep"></div>
+    <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
   </nav>
   <div class="sb-ft" id="sbDate"></div>
 </div>
@@ -515,6 +516,7 @@ const OS_OVERLAY_MAP = {
   routine: { src: '../routine-os/index.html',    title: 'ROUTINE OS' },
   shot:    { src: '../shot-task-os/index.html',   title: 'SHOT OS' },
   project: { src: '../project-os/index.html',     title: 'PROJECT OS' },
+  '100list': { src: '../100list/index.html',      title: '100リスト' },
 };
 const LAUNCHER_OVERLAY_MAP = {
   '1day':    { src: '../1day/index.html',           title: '1day' },
