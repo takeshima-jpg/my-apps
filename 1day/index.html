@@ -410,6 +410,7 @@ function gdriveAutoSave() {
       <div class="field-label">記録日</div>
       <div class="date-btn-row" id="dateBtnRow"></div>
       <input type="hidden" id="entryDate">
+      <input type="date" id="entryDateEdit" style="display:none;margin-top:8px;padding:8px 12px;border:1px solid var(--border2);border-radius:6px;font-family:inherit;font-size:14px;background:var(--bg3);color:var(--text);width:100%;" onchange="document.getElementById('entryDate').value=this.value;">
     </div>
     <div class="field">
       <div class="field-label">今週は？</div>
@@ -1019,6 +1020,11 @@ function openEntryModal(editId = null) {
     const log = state.logs.find(l => l.id === editId);
     if (log) {
       buildDateButtons(log.date);
+      // 編集時は日付直接入力も表示
+      const dateEditInput = document.getElementById('entryDateEdit');
+      dateEditInput.style.display = 'block';
+      dateEditInput.value = log.date;
+      document.getElementById('dateBtnRow').style.display = 'none';
       document.getElementById('eventsInput').value = log.events || '';
       document.getElementById('unease').value = log.unease || '';
       selectedSat = log.satisfaction || '';
@@ -1036,6 +1042,8 @@ function openEntryModal(editId = null) {
   } else {
     buildDateButtons();
     // 既存データ互換チェック（新規は不要）
+    document.getElementById('entryDateEdit').style.display = 'none';
+    document.getElementById('dateBtnRow').style.display = '';
   }
 
   document.getElementById('entryModal').classList.add('open');
