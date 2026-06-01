@@ -990,7 +990,7 @@ function seed() {
 ══════════════════════════════════ */
 function uid() { return Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4); }
 function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
-function today() { return new Date().toISOString().slice(0,10); }
+function today() { return new Date().toLocaleDateString('sv'); }
 function od(d)   { return d && d < today(); }
 function proj(id){ return S.projects.find(p=>p.id===id); }
 function $$(id)  { return document.getElementById(id); }
@@ -2363,7 +2363,7 @@ const VISION_DATA = {
 function renderVision() {
   const area = document.getElementById('visionArea');
   if (!area) return;
-  const seed = parseInt(new Date().toISOString().slice(0,10).replace(/-/g,'')) % 100;
+  const seed = parseInt(new Date().toLocaleDateString('sv').replace(/-/g,'')) % 100;
   const types = ['vision', 'principle', 'direction'];
   const type = types[seed % 3];
   let html = '';

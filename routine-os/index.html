@@ -514,7 +514,7 @@ function normalizeCycle(value){
 }
 
 
-function ds(d){if(typeof d==='string')return d.slice(0,10);return d.toISOString().slice(0,10);}
+function ds(d){if(typeof d==='string')return d.slice(0,10);return d.toLocaleDateString('sv');}
 function pd(s){if(!s)return null;return new Date(s+'T00:00:00');}
 function isWE(d){var x=new Date(d+'T00:00:00');return x.getDay()===0||x.getDay()===6;}
 function isHol(d){
@@ -563,7 +563,7 @@ function calcNext(t,from){
     if(nx<=base)nx.setFullYear(nx.getFullYear()+1);
     return ds(nx);
   }
-  if(ab==='from_ms'){var m=base.getMonth(),y=base.getFullYear(),nm=m+1>11?0:m+1,ny=m+1>11?y+1:y;return tp==='business'?nBD(ny,nm,days,eh):(new Date(ny,nm,days)).toISOString().slice(0,10);}
+  if(ab==='from_ms'){var m=base.getMonth(),y=base.getFullYear(),nm=m+1>11?0:m+1,ny=m+1>11?y+1:y;return tp==='business'?nBD(ny,nm,days,eh):(new Date(ny,nm,days)).toLocaleDateString('sv');}
   if(ab==='from_me'){var m=base.getMonth(),y=base.getFullYear(),nm=m+1>11?0:m+1,ny=m+1>11?y+1:y;return tp==='business'?nLBD(ny,nm,Math.abs(days),eh):ds(new Date(ny,nm+1,days));}
   if(ab==='from_ys'){var y=base.getFullYear()+1;return tp==='business'?nBD(y,0,days,eh):ds(new Date(y,0,days));}
   return tp==='business'?addBD(from,days,ew!==false,eh):addCD(from,days);

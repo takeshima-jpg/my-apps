@@ -575,7 +575,7 @@ const isOv = d => d && d < TODAY;
 const isTd = d => d && d === TODAY;
 const is3  = d => { if(!d) return false; const diff=(new Date(d+'T00:00:00')-new Date(TODAY+'T00:00:00'))/86400000; return diff>0&&diff<=3; };
 const is7  = d => { if(!d) return false; const diff=(new Date(d+'T00:00:00')-new Date(TODAY+'T00:00:00'))/86400000; return diff>3&&diff<=7; };
-const addD = (base,n) => { const d=new Date((base||TODAY)+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+const addD = (base,n) => { const d=new Date((base||TODAY)+'T00:00:00'); d.setDate(d.getDate()+n); return d.toLocaleDateString('sv'); };
 function fmtDate(s){
   if(!s) return '';
   const dt = new Date(s+'T00:00:00');
@@ -782,7 +782,7 @@ function isHidden(taskId){
 function hideTask(taskId, title, days){
   const w = getWaiting();
   const d = new Date(TODAY+'T00:00:00'); d.setDate(d.getDate()+days);
-  const restoreAt = d.toISOString().slice(0,10);
+  const restoreAt = d.toLocaleDateString('sv');
   w[taskId] = { hiddenAt: TODAY, restoreAt, reason:'waiting', title };
   saveWaiting(w);
   updateWaitingCount();
@@ -1135,7 +1135,7 @@ function renderHome(){
   // ─ Project 進行（直近30日イベント、折りたたみ）
   if(activePj.length){
     const d30 = new Date(); d30.setDate(d30.getDate()-30);
-    const from30 = d30.toISOString().slice(0,10);
+    const from30 = d30.toLocaleDateString('sv');
 
     const pjOpen = !!homePjOpen;
     const pjArrowCls = 'week-hd-arrow' + (pjOpen ? ' open' : '');
@@ -1248,7 +1248,7 @@ function renderTl(id, tasks){
   let rows='';
   for(let i=0;i<=13;i++){
     const d=new Date(TODAY+'T00:00:00'); d.setDate(d.getDate()+i);
-    const dk=d.toISOString().slice(0,10);
+    const dk=d.toLocaleDateString('sv');
     const dow=['日','月','火','水','木','金','土'][d.getDay()];
     const items=tasks.filter(t=>t.due===dk);
     const isT=dk===TODAY, isPast=dk<TODAY, isWk=d.getDay()===0||d.getDay()===6;

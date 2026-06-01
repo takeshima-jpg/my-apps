@@ -708,8 +708,8 @@ function save() {
 }
 
 // ─── Utils ────────────────────────────────────────────────
-function today() { return new Date().toISOString().slice(0,10).replace(/-/g,'/'); }
-function todayInput() { return new Date().toISOString().slice(0,10); }
+function today() { return new Date().toLocaleDateString('sv').replace(/-/g,'/'); }
+function todayInput() { return new Date().toLocaleDateString('sv'); }
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }

@@ -354,7 +354,7 @@ const VISION_DATA = {
 function renderVision(){
   const area = document.getElementById('visionArea');
   if(!area) return;
-  const seed = parseInt(new Date().toISOString().slice(0,10).replace(/-/g,'')) % 100;
+  const seed = parseInt(new Date().toLocaleDateString('sv').replace(/-/g,'')) % 100;
   const types = ['vision','principle','direction'];
   const type = types[seed % 3];
   let h = '';

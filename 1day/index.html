@@ -643,7 +643,7 @@ function saveData()    { localStorage.setItem(DB_KEY, JSON.stringify(state.logs)
 function saveReviews() { localStorage.setItem(RV_KEY, JSON.stringify(state.reviews)); }
 
 // DATE HELPERS
-function today() { return new Date().toISOString().slice(0,10); }
+function today() { return new Date().toLocaleDateString('sv'); }
 function formatDate(iso) {
   const d = new Date(iso + 'T00:00:00');
   const days = ['日','月','火','水','木','金','土'];
