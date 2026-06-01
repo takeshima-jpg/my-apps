@@ -1113,6 +1113,14 @@ function changeStatus(id, status) {
   save(); render();
 }
 
+// ── SET TODAY ──
+function setToday(id) {
+  const t = tasks.find(x => x.id === id); if (!t) return;
+  t.dueDate = getTodayKey();
+  t.updatedAt = new Date().toISOString();
+  save(); render();
+}
+
 // ── POSTPONE ──
 function postpone(id, days) {
   const t = tasks.find(x => x.id === id); if (!t) return;
@@ -1337,22 +1345,12 @@ function buildCardHTML(t) {
   // action buttons
   const id = t.id, titleEsc = escH(t.title).replace(/'/g,"&#39;");
   let acts = '';
-  if (t.status === 'todo' || t.status === 'pending') {
-    acts += `<button class="act-btn ab-start" onclick="changeStatus('${id}','doing')">開始</button>`;
-    acts += `<button class="act-btn ab-done" onclick="changeStatus('${id}','done')">完了</button>`;
-    if (t.status !== 'pending') acts += `<button class="act-btn ab-pend" onclick="changeStatus('${id}','pending')">保留</button>`;
-    else acts += `<button class="act-btn ab-back" onclick="changeStatus('${id}','todo')">戻す</button>`;
-  } else if (t.status === 'doing') {
+  if (t.status !== 'done') {
+    acts += `<button class="act-btn ab-tmr" onclick="setToday('${id}')">今日</button>`;
     acts += `<button class="act-btn ab-done" onclick="changeStatus('${id}','done')">完了</button>`;
     acts += `<button class="act-btn ab-pend" onclick="changeStatus('${id}','pending')">保留</button>`;
+  } else {
     acts += `<button class="act-btn ab-back" onclick="changeStatus('${id}','todo')">戻す</button>`;
-  } else if (t.status === 'done') {
-    acts += `<button class="act-btn ab-back" onclick="changeStatus('${id}','todo')">戻す</button>`;
-  }
-  // postpone
-  if (t.status !== 'done') {
-    acts += `<button class="act-btn ab-tmr" onclick="postpone('${id}',1)">明日</button>`;
-    acts += `<button class="act-btn ab-week" onclick="postpone('${id}',7)">来週</button>`;
   }
   acts += `<button class="act-btn ab-edit" onclick="openEdit('${id}')">編集</button>`;
   acts += `<button class="act-btn ab-del" onclick="deleteTask('${id}','${titleEsc}')">削除</button>`;
