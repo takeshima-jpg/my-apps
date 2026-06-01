@@ -2387,9 +2387,9 @@ document.addEventListener('DOMContentLoaded', ()=>{migrateProjectItems();nav('da
 </script>
   <script>
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./service-worker.js")
-        .then(r => console.log("SW registered:", r))
-        .catch(e => console.log("SW error:", e));
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
     }
   </script>
 </body>
