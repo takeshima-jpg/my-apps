@@ -958,12 +958,17 @@ function toggleWeek(){
 
 let homeShotOpen = false;
 let home100ListOpen = false;
+let homePjOpen = false;
 function toggleShot(){
   homeShotOpen = !homeShotOpen;
   renderHome();
 }
 function toggle100List(){
   home100ListOpen = !home100ListOpen;
+  renderHome();
+}
+function togglePj(){
+  homePjOpen = !homePjOpen;
   renderHome();
 }
 
@@ -1127,39 +1132,57 @@ function renderHome(){
     h += '</div>' + body + '</div>';
   }
 
-  // ─ Project 進行（当月イベント）
+  // ─ Project 進行（当月イベント、折りたたみ）
   if(activePj.length){
-    h += secLabel('◈ Project', activePj.length);
     const yrP = new Date().getFullYear();
     const moP = String(new Date().getMonth()+1).padStart(2,'0');
     const moPrefix = yrP+'-'+moP;
+    // 当月イベントがあるプロジェクトの総数
+    let totalEvts = 0;
     activePj.forEach(p => {
-      // 当月のイベントを日付降順で取得（最新3件）
-      const evts = (p.events||[])
-        .filter(e => e.date && e.date.startsWith(moPrefix))
-        .sort((a,b) => (b.date||'').localeCompare(a.date||''))
-        .slice(0,3);
-      let evtRows = '';
-      if(evts.length){
-        evtRows = evts.map(e => {
-          const d = e.date ? e.date.replace(/^\d{4}-/,'').replace('-','/') : '';
-          return '<div class="trow" style="padding:4px 6px;">'
-            +'<div class="trow-title" style="font-size:12px;">'+esc(e.title||'')+'</div>'
-            +'<div class="trow-meta"><span style="font-size:11px;color:var(--text3);">'+d+'</span></div>'
-            +'<button class="btn-open" data-nav="project" onclick="nav(this.dataset.nav)">開く</button>'
-            +'</div>';
-        }).join('');
-      } else {
-        evtRows = '<div style="font-size:12px;color:var(--text3);padding:4px 8px;">当月のイベントなし</div>';
-      }
-      h += '<div class="pj-row" style="flex-direction:column;align-items:stretch;gap:4px;">'
-        +'<div style="display:flex;align-items:center;gap:8px;">'
-        +'<div class="pj-name">'+esc(p.name||p.title||'')+'</div>'
-        +'<button class="btn-open" style="margin-left:auto;" data-nav="project" onclick="nav(this.dataset.nav)">開く</button>'
-        +'</div>'
-        +evtRows
-        +'</div>';
+      totalEvts += (p.events||[]).filter(e => e.date && e.date.startsWith(moPrefix)).length;
     });
+    const pjOpen = !!homePjOpen;
+    const pjArrowCls = 'week-hd-arrow' + (pjOpen ? ' open' : '');
+    h += '<div class="week-wrap"><div class="week-hd" onclick="togglePj()">'
+      +'<span class="week-hd-label">◈ Project — 当月イベント</span>'
+      +'<span class="week-hd-count">'+activePj.length+'</span>'
+      +'<span class="'+pjArrowCls+'">▶</span>'
+      +'</div>';
+    if(pjOpen){
+      h += '<div class="week-body">';
+      activePj.forEach(p => {
+        const evts = (p.events||[])
+          .filter(e => e.date && e.date.startsWith(moPrefix))
+          .sort((a,b) => (b.date||'').localeCompare(a.date||''))
+          .slice(0,3);
+        let evtRows = '';
+        if(evts.length){
+          evtRows = evts.map(e => {
+            const d = e.date ? e.date.replace(/^\d{4}-/,'').replace('-','/') : '';
+            const isOver = e.date && e.date < TODAY;
+            const rowStyle = isOver ? 'background:rgba(220,50,50,0.08);border-left:3px solid var(--r);' : '';
+            const dateColor = isOver ? 'var(--r)' : 'var(--text3)';
+            return '<div class="trow" style="padding:4px 6px;'+rowStyle+'">'
+              +'<div class="trow-title" style="font-size:12px;">'+esc(e.title||'')+'</div>'
+              +'<div class="trow-meta"><span style="font-size:11px;color:'+dateColor+';">'+d+'</span></div>'
+              +'<button class="btn-open" data-nav="project" onclick="nav(this.dataset.nav)">開く</button>'
+              +'</div>';
+          }).join('');
+        } else {
+          evtRows = '<div style="font-size:12px;color:var(--text3);padding:4px 8px;">当月のイベントなし</div>';
+        }
+        h += '<div style="margin-bottom:8px;">'
+          +'<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;font-weight:600;font-size:13px;border-bottom:1px solid var(--border);">'
+          +esc(p.name||p.title||'')
+          +'<button class="btn-open" style="margin-left:auto;" data-nav="project" onclick="nav(this.dataset.nav)">開く</button>'
+          +'</div>'
+          +evtRows
+          +'</div>';
+      });
+      h += '</div>';
+    }
+    h += '</div>';
   }
 
   /* TIMELINE-DISABLED (将来復活可)
