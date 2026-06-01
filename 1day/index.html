@@ -1162,14 +1162,11 @@ function importData() {
   document.getElementById('importFileInput').click();
 }
 function handleImport(e) {
-  alert('handleImport開始');
   const file = e.target.files[0];
-  alert('ファイル: ' + (file ? file.name : 'なし'));
   if (!file) return;
   const reader = new FileReader();
   reader.onerror = () => alert('ファイルの読み込みに失敗しました');
   reader.onload = ev => {
-    alert('読み込み完了、サイズ: ' + ev.target.result.length);
     try {
       const raw = ev.target.result;
       let data;
@@ -1246,7 +1243,6 @@ function bindEvents() {
     btn.classList.add('selected'); selectedConviction = btn.dataset.value;
   }));
 
-  document.  document.
   document.querySelectorAll('.filter-chip').forEach(chip => chip.addEventListener('click', () => {
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active'); state.filter = chip.dataset.filter; renderLogList();
@@ -1263,7 +1259,7 @@ function bindEvents() {
     const btn = e.target.closest('
   });
 
-  document.  document.  document.getElementById('importFileInput').addEventListener('change', handleImport);
+  document.getElementById('importFileInput').addEventListener('change', handleImport);
 
 
 
