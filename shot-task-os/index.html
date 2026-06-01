@@ -1503,10 +1503,24 @@ function onDragStart(e, idx) {
 function onDragOver(e, idx) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
-  document.querySelectorAll('
+  document.querySelectorAll('.cat-item-wrap').forEach(el => el.classList.remove('drag-over'));
+  const el = document.getElementById('cat-wrap-' + idx);
+  if (el && idx !== dragSrcIndex) el.classList.add('drag-over');
+}
+function onDrop(e, idx) {
+  e.preventDefault();
+  if (dragSrcIndex === null || dragSrcIndex === idx) return;
+  const moved = CATEGORIES.splice(dragSrcIndex, 1)[0];
+  CATEGORIES.splice(idx, 0, moved);
+  saveCategories();
+  dragSrcIndex = null;
+  renderCatList();
+}
 function onDragEnd(e) {
   dragSrcIndex = null;
-  document.querySelectorAll(');
+  document.querySelectorAll('.cat-item-wrap').forEach(el => {
+    el.classList.remove('dragging', 'drag-over');
+  });
 }
 
 
