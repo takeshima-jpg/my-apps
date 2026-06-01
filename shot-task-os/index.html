@@ -1316,7 +1316,7 @@ function render() {
     .filter(t => showDone || t.status !== 'done');
 
   document.getElementById('viewTitle').textContent = selectedCat || '実行判断ビュー';
-  document.getElementById('taskCountBadge').textContent = filtered.length + '件';
+  document.getElementById('taskCountBadge').textContent = filtered.filter(t=>t.status!=='done').length + '件';
 
   // Sort
   const sorted = [...filtered].sort((a, b) => {
@@ -1506,20 +1506,21 @@ function updateSummary() {
 // ── CAT LIST ──
 function renderCatList() {
   const el = document.getElementById('catList');
+  const activeTasks = tasks.filter(t => t.status !== 'done');
   if (!catEditMode) {
-    // 通常モード
+    // 通常モード（未完了のみ件数）
     const allBtn = `<div class="cat-item${!selectedCat?' active':''}" onclick="filterCat(null)">
-      <span>すべて</span><span class="cat-count">${tasks.length}</span></div>`;
+      <span>すべて</span><span class="cat-count">${activeTasks.length}</span></div>`;
     const cats = CATEGORIES.map(cat => {
-      const n = tasks.filter(t => t.category===cat).length;
+      const n = activeTasks.filter(t => t.category===cat).length;
       return `<div class="cat-item${selectedCat===cat?' active':''}" onclick="filterCat('${escH(cat)}')">
         <span>${escH(cat)}</span><span class="cat-count">${n}</span></div>`;
     });
     el.innerHTML = allBtn + cats.join('');
   } else {
-    // 編集モード：ドラッグ&ドロップ＋削除
+    // 編集モード（未完了のみ件数）
     const items = CATEGORIES.map((cat, i) => {
-      const n = tasks.filter(t => t.category===cat).length;
+      const n = activeTasks.filter(t => t.category===cat).length;
       return `<div class="cat-item-wrap" draggable="true"
           ondragstart="onDragStart(event,${i})"
           ondragover="onDragOver(event,${i})"
@@ -1707,6 +1708,37 @@ function importJSON() {
   document.getElementById('importFileInput').click();
 }
 
+// タイトル正規化（全角/半角・前後スペース・の削除）
+function normalizeTitle(t) {
+  return (t||'').replace(/[\u3000\s]/g,'').replace(/の/g,'').toLowerCase();
+}
+
+// ステータス優先度（小さいほど優先）
+function statusPri(s){ return s==='done'?0:s==='todo'?1:s==='pending'?2:9; }
+
+// タスクマージ
+function mergeTasks(existing, incoming) {
+  const es = existing.status, is_ = incoming.status;
+  const status = statusPri(es) <= statusPri(is_) ? es : is_;
+  const memoA = (existing.memo||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const memoB = (incoming.memo||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const memoSet = new Set([...memoA, ...memoB]);
+  const memo = [...memoSet].join('\n');
+  const dueDate = existing.dueDate || incoming.dueDate || null;
+  const createdAt = (existing.createdAt && incoming.createdAt)
+    ? (existing.createdAt < incoming.createdAt ? existing.createdAt : incoming.createdAt)
+    : (existing.createdAt || incoming.createdAt || null);
+  const updatedAt = (existing.updatedAt && incoming.updatedAt)
+    ? (existing.updatedAt > incoming.updatedAt ? existing.updatedAt : incoming.updatedAt)
+    : (existing.updatedAt || incoming.updatedAt || null);
+  const completedAt = status==='done'
+    ? ((existing.completedAt && incoming.completedAt)
+        ? (existing.completedAt > incoming.completedAt ? existing.completedAt : incoming.completedAt)
+        : (existing.completedAt || incoming.completedAt || null))
+    : null;
+  return {...existing, status, memo, dueDate, createdAt, updatedAt, completedAt};
+}
+
 function handleImportFile(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1714,38 +1746,56 @@ function handleImportFile(event) {
   reader.onload = function(e) {
     try {
       const data = JSON.parse(e.target.result);
-      // 配列直接 or { tasks: [...] } 形式に対応
       const imported = Array.isArray(data) ? data : (data.tasks || []);
       if (!Array.isArray(imported) || imported.length === 0) {
         alert('有効なデータが見つかりませんでした。');
         return;
       }
-      const existing = tasks.length;
-      if (existing > 0) {
-        const choice = confirm(
-          `現在 ${existing} 件のタスクがあります。\n\n` +
-          `【OK】既存データに追加インポート（重複はスキップ）\n` +
-          `【キャンセル】既存データを上書き（全置換）`
-        );
-        if (choice) {
-          // 追加：既存IDと重複しないものだけ追加
-          const existingIds = new Set(tasks.map(t => t.id));
-          const newTasks = imported.filter(t => !existingIds.has(t.id));
-          tasks.push(...newTasks);
-          alert(`${newTasks.length} 件を追加しました（重複 ${imported.length - newTasks.length} 件スキップ）。`);
+
+      // バックアップ保存
+      try {
+        localStorage.setItem('shot_backup_' + Date.now(), JSON.stringify(tasks));
+      } catch(be) {}
+
+      // タイトル正規化マップを構築
+      const normMap = new Map();
+      tasks.forEach((t, i) => { normMap.set(normalizeTitle(t.title), i); });
+
+      let addedCount = 0, mergedCount = 0, skippedCount = 0;
+      const dupList = [];
+
+      imported.forEach(inc => {
+        const normInc = normalizeTitle(inc.title);
+        if (normMap.has(normInc)) {
+          const idx = normMap.get(normInc);
+          const orig = tasks[idx];
+          // 完全一致ならスキップ、表記ゆれならマージ
+          if (orig.title.trim() === (inc.title||'').trim()) {
+            skippedCount++;
+          } else {
+            tasks[idx] = mergeTasks(orig, inc);
+            mergedCount++;
+            dupList.push(`「${orig.title}」←「${inc.title}」`);
+          }
         } else {
-          // 上書き
-          tasks = imported;
-          alert(`${imported.length} 件のタスクで上書きしました。`);
+          tasks.push(inc);
+          normMap.set(normInc, tasks.length - 1);
+          addedCount++;
         }
-      } else {
-        tasks = imported;
-        alert(`${imported.length} 件のタスクをインポートしました。`);
-      }
+      });
+
       save();
       render();
-      // ファイル選択をリセット
       event.target.value = '';
+
+      let msg = `インポート完了\n\n`;
+      msg += `✅ 追加：${addedCount} 件\n`;
+      msg += `🔀 マージ：${mergedCount} 件\n`;
+      msg += `⏭ スキップ：${skippedCount} 件\n`;
+      if (dupList.length > 0) {
+        msg += `\n─ 表記ゆれマージ一覧 ─\n` + dupList.join('\n');
+      }
+      alert(msg);
     } catch(err) {
       alert('JSONの読み込みに失敗しました。\n' + err.message);
     }
