@@ -584,6 +584,13 @@ function fmtDate(s){
 }
 
 // ── UNIFIED TASKS ──
+
+function get100ListItems(){
+  try{
+    const raw = localStorage.getItem('yaritai_items_v4');
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
 function allTasks(){
   const tasks = [];
 
@@ -954,6 +961,10 @@ function toggleShot(){
   homeShotOpen = !homeShotOpen;
   renderHome();
 }
+function toggle100List(){
+  home100ListOpen = !home100ListOpen;
+  renderHome();
+}
 
 function updateWaitingCount(){
   const w = getWaiting();
@@ -1101,6 +1112,33 @@ function renderHome(){
   h += secLabel('📅 直近2週間', '');
   h += `<div class="tl-scroll"><div class="tl-grid" id="tlGrid"></div></div>`;
   */
+
+
+  // 100リスト（期限切れ・当月、折りたたみ）
+  const allList = get100ListItems().filter(i => !i.completed);
+  const yr = new Date().getFullYear();
+  const mo = new Date().getMonth() + 1;
+  const listOv = allList.filter(i => {
+    if(!i.year) return false;
+    if(i.year < yr) return true;
+    if(i.year === yr && i.month && i.month < mo) return true;
+    return false;
+  });
+  const listThisMonth = allList.filter(i => i.year === yr && i.month === mo);
+  const listItems = [...new Map([...listOv, ...listThisMonth].map(i=>[i.id,i])).values()];
+  if(listItems.length){
+    const lOpen = !!home100ListOpen;
+    const rows = listItems.slice(0,10).map(i=>{
+      const isOvItem = i.year < yr || (i.year === yr && i.month && i.month < mo);
+      const dateStr = (i.year||'') + (i.month ? '/' + String(i.month).padStart(2,'0') : '');
+      const dateColor = isOvItem ? 'var(--r)' : 'var(--text3)';
+      return '<div class="trow"><div class="trow-title">' + esc(i.title) + '</div><div class="trow-meta"><span style="font-size:11px;color:' + dateColor + ';">' + dateStr + '</span></div><button class="btn-open" onclick="nav('100list')">開く</button></div>';
+    }).join('');
+    const moreRow = listItems.length > 10 ? '<div style="font-size:13px;color:var(--text3);padding:6px 6px 2px;">他 ' + (listItems.length-10) + '件</div>' : '';
+    const body = lOpen ? '<div class="week-body">' + rows + moreRow + '</div>' : '';
+    const arrowCls = 'week-hd-arrow' + (lOpen ? ' open' : '');
+    h += '<div class="week-wrap"><div class="week-hd" onclick="toggle100List()"><span class="week-hd-label">≡ 100リスト — 期限切れ・当月</span><span class="week-hd-count">' + listItems.length + '</span><span class="' + arrowCls + '" id="list100-arrow">▶</span></div>' + body + '</div>';
+  }
 
   document.getElementById('home-content').innerHTML = h;
   /* TIMELINE-DISABLED renderTl('tlGrid', allTasks()); */
