@@ -703,6 +703,7 @@ const App = () => {
             <div style={{ fontSize: 13 }}>「＋ 新しい人物を記録」から始めましょう</div>
           </div>
         ) : (
+          <>
           <div className="person-grid">
             {filtered.map(p => (
               <div key={p.id}
