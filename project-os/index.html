@@ -1107,7 +1107,7 @@ function renderDash() {
       allExecItems.push({ date:e.date, label:e.title, kind:'通常', status:e.status||'', pid:p.id, pname:p.name, sheetUrl:p.sheetUrl||'', tab:'records' });
     });
   });
-  allExecItems.sort((a,b) => itemScore(a) - itemScore(b));
+  allExecItems.sort((a,b) => (a.date||'9999').localeCompare(b.date||'9999'));
 
   /* ─────────────────────────────────────
      ZONE A: 今押すべきTOP3（PJ横断）
