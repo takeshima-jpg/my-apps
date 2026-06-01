@@ -203,7 +203,6 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .mob-header { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 48px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; flex-shrink: 0; }
 .mob-logo { font-size: 17px; font-weight: 800; color: var(--accent); letter-spacing: .03em; }
 .mob-sub { font-size: 13px; color: var(--text3); }
-.mob-menu-btn { background: none; border: none; color: var(--text2); font-size: 22px; cursor: pointer; padding: 4px 8px; margin-left: auto; line-height: 1; }
 
 @media (max-width: 720px) {
   .mob-header { display: flex; }
@@ -239,11 +238,9 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 
 
 /* モバイル用データ管理ボタン */
-.mob-data-bar { display: none; gap: 8px; padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+.mob-data-bar { display: flex; gap: 8px; padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); }
 .mob-data-btn { flex: 1; padding: 8px; font-size: 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); cursor: pointer; font-family: inherit; }
-@media (max-width: 720px) {
-  .mob-data-bar { display: flex; }
-}
+
 
 /* モバイル: タグをグリッド表示 */
 @media (max-width: 720px) {
@@ -534,8 +531,7 @@ function gdriveAutoSave() {
 <div class="mob-header">
   <div class="mob-logo">1day</div>
   <div class="mob-sub">思考ログ</div>
-  <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
-</div>
+  </div>
 <div class="mob-data-bar">
   <button class="mob-data-btn" onclick="exportData()">⬇ バックアップ</button>
   <button class="mob-data-btn" onclick="document.getElementById('importFileInput').click()">⬆ 復元</button>
