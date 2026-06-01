@@ -400,9 +400,12 @@ let settings = (()=>{
 })();
 function saveSettings(){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
 function applySettings(){
-  document.getElementById('app-name-logo').textContent = '100LIST';
-  document.getElementById('app-title').textContent = '100LIST';
-  document.getElementById('nav-focus-label').textContent = settings.focusListName || '重点リスト';
+  const logo = document.getElementById('app-name-logo');
+  if(logo) logo.textContent = '100LIST';
+  const title = document.getElementById('app-title');
+  if(title) title.textContent = '100LIST';
+  const focusLabel = document.getElementById('nav-focus-label');
+  if(focusLabel) focusLabel.textContent = settings.focusListName || '重点リスト';
 }
 
 // ===== SEED DATA (実データ投入箇所) =====
