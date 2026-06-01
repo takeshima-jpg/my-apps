@@ -1174,10 +1174,14 @@ function handleImport(e) {
       if (!data.logs && !data.reviews) throw new Error('logsまたはreviewsキーが見つかりません');
       const logCount = (data.logs||[]).length;
       const rvCount = (data.reviews||[]).length;
-      if (!confirm(`ログ: ${logCount}件、レビュー: ${rvCount}件\nを復元します。現在のデータは上書きされます。\n続けますか？`)) return;
-      if (data.logs) { state.logs = data.logs; saveData(); }
-      if (data.reviews) { state.reviews = data.reviews; saveReviews(); }
+      const ok = confirm(`ログ: ${logCount}件、レビュー: ${rvCount}件\nを復元します。現在のデータは上書きされます。\n続けますか？`);
+      if (!ok) { e.target.value = ''; return; }
+      if (data.logs) { state.logs = data.logs; }
+      if (data.reviews) { state.reviews = data.reviews; }
+      saveData();
+      saveReviews();
       render();
+      e.target.value = '';
       toast('インポートしました（' + logCount + '件）');
     } catch(err) { alert('インポートに失敗しました: ' + err.message); }
   };
