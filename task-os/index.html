@@ -1091,30 +1091,6 @@ function renderHome(){
     </div>`;
   }
 
-  // ─ Project 進行
-  if(activePj.length){
-    h += secLabel('◈ Project', activePj.length);
-    activePj.forEach(p => {
-      const all=[...(p.forks||[]),...(p.events||[])];
-      const doneC=all.filter(i=>i.status==='完了'||i.status==='past'||i.status==='done').length;
-      const pct=all.length?Math.round(doneC/all.length*100):0;
-      const ovC=all.filter(i=>i.date&&i.date<TODAY&&i.status!=='完了'&&i.status!=='past').length;
-      h += `<div class="pj-row">
-        <div class="pj-name">${esc(p.name||p.title||'')}</div>
-        ${ovC?`<span style="font-size:10px;color:var(--r);font-weight:700;">${ovC}超過</span>`:''}
-        <div class="pj-bar-bg"><div class="pj-bar" style="width:${pct}%"></div></div>
-        <div class="pj-pct">${pct}%</div>
-        <button class="btn-open" onclick="nav('project')">開く</button>
-      </div>`;
-    });
-  }
-
-  /* TIMELINE-DISABLED (将来復活可)
-  h += secLabel('📅 直近2週間', '');
-  h += `<div class="tl-scroll"><div class="tl-grid" id="tlGrid"></div></div>`;
-  */
-
-
   // 100リスト（期限切れ・当月、折りたたみ）
   const allList = get100ListItems().filter(function(i){ return !i.completed; });
   const yrL = new Date().getFullYear();
@@ -1150,6 +1126,32 @@ function renderHome(){
     h += '<span class="' + arrowCls + '" id="list100-arrow">▶</span>';
     h += '</div>' + body + '</div>';
   }
+
+  // ─ Project 進行
+  if(activePj.length){
+    h += secLabel('◈ Project', activePj.length);
+    activePj.forEach(p => {
+      const all=[...(p.forks||[]),...(p.events||[])];
+      const doneC=all.filter(i=>i.status==='完了'||i.status==='past'||i.status==='done').length;
+      const pct=all.length?Math.round(doneC/all.length*100):0;
+      const ovC=all.filter(i=>i.date&&i.date<TODAY&&i.status!=='完了'&&i.status!=='past').length;
+      h += `<div class="pj-row">
+        <div class="pj-name">${esc(p.name||p.title||'')}</div>
+        ${ovC?`<span style="font-size:10px;color:var(--r);font-weight:700;">${ovC}超過</span>`:''}
+        <div class="pj-bar-bg"><div class="pj-bar" style="width:${pct}%"></div></div>
+        <div class="pj-pct">${pct}%</div>
+        <button class="btn-open" onclick="nav('project')">開く</button>
+      </div>`;
+    });
+  }
+
+  /* TIMELINE-DISABLED (将来復活可)
+  h += secLabel('📅 直近2週間', '');
+  h += `<div class="tl-scroll"><div class="tl-grid" id="tlGrid"></div></div>`;
+  */
+
+
+
 
   document.getElementById('home-content').innerHTML = h;
   /* TIMELINE-DISABLED renderTl('tlGrid', allTasks()); */
