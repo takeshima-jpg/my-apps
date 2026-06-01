@@ -1137,16 +1137,7 @@ function renderDash() {
   ───────────────────────────────────── */
   const sigs = [];
   ps.forEach(p => {
-    // 温度感「危険」イベント
-    (p.events||[])
-      .filter(e => e.sentiment === '危険')
-      .sort((a,b) => (b.date||'').localeCompare(a.date||''))
-      .slice(0, 2)
-      .forEach(e => sigs.push({lv:'crit', ic:'🚨',
-        t:`温度感 危険：${e.stakeholders||e.title}`,
-        s:`${p.name} ／ ${e.date}`, pid:p.id, tab:'records', pri:0}));
-
-    // 期限超過（制約・イベント、30日以内）
+    // 期限超過（制約・イベント、30日以内）のみ
     [...(p.constraints||[]), ...(p.events||[])]
       .filter(e => e.date && e.date < todayStr && e.status !== '完了')
       .forEach(e => {
@@ -1155,30 +1146,6 @@ function renderDash() {
           t:`期限超過：${e.title}`,
           s:`${p.name} ／ ${e.date}`, pid:p.id, tab:'records', pri:0});
       });
-
-    // 直近14日の分岐（future）
-    (p.forks||[]).filter(f => f.status === 'future' && f.date).forEach(f => {
-      const diff = (new Date(f.date) - now) / 86400000;
-      if (diff >= 0 && diff <= 14) sigs.push({lv:'warn', ic:'⑂',
-        t:`直近の分岐：${f.title}`,
-        s:`${p.name} ／ ${f.date}`, pid:p.id, tab:'forks', pri:2});
-    });
-
-    // 制約接近（7日以内）
-    (p.constraints||[]).filter(e => e.date && e.status !== '完了').forEach(e => {
-      const diff = (new Date(e.date) - now) / 86400000;
-      if (diff >= 0 && diff <= 7) sigs.push({lv:'warn', ic:'🔒',
-        t:`制約接近：${e.title}`,
-        s:`${p.name} ／ ${e.date}`, pid:p.id, tab:'records', pri:1});
-    });
-
-    // 30日更新なし
-    if (p.updatedAt) {
-      const days = Math.floor((now - new Date(p.updatedAt)) / 86400000);
-      if (days >= 30) sigs.push({lv:'info', ic:'⏸',
-        t:`${days}日間更新なし：${p.name}`,
-        s:'シートを取り込んでください', pid:p.id, tab:'overview', pri:4});
-    }
   });
 
   sigs.sort((a,b) => a.pri - b.pri);
