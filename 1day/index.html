@@ -335,7 +335,8 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .gdrive-btn:hover { background: var(--bg2); }
 .gdrive-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 </style>
-<script src="https://accounts.google.com/gsi/client">
+<script src="https://accounts.google.com/gsi/client"></script>
+<script>
 // ── GOOGLE DRIVE SYNC ──
 const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -462,6 +463,7 @@ async function gdriveAutoLoad() {
 function gdriveAutoSave() {
   if (gdriveToken) gdriveSave();
 }
+
 
 </script>
 </head>
