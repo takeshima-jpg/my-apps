@@ -957,6 +957,7 @@ function toggleWeek(){
 }
 
 let homeShotOpen = false;
+let home100ListOpen = false;
 function toggleShot(){
   homeShotOpen = !homeShotOpen;
   renderHome();
@@ -1116,20 +1117,20 @@ function renderHome(){
 
   // 100リスト（期限切れ・当月、折りたたみ）
   const allList = get100ListItems().filter(i => !i.completed);
-  const yr = new Date().getFullYear();
-  const mo = new Date().getMonth() + 1;
+  const yrL = new Date().getFullYear();
+  const moL = new Date().getMonth() + 1;
   const listOv = allList.filter(i => {
     if(!i.year) return false;
-    if(i.year < yr) return true;
-    if(i.year === yr && i.month && i.month < mo) return true;
+    if(i.year < yrL) return true;
+    if(i.year === yrL && i.month && i.month < moL) return true;
     return false;
   });
-  const listThisMonth = allList.filter(i => i.year === yr && i.month === mo);
+  const listThisMonth = allList.filter(i => i.year === yrL && i.month === moL);
   const listItems = [...new Map([...listOv, ...listThisMonth].map(i=>[i.id,i])).values()];
   if(listItems.length){
     const lOpen = !!home100ListOpen;
     const rows = listItems.slice(0,10).map(i=>{
-      const isOvItem = i.year < yr || (i.year === yr && i.month && i.month < mo);
+      const isOvItem = i.year < yrL || (i.year === yrL && i.month && i.month < moL);
       const dateStr = (i.year||'') + (i.month ? '/' + String(i.month).padStart(2,'0') : '');
       const dateColor = isOvItem ? 'var(--r)' : 'var(--text3)';
       return '<div class="trow"><div class="trow-title">' + esc(i.title) + '</div><div class="trow-meta"><span style="font-size:11px;color:' + dateColor + ';">' + dateStr + '</span></div><button class="btn-open" onclick="nav('100list')">開く</button></div>';
