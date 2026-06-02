@@ -512,7 +512,16 @@ function renderHome(){
   const tHd=D({css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:16px'});
   tHd.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0'},'探求テーマ'));
   const addTh=Bt({cls:'btn-g'},'＋ テーマ追加');addTh.addEventListener('click',()=>openThemeForm(null));
-  tHd.appendChild(addTh);tsec.appendChild(tHd);
+  const syncBtn=Bt({cls:'btn-s',css:'margin-right:6px;font-size:11px'},`↺ PJ同期`);
+  syncBtn.addEventListener('click',async()=>{
+    syncBtn.textContent='同期中...';syncBtn.disabled=true;
+    await syncFromProjectOS();
+    const priOrd2={S:0,A:1,B:2,C:3};
+    const th2=await dball('themes');
+    S.themes=th2.sort((a,b)=>(priOrd2[a.priority]||9)-(priOrd2[b.priority]||9));
+    ra();
+  });
+  tHd.appendChild(syncBtn);tHd.appendChild(addTh);tsec.appendChild(tHd);
   if(!themes.length){tsec.appendChild(D({cls:'empty'},'テーマを追加してください'));}
   else{
     const grid=D({cls:'theme-grid'});
@@ -524,6 +533,7 @@ function renderHome(){
       const meta2=D({cls:'tcard-meta'});
       if(t.status)meta2.appendChild(Sp({cls:'tcard-status '+stClass(t.status)},t.status));
       if(t.priority==='S')meta2.appendChild(Sp({css:'font-size:10px;color:#9a7000;font-family:var(--mono)'},'S'));
+      if(t._fromProjectOS)meta2.appendChild(Sp({css:'font-size:10px;color:#4a7a9b;background:#e8f4f8;border-radius:3px;padding:1px 5px;margin-left:4px'},'PJ'));
       main2.appendChild(meta2);
       if(t.summary)main2.appendChild(D({cls:'tcard-summary'},t.summary));
       card.appendChild(main2);
@@ -839,11 +849,49 @@ const DEFAULT_THEMES=[
 ];
 async function seedDefaultThemes(){const existing=await dball('themes');if(existing.length>0)return;for(const t of DEFAULT_THEMES)await dbput('themes',t);S.themes=DEFAULT_THEMES;}
 
+/* ── Project OS 同期 ── */
+const POS_STATUS_MAP={'進行中':'実行中','構想中':'構想中','保留':'保留','完了':'完了','中止':'完了'};
+async function syncFromProjectOS(){
+  try{
+    const raw=localStorage.getItem('pos_v4');
+    if(!raw)return 0;
+    const pos=JSON.parse(raw);
+    const projects=(pos.projects||[]).filter(p=>p.title&&p.status!=='完了'&&p.status!=='中止');
+    const existing=await dball('themes');
+    let added=0;
+    for(const p of projects){
+      const syncId='pos_'+p.id;
+      const already=existing.find(t=>t.id===syncId);
+      const mapped={
+        id:syncId,
+        title:p.title,
+        status:POS_STATUS_MAP[p.status]||'構想中',
+        priority:p.priority==='高'?'A':p.priority==='中'?'B':'C',
+        goal:p.goal||'',
+        createdAt:tod(),
+        updatedAt:tod(),
+        _fromProjectOS:true
+      };
+      if(!already){await dbput('themes',mapped);added++;}
+      else if(already.title!==p.title||already.status!==mapped.status){
+        await dbput('themes',{...already,...mapped,updatedAt:tod()});
+      }
+    }
+    // 削除されたプロジェクトを非表示に（completedに移動）
+    const posIds=new Set(projects.map(p=>'pos_'+p.id));
+    for(const t of existing.filter(t=>t._fromProjectOS&&!posIds.has(t.id))){
+      await dbput('themes',{...t,status:'完了',updatedAt:tod()});
+    }
+    return added;
+  }catch(e){console.warn('Project OS sync error:',e);return 0;}
+}
+
 /* ── Boot ── */
 (async()=>{
   try{const v=await dbget('settings','vision');if(v?.value)S.vision=v.value;}catch(e){}
   try{
     await seedDefaultThemes();
+    await syncFromProjectOS();
     const priOrd={S:0,A:1,B:2,C:3};
     const th=await dball('themes');
     S.themes=th.sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));
