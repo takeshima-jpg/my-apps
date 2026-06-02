@@ -287,8 +287,31 @@ nav{display:flex;flex-direction:column;gap:0;}
 
 <script>
 /* ── DB ── */
-const DBN='ReflectOS6',DBV=2;
-function odb(){return new Promise((res,rej)=>{const r=indexedDB.open(DBN,DBV);r.onupgradeneeded=e=>{const db=e.target.result;['logs','themes','settings','checks'].forEach(s=>{if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'});});};r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e);});}
+const DBN='ReflectOS6',DBV=3;
+let _db=null;
+function odb(){
+  if(_db)return Promise.resolve(_db);
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(DBN,DBV);
+    r.onupgradeneeded=e=>{
+      const db=e.target.result;
+      ['logs','themes','settings','checks'].forEach(s=>{
+        if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'});
+      });
+    };
+    r.onsuccess=e=>{_db=e.target.result;res(_db);};
+    r.onerror=e=>{
+      // バージョン競合時はDBを削除して再試行
+      console.warn('DB open error, retrying...',e.target.error);
+      indexedDB.deleteDatabase(DBN);
+      const r2=indexedDB.open(DBN,DBV);
+      r2.onupgradeneeded=e2=>{const db=e2.target.result;['logs','themes','settings','checks'].forEach(s=>{if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'});});};
+      r2.onsuccess=e2=>{_db=e2.target.result;res(_db);};
+      r2.onerror=e2=>rej(e2);
+    };
+    r.onblocked=()=>{console.warn('DB blocked');};
+  });
+}
 async function dbput(s,v){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).put(v);tx.oncomplete=res;tx.onerror=rej;});}
 async function dbget(s,k){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readonly');const r=tx.objectStore(s).get(k);r.onsuccess=()=>res(r.result);r.onerror=rej;});}
 async function dball(s){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readonly');const r=tx.objectStore(s).getAll();r.onsuccess=()=>res(r.result);r.onerror=rej;});}
@@ -524,7 +547,12 @@ function renderHome(){
   const syncBtn=Bt({cls:'btn-s',css:'margin-right:6px;font-size:11px'},`↺ PJ同期`);
   syncBtn.addEventListener('click',async()=>{
     syncBtn.textContent='同期中...';syncBtn.disabled=true;
-    await syncFromProjectOS();
+    const result=await syncFromProjectOS();
+    if(result===-1){
+      syncBtn.textContent='↺ PJ同期';syncBtn.disabled=false;
+      alert('Project OSのデータが見つかりません。\nProject OSを一度開いてからお試しください。\n（同じブラウザで https://takeshima-jpg.github.io/my-apps/project-os/ を開く）');
+      return;
+    }
     const priOrd2={S:0,A:1,B:2,C:3};
     const th2=await dball('themes');
     S.themes=th2.sort((a,b)=>(priOrd2[a.priority]||9)-(priOrd2[b.priority]||9));
@@ -901,7 +929,7 @@ const POS_STATUS_MAP={'進行中':'実行中','構想中':'構想中','保留':'
 async function syncFromProjectOS(){
   try{
     const raw=localStorage.getItem('pos_v4');
-    if(!raw)return 0;
+    if(!raw){console.info('pos_v4 not found. Open Project OS first.');return -1;}
     const pos=JSON.parse(raw);
     const projects=(pos.projects||[]).filter(p=>p.title&&p.status!=='完了'&&p.status!=='中止');
     const existing=await dball('themes');
