@@ -775,11 +775,12 @@ textarea.fc.tall { min-height: 130px; }
         <div class="import-panel-b">
           <div class="si-format-hint">
             シート全体をそのまま貼り付けてください（A1以降）<br>
-            「NO・種別・月・日・状態」が並ぶ行を自動検出してデータ開始位置にします。上部の固定情報（ゴール・前提条件・成功条件・注意論点）も自動取得してプロジェクトに同期します。<br>
-            列構成：<code>NO</code> <code>種別</code> <code>月</code> <code>日</code> <code>状態</code> <code>イベント</code> <code>担当</code> <code>対象</code> <code>施策</code> <code>ゴール（狙い）</code> <code>結果</code> <code>温度感</code>　　種別：<code>空欄</code>=イベント　<code>分岐</code>=分岐点　<code>記録</code>=記録
+            「ID・期日・状態・イベント」が並ぶ行を自動検出してデータ開始位置にします。上部の固定情報（PJ名・ゴール・成功条件・注意論点）も自動取得してプロジェクトに同期します。<br>
+            列構成：<code>ID</code> <code>Phase</code> <code>種別</code> <code>期日</code> <code>状態</code> <code>イベント</code> <code>担当</code> <code>対象</code> <code>施策</code> <code>ゴール（狙い）</code> <code>結果</code>　　種別：<code>空欄</code>=イベント　<code>分岐</code>=分岐点　<code>制約</code>=制約　<code>記録</code>=記録<br>
+            <span style="color:var(--gray3);">旧フォーマット（月・日分割 / 温度感列）も引き続き読み込み可能です。</span>
           </div>
           <textarea class="import-textarea" id="si-paste" style="min-height:260px;"
-            placeholder="シート全体をそのまま貼り付けてください。&#10;&#10;Ctrl+A → Ctrl+C でコピーし、ここに Ctrl+V で貼り付け。&#10;&#10;「NO・種別・月・日・状態」が含まれる行を自動検出してヘッダー行とします。&#10;それより上の固定エリア（ゴール・前提条件・成功条件・注意論点など）はプロジェクト情報として自動同期されます。&#10;&#10;貼り付けるたびに全上書き更新されます。"></textarea>
+            placeholder="シート全体をそのまま貼り付けてください。&#10;&#10;Ctrl+A → Ctrl+C でコピーし、ここに Ctrl+V で貼り付け。&#10;&#10;「ID・期日・状態・イベント」が含まれる行を自動検出してヘッダー行とします。&#10;それより上の固定エリア（PJ名・ゴール・成功条件・注意論点など）はプロジェクト情報として自動同期されます。&#10;&#10;貼り付けるたびに全上書き更新されます。&#10;（旧フォーマット：月・日分割も引き続き対応）"></textarea>
         </div>
       </div>
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
@@ -798,7 +799,7 @@ textarea.fc.tall { min-height: 130px; }
           </div>
         </div>
         <div class="import-panel" id="si-sent-panel" style="display:none;margin-bottom:14px;">
-          <div class="import-panel-h">④ 温度感履歴（注意・危険のイベント）</div>
+          <div class="import-panel-h">④ 温度感履歴（注意・危険のイベント）<span style="font-size:.62rem;color:var(--gray3);font-weight:400;margin-left:8px;">旧フォーマット対応</span></div>
           <div class="import-panel-b">
             <div id="si-sent-list" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
           </div>
@@ -1795,12 +1796,15 @@ function normH(s) {
 }
 
 /* ── 管理表ヘッダーの候補列名 ── */
-// 列構成：NO / 種別 / 月 / 日 / 状態 / イベント / 担当 / 対象 / 施策 / ゴール（狙い） / 結果 / 温度感
+// 列構成：ID / Phase / 種別 / 期日 / 状態 / イベント / 担当 / 対象 / 施策 / ゴール（狙い） / 結果
+// ※旧フォーマット（月・日分割 / 温度感）も後方互換として継続サポート
 const SS_COLS = {
-  NO:        ['no'],
+  NO:        ['id','no'],
+  PHASE:     ['phase','フェーズ','ph'],
   KIND:      ['種別'],
-  MONTH:     ['月'],
-  DAY:       ['日'],
+  DATE:      ['期日','日付','date'],
+  MONTH:     ['月'],   // 旧フォーマット後方互換
+  DAY:       ['日'],   // 旧フォーマット後方互換
   STATUS:    ['状態'],
   TITLE:     ['イベント','イベント・論点','論点','タイトル','件名'],
   ASSIGNEE:  ['担当','担当者'],
@@ -1808,24 +1812,29 @@ const SS_COLS = {
   CONTENT:   ['施策','内容・施策','内容施策','内容','詳細'],
   GOAL:      ['ゴール（狙い）','ゴール・意味','ゴール意味','ゴール','狙い','意味'],
   RESULT:    ['結果','結果・学び','結果学び','学び'],
-  SENTIMENT: ['温度感'],
+  SENTIMENT: ['温度感'],  // 旧フォーマット後方互換
 };
 
-/* ── ヘッダー行検出：NO・種別・月・日・状態が部分一致する行を探す ── */
-// 「管理表ヘッダー行」の判定：NO, 種別, 月, 日, 状態 のうち3つ以上がその行にある
-const HEADER_SIGNALS = ['no', '種別', '月', '日', '状態'];
+/* ── ヘッダー行検出 ── */
+// 新フォーマット：ID / Phase / 期日 / 状態 / イベント のうち3つ以上
+// 旧フォーマット：NO / 種別 / 月 / 日 / 状態 のうち3つ以上
+const HEADER_SIGNALS_NEW = ['id', '期日', '状態', 'イベント', '種別', 'phase'];
+const HEADER_SIGNALS_OLD = ['no', '種別', '月', '日', '状態'];
 function isHeaderRow(cells) {
   const norms = cells.map(c => normH(c));
-  let hit = 0;
-  for (const sig of HEADER_SIGNALS) {
-    if (norms.some(n => n === normH(sig) || n.includes(normH(sig)))) hit++;
+  function countHit(signals) {
+    let hit = 0;
+    for (const sig of signals) {
+      if (norms.some(n => n === normH(sig) || n.includes(normH(sig)))) hit++;
+    }
+    return hit;
   }
-  return hit >= 3;
+  return countHit(HEADER_SIGNALS_NEW) >= 3 || countHit(HEADER_SIGNALS_OLD) >= 3;
 }
 
 /* ── 上部固定エリアのラベル候補 ── */
 const AREA_KEYS = {
-  projectName:      ['プロジェクト名','プロジェクト','project'],
+  projectName:      ['pj名','プロジェクト名','プロジェクト','project'],
   nextAction:       ['次の一手','nextaction'],
   attentionIssue:   ['注意論点','危険論点','注意事項'],
   issueMemo:        ['論点メモ','課題メモ','論点'],
@@ -2008,7 +2017,24 @@ function parseSheetFull(text) {
 }
 
 /* ── 日付構築 ── */
-function buildDate(mo, dy, year) {
+// 新フォーマット: dateStr = "2026/06/15" or "2026-06-15"
+// 旧フォーマット: mo="6" dy="15" でyearと合成
+function buildDate(mo, dy, year, dateStr) {
+  // 新フォーマット優先
+  if (dateStr && dateStr.trim()) {
+    const s = dateStr.trim().replace(/\//g, '-');
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) {
+      const [y, m, d] = s.split('-');
+      return `${y}-${String(parseInt(m)).padStart(2,'0')}-${String(parseInt(d)).padStart(2,'0')}`;
+    }
+    // M/D or M-D（年なし）→ 当年で補完
+    if (/^\d{1,2}[-/]\d{1,2}$/.test(s)) {
+      const [m, d] = s.split(/[-/]/);
+      return `${year}-${String(parseInt(m)).padStart(2,'0')}-${String(parseInt(d)).padStart(2,'0')}`;
+    }
+  }
+  // 旧フォーマット（月・日分割）
   const m = parseInt(mo) || 0;
   const d = parseInt(dy) || 0;
   if (!m || !d) return '';
@@ -2020,9 +2046,11 @@ function rowToObj(row, colMap, projName, year) {
   const g = f => getCol(row, colMap, f);
 
   const no        = g('NO');
+  const phase     = g('PHASE');
   const kind      = g('KIND');
-  const mo        = g('MONTH');
-  const dy        = g('DAY');
+  const dateStr   = g('DATE');   // 新フォーマット: 期日列
+  const mo        = g('MONTH');  // 旧フォーマット後方互換
+  const dy        = g('DAY');    // 旧フォーマット後方互換
   const status    = g('STATUS');
   const title     = g('TITLE');
   const assignee  = g('ASSIGNEE');
@@ -2030,15 +2058,17 @@ function rowToObj(row, colMap, projName, year) {
   const content   = g('CONTENT');
   const goal      = g('GOAL');
   const result    = g('RESULT');
-  const sentiment = g('SENTIMENT');
+  const sentiment = g('SENTIMENT'); // 旧フォーマット後方互換
 
-  // 空行スキップ：タイトルが空なら登録しない（NOだけある行も除外）
+  // 空行スキップ：タイトルが空なら登録しない（IDだけある行も除外）
   if (!title) return null;
 
-  const date     = buildDate(mo, dy, year);
-  const _key     = no ? `${projName}__${no}` : null;
+  const date     = buildDate(mo, dy, year, dateStr);
+  // IDが小数点付き（11.0）の場合も文字列キーとして正規化
+  const noStr    = no ? String(no).replace(/\.0$/, '') : '';
+  const _key     = noStr ? `${projName}__${noStr}` : null;
   const category = resolveCategory(kind);
-  const base     = { id: uid(), _key, date, status, sentiment, _category: category };
+  const base     = { id: uid(), _key, date, status, phase, sentiment, _category: category };
 
   if (category === 'forks') {
     return { ...base, title,
@@ -2055,14 +2085,13 @@ function rowToObj(row, colMap, projName, year) {
     };
   }
   if (category === 'constraints') {
-    // 種別=制約
     return { ...base, title,
       content, goal, stakeholders: target || assignee,
       status: status || '未着手',
     };
   }
 
-  // events（施策 = nextAction/nextStep として扱う）
+  // events
   return { ...base, title, assignee, stakeholders: target,
     content, goal, result, nextStep: content, status: status || '未着手' };
 }
