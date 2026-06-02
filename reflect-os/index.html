@@ -70,6 +70,8 @@ nav{display:flex;flex-direction:column;gap:0;}
 .cl-cb{flex-shrink:0;width:16px;height:16px;accent-color:var(--go);cursor:pointer;margin-top:2px;}
 .cl-label{flex:1;font-size:14px;color:var(--tx);line-height:1.6;min-width:0;}
 .cl-row input[type=checkbox]:checked~.cl-label{text-decoration:line-through;color:var(--mu);}
+.cl-done .cl-label{text-decoration:line-through;color:var(--mu);}
+.cl-done .cl-from{color:var(--di);}
 .cl-from{font-size:11px;color:var(--di);white-space:nowrap;flex-shrink:0;}
 .ai-prompt-box{border:1px solid var(--bd);border-radius:5px;margin-bottom:16px;background:var(--sf);}
 .ai-prompt-box summary{padding:10px 14px;font-size:13px;cursor:pointer;color:var(--mu);}
@@ -285,8 +287,8 @@ nav{display:flex;flex-direction:column;gap:0;}
 
 <script>
 /* ── DB ── */
-const DBN='ReflectOS6',DBV=1;
-function odb(){return new Promise((res,rej)=>{const r=indexedDB.open(DBN,DBV);r.onupgradeneeded=e=>{const db=e.target.result;['logs','themes','settings'].forEach(s=>{if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'});});};r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e);});}
+const DBN='ReflectOS6',DBV=2;
+function odb(){return new Promise((res,rej)=>{const r=indexedDB.open(DBN,DBV);r.onupgradeneeded=e=>{const db=e.target.result;['logs','themes','settings','checks'].forEach(s=>{if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'});});};r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e);});}
 async function dbput(s,v){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).put(v);tx.oncomplete=res;tx.onerror=rej;});}
 async function dbget(s,k){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readonly');const r=tx.objectStore(s).get(k);r.onsuccess=()=>res(r.result);r.onerror=rej;});}
 async function dball(s){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readonly');const r=tx.objectStore(s).getAll();r.onsuccess=()=>res(r.result);r.onerror=rej;});}
@@ -304,7 +306,7 @@ const Sel=(a,...c)=>h('select',a,...c);
 const Opt=(v,t,sel)=>h('option',{value:v,...(sel?{selected:''}:{})},t);
 
 /* ── State ── */
-let S={vision:{vision:'',yearGoal:''},themes:[],logs:[],tab:'home',forming:null,editing:null,fd:{},_dashTab:'lessons'};
+let S={vision:{vision:'',yearGoal:''},themes:[],logs:[],checks:{},tab:'home',forming:null,editing:null,fd:{},_dashTab:'lessons'};
 
 /* ── Constants ── */
 const TM={note:{label:'振り返り',bg:'#f0f5f1',ac:'#2a6a3a'},moya:{label:'モヤモヤ',bg:'#f0f0f8',ac:'#4a4a8a'},vision:{label:'VISION点検',bg:'#faf0e8',ac:'#7a5020'},strategy:{label:'戦略テーマ',bg:'#f0f5f0',ac:'#1a6050'},philosophy:{label:'思想変化',bg:'#f4f1fa',ac:'#5a4a8a'}};
@@ -583,9 +585,12 @@ function renderHome(){
     const qList=D({cls:'checklist'});
     qs.slice(0,10).forEach(r=>{
       const lines=r.question.split(/\n/).filter(l=>l.trim());
-      lines.forEach(line=>{
+      lines.forEach((line,i)=>{
         const row=D({cls:'cl-row'});
         const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
+        const ckId='q_'+r.id+'_'+i;cb.checked=!!S.checks[ckId];
+        if(cb.checked)row.classList.add('cl-done');
+        cb.addEventListener('change',async()=>{S.checks[ckId]=cb.checked;await dbput('checks',{id:ckId,done:cb.checked});row.classList.toggle('cl-done',cb.checked);});
         const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\s]+/,'');
         const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'');
         row.appendChild(cb);row.appendChild(lbl);row.appendChild(from);
@@ -603,9 +608,12 @@ function renderHome(){
     const eList=D({cls:'checklist'});
     exps.slice(0,10).forEach(r=>{
       const lines=r.nextExp.split(/\n/).filter(l=>l.trim());
-      lines.forEach(line=>{
+      lines.forEach((line,i)=>{
         const row=D({cls:'cl-row'});
         const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
+        const ckId='e_'+r.id+'_'+i;cb.checked=!!S.checks[ckId];
+        if(cb.checked)row.classList.add('cl-done');
+        cb.addEventListener('change',async()=>{S.checks[ckId]=cb.checked;await dbput('checks',{id:ckId,done:cb.checked});row.classList.toggle('cl-done',cb.checked);});
         const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\d\.）\)\s]+/,'');
         const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'');
         row.appendChild(cb);row.appendChild(lbl);row.appendChild(from);
@@ -936,6 +944,8 @@ async function syncFromProjectOS(){
     S.themes=th.sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));
     const lg=await dball('logs');
     S.logs=lg.sort((a,b)=>b.date.localeCompare(a.date));
+    const chks=await dball('checks');
+    chks.forEach(c=>{S.checks[c.id]=c.done;});
   }catch(e){console.warn(e);}
   // サイドバーの記録ボタンを生成
   const sbRec = document.getElementById('sb-rec-btns');
