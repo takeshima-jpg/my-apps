@@ -786,6 +786,7 @@ textarea.fc.tall { min-height: 130px; }
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
         <button class="btn btn-navy" style="padding:11px 28px;font-size:.9rem;" onclick="siParse()">⬇ 解析して取り込む</button>
         <button class="btn btn-danger btn-sm" id="si-clear-btn" onclick="siClearImport()" style="display:none;">🗑 取り込みデータをクリア</button>
+        <button class="btn btn-outline btn-sm" id="si-undo-btn" onclick="siUndo()" style="display:none;border-color:var(--blue);color:var(--blue);">↩ 元に戻す</button>
         <div id="si-status" style="font-size:.8rem;color:var(--gray3);flex:1;"></div>
       </div>
       <div id="si-result" style="display:none;">
@@ -2186,6 +2187,63 @@ function renderImport() {
   siRefreshProjSel();
   $$('si-status').textContent = '';
   $$('si-result').style.display = 'none';
+  updateUndoBtn();
+}
+
+/* ── アンドゥ（1世代スナップショット） ── */
+const UNDO_KEY = 'pos_v4_undo';
+
+function saveSnapshot(pid, label) {
+  const p = S.projects.find(x => x.id === pid);
+  if (!p) return;
+  try {
+    const snap = {
+      pid,
+      label,
+      savedAt: new Date().toISOString(),
+      data: JSON.parse(JSON.stringify(p))  // deep copy
+    };
+    localStorage.setItem(UNDO_KEY, JSON.stringify(snap));
+  } catch(e) {}
+}
+
+function loadSnapshot() {
+  try {
+    const raw = localStorage.getItem(UNDO_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function siUndo() {
+  const snap = loadSnapshot();
+  if (!snap) { alert('元に戻せるデータがありません'); return; }
+  const fmt = new Date(snap.savedAt).toLocaleString('ja-JP');
+  if (!confirm(`「${snap.data.name}」を取り込み前の状態に戻します。\n保存日時：${fmt}\n\nよろしいですか？`)) return;
+  const idx = S.projects.findIndex(x => x.id === snap.pid);
+  if (idx !== -1) {
+    S.projects[idx] = snap.data;
+  } else {
+    S.projects.push(snap.data);
+  }
+  localStorage.removeItem(UNDO_KEY);
+  save();
+  siRefreshProjSel();
+  updateUndoBtn();
+  $$('si-status').innerHTML = `<span style="color:var(--blue);font-weight:600;">↩ 元に戻しました（${esc(snap.data.name)}）</span>`;
+  $$('si-result').style.display = 'none';
+}
+
+function updateUndoBtn() {
+  const btn = $$('si-undo-btn');
+  if (!btn) return;
+  const snap = loadSnapshot();
+  if (snap) {
+    const fmt = new Date(snap.savedAt).toLocaleString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    btn.style.display = 'inline-flex';
+    btn.title = `${snap.data.name} の取り込み前状態（${fmt}）に戻す`;
+  } else {
+    btn.style.display = 'none';
+  }
 }
 
 function siDeleteProj(pid) {
@@ -2237,6 +2295,32 @@ function siParse() {
 
   const text = $$('si-paste')?.value || '';
   if (!text.trim()) { alert('スプレッドシートの内容を貼り付けてください'); return; }
+
+  // ── 予防: 確認ダイアログ ──
+  const existEvt = (p.events||[]).length;
+  const existFrk = (p.forks||[]).length;
+  const existRec = (p.decisions||[]).length;
+  const existTotal = existEvt + existFrk + existRec;
+  const hasExisting = existTotal > 0;
+
+  const confirmMsg = [
+    `▼ 取り込み先プロジェクト`,
+    `  「${p.name}」`,
+    ``,
+    hasExisting
+      ? `▼ 現在のデータ（全上書きされます）\n  イベント ${existEvt}件 ／ 分岐 ${existFrk}件 ／ 記録 ${existRec}件`
+      : `▼ 現在のデータ\n  （まだデータがありません）`,
+    ``,
+    `このプロジェクトにシートを取り込みます。`,
+    hasExisting ? `既存データはすべて上書きされます。` : ``,
+    `よろしいですか？`,
+  ].filter(s => s !== undefined).join('\n');
+
+  if (!confirm(confirmMsg)) return;
+
+  // ── 処置策: 取り込み前スナップショット保存 ──
+  saveSnapshot(pid, 'import');
+  updateUndoBtn();
 
   $$('si-status').textContent = '解析中...';
 
@@ -2338,7 +2422,8 @@ function siParse() {
     `<span style="color:var(--green);font-weight:600;">✓ 取り込み完了</span>　` +
     `${totalRows}件を反映` +
     (skipped ? `・スキップ ${skipped}行（空行）` : '') +
-    `　<span style="color:var(--gray3);font-size:.72rem;">ヘッダー検出：${headerRowIdx+1}行目 ／ 全上書き</span>`;
+    `　<span style="color:var(--gray3);font-size:.72rem;">ヘッダー検出：${headerRowIdx+1}行目 ／ 全上書き</span>` +
+    `　<span style="font-size:.72rem;color:var(--blue);">↩ ボタンで取り込み前に戻せます</span>`;
 
   // 統計バッジ
   const summaryParts = [
