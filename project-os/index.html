@@ -1377,40 +1377,51 @@ function buildPane(p,t){
 
 /* ── OVERVIEW ── */
 function paneOv(p){
-  // 概要タブ：関係者カードは不要のため削除
+  // フェーズマップHTML生成
+  const phases = p.phases || [];
+  const phaseMapHtml = phases.length ? `
+    <div class="ov-card full" style="margin-bottom:0;">
+      <div class="ov-card-h">フェーズマップ</div>
+      <div class="ov-card-b" style="padding:10px 15px;">
+        <div style="display:flex;gap:0;overflow-x:auto;padding-bottom:4px;">
+          ${phases.map((ph,i) => `
+            <div style="flex:1;min-width:100px;text-align:center;padding:10px 8px;
+                        border-right:${i<phases.length-1?'1px solid var(--gray1)':'none'};
+                        position:relative;">
+              <div style="font-size:1.1rem;font-weight:800;color:var(--navy);opacity:.18;line-height:1;">${esc(ph.phase)}</div>
+              <div style="font-size:.78rem;font-weight:700;color:var(--navy);margin:3px 0 2px;">${esc(ph.theme)}</div>
+              <div style="font-size:.65rem;color:var(--gray3);line-height:1.4;">${esc(ph.goal)}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>` : '';
+
   return `
     ${p.nextAction?`<div class="ov-next"><div class="ov-next-lbl">今の次の一手</div><div class="ov-next-txt">${esc(p.nextAction)}</div></div>`:''}
     <div class="fe" style="max-width:820px;align-items:center;gap:10px;">
-      <span style="font-size:.72rem;color:var(--gray3);">ゴール・前提条件・成功条件はスプレッドシートから自動同期されます</span>
+      <span style="font-size:.72rem;color:var(--gray3);">ゴール・成功条件・注意論点はスプレッドシートから自動同期されます</span>
       <button class="btn btn-navy btn-sm" onclick="nav('import')" style="margin-left:auto;">⬇ シートを取り込む</button>
     </div>
     <div class="ov-grid">
+
       <div class="ov-card full">
         <div class="ov-card-h">ゴール</div>
         <div class="ov-card-b"><div class="ov-text">${esc(p.goal)||'<span style="color:var(--gray3)">—（スプレッドシートから取り込まれます）</span>'}</div></div>
       </div>
+
       ${p.attentionIssue?`
       <div class="ov-card full">
         <div class="ov-card-h" style="color:var(--orange);">⚠ 注意論点</div>
         <div class="ov-card-b"><div class="ov-text" style="color:var(--orange);">${esc(p.attentionIssue)}</div></div>
       </div>`:''}
-      ${p.issueMemo?`
+
+      ${p.successConditions?`
       <div class="ov-card full">
-        <div class="ov-card-h">論点メモ</div>
-        <div class="ov-card-b"><div class="ov-text">${esc(p.issueMemo)}</div></div>
-      </div>`:''}
-      <div class="ov-card">
-        <div class="ov-card-h">前提条件</div>
-        <div class="ov-card-b">
-          <ul class="ov-list">
-            ${(p.premises||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li style="list-style:none;color:var(--gray3)">—</li>'}
-          </ul>
-        </div>
-      </div>
-      <div class="ov-card">
         <div class="ov-card-h">成功条件</div>
-        <div class="ov-card-b"><div class="ov-text">${esc(p.successConditions)||'<span style="color:var(--gray3)">—</span>'}</div></div>
-      </div>
+        <div class="ov-card-b"><div class="ov-text">${esc(p.successConditions)}</div></div>
+      </div>`:''}
+
+      ${phaseMapHtml}
 
     </div>`;
 }
@@ -1930,6 +1941,40 @@ function parseHeaderArea(lines, headerRowIdx, delim) {
       if (val) result[field] = val;
     }
   }
+
+  // ── フェーズマップ解析 ──
+  // 「フェーズマップ」行の直後にある「Phase / テーマ / 成功条件」ヘッダー行を探し
+  // その後の数値始まり行をフェーズとして取得
+  result.phases = [];
+  let phaseSectionStart = -1;
+  for (let i = 0; i < headerRowIdx; i++) {
+    const cells = splitCells(lines[i]);
+    const firstNorm = normH(cells.find(c => c.trim()) || '');
+    if (firstNorm === normH('フェーズマップ')) { phaseSectionStart = i; break; }
+  }
+  if (phaseSectionStart !== -1) {
+    // フェーズマップ以降の行で「Phase / テーマ / 成功条件」ヘッダー行をスキップし数字行を取得
+    for (let i = phaseSectionStart + 1; i < headerRowIdx; i++) {
+      const cells = splitCells(lines[i]);
+      if (!cells.some(c => c.trim())) continue;
+      const first = cells.find(c => c.trim()) || '';
+      const firstNorm = normH(first);
+      // ヘッダー行スキップ（phase, テーマ, 成功条件）
+      if (firstNorm === normH('phase') || firstNorm === normH('テーマ')) continue;
+      // 数値または全角数字（１〜６）始まりの行をフェーズデータとして取得
+      if (/^[0-9１２３４５６７８９]/.test(first.trim())) {
+        const nonEmpty = cells.filter(c => c.trim());
+        if (nonEmpty.length >= 2) {
+          result.phases.push({
+            phase: nonEmpty[0],
+            theme: nonEmpty[1],
+            goal:  nonEmpty[2] || ''
+          });
+        }
+      }
+    }
+  }
+
   return result;
 }
 
@@ -2371,7 +2416,6 @@ function siParse() {
     attentionIssue:   (v) => { p.attentionIssue    = v; },
     issueMemo:        (v) => { p.issueMemo         = v; },
     premises:         (v) => {
-      // 前提条件：改行のみで分割（「・」始まりの行はそのまま1項目として保持）
       p.premises = v.split(/\n+/).map(s => s.trim()).filter(Boolean);
     },
   };
@@ -2379,6 +2423,11 @@ function siParse() {
   for (const [field, apply] of Object.entries(syncFields)) {
     const val = headerAreaInfo[field];
     if (val && val.trim()) { apply(val.trim()); synced.push(field); }
+  }
+  // フェーズマップ同期
+  if (headerAreaInfo.phases && headerAreaInfo.phases.length) {
+    p.phases = headerAreaInfo.phases;
+    synced.push('phases');
   }
 
   // ── 行を分類 ──
