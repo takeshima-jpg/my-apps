@@ -1397,7 +1397,6 @@ function paneOv(p){
     </div>` : '';
 
   return `
-    ${p.nextAction?`<div class="ov-next"><div class="ov-next-lbl">今の次の一手</div><div class="ov-next-txt">${esc(p.nextAction)}</div></div>`:''}
     <div class="fe" style="max-width:820px;align-items:center;gap:10px;">
       <span style="font-size:.72rem;color:var(--gray3);">ゴール・成功条件・注意論点はスプレッドシートから自動同期されます</span>
       <button class="btn btn-navy btn-sm" onclick="nav('import')" style="margin-left:auto;">⬇ シートを取り込む</button>
@@ -1603,15 +1602,13 @@ function openProjModal(pid){
     </div>
     <div class="fg"><label class="fl">スプレッドシート URL</label>${inp('fsurl',p?.sheetUrl,'https://docs.google.com/spreadsheets/...')}</div>
     <div class="fg"><label class="fl">ゴール</label>${ta('fgo',p?.goal)}</div>
-    <div class="fg"><label class="fl">今の次の一手</label>${inp('fna',p?.nextAction,'今すぐやるべき一手')}</div>
-    <div class="fg"><label class="fl">成功条件</label>${ta('fsc',p?.successConditions)}</div>
-    <div class="fg"><label class="fl">前提条件（1行1項目）</label>${ta('fpm',(p?.premises||[]).join('\n'),'tall')}</div>`,
+    <div class="fg"><label class="fl">注意論点</label>${inp('fat',p?.attentionIssue,'リスク・要注意事項')}</div>
+    <div class="fg"><label class="fl">成功条件</label>${ta('fsc',p?.successConditions)}</div>`,
   ()=>{
     const name=g('fn'); if(!name){alert('プロジェクト名を入力してください');return;}
     const data={name,status:g('fst'),priority:g('fpr'),deadline:g('fdl'),owner:g('fow'),
       sheetUrl:g('fsurl'),
-      goal:g('fgo'),nextAction:g('fna'),successConditions:g('fsc'),
-      premises:($$('fpm').value||'').split('\n').map(l=>l.trim()).filter(Boolean),
+      goal:g('fgo'),attentionIssue:g('fat'),successConditions:g('fsc'),
       updatedAt:today()};
     if(p) Object.assign(proj(pid),data);
     else S.projects.push({id:uid(),...data,stakeholders:[],issues:[],forks:[],decisions:[],learnings:[],events:[],constraints:[]});
