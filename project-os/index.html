@@ -281,6 +281,16 @@ input, select, textarea { font-family: var(--f0); }
   transition: all .15s;
 }
 .proj-card-new:hover { border-color: var(--navy); color: var(--navy); }
+.pc-drag-handle {
+  margin-left: auto; font-size: .72rem; color: var(--gray3);
+  cursor: grab; padding: 4px 8px; border-radius: 4px;
+  user-select: none; border: 1px solid var(--gray1);
+  display: flex; align-items: center; gap: 4px;
+  transition: all .14s;
+}
+.pc-drag-handle:hover { color: var(--navy); border-color: var(--gray3); cursor: grab; }
+.proj-card.dragging { opacity: .45; transform: scale(.98); }
+.proj-card.drag-over { border-top: 2px solid var(--navy); }
 
 /* ═══════════════════════════════════════════
    DETAIL
@@ -291,11 +301,13 @@ input, select, textarea { font-family: var(--f0); }
   position: sticky; top: 0; z-index: 20;
 }
 .det-back {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: .72rem; color: var(--gray3); cursor: pointer;
-  margin-bottom: 7px; transition: color .14s;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .78rem; font-weight: 600; color: var(--navy);
+  background: var(--off); border: 1px solid var(--gray2);
+  border-radius: 6px; padding: 5px 12px;
+  cursor: pointer; margin-bottom: 12px; transition: all .14s;
 }
-.det-back:hover { color: var(--navy); }
+.det-back:hover { background: var(--gray1); border-color: var(--gray3); }
 .det-name { font-family: var(--f1); font-size: 1.475rem; color: var(--navy); margin-bottom: 7px; }
 .det-meta { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
 
@@ -870,7 +882,7 @@ textarea.fc.tall { min-height: 130px; }
   <!-- 3. DETAIL -->
   <div class="pg" id="pg-detail">
     <div class="det-top">
-      <div class="det-back" onclick="nav('projs')">← プロジェクト一覧</div>
+      <button class="det-back" onclick="nav('projs')">← プロジェクト一覧へ</button>
       <div id="det-name" class="det-name"></div>
       <div id="det-meta" class="det-meta"></div>
     </div>
@@ -1348,7 +1360,7 @@ function renderProjs() {
     })();
 
     return `
-    <div class="proj-card" onclick="nav('detail','${p.id}')">
+    <div class="proj-card" data-pid="${p.id}">
       <div class="pc-top">
         <div class="pc-name">${esc(p.name)}</div>
         <div class="pc-badges">
@@ -1367,13 +1379,58 @@ function renderProjs() {
         ${evtN     ? `<span class="pc-stat">実行 ${evtN}</span>` : ''}
       </div>
       <div class="pc-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-outline btn-xs" onclick="nav('detail','${p.id}')">詳細</button>
-        <button class="btn btn-outline btn-xs" onclick="openProjModal('${p.id}')">編集</button>
-        <button class="btn btn-danger btn-xs"  onclick="delProj('${p.id}')">削除</button>
+        <button class="btn btn-navy btn-sm" onclick="nav('detail','${p.id}')">詳細を見る</button>
+        <button class="btn btn-outline btn-sm" onclick="openProjModal('${p.id}')">編集</button>
+        <button class="btn btn-danger btn-sm" onclick="delProj('${p.id}')">削除</button>
+        <div class="pc-drag-handle" title="ドラッグして並び替え" draggable="false">⠿ 並び替え</div>
       </div>
     </div>`;
   }).join('');
   $$('proj-grid').innerHTML = html + `<div class="proj-card-new" onclick="openProjModal()">＋ 新しいプロジェクトを追加</div>`;
+  initProjDrag();
+}
+
+function initProjDrag() {
+  const grid = $$('proj-grid');
+  let dragSrc = null;
+
+  grid.querySelectorAll('.proj-card').forEach((card, i) => {
+    const handle = card.querySelector('.pc-drag-handle');
+    if (!handle) return;
+
+    handle.addEventListener('mousedown', () => { card.setAttribute('draggable', 'true'); });
+    card.addEventListener('dragstart', e => {
+      dragSrc = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      card.setAttribute('draggable', 'false');
+      grid.querySelectorAll('.proj-card').forEach(c => c.classList.remove('drag-over'));
+      // 順序をS.projectsに反映して保存
+      const newOrder = [...grid.querySelectorAll('.proj-card[data-pid]')].map(c => c.dataset.pid);
+      S.projects.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
+      save();
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (card !== dragSrc) {
+        grid.querySelectorAll('.proj-card').forEach(c => c.classList.remove('drag-over'));
+        card.classList.add('drag-over');
+      }
+    });
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragSrc && dragSrc !== card) {
+        const cards = [...grid.querySelectorAll('.proj-card[data-pid]')];
+        const srcIdx = cards.indexOf(dragSrc);
+        const dstIdx = cards.indexOf(card);
+        if (srcIdx > dstIdx) card.parentNode.insertBefore(dragSrc, card);
+        else card.parentNode.insertBefore(dragSrc, card.nextSibling);
+      }
+    });
+  });
 }
 
 /* ══════════════════════════════════
