@@ -703,10 +703,9 @@ function renderAiImport(){
     '<code>【振り返り / モヤモヤ / VISION点検 / 戦略テーマ / 思想変化】</code><br>',
     '<code>タイトル：</code>〇〇〇<br>',
     '<code>日付：</code>2026-06-01（省略可・省略時は今日）<br>',
-    '<code>内容：</code>〇〇〇<br>',
-    '<code>気づき・学び：</code>〇〇〇（任意）<br>',
-    '<code>問い：</code>〇〇〇（任意）<br>',
-    '<code>次のアクション：</code>〇〇〇（任意）<br>',
+    '<code>気づき・学び：</code>〇〇〇（任意・複数行可）<br>',
+    '<code>問い：</code>〇〇〇（任意・複数行可）<br>',
+    '<code>次の実験：</code>〇〇〇（任意・複数行可）<br>',
     '<br>※タイプは行頭の【】で判定。複数エントリーを続けて貼り付けOK。',
   ].join('');
   wrap.innerHTML =
@@ -761,24 +760,17 @@ function parseAiReflect(text){
     const title      = extractField(block, ['タイトル','title']);
     const rawDate    = extractField(block, ['日付','date']);
     const date       = (rawDate.match(/\d{4}-\d{2}-\d{2}/) || [tod()])[0];
-    const body       = extractMultiField(block, ['内容','本文','body']);
     const learned    = extractMultiField(block, ['気づき・学び','気づき','学び','learned']);
     const question   = extractMultiField(block, ['問い','question']);
-    const next_action= extractMultiField(block, ['次のアクション','ネクスト','next_action','next']);
+    const nextExp    = extractMultiField(block, ['次の実験','次のアクション','nextExp','next']);
 
-    if(!title && !body && !learned) return;
-    // 「内容」と「気づき・学び」を lesson に統合表示
-    const lessonVal = (body && learned)
-      ? body + '\n\n【気づき・学び】\n' + learned
-      : (learned || body);
+    if(!title && !learned) return;
     const entry = {
       id:uid(), type:typKey, date, status:'published',
-      title: title || (body||learned||'').slice(0,40),
-      lesson: lessonVal,
-      learned,              // 後方互換
-      body,                 // 内容（生データ保持）
-      nextExp: next_action, // 実験タブ・ログカードに表示
-      question, next_action
+      title: title || learned.slice(0,40),
+      lesson: learned,
+      nextExp,
+      question
     };
     if(typKey==='moya')        entry.moya_what    = extractField(block, ['何にモヤモヤ','モヤモヤ詳細']);
     if(typKey==='vision')      entry.vision_change= extractField(block, ['VISIONの変化','変化']);
