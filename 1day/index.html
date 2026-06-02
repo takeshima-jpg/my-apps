@@ -209,21 +209,43 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
 
 /* RESPONSIVE */
-.mob-header { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 48px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; flex-shrink: 0; }
-.mob-logo { font-size: 17px; font-weight: 800; color: var(--accent); letter-spacing: .03em; }
-.mob-sub { font-size: 13px; color: var(--text3); }
+/* モバイルヘッダー */
+.mob-header { display: none; align-items: center; padding: 0 16px; height: 52px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 200; flex-shrink: 0; gap: 10px; }
+.mob-header-logo { display: flex; align-items: center; gap: 8px; }
+.mob-header-logo img { width: 28px; height: 28px; border-radius: 7px; }
+.mob-header-logo span { font-size: 16px; font-weight: 700; color: var(--text); }
+.mob-header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.mob-rec-btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; }
+.mob-menu-btn { background: none; border: none; font-size: 22px; color: var(--text2); cursor: pointer; padding: 4px; line-height: 1; }
+/* ドロワーオーバーレイ */
+.mob-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 299; }
+.mob-overlay.open { display: block; }
+/* ドロワー本体 */
+.mob-drawer { position: fixed; top: 0; left: -100%; width: 260px; height: 100%; background: var(--bg2); border-right: 1px solid var(--border); z-index: 300; transition: left .22s ease; overflow-y: auto; display: flex; flex-direction: column; }
+.mob-drawer.open { left: 0; }
+.mob-drawer .drawer-hd { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.mob-drawer .drawer-hd img { width: 28px; height: 28px; border-radius: 7px; }
+.mob-drawer .drawer-hd span { font-size: 15px; font-weight: 700; color: var(--text); }
+.mob-drawer .drawer-close { margin-left: auto; background: none; border: none; font-size: 20px; color: var(--text3); cursor: pointer; }
+.mob-drawer .drawer-section { padding: 10px 16px; border-top: 1px solid var(--border); }
+.mob-drawer .drawer-lbl { font-size: 9px; color: var(--text3); letter-spacing: .15em; text-transform: uppercase; margin-bottom: 8px; }
+.mob-drawer .drawer-btn { display: block; width: 100%; padding: 8px 10px; margin-bottom: 5px; font-size: 14px; text-align: left; background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text2); cursor: pointer; font-family: inherit; }
+.mob-drawer .drawer-btn.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.mob-drawer .drawer-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.mob-drawer .drawer-ft { padding: 10px 16px; border-top: 1px solid var(--border); margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
+.mob-drawer .drawer-ft button, .mob-drawer .drawer-ft label { display: block; width: 100%; padding: 7px 10px; font-size: 13px; text-align: left; background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text3); cursor: pointer; font-family: inherit; }
 
 @media (max-width: 720px) {
   .mob-header { display: flex; }
-  
-  
-  
+  .sidebar { display: none; }
+  .app { flex-direction: column; }
+  .main { height: auto; }
   .topbar { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
   .topbar-right { flex-wrap: wrap; width: 100%; gap: 8px; }
   .search-input { width: 100%; }
   .log-list { padding: 16px; }
   .log-list.selectable { padding-left: 40px; }
-  .filter-bar, 
+  .filter-bar,
   .review-insights { grid-template-columns: 1fr; }
   .modal { padding: 20px; }
 }
@@ -537,6 +559,64 @@ function gdriveAutoSave() {
 </div>
 
 <!-- MAIN -->
+<!-- MOBILE HEADER -->
+<div class="mob-header" id="mobHeader">
+  <div class="mob-header-logo">
+    <img src="icons/icon-32.png">
+    <span>1day</span>
+  </div>
+  <div class="mob-header-right">
+    <button class="mob-rec-btn" onclick="document.getElementById('openEntry').click()">＋ 記録する</button>
+    <button class="mob-menu-btn" onclick="openMobDrawer()" aria-label="メニュー">☰</button>
+  </div>
+</div>
+<!-- MOBILE DRAWER -->
+<div class="mob-overlay" id="mobOverlay" onclick="closeMobDrawer()"></div>
+<div class="mob-drawer" id="mobDrawer">
+  <div class="drawer-hd">
+    <img src="icons/icon-32.png"><span>1day</span>
+    <button class="drawer-close" onclick="closeMobDrawer()">✕</button>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-lbl">アクション</div>
+    <button class="drawer-btn primary" onclick="document.getElementById('openEntry').click();closeMobDrawer()">＋ 記録する</button>
+    <button class="drawer-btn" onclick="document.getElementById('openReview').click();closeMobDrawer()">◈ 週次レビュー</button>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-lbl">フィルター</div>
+    <button class="drawer-btn active" id="msbf-all" onclick="setFilter('all');closeMobDrawer()">すべて</button>
+    <button class="drawer-btn" id="msbf-unease" onclick="setFilter('flag:unease');closeMobDrawer()">△ 違和感</button>
+    <button class="drawer-btn" id="msbf-energy" onclick="setFilter('flag:energy');closeMobDrawer()">◉ エネルギー高</button>
+    <button class="drawer-btn" id="msbf-deep" onclick="setFilter('flag:deep');closeMobDrawer()">◎ 深掘り</button>
+    <button class="drawer-btn" id="msbf-vision" onclick="setFilter('flag:vision');closeMobDrawer()">◈ VISION</button>
+    <button class="drawer-btn" id="msbf-blog" onclick="setFilter('flag:blog');closeMobDrawer()">≡ ブログ候補</button>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-lbl">タグ</div>
+    <button class="drawer-btn" id="msbf-経営" onclick="setFilter('tag:経営');closeMobDrawer()">経営</button>
+    <button class="drawer-btn" id="msbf-組織" onclick="setFilter('tag:組織');closeMobDrawer()">組織</button>
+    <button class="drawer-btn" id="msbf-人間関係" onclick="setFilter('tag:人間関係');closeMobDrawer()">人間関係</button>
+    <button class="drawer-btn" id="msbf-家族" onclick="setFilter('tag:家族');closeMobDrawer()">家族</button>
+    <button class="drawer-btn" id="msbf-健康" onclick="setFilter('tag:健康');closeMobDrawer()">健康</button>
+    <button class="drawer-btn" id="msbf-感情" onclick="setFilter('tag:感情');closeMobDrawer()">感情</button>
+    <button class="drawer-btn" id="msbf-学び" onclick="setFilter('tag:学び');closeMobDrawer()">学び</button>
+    <button class="drawer-btn" id="msbf-未来" onclick="setFilter('tag:未来');closeMobDrawer()">未来</button>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-lbl">Google Drive</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:5px;">
+      <div id="gdriveDotMob" style="width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0;"></div>
+      <span id="gdriveStatusMob">未接続</span>
+    </div>
+    <button class="drawer-btn" id="gdriveConnectMob" onclick="gdriveConnect()">Googleでログイン</button>
+    <button class="drawer-btn" id="gdriveSaveMob" onclick="gdriveSave()" style="display:none">⬆ 保存</button>
+    <button class="drawer-btn" id="gdriveLoadMob" onclick="gdriveLoad()" style="display:none">⬇ 読込</button>
+  </div>
+  <div class="drawer-ft">
+    <button onclick="exportData();closeMobDrawer()">⬇ バックアップ</button>
+    <label>⬆ 復元<input type="file" id="importFileInputMob" accept=".json" style="display:none"></label>
+  </div>
+</div>
 <div class="app">
 <div class="sidebar">
   <div class="sb-hd">
@@ -1285,6 +1365,26 @@ function bindEvents() {
 
   document.getElementById('importFileInput').addEventListener('change', handleImport);
 }
+
+// モバイルドロワー開閉
+function openMobDrawer() {
+  document.getElementById('mobDrawer').classList.add('open');
+  document.getElementById('mobOverlay').classList.add('open');
+}
+function closeMobDrawer() {
+  document.getElementById('mobDrawer').classList.remove('open');
+  document.getElementById('mobOverlay').classList.remove('open');
+}
+// importFileInputMobのイベント
+document.addEventListener('DOMContentLoaded', function() {
+  var mobImp = document.getElementById('importFileInputMob');
+  if(mobImp) {
+    var origImp = document.getElementById('importFileInput');
+    mobImp.addEventListener('change', function(e) {
+      if(origImp) { origImp.files = e.target.files; origImp.dispatchEvent(new Event('change')); }
+    });
+  }
+});
 
 // サイドバーフィルター
 function setFilter(f) {
