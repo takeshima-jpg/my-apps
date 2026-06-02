@@ -2154,7 +2154,12 @@ function siRefreshProjSel() {
           <div class="si-proj-name">${esc(p.name)}</div>
           <div class="si-proj-meta">${esc(meta)}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;">${sheetBtn}<span class="si-proj-check">✓</span></div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${sheetBtn}
+          <button onclick="event.stopPropagation();siDeleteProj('${p.id}')"
+            style="font-size:.65rem;color:var(--red);background:var(--red-s);border:1px solid var(--red-b);border-radius:4px;padding:2px 7px;cursor:pointer;white-space:nowrap;">削除</button>
+          <span class="si-proj-check">✓</span>
+        </div>
       </div>`;
   }).join('');
 
@@ -2181,6 +2186,15 @@ function renderImport() {
   siRefreshProjSel();
   $$('si-status').textContent = '';
   $$('si-result').style.display = 'none';
+}
+
+function siDeleteProj(pid) {
+  const p = S.projects.find(x => x.id === pid);
+  if (!p) return;
+  if (!confirm(`「${p.name}」を削除しますか？\nすべてのデータが失われます。`)) return;
+  S.projects = S.projects.filter(x => x.id !== pid);
+  if (siSelPid === pid) siSelPid = S.projects[0]?.id || null;
+  save(); siRefreshProjSel();
 }
 
 function siNewProj() {
