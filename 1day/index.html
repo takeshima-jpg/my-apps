@@ -217,12 +217,17 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .mob-header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .mob-rec-btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; }
 .mob-menu-btn { background: none; border: none; font-size: 22px; color: var(--text2); cursor: pointer; padding: 4px; line-height: 1; }
-/* ドロワーオーバーレイ */
+/* モバイルナビバー */
+.mob-nav-bar { display: none; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 12px; gap: 6px; flex-shrink: 0; scrollbar-width: none; }
+.mob-nav-bar::-webkit-scrollbar { display: none; }
+.mob-nav-item { display: inline-flex; align-items: center; padding: 10px 14px; font-size: 13px; color: var(--text2); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; background: none; border-left: none; border-top: none; border-right: none; font-family: inherit; flex-shrink: 0; }
+.mob-nav-item.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.mob-nav-sep { display: inline-block; width: 1px; height: 20px; background: var(--border); margin: 0 4px; vertical-align: middle; }
+/* ドロワー（バックアップ・Drive用に残す） */
 .mob-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 299; }
 .mob-overlay.open { display: block; }
-/* ドロワー本体 */
-.mob-drawer { position: fixed; top: 0; left: -100%; width: 260px; height: 100%; background: var(--bg2); border-right: 1px solid var(--border); z-index: 300; transition: left .22s ease; overflow-y: auto; display: flex; flex-direction: column; }
-.mob-drawer.open { left: 0; }
+.mob-drawer { position: fixed; top: 0; right: -100%; left: auto; width: 240px; height: 100%; background: var(--bg2); border-left: 1px solid var(--border); z-index: 300; transition: right .22s ease; overflow-y: auto; display: flex; flex-direction: column; }
+.mob-drawer.open { right: 0; }
 .mob-drawer .drawer-hd { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
 .mob-drawer .drawer-hd img { width: 28px; height: 28px; border-radius: 7px; }
 .mob-drawer .drawer-hd span { font-size: 15px; font-weight: 700; color: var(--text); }
@@ -237,6 +242,7 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 
 @media (max-width: 720px) {
   .mob-header { display: flex; }
+  .mob-nav-bar { display: flex; }
   .sidebar { display: none; }
   .app { flex-direction: column; }
   .main { height: auto; }
@@ -567,8 +573,27 @@ function gdriveAutoSave() {
   </div>
   <div class="mob-header-right">
     <button class="mob-rec-btn" onclick="document.getElementById('openEntry').click()">＋ 記録する</button>
-    <button class="mob-menu-btn" onclick="openMobDrawer()" aria-label="メニュー">☰</button>
+    <button class="mob-menu-btn" onclick="openMobDrawer()" aria-label="その他">⋯</button>
   </div>
+</div>
+<!-- MOBILE NAV BAR -->
+<div class="mob-nav-bar" id="mobNavBar">
+  <button class="mob-nav-item active" id="mnav-all" onclick="setFilter('all')">すべて</button>
+  <span class="mob-nav-sep"></span>
+  <button class="mob-nav-item" id="mnav-unease" onclick="setFilter('flag:unease')">△ 違和感</button>
+  <button class="mob-nav-item" id="mnav-energy" onclick="setFilter('flag:energy')">◉ エネ高</button>
+  <button class="mob-nav-item" id="mnav-deep" onclick="setFilter('flag:deep')">◎ 深掘り</button>
+  <button class="mob-nav-item" id="mnav-vision" onclick="setFilter('flag:vision')">◈ VISION</button>
+  <button class="mob-nav-item" id="mnav-blog" onclick="setFilter('flag:blog')">≡ ブログ</button>
+  <span class="mob-nav-sep"></span>
+  <button class="mob-nav-item" id="mnav-経営" onclick="setFilter('tag:経営')">経営</button>
+  <button class="mob-nav-item" id="mnav-組織" onclick="setFilter('tag:組織')">組織</button>
+  <button class="mob-nav-item" id="mnav-人間関係" onclick="setFilter('tag:人間関係')">人間関係</button>
+  <button class="mob-nav-item" id="mnav-家族" onclick="setFilter('tag:家族')">家族</button>
+  <button class="mob-nav-item" id="mnav-健康" onclick="setFilter('tag:健康')">健康</button>
+  <button class="mob-nav-item" id="mnav-感情" onclick="setFilter('tag:感情')">感情</button>
+  <button class="mob-nav-item" id="mnav-学び" onclick="setFilter('tag:学び')">学び</button>
+  <button class="mob-nav-item" id="mnav-未来" onclick="setFilter('tag:未来')">未来</button>
 </div>
 <!-- MOBILE DRAWER -->
 <div class="mob-overlay" id="mobOverlay" onclick="closeMobDrawer()"></div>
@@ -579,28 +604,7 @@ function gdriveAutoSave() {
   </div>
   <div class="drawer-section">
     <div class="drawer-lbl">アクション</div>
-    <button class="drawer-btn primary" onclick="document.getElementById('openEntry').click();closeMobDrawer()">＋ 記録する</button>
     <button class="drawer-btn" onclick="document.getElementById('openReview').click();closeMobDrawer()">◈ 週次レビュー</button>
-  </div>
-  <div class="drawer-section">
-    <div class="drawer-lbl">フィルター</div>
-    <button class="drawer-btn active" id="msbf-all" onclick="setFilter('all');closeMobDrawer()">すべて</button>
-    <button class="drawer-btn" id="msbf-unease" onclick="setFilter('flag:unease');closeMobDrawer()">△ 違和感</button>
-    <button class="drawer-btn" id="msbf-energy" onclick="setFilter('flag:energy');closeMobDrawer()">◉ エネルギー高</button>
-    <button class="drawer-btn" id="msbf-deep" onclick="setFilter('flag:deep');closeMobDrawer()">◎ 深掘り</button>
-    <button class="drawer-btn" id="msbf-vision" onclick="setFilter('flag:vision');closeMobDrawer()">◈ VISION</button>
-    <button class="drawer-btn" id="msbf-blog" onclick="setFilter('flag:blog');closeMobDrawer()">≡ ブログ候補</button>
-  </div>
-  <div class="drawer-section">
-    <div class="drawer-lbl">タグ</div>
-    <button class="drawer-btn" id="msbf-経営" onclick="setFilter('tag:経営');closeMobDrawer()">経営</button>
-    <button class="drawer-btn" id="msbf-組織" onclick="setFilter('tag:組織');closeMobDrawer()">組織</button>
-    <button class="drawer-btn" id="msbf-人間関係" onclick="setFilter('tag:人間関係');closeMobDrawer()">人間関係</button>
-    <button class="drawer-btn" id="msbf-家族" onclick="setFilter('tag:家族');closeMobDrawer()">家族</button>
-    <button class="drawer-btn" id="msbf-健康" onclick="setFilter('tag:健康');closeMobDrawer()">健康</button>
-    <button class="drawer-btn" id="msbf-感情" onclick="setFilter('tag:感情');closeMobDrawer()">感情</button>
-    <button class="drawer-btn" id="msbf-学び" onclick="setFilter('tag:学び');closeMobDrawer()">学び</button>
-    <button class="drawer-btn" id="msbf-未来" onclick="setFilter('tag:未来');closeMobDrawer()">未来</button>
   </div>
   <div class="drawer-section">
     <div class="drawer-lbl">Google Drive</div>
@@ -1389,10 +1393,16 @@ document.addEventListener('DOMContentLoaded', function() {
 // サイドバーフィルター
 function setFilter(f) {
   state.filter = f;
+  // デスクトップサイドバー同期
   document.querySelectorAll('.sb-action[id^="sbf-"]').forEach(b => b.classList.remove('active'));
   const raw = f.replace('flag:', '').replace('tag:', '');
   const el = document.getElementById('sbf-' + (f === 'all' ? 'all' : raw));
   if (el) el.classList.add('active');
+  // モバイルナビバー同期
+  document.querySelectorAll('.mob-nav-item[id^="mnav-"]').forEach(b => b.classList.remove('active'));
+  const mel = document.getElementById('mnav-' + (f === 'all' ? 'all' : raw));
+  if (mel) { mel.classList.add('active'); mel.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'}); }
+  // filter-chip同期
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
   renderLogList();
 }
