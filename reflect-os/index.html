@@ -540,17 +540,70 @@ function renderHome(){
   const priOrd={S:0,A:1,B:2,C:3};
   const stOrd={実行中:0,構想中:1,保留:2,完了:3,撤退:4};
   const themes=[...S.themes].sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9)||(stOrd[a.status]||9)-(stOrd[b.status]||9));
+  // ── カード生成関数（探求テーマ・プロジェクト共用） ──
+  function buildThemeCard(t){
+    const relLogs=pub.filter(r=>(r.themes||[]).includes(t.id));
+    const card=D({cls:'tcard'});
+    const main2=D({cls:'tcard-main'});
+    main2.appendChild(D({cls:'tcard-name'},t.title));
+    const meta2=D({cls:'tcard-meta'});
+    if(t.status)meta2.appendChild(Sp({cls:'tcard-status '+stClass(t.status)},t.status));
+    if(t.priority==='S')meta2.appendChild(Sp({css:'font-size:10px;color:#9a7000;font-family:var(--mono)'},'S'));
+    main2.appendChild(meta2);
+    if(t.summary)main2.appendChild(D({cls:'tcard-summary'},t.summary));
+    card.appendChild(main2);
+    const det=D({cls:'tcard-detail'});
+    if(t.purpose){det.appendChild(D({cls:'tcard-dl'},'目的'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;margin-bottom:8px'},t.purpose));}
+    if(t.currentState){det.appendChild(D({cls:'tcard-dl'},'現在地'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;margin-bottom:8px'},t.currentState));}
+    if(t.nextAction){det.appendChild(D({cls:'tcard-dl'},'次の一手'));det.appendChild(D({css:'font-size:15px;color:var(--go);line-height:1.7;margin-bottom:8px'},t.nextAction));}
+    const ms=(t.milestones||[]).filter(m=>m.title);
+    if(ms.length){det.appendChild(D({cls:'tcard-dl'},'マイルストーン'));const ml=D({css:'margin-bottom:8px'});ms.forEach(m=>{const st=m.status||'未着手';ml.appendChild(Sp({cls:'ms-pill '+(st==='完了'?'ms-done':st==='実行中'?'ms-doing':'ms-todo')},(st==='完了'?'✓':st==='実行中'?'▶':'○')+' '+m.title));});det.appendChild(ml);}
+    const kpis=(t.metrics||[]).filter(k=>k.name);
+    if(kpis.length){det.appendChild(D({cls:'tcard-dl'},'数字目標'));kpis.forEach(k=>{const kr=D({cls:'kpi-row'});kr.appendChild(Sp({cls:'kpi-name'},k.name+' '));kr.appendChild(document.createTextNode(k.target));det.appendChild(kr);});}
+    if(relLogs.length){det.appendChild(D({cls:'tcard-dl'},'関連振り返り'));det.appendChild(D({css:'font-size:15px;color:var(--mu);margin-bottom:8px'},relLogs.length+'件'));}
+    const qs2=relLogs.filter(r=>r.question?.trim()).length;
+    if(qs2){det.appendChild(D({css:'font-size:14px;color:var(--bl);margin-bottom:4px'},'問い '+qs2+'件'));}
+    if(!t._fromProjectOS){
+      const acts2=D({cls:'tcard-acts'});
+      const editBtn=Bt({cls:'btn-g',css:'font-size:13px'},'編集');editBtn.addEventListener('click',e=>{e.stopPropagation();openThemeForm(t);});acts2.appendChild(editBtn);
+      det.appendChild(acts2);
+    }
+    card.appendChild(det);
+    main2.addEventListener('click',()=>{det.classList.toggle('open');});
+    return card;
+  }
+
+  // ── 探求テーマ（手動追加のみ） ──
+  const myThemes=themes.filter(t=>!t._fromProjectOS);
+  const pjThemes=themes.filter(t=>t._fromProjectOS);
+
   const tsec=D({cls:'sec'});
   const tHd=D({css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:16px'});
   tHd.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0'},'探求テーマ'));
   const addTh=Bt({cls:'btn-g'},'＋ テーマ追加');addTh.addEventListener('click',()=>openThemeForm(null));
-  const syncBtn=Bt({cls:'btn-s',css:'margin-right:6px;font-size:11px'},`↺ PJ同期`);
+  tHd.appendChild(addTh);tsec.appendChild(tHd);
+  if(!myThemes.length){tsec.appendChild(D({cls:'empty'},'テーマを追加してください'));}
+  else{
+    const grid=D({cls:'theme-grid'});
+    myThemes.forEach(t=>grid.appendChild(buildThemeCard(t)));
+    tsec.appendChild(grid);
+  }
+  f.appendChild(tsec);
+
+  // ── プロジェクト（Project OS同期・折りたたみ） ──
+  const pjsec=D({cls:'sec',css:'margin-top:32px'});
+  const pjHd=D({css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'});
+  const pjToggle=D({css:'display:flex;align-items:center;gap:8px;cursor:pointer'});
+  const pjArrow=Sp({css:'font-size:11px;color:var(--mu);transition:transform .2s'},'▶');
+  const pjLbl=D({cls:'sec-lbl',css:'margin-bottom:0'},'プロジェクト');
+  pjToggle.appendChild(pjArrow);pjToggle.appendChild(pjLbl);
+  const syncBtn=Bt({cls:'btn-s',css:'font-size:11px'},`↺ PJ同期`);
   syncBtn.addEventListener('click',async()=>{
     syncBtn.textContent='同期中...';syncBtn.disabled=true;
     const result=await syncFromProjectOS();
     if(result===-1){
       syncBtn.textContent='↺ PJ同期';syncBtn.disabled=false;
-      alert('Project OSのデータが見つかりません。\nProject OSを一度開いてからお試しください。\n（同じブラウザで https://takeshima-jpg.github.io/my-apps/project-os/ を開く）');
+      alert('Project OSのデータが見つかりません。\nProject OSを一度開いてからお試しください。');
       return;
     }
     const priOrd2={S:0,A:1,B:2,C:3};
@@ -558,44 +611,21 @@ function renderHome(){
     S.themes=th2.sort((a,b)=>(priOrd2[a.priority]||9)-(priOrd2[b.priority]||9));
     ra();
   });
-  tHd.appendChild(syncBtn);tHd.appendChild(addTh);tsec.appendChild(tHd);
-  if(!themes.length){tsec.appendChild(D({cls:'empty'},'テーマを追加してください'));}
+  pjHd.appendChild(pjToggle);pjHd.appendChild(syncBtn);pjsec.appendChild(pjHd);
+  const pjBody=D({css:'display:none'});
+  if(!pjThemes.length){pjBody.appendChild(D({cls:'empty',css:'font-size:13px'},'PJ同期ボタンで取り込めます'));}
   else{
-    const grid=D({cls:'theme-grid'});
-    themes.forEach(t=>{
-      const relLogs=pub.filter(r=>(r.themes||[]).includes(t.id));
-      const card=D({cls:'tcard'});
-      const main2=D({cls:'tcard-main'});
-      main2.appendChild(D({cls:'tcard-name'},t.title));
-      const meta2=D({cls:'tcard-meta'});
-      if(t.status)meta2.appendChild(Sp({cls:'tcard-status '+stClass(t.status)},t.status));
-      if(t.priority==='S')meta2.appendChild(Sp({css:'font-size:10px;color:#9a7000;font-family:var(--mono)'},'S'));
-      if(t._fromProjectOS)meta2.appendChild(Sp({css:'font-size:10px;color:#4a7a9b;background:#e8f4f8;border-radius:3px;padding:1px 5px;margin-left:4px'},'PJ'));
-      main2.appendChild(meta2);
-      if(t.summary)main2.appendChild(D({cls:'tcard-summary'},t.summary));
-      card.appendChild(main2);
-      // Expandable detail
-      const det=D({cls:'tcard-detail'});
-      if(t.purpose){det.appendChild(D({cls:'tcard-dl'},'目的'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;margin-bottom:8px'},t.purpose));}
-      if(t.currentState){det.appendChild(D({cls:'tcard-dl'},'現在地'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;margin-bottom:8px'},t.currentState));}
-      if(t.nextAction){det.appendChild(D({cls:'tcard-dl'},'次の一手'));det.appendChild(D({css:'font-size:15px;color:var(--go);line-height:1.7;margin-bottom:8px'},t.nextAction));}
-      const ms=(t.milestones||[]).filter(m=>m.title);
-      if(ms.length){det.appendChild(D({cls:'tcard-dl'},'マイルストーン'));const ml=D({css:'margin-bottom:8px'});ms.forEach(m=>{const st=m.status||'未着手';ml.appendChild(Sp({cls:'ms-pill '+(st==='完了'?'ms-done':st==='実行中'?'ms-doing':'ms-todo')},(st==='完了'?'✓':st==='実行中'?'▶':'○')+' '+m.title));});det.appendChild(ml);}
-      const kpis=(t.metrics||[]).filter(k=>k.name);
-      if(kpis.length){det.appendChild(D({cls:'tcard-dl'},'数字目標'));kpis.forEach(k=>{const kr=D({cls:'kpi-row'});kr.appendChild(Sp({cls:'kpi-name'},k.name+' '));kr.appendChild(document.createTextNode(k.target));det.appendChild(kr);});}
-      if(relLogs.length){det.appendChild(D({cls:'tcard-dl'},'関連振り返り'));det.appendChild(D({css:'font-size:15px;color:var(--mu);margin-bottom:8px'},relLogs.length+'件'));}
-      const qs2=relLogs.filter(r=>r.question?.trim()).length;
-      if(qs2){det.appendChild(D({css:'font-size:14px;color:var(--bl);margin-bottom:4px'},'問い '+qs2+'件'));}
-      const acts2=D({cls:'tcard-acts'});
-      const editBtn=Bt({cls:'btn-g',css:'font-size:13px'},'編集');editBtn.addEventListener('click',e=>{e.stopPropagation();openThemeForm(t);});acts2.appendChild(editBtn);
-      det.appendChild(acts2);
-      card.appendChild(det);
-      main2.addEventListener('click',()=>{det.classList.toggle('open');});
-      grid.appendChild(card);
-    });
-    tsec.appendChild(grid);
+    const pjGrid=D({cls:'theme-grid'});
+    pjThemes.forEach(t=>pjGrid.appendChild(buildThemeCard(t)));
+    pjBody.appendChild(pjGrid);
   }
-  f.appendChild(tsec);
+  pjsec.appendChild(pjBody);
+  pjToggle.addEventListener('click',()=>{
+    const open=pjBody.style.display==='block';
+    pjBody.style.display=open?'none':'block';
+    pjArrow.style.transform=open?'':'rotate(90deg)';
+  });
+  f.appendChild(pjsec);
 
   // Record buttons moved to sidebar
 
