@@ -1427,7 +1427,7 @@ function paneOv(p){
 
 /* ── FORKS ── */
 function paneForks(p){
-  const items = [...(p.forks||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));  // 降順（新しい分岐が上）
+  const items = [...(p.forks||[])].sort((a,b)=>(a.date||'').localeCompare(b.date||''));  // 昇順（期日が近い順）
   return `
     <div class="forks-wrap">
       <div class="forks-intro">
