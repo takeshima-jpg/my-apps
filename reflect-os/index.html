@@ -462,9 +462,9 @@ function logCard(r){
   if(r.gdocUrl)dr.appendChild(Sp({cls:'gdoc-ok'},'● GDoc'));else dr.appendChild(Sp({cls:'gdoc-no'},'○ GDoc'));
   item.appendChild(dr);
   item.appendChild(D({cls:'log-title'},r.title||'（無題）'));
-  if(r.lesson){const ls=r.lesson.replace(/\n+/g,' ');item.appendChild(D({cls:'log-lesson'},ls.length>100?ls.slice(0,100)+'…':ls));}
-  if(r.question){const qq=r.question.replace(/\n+/g,' ');item.appendChild(D({cls:'log-q'},'？ '+(qq.length>80?qq.slice(0,80)+'…':qq)));}
-  if(r.nextExp){const nx=r.nextExp.replace(/\n+/g,' ');item.appendChild(D({cls:'log-exp'},'▶ '+(nx.length>80?nx.slice(0,80)+'…':nx)));}
+  if(r.lesson){const ls=r.lesson.split(/\n/).find(l=>l.trim())||'';const lsc=ls.trim();item.appendChild(D({cls:'log-lesson'},lsc.length>100?lsc.slice(0,100)+'…':lsc));}
+  if(r.question){const ql=r.question.split(/\n/).find(l=>l.trim())||'';const qt=ql.trim();item.appendChild(D({cls:'log-q'},'？ '+(qt.length>80?qt.slice(0,80)+'…':qt)));}
+  if(r.nextExp){const nl=r.nextExp.split(/\n/).find(l=>l.trim())||'';const nt=nl.trim();item.appendChild(D({cls:'log-exp'},'▶ '+(nt.length>80?nt.slice(0,80)+'…':nt)));}
   // Philosophy extras
   if(r.type==='philosophy'){
     if(r.pivot)item.appendChild(Sp({cls:'phil-pivot'},'転換点: '+r.pivot.slice(0,60)));
