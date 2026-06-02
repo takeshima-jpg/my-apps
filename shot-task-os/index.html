@@ -542,6 +542,16 @@ tr:hover td { background: var(--surface2); }
 }
 
 /* REVIEW */
+.rev-dormant-row { display:flex; gap:12px; margin-bottom:10px; }
+.rev-dormant-cell { flex:1; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:12px; text-align:center; }
+.rev-dormant-num { font-size:28px; font-weight:800; color:var(--text); line-height:1; margin-bottom:4px; }
+.rev-dormant-num.warn { color:#c97a00; }
+.rev-dormant-lbl { font-size:11px; color:var(--text-sub); letter-spacing:.06em; }
+.rev-check-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+.rev-check { background:#f0f4f8; border:1px solid #d0dae6; border-radius:20px; padding:4px 12px; font-size:12px; color:#4a6080; }
+.rev-prompts { display:flex; flex-direction:column; gap:8px; }
+.rev-prompt-item { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; background:var(--bg); border:1px solid var(--border); border-radius:6px; font-size:14px; color:var(--text); line-height:1.5; }
+.rev-prompt-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
 .rev-section { margin-bottom: 18px; }
 .rev-sec-title {
   font-family: var(--font-mono);
@@ -783,7 +793,7 @@ input[type=checkbox] {
 
       <div class="divider"></div>
 
-      <button class="btn-panel" onclick="openReview()">▸ 月次棚卸</button>
+      <button class="btn-panel" onclick="openReview()">▸ 週次レビュー</button>
       <button class="btn-panel" onclick="exportJSON()">⬇ バックアップ</button>
       <button class="btn-panel" onclick="importJSON()">⬆ 復元</button>
       <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="handleImportFile(event)">
@@ -903,20 +913,14 @@ input[type=checkbox] {
 
 <!-- REVIEW MODAL -->
 <div class="modal-overlay" id="reviewModal">
-  <div class="modal" style="width:520px">
-    <div class="modal-title">月次棚卸レビュー</div>
-
-    <div class="rev-criteria">
-      レビュー観点：<br>
-      1. まだ必要か？　2. 今月やるか？<br>
-      3. 誰かに委任できるか？　4. プロジェクト化すべきか？
-    </div>
+  <div class="modal" style="width:560px;max-height:88vh;overflow-y:auto;">
+    <div class="modal-title">週次レビュー</div>
 
     <div id="reviewContent"></div>
 
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeReview()">閉じる</button>
-      <button class="btn-save" onclick="exportAndClose()">バックアップ</button>
+      <button class="btn-save" onclick="exportAndClose()">バックアップして閉じる</button>
     </div>
   </div>
 </div>
@@ -1569,39 +1573,65 @@ function renderAllTable() {
 
 // ── REVIEW ──
 function openReview() {
-  const today = getTodayKey();
-  const threshold = 30;
   const active = tasks.filter(t => t.status !== 'done');
-  const overdue = active.filter(t => getDateState(t.dueDate)==='overdue');
+  const urgent = active.filter(t => { const s = getDateState(t.dueDate); return s==='overdue'||s==='today'; });
   const pending = tasks.filter(t => t.status==='pending');
   const nodue = active.filter(t => !t.dueDate);
-  const stale = active.filter(t => daysSinceUpdate(t) >= threshold);
 
-  function items(arr, cls, extra='') {
-    if (!arr.length) return '<div class="rev-empty">なし</div>';
-    return arr.map(t => `<div class="rev-item ${cls}">
+  function itemRow(t, showDate) {
+    const meta = showDate && t.dueDate ? fmtDate(t.dueDate) : (t.category||'');
+    return `<div class="rev-item">
       <span class="rev-item-title">${escH(t.title)}</span>
-      <span class="rev-item-meta">${extra ? (extra==='due'?fmtDate(t.dueDate):daysSinceUpdate(t)+'日前') : escH(t.category)}</span>
-    </div>`).join('');
+      <span class="rev-item-meta">${escH(meta)}</span>
+    </div>`;
   }
+
+  const urgentHtml = urgent.length
+    ? urgent.map(t => itemRow(t, true)).join('')
+    : '<div class="rev-empty">✓ なし</div>';
+
+  const dormantHtml = (pending.length || nodue.length)
+    ? `<div class="rev-dormant-row">
+        <div class="rev-dormant-cell">
+          <div class="rev-dormant-num ${pending.length>0?'warn':''}">${pending.length}</div>
+          <div class="rev-dormant-lbl">保留中</div>
+        </div>
+        <div class="rev-dormant-cell">
+          <div class="rev-dormant-num ${nodue.length>5?'warn':''}">${nodue.length}</div>
+          <div class="rev-dormant-lbl">期限なし</div>
+        </div>
+      </div>
+      <div class="rev-check-row">
+        <span class="rev-check">まだ必要か？</span>
+        <span class="rev-check">誰かに渡せるか？</span>
+      </div>`
+    : '<div class="rev-empty">✓ なし</div>';
+
+  const prompts = [
+    { icon:'📬', text:'返信・連絡していないことはないか？' },
+    { icon:'📋', text:'来週の予定から逆算して、必要なタスクは登録したか？' },
+    { icon:'💭', text:'ずっと気になっているのに、まだ登録していないことはないか？' },
+    { icon:'🤝', text:'誰かに依頼したこと・待っていることはないか？' },
+  ];
 
   document.getElementById('reviewContent').innerHTML = `
     <div class="rev-section">
-      <div class="rev-sec-title">期限切れ（${overdue.length}件）</div>
-      ${items(overdue,'rev-overdue','due')}
+      <div class="rev-sec-title">🔴 期限切れ・今日期限（${urgent.length}件）</div>
+      ${urgentHtml}
     </div>
+
     <div class="rev-section">
-      <div class="rev-sec-title">保留中（${pending.length}件）</div>
-      ${items(pending,'rev-pending')}
+      <div class="rev-sec-title">📦 休眠タスク</div>
+      ${dormantHtml}
     </div>
+
     <div class="rev-section">
-      <div class="rev-sec-title">期限なし（${nodue.length}件）</div>
-      ${items(nodue,'rev-nodue')}
-    </div>
-    <div class="rev-section">
-      <div class="rev-sec-title">30日以上更新なし（${stale.length}件）</div>
-      ${items(stale,'rev-stale','days')}
+      <div class="rev-sec-title">➕ 追加漏れチェック</div>
+      <div class="rev-prompts">
+        ${prompts.map(p=>`<div class="rev-prompt-item"><span class="rev-prompt-icon">${p.icon}</span><span>${p.text}</span></div>`).join('')}
+      </div>
     </div>`;
+
   document.getElementById('reviewModal').classList.add('open');
 }
 function closeReview() { document.getElementById('reviewModal').classList.remove('open'); }
