@@ -58,6 +58,7 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
 .sb-ft{padding:12px 18px;border-top:1px solid rgba(255,255,255,0.05);font-size:10px;color:rgba(255,255,255,0.2);line-height:1.8;}
 
 /* ── TOP BAR ── */
+.vision-pill{font-size:12px;color:var(--text2);background:var(--bg);border:1px solid var(--border);padding:4px 12px;border-radius:20px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default;flex-shrink:1;}
 .topbar{height:48px;background:var(--surface);border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;padding:0 22px;flex-shrink:0;}
 .tb-title{font-size:15px;font-weight:600;color:var(--text2);letter-spacing:.02em;}
@@ -309,6 +310,7 @@ select.fi{cursor:pointer;}
       <span class="tb-title">HOME</span>
       <div class="tb-right">
         <span class="tb-clock" id="home-clock"></span>
+        <span class="vision-pill" id="vision-pill"></span>
         <button class="btn-nav" onclick="renderHome()">↺</button>
         <button class="launcher-btn" onclick="toggleLauncher(event)" title="アプリを開く" aria-label="App launcher">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1537,6 +1539,28 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if(e.target===e.currentTarget) closeShotAdd();
     });
   });
+})();
+</script>
+<script>
+// VISION pill
+(function(){
+  var VISION = '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。';
+  var PRINCIPLES = [
+    {title:'成長', text:'未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。'},
+    {title:'愛',   text:'周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。'},
+    {title:'健康', text:'心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。'},
+    {title:'知性', text:'目の前の課題を深く考え、本質を見抜く。感情ではなく、原則と論理で判断する。'},
+    {title:'財',   text:'価値を正しく届け、それに見合った対価を受け取る。お金は目的ではなく、VISIONを実現する手段。'},
+  ];
+  function initVisionPill(){
+    var el = document.getElementById('vision-pill');
+    if(!el) return;
+    var day = parseInt(new Date().toLocaleDateString('sv').replace(/-/g,''));
+    var p = PRINCIPLES[day % PRINCIPLES.length];
+    el.textContent = p.title + '：' + p.text;
+    el.title = VISION;
+  }
+  document.addEventListener('DOMContentLoaded', initVisionPill);
 })();
 </script>
 <script>
