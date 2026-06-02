@@ -58,7 +58,14 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
 .sb-ft{padding:12px 18px;border-top:1px solid rgba(255,255,255,0.05);font-size:10px;color:rgba(255,255,255,0.2);line-height:1.8;}
 
 /* ── TOP BAR ── */
-.vision-pill{font-size:12px;color:var(--text2);background:var(--bg);border:1px solid var(--border);padding:4px 12px;border-radius:20px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default;flex-shrink:1;}
+.vision-pill{font-size:12px;color:var(--text2);background:var(--bg);border:1px solid var(--border);padding:4px 12px;border-radius:20px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;flex-shrink:1;transition:border-color .15s;}
+.vision-pill:hover{border-color:var(--accent);color:var(--accent);}
+.vision-popup{position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.12);}
+.vision-popup .vp-label{font-size:9px;color:var(--text3);letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;}
+.vision-popup .vp-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:12px;line-height:1.5;}
+.vision-popup .vp-principle-tag{font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px;}
+.vision-popup .vp-principle-text{font-size:13px;color:var(--text2);line-height:1.8;}
+.vision-popup-close{position:absolute;top:10px;right:12px;font-size:16px;color:var(--text3);cursor:pointer;background:none;border:none;line-height:1;}
 .topbar{height:48px;background:var(--surface);border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;padding:0 22px;flex-shrink:0;}
 .tb-title{font-size:15px;font-weight:600;color:var(--text2);letter-spacing:.02em;}
@@ -310,7 +317,7 @@ select.fi{cursor:pointer;}
       <span class="tb-title">HOME</span>
       <div class="tb-right">
         <span class="tb-clock" id="home-clock"></span>
-        <span class="vision-pill" id="vision-pill"></span>
+        <span class="vision-pill" id="vision-pill" onclick="toggleVisionPopup(event)"></span>
         <button class="btn-nav" onclick="renderHome()">↺</button>
         <button class="launcher-btn" onclick="toggleLauncher(event)" title="アプリを開く" aria-label="App launcher">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1543,25 +1550,46 @@ document.addEventListener('DOMContentLoaded', ()=>{
 </script>
 <script>
 // VISION pill
+var _VISION = '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。';
+var _PRINCIPLES = [
+  {title:'成長', text:'未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。'},
+  {title:'愛',   text:'周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。'},
+  {title:'健康', text:'心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。'},
+  {title:'知性', text:'目の前の課題を深く考え、本質を見抜く。感情ではなく、原則と論理で判断する。'},
+  {title:'財',   text:'価値を正しく届け、それに見合った対価を受け取る。お金は目的ではなく、VISIONを実現する手段。'},
+];
 (function(){
-  var VISION = '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。';
-  var PRINCIPLES = [
-    {title:'成長', text:'未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。'},
-    {title:'愛',   text:'周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。'},
-    {title:'健康', text:'心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。'},
-    {title:'知性', text:'目の前の課題を深く考え、本質を見抜く。感情ではなく、原則と論理で判断する。'},
-    {title:'財',   text:'価値を正しく届け、それに見合った対価を受け取る。お金は目的ではなく、VISIONを実現する手段。'},
-  ];
   function initVisionPill(){
     var el = document.getElementById('vision-pill');
     if(!el) return;
     var day = parseInt(new Date().toLocaleDateString('sv').replace(/-/g,''));
-    var p = PRINCIPLES[day % PRINCIPLES.length];
+    var p = _PRINCIPLES[day % _PRINCIPLES.length];
     el.textContent = p.title + '：' + p.text;
-    el.title = VISION;
   }
   document.addEventListener('DOMContentLoaded', initVisionPill);
 })();
+function toggleVisionPopup(e){
+  e.stopPropagation();
+  var pop = document.getElementById('visionPopup');
+  if(pop.style.display !== 'none'){ closeVisionPopup(); return; }
+  var day = parseInt(new Date().toLocaleDateString('sv').replace(/-/g,''));
+  var p = _PRINCIPLES[day % _PRINCIPLES.length];
+  document.getElementById('vp-vision-text').textContent = _VISION;
+  document.getElementById('vp-principle-tag').textContent = '今日の指針：' + p.title;
+  document.getElementById('vp-principle-text').textContent = p.text;
+  // pillの位置に合わせて表示
+  var rect = e.currentTarget.getBoundingClientRect();
+  pop.style.display = 'block';
+  pop.style.top = (rect.bottom + 8) + 'px';
+  var left = rect.left;
+  if(left + 380 > window.innerWidth) left = window.innerWidth - 390;
+  pop.style.left = left + 'px';
+  setTimeout(function(){ document.addEventListener('click', closeVisionPopup, {once:true}); }, 0);
+}
+function closeVisionPopup(){
+  var pop = document.getElementById('visionPopup');
+  if(pop) pop.style.display = 'none';
+}
 </script>
 <script>
 if('serviceWorker' in navigator){
@@ -1570,5 +1598,12 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
+<div class="vision-popup" id="visionPopup" style="display:none;">
+  <button class="vision-popup-close" onclick="closeVisionPopup()">✕</button>
+  <div class="vp-label">VISION 2026</div>
+  <div class="vp-title" id="vp-vision-text"></div>
+  <div class="vp-principle-tag" id="vp-principle-tag"></div>
+  <div class="vp-principle-text" id="vp-principle-text"></div>
+</div>
 </body>
 </html>
