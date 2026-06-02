@@ -42,7 +42,7 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
 .main{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 
 /* ── SIDEBAR ── */
-.sb-brand{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.sb-hd{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
 .sb-logo{font-size:9px;letter-spacing:.18em;color:rgba(255,255,255,0.25);text-transform:uppercase;font-weight:600;}
 .sb-name{font-size:17px;font-weight:700;color:#fff;margin-top:2px;letter-spacing:-.01em;}
 .sb-nav{flex:1;padding:8px 0;}
@@ -273,20 +273,15 @@ select.fi{cursor:pointer;}
 </style>
 </head>
 <body>
-<div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
-<div class="mob-header">
-  <div style="display:flex;align-items:center;gap:8px;"><img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;"><span style="font-size:15px;font-weight:700;color:#fff;">Task OS</span></div>
-  <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
-</div>
 <div class="app">
 
 <!-- SIDEBAR -->
 <div class="sidebar">
-  <div class="sb-brand">
-    <div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
-    <img src="icons/icon-32.png" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
-    <span style="font-size:16px;font-weight:700;color:#fff;letter-spacing:.01em;">Task OS</span>
-  </div>
+  <div class="sb-hd" style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;flex-shrink:0;">
+      <span style="font-size:15px;font-weight:700;color:#fff;">Task OS</span>
+    </div>
   </div>
   <nav class="sb-nav">
     <div class="ni act" onclick="nav('home')"><span class="ni-ico">◉</span>ホーム</div>
@@ -299,6 +294,9 @@ select.fi{cursor:pointer;}
     <div class="sb-sep"></div>
     <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
   </nav>
+  <div style="padding:8px 12px;border-top:1px solid rgba(255,255,255,.05);">
+    <button onclick="exportJSON()" style="display:block;width:100%;padding:5px 8px;font-size:11px;text-align:left;background:none;border:1px solid rgba(255,255,255,.12);border-radius:4px;color:rgba(255,255,255,.45);cursor:pointer;font-family:inherit;">⬇ エクスポート</button>
+  </div>
   <div class="sb-ft" id="sbDate"></div>
 </div>
 
@@ -325,7 +323,7 @@ select.fi{cursor:pointer;}
             <rect x="11" y="11" width="4" height="4" rx="1" fill="currentColor" opacity=".7"/>
           </svg>
         </button>
-        <button class="btn-shot-add" onclick="openShotAdd()" title="Shot にタスクを追加">＋ Shot</button>
+        <button class="btn-shot-add" onclick="openShotAdd()" title="Shot にタスクを追加">＋ タスク追加</button>
       </div>
     </div>
     <div class="scroll" id="home-content"></div>
@@ -376,7 +374,7 @@ select.fi{cursor:pointer;}
             <rect x="11" y="11" width="4" height="4" rx="1" fill="currentColor" opacity=".7"/>
           </svg>
         </button>
-        <button class="btn-shot-add" onclick="openShotAdd()" title="Shot にタスクを追加">＋ Shot</button>
+        <button class="btn-shot-add" onclick="openShotAdd()" title="Shot にタスクを追加">＋ タスク追加</button>
       </div>
     </div>
     <div class="search-wrap">
@@ -1423,7 +1421,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 .mob-menu-btn{background:none;border:none;color:rgba(255,255,255,.7);font-size:22px;cursor:pointer;padding:4px 8px;margin-left:auto;}
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:299;}
 @media(max-width:680px){
-  .mob-header{display:flex;}
+  /* mob-header removed */
   .app{flex-direction:column;}
   .sidebar{position:fixed;left:-100%;top:0;height:100%;width:240px;z-index:300;transition:left .25s ease;}
   .sidebar.open{left:0;}
