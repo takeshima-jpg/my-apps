@@ -134,6 +134,7 @@ nav{display:flex;flex-direction:column;gap:0;}
 .tcard-summary{font-size:14px;color:var(--mu);line-height:1.6}
 .tcard-detail{display:none;border-top:1px solid var(--bd);padding:12px 16px;font-size:14px;color:var(--mu);line-height:1.7}
 .tcard-detail.open{display:block}
+.tcard-active{border-color:var(--go)!important;box-shadow:0 0 0 2px var(--go)33;}
 .tcard-dl{font-size:9px;color:var(--di);letter-spacing:.1em;text-transform:uppercase;margin:10px 0 4px}
 .tcard-dl:first-child{margin-top:0}
 .ms-pill{display:inline-flex;padding:2px 8px;font-size:10px;border-radius:10px;border:1px solid;margin:2px;gap:4px}
@@ -329,7 +330,7 @@ const Sel=(a,...c)=>h('select',a,...c);
 const Opt=(v,t,sel)=>h('option',{value:v,...(sel?{selected:''}:{})},t);
 
 /* ── State ── */
-let S={vision:{vision:'',yearGoal:''},themes:[],logs:[],checks:{},tab:'home',forming:null,editing:null,fd:{},_dashTab:'lessons'};
+let S={vision:{vision:'',yearGoal:''},themes:[],logs:[],checks:{},tab:'home',forming:null,editing:null,fd:{},_dashTab:'lessons',_activeTheme:null};
 
 /* ── Constants ── */
 const TM={note:{label:'振り返り',bg:'#f0f5f1',ac:'#2a6a3a'},moya:{label:'モヤモヤ',bg:'#f0f0f8',ac:'#4a4a8a'},vision:{label:'VISION点検',bg:'#faf0e8',ac:'#7a5020'},strategy:{label:'戦略テーマ',bg:'#f0f5f0',ac:'#1a6050'},philosophy:{label:'思想変化',bg:'#f4f1fa',ac:'#5a4a8a'}};
@@ -440,8 +441,8 @@ function openThemeForm(existing){
 /* ── Log form ── */
 function buildLogForm(type){
   const hint=D({cls:'hint'},'必要なものだけ記録してください。全部埋める必要はありません。');
-  const required=[D({cls:'g2'},tI('タイトル','title','ひと言で'),tI('日付','date','','date')),taF('教訓','lesson','腹落ちした学び。一言でも可。',70),taF('次の実験','nextExp','「〜してみる」で書く',55)];
-  const optional=[urlF('gdocUrl'),thChipsF('themes'),tI('関連人物','people','名前をカンマ区切り','text',true),tI('未解決の問い','question','まだ答えが出ていない問い','text',true),tI('タグ','tags','カンマ区切り','text',true)];
+  const required=[D({cls:'g2'},tI('タイトル','title','ひと言で'),tI('日付','date','','date')),thChipsF('themes'),taF('教訓','lesson','腹落ちした学び。一言でも可。',70),taF('次の実験','nextExp','「〜してみる」で書く',55)];
+  const optional=[urlF('gdocUrl'),tI('関連人物','people','名前をカンマ区切り','text',true),tI('未解決の問い','question','まだ答えが出ていない問い','text',true),tI('タグ','tags','カンマ区切り','text',true)];
   let detail=[];
   if(type==='note'||type==='moya'){detail=[chipsF('感情','emotions',EMOTIONS,false,true),chipsF('バイアス','biases',BIASES,false,true),taF('身体感覚','body','胸・喉・胃・頭など',50,true),tI('メタファー','metaphor','この経験を一言で','text',true)];}
   if(type==='moya')detail.unshift(taF('何にモヤモヤしたか','moya_what','違和感・引っかかり',55,true));
@@ -574,9 +575,17 @@ function renderHome(){
       relPjs.forEach(p=>pjRow.appendChild(Sp({css:'font-size:12px;background:var(--sf2,#e8f4f8);color:#4a7a9b;border-radius:3px;padding:2px 8px'},p.title)));
       det.appendChild(pjRow);
     }
-    if(relLogs.length){det.appendChild(D({cls:'tcard-dl'},'関連振り返り'));det.appendChild(D({css:'font-size:15px;color:var(--mu);margin-bottom:8px'},relLogs.length+'件'));}
-    const qs2=relLogs.filter(r=>r.question?.trim()).length;
-    if(qs2){det.appendChild(D({css:'font-size:14px;color:var(--bl);margin-bottom:4px'},'問い '+qs2+'件'));}
+    if(relLogs.length){
+      det.appendChild(D({cls:'tcard-dl'},'関連振り返り'));
+      const recentLogs=relLogs.slice(0,3);
+      recentLogs.forEach(rl=>{
+        const row=D({css:'font-size:13px;color:var(--mu);padding:3px 0;border-bottom:1px solid var(--bd);cursor:pointer'});
+        row.textContent=rl.date+' '+( rl.title||'');
+        row.addEventListener('click',e=>{e.stopPropagation();S.editing=rl;S.forming=null;S.fd=JSON.parse(JSON.stringify(rl));ra();});
+        det.appendChild(row);
+      });
+      if(relLogs.length>3)det.appendChild(D({css:'font-size:12px;color:var(--di);margin-top:4px'},'+' +(relLogs.length-3)+'件'));
+    }
     if(!t._fromProjectOS){
       const acts2=D({cls:'tcard-acts'});
       const editBtn=Bt({cls:'btn-g',css:'font-size:13px'},'編集');editBtn.addEventListener('click',e=>{e.stopPropagation();openThemeForm(t);});acts2.appendChild(editBtn);
@@ -601,7 +610,25 @@ function renderHome(){
       det.appendChild(acts2);
     }
     card.appendChild(det);
-    main2.addEventListener('click',()=>{det.classList.toggle('open');});
+    main2.addEventListener('click',()=>{
+      if(t._fromProjectOS){det.classList.toggle('open');return;}
+      // 探求テーマ：選択トグル
+      if(S._activeTheme===t.id){
+        S._activeTheme=null;
+        card.classList.remove('tcard-active');
+        det.classList.remove('open');
+      } else {
+        // 他のカードの選択を解除
+        document.querySelectorAll('.tcard-active').forEach(el=>el.classList.remove('tcard-active'));
+        document.querySelectorAll('.tcard-detail.open').forEach(el=>el.classList.remove('open'));
+        S._activeTheme=t.id;
+        card.classList.add('tcard-active');
+        det.classList.add('open');
+      }
+      // 問い・実験セクションを再描画
+      const clSec=document.getElementById('cl-section');
+      if(clSec)clSec.replaceWith(buildClSection(pub));
+    });
     return card;
   }
 
@@ -689,51 +716,78 @@ function renderHome(){
     if(pub.length>5){const more=Bt({cls:'more-lnk',onclick:()=>{S.tab='log';ra();updateNav();}},'→ すべて見る（'+pub.length+'件）');f.appendChild(more);}
   }
 
-  // Questions as checklist
-  const qs=pub.filter(r=>r.question?.trim());
-  if(qs.length){
-    f.appendChild(D({cls:'sec-lbl',css:'margin-top:32px'},'未解決の問い'));
-    const qList=D({cls:'checklist'});
-    qs.slice(0,10).forEach(r=>{
-      const lines=r.question.split(/\n/).filter(l=>l.trim());
-      lines.forEach((line,i)=>{
-        const row=D({cls:'cl-row'});
-        const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
-        const ckId='q_'+r.id+'_'+i;cb.checked=!!S.checks[ckId];
-        if(cb.checked)row.classList.add('cl-done');
-        cb.addEventListener('change',async()=>{S.checks[ckId]=cb.checked;await dbput('checks',{id:ckId,done:cb.checked});row.classList.toggle('cl-done',cb.checked);});
-        const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\s]+/,'');
-        const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'');
-        row.appendChild(cb);row.appendChild(lbl);row.appendChild(from);
-        qList.appendChild(row);
-      });
-    });
-    f.appendChild(qList);
-    if(qs.length>10){const more=Bt({cls:'more-lnk',onclick:()=>{S.tab='dash';S._dashTab='questions';ra();updateNav();}},'→ すべて見る');f.appendChild(more);}
-  }
+  // 問い・実験セクション（テーマフィルター対応）
+  function buildClSection(logs){
+    const sec=D({id:'cl-section'});
+    const at=S._activeTheme;
+    const theme=at?S.themes.find(t=>t.id===at):null;
 
-  // Experiments as checklist
-  const exps=pub.filter(r=>r.nextExp?.trim());
-  if(exps.length){
-    f.appendChild(D({cls:'sec-lbl',css:'margin-top:32px'},'次の実験'));
-    const eList=D({cls:'checklist'});
-    exps.slice(0,10).forEach(r=>{
-      const lines=r.nextExp.split(/\n/).filter(l=>l.trim());
-      lines.forEach((line,i)=>{
-        const row=D({cls:'cl-row'});
-        const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
-        const ckId='e_'+r.id+'_'+i;cb.checked=!!S.checks[ckId];
-        if(cb.checked)row.classList.add('cl-done');
-        cb.addEventListener('change',async()=>{S.checks[ckId]=cb.checked;await dbput('checks',{id:ckId,done:cb.checked});row.classList.toggle('cl-done',cb.checked);});
-        const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\d\.）\)\s]+/,'');
-        const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'');
-        row.appendChild(cb);row.appendChild(lbl);row.appendChild(from);
-        eList.appendChild(row);
+    // フィルター対象ログを決定
+    let filtered=logs;
+    if(theme){
+      // 選択テーマに紐づくログ（themesフィールドにテーマIDが含まれる）
+      filtered=logs.filter(r=>(r.themes||[]).includes(theme.id));
+    }
+
+    // フィルター表示ラベル
+    if(theme){
+      const lbl=D({css:'display:flex;align-items:center;gap:8px;margin-bottom:16px;margin-top:32px'});
+      lbl.appendChild(Sp({css:'font-size:12px;background:var(--go);color:#fff;border-radius:10px;padding:2px 10px'},theme.title));
+      lbl.appendChild(Sp({css:'font-size:12px;color:var(--mu)'},'の問い・実験'));
+      const clr=Bt({cls:'btn-s',css:'font-size:11px;padding:2px 8px'},'✕ 全て表示');
+      clr.addEventListener('click',()=>{S._activeTheme=null;document.querySelectorAll('.tcard-active').forEach(el=>el.classList.remove('tcard-active'));document.querySelectorAll('.tcard-detail.open').forEach(el=>el.classList.remove('open'));const s=document.getElementById('cl-section');if(s)s.replaceWith(buildClSection(pub));});
+      lbl.appendChild(clr);
+      sec.appendChild(lbl);
+    }
+
+    const qs=filtered.filter(r=>r.question?.trim());
+    if(qs.length){
+      sec.appendChild(D({cls:'sec-lbl',css:'margin-top:theme?0:32px'},'未解決の問い'+(theme?'':'')));
+      const qList=D({cls:'checklist'});
+      qs.forEach(r=>{
+        const lines=r.question.split(/\n/).filter(l=>l.trim());
+        lines.forEach((line,i)=>{
+          const row=D({cls:'cl-row'});
+          const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
+          const ckId='q_'+r.id+'_'+i;cb.checked=!!S.checks[ckId];
+          if(cb.checked)row.classList.add('cl-done');
+          cb.addEventListener('change',async()=>{S.checks[ckId]=cb.checked;await dbput('checks',{id:ckId,done:cb.checked});row.classList.toggle('cl-done',cb.checked);});
+          const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\s]+/,'');
+          const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'');
+          row.appendChild(cb);row.appendChild(lbl);row.appendChild(from);
+          qList.appendChild(row);
+        });
       });
-    });
-    f.appendChild(eList);
-    if(exps.length>10){const more=Bt({cls:'more-lnk',onclick:()=>{S.tab='dash';S._dashTab='experiments';ra();updateNav();}},'→ すべて見る');f.appendChild(more);}
+      sec.appendChild(qList);
+    }
+
+    const exps=filtered.filter(r=>r.nextExp?.trim());
+    if(exps.length){
+      sec.appendChild(D({cls:'sec-lbl',css:'margin-top:32px'},'次の実験'));
+      const eList=D({cls:'checklist'});
+      exps.forEach(r=>{
+        const lines=r.nextExp.split(/\n/).filter(l=>l.trim());
+        lines.forEach((line,i)=>{
+          const row=D({cls:'cl-row'});
+          const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
+          const ckId='e_'+r.id+'_'+i;cb.checked=!!S.checks[ckId];
+          if(cb.checked)row.classList.add('cl-done');
+          cb.addEventListener('change',async()=>{S.checks[ckId]=cb.checked;await dbput('checks',{id:ckId,done:cb.checked});row.classList.toggle('cl-done',cb.checked);});
+          const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\d\.）\)\s]+/,'');
+          const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'');
+          row.appendChild(cb);row.appendChild(lbl);row.appendChild(from);
+          eList.appendChild(row);
+        });
+      });
+      sec.appendChild(eList);
+    }
+
+    if(theme && !qs.length && !exps.length){
+      sec.appendChild(D({cls:'empty',css:'margin-top:16px'},'このテーマに紐づく振り返りはまだありません'));
+    }
+    return sec;
   }
+  f.appendChild(buildClSection(pub));
 
   return f;
 }
