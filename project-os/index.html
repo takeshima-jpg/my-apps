@@ -1596,17 +1596,13 @@ function openProjModal(pid){
       <div class="fg"><label class="fl">状態</label>${sel('fst',['構想中','進行中','停滞','完了','保留'],p?.status)}</div>
       <div class="fg"><label class="fl">重要度</label>${sel('fpr',['高','中','低'],p?.priority)}</div>
     </div>
-    <div class="fr2">
-      <div class="fg"><label class="fl">期限</label>${fmtDate('fdl',p?.deadline)}</div>
-      <div class="fg"><label class="fl">オーナー</label>${inp('fow',p?.owner,'担当者名')}</div>
-    </div>
     <div class="fg"><label class="fl">スプレッドシート URL</label>${inp('fsurl',p?.sheetUrl,'https://docs.google.com/spreadsheets/...')}</div>
     <div class="fg"><label class="fl">ゴール</label>${ta('fgo',p?.goal)}</div>
     <div class="fg"><label class="fl">注意論点</label>${inp('fat',p?.attentionIssue,'リスク・要注意事項')}</div>
     <div class="fg"><label class="fl">成功条件</label>${ta('fsc',p?.successConditions)}</div>`,
   ()=>{
     const name=g('fn'); if(!name){alert('プロジェクト名を入力してください');return;}
-    const data={name,status:g('fst'),priority:g('fpr'),deadline:g('fdl'),owner:g('fow'),
+    const data={name,status:g('fst'),priority:g('fpr'),
       sheetUrl:g('fsurl'),
       goal:g('fgo'),attentionIssue:g('fat'),successConditions:g('fsc'),
       updatedAt:today()};
