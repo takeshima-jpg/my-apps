@@ -391,20 +391,31 @@ function buildThemeForm(tfd){
     };
     render();return fld('KPI / 数字',w,true);
   };
+  // 関連PJ選択（Project OSから同期済みのものを選択肢に）
+  function pjSelectF(){
+    const pjThemes=S.themes.filter(t=>t._fromProjectOS);
+    if(!pjThemes.length)return null;
+    const cur=tfd.relatedPj||[];
+    const w=D({cls:'chips'});
+    pjThemes.forEach(p=>{
+      const on=cur.includes(p.id);
+      const c=Bt({cls:'chip'+(on?' on':'')},p.title);
+      c.addEventListener('click',()=>{
+        const idx=(tfd.relatedPj||[]).indexOf(p.id);
+        if(idx>=0)tfd.relatedPj.splice(idx,1);
+        else tfd.relatedPj=[...(tfd.relatedPj||[]),p.id];
+        c.classList.toggle('on');
+      });
+      w.appendChild(c);
+    });
+    return fld('関連PJ',w,true);
+  }
   return [
-    tI('テーマ名','title','例：2億円プロジェクト','text',false,tfd),
-    D({cls:'g2'},selF('カテゴリ','category',THEME_CATS,tfd),selF('ステータス','status',THEME_STATUS,tfd)),
-    D({cls:'g2'},selF('優先度','priority',THEME_PRI,tfd),tI('目標日','targetDate','','date',true,tfd)),
-    taF('概要（一言）','summary','','50',false,tfd),
-    taF('目的','purpose','何を実現したいか',60,true,tfd),
-    taF('現在の状態','currentState','今どこまで来ているか',60,true,tfd),
-    taF('次の一手','nextAction','次に何をするか',55,true,tfd),
-    D({cls:'tf-sect'},'マイルストーン・数字'),
-    msEditor(),kpiEditor(),
-    D({cls:'tf-sect'},'感情・リスク'),
-    tI('感情状態','emotionState','ワクワク / 重い / 不安 など','text',true,tfd),
-    taF('リスク','risks','警戒していること',50,true,tfd),
-  ];
+    tI('テーマ名','title','例：M&A実行に向けた意思決定軸','text',false,tfd),
+    taF('現在の仮説','currentState','今どう考えているか・何を信じているか',80,false,tfd),
+    taF('次の実験','nextAction','「〜してみる」形式で',55,false,tfd),
+    pjSelectF(),
+  ].filter(Boolean);
 }
 
 function openThemeForm(existing){
@@ -550,16 +561,19 @@ function renderHome(){
     if(t.status)meta2.appendChild(Sp({cls:'tcard-status '+stClass(t.status)},t.status));
     if(t.priority==='S')meta2.appendChild(Sp({css:'font-size:10px;color:#9a7000;font-family:var(--mono)'},'S'));
     main2.appendChild(meta2);
-    if(t.summary)main2.appendChild(D({cls:'tcard-summary'},t.summary));
+    const summaryText=t.currentState||t.summary||'';if(summaryText)main2.appendChild(D({cls:'tcard-summary'},summaryText.split('\n')[0].slice(0,60)+(summaryText.length>60?'…':'')));
     card.appendChild(main2);
     const det=D({cls:'tcard-detail'});
-    if(t.purpose){det.appendChild(D({cls:'tcard-dl'},'目的'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;margin-bottom:8px'},t.purpose));}
-    if(t.currentState){det.appendChild(D({cls:'tcard-dl'},'現在地'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;margin-bottom:8px'},t.currentState));}
-    if(t.nextAction){det.appendChild(D({cls:'tcard-dl'},'次の一手'));det.appendChild(D({css:'font-size:15px;color:var(--go);line-height:1.7;margin-bottom:8px'},t.nextAction));}
-    const ms=(t.milestones||[]).filter(m=>m.title);
-    if(ms.length){det.appendChild(D({cls:'tcard-dl'},'マイルストーン'));const ml=D({css:'margin-bottom:8px'});ms.forEach(m=>{const st=m.status||'未着手';ml.appendChild(Sp({cls:'ms-pill '+(st==='完了'?'ms-done':st==='実行中'?'ms-doing':'ms-todo')},(st==='完了'?'✓':st==='実行中'?'▶':'○')+' '+m.title));});det.appendChild(ml);}
-    const kpis=(t.metrics||[]).filter(k=>k.name);
-    if(kpis.length){det.appendChild(D({cls:'tcard-dl'},'数字目標'));kpis.forEach(k=>{const kr=D({cls:'kpi-row'});kr.appendChild(Sp({cls:'kpi-name'},k.name+' '));kr.appendChild(document.createTextNode(k.target));det.appendChild(kr);});}
+    if(t.currentState){det.appendChild(D({cls:'tcard-dl'},'現在の仮説'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:8px'},t.currentState));}
+    if(t.nextAction){det.appendChild(D({cls:'tcard-dl'},'次の実験'));det.appendChild(D({css:'font-size:15px;color:var(--go);line-height:1.7;white-space:pre-wrap;margin-bottom:8px'},t.nextAction));}
+    // 関連PJ
+    const relPjs=(t.relatedPj||[]).map(id=>S.themes.find(x=>x.id===id)).filter(Boolean);
+    if(relPjs.length){
+      det.appendChild(D({cls:'tcard-dl'},'関連PJ'));
+      const pjRow=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px'});
+      relPjs.forEach(p=>pjRow.appendChild(Sp({css:'font-size:12px;background:var(--sf2,#e8f4f8);color:#4a7a9b;border-radius:3px;padding:2px 8px'},p.title)));
+      det.appendChild(pjRow);
+    }
     if(relLogs.length){det.appendChild(D({cls:'tcard-dl'},'関連振り返り'));det.appendChild(D({css:'font-size:15px;color:var(--mu);margin-bottom:8px'},relLogs.length+'件'));}
     const qs2=relLogs.filter(r=>r.question?.trim()).length;
     if(qs2){det.appendChild(D({css:'font-size:14px;color:var(--bl);margin-bottom:4px'},'問い '+qs2+'件'));}
