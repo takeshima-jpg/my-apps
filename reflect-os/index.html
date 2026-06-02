@@ -64,6 +64,11 @@ nav{display:flex;flex-direction:column;gap:0;}
 
 /* ── AI Import ── */
 .ai-import-wrap{max-width:var(--max);padding:32px 28px 80px;}
+.ai-prompt-box{border:1px solid var(--bd);border-radius:5px;margin-bottom:16px;background:var(--sf);}
+.ai-prompt-box summary{padding:10px 14px;font-size:13px;cursor:pointer;color:var(--mu);}
+.ai-prompt-inner{padding:0 14px 14px;}
+.ai-prompt-note{font-size:12px;color:var(--mu);margin-bottom:8px;}
+.ai-prompt-pre{font-size:12px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:12px;white-space:pre-wrap;word-break:break-all;margin-bottom:8px;line-height:1.7;color:var(--tx);}
 .ai-import-title{font-size:20px;font-weight:700;color:var(--tx);margin-bottom:4px;}
 .ai-import-sub{font-size:13px;color:var(--mu);margin-bottom:24px;}
 .ai-format-box{font-size:13px;color:var(--mu);background:var(--bg);border:1px solid var(--bd);border-radius:5px;padding:14px 16px;line-height:2;margin-bottom:16px;}
@@ -457,9 +462,9 @@ function logCard(r){
   if(r.gdocUrl)dr.appendChild(Sp({cls:'gdoc-ok'},'● GDoc'));else dr.appendChild(Sp({cls:'gdoc-no'},'○ GDoc'));
   item.appendChild(dr);
   item.appendChild(D({cls:'log-title'},r.title||'（無題）'));
-  if(r.lesson)item.appendChild(D({cls:'log-lesson'},r.lesson.length>120?r.lesson.slice(0,120)+'…':r.lesson));
-  if(r.question)item.appendChild(D({cls:'log-q'},'？ '+(r.question.length>80?r.question.slice(0,80)+'…':r.question)));
-  if(r.nextExp)item.appendChild(D({cls:'log-exp'},'▶ '+(r.nextExp.length>80?r.nextExp.slice(0,80)+'…':r.nextExp)));
+  if(r.lesson){const ls=r.lesson.replace(/\n+/g,' ');item.appendChild(D({cls:'log-lesson'},ls.length>100?ls.slice(0,100)+'…':ls));}
+  if(r.question){const qq=r.question.replace(/\n+/g,' ');item.appendChild(D({cls:'log-q'},'？ '+(qq.length>80?qq.slice(0,80)+'…':qq)));}
+  if(r.nextExp){const nx=r.nextExp.replace(/\n+/g,' ');item.appendChild(D({cls:'log-exp'},'▶ '+(nx.length>80?nx.slice(0,80)+'…':nx)));}
   // Philosophy extras
   if(r.type==='philosophy'){
     if(r.pivot)item.appendChild(Sp({cls:'phil-pivot'},'転換点: '+r.pivot.slice(0,60)));
@@ -646,11 +651,11 @@ function renderDash(){
       container.appendChild(D({cls:'sec-lbl'},'未解決の問い（'+qs.length+'件）'));
       if(!qs.length){container.appendChild(D({cls:'empty'},'まだなし'));return;}
       qs.forEach(r=>{const qi=D({cls:'q-item'});qi.appendChild(document.createTextNode('？ '+r.question));qi.appendChild(D({cls:'q-from'},r.date+' / '+(r.title||'')));container.appendChild(qi);});
-    }else if(tab==='metaphors'){
-      const ms=pub.filter(r=>r.metaphor?.trim());
-      container.appendChild(D({cls:'sec-lbl'},'よく出るメタファー（'+ms.length+'件）'));
-      if(!ms.length){container.appendChild(D({cls:'empty'},'まだなし'));return;}
-      ms.forEach(r=>{const it=D({cls:'learn-item'});it.appendChild(Sp({cls:'learn-exp'},r.metaphor));it.appendChild(D({cls:'learn-from'},r.date+' / '+(r.title||'')));container.appendChild(it);});
+    }else if(tab==='experiments'){
+      const es=pub.filter(r=>r.nextExp?.trim());
+      container.appendChild(D({cls:'sec-lbl'},'次の実験（'+es.length+'件）'));
+      if(!es.length){container.appendChild(D({cls:'empty'},'まだなし'));return;}
+      es.forEach(r=>{const it=D({cls:'learn-item'});it.appendChild(document.createTextNode(r.nextExp));it.appendChild(D({cls:'learn-from'},r.date+' / '+(r.title||'')));container.appendChild(it);});
     }else if(tab==='philosophy'){
       const ps=pub.filter(r=>r.type==='philosophy').sort((a,b)=>a.date.localeCompare(b.date));
       container.appendChild(D({cls:'sec-lbl'},'思想タイムライン（'+ps.length+'件）'));
@@ -712,6 +717,12 @@ function renderAiImport(){
     '<div class="ai-import-title">⬇ 取り込む</div>' +
     '<div class="ai-import-sub">AIとの壁打ち・思考整理の結果を貼り付けて一括登録</div>' +
     '<div class="ai-format-box">' + fmt + '</div>' +
+    '<details class="ai-prompt-box"><summary>📋 AIへの指示プロンプト（コピーして使う）</summary>' +
+    '<div class="ai-prompt-inner">' +
+    '<p class="ai-prompt-note">以下をClaudeに渡すと、取り込みフォーマットで返してくれます。</p>' +
+    '<pre class="ai-prompt-pre" id="ai-prompt-text">以下の振り返りメモを、Reflect OS の取り込みフォーマットに整形してください。\n\n【ルール】\n・タイプは【振り返り】【モヤモヤ】【VISION点検】【戦略テーマ】【思想変化】のいずれか\n・気づき・学び：は箇条書きで要点のみ（最大5項目）\n・問い：は未解決・本質的なものを絞って（最大3つ）\n・次の実験：は「〜してみる」形式の具体的アクション（最大4つ）\n・冗長な説明は省き、エッセンスだけを残す\n\n【出力フォーマット】\n【振り返り】\nタイトル：（ひと言で）\n日付：YYYY-MM-DD\n気づき・学び：\n・〇〇\n問い：\n・〇〇\n次の実験：\n・〇〇\n\n【メモ】\n</pre>' +
+    '<button class="btn-s" onclick="navigator.clipboard.writeText(document.getElementById(\'ai-prompt-text\').textContent);this.textContent=\'コピーしました ✓\';setTimeout(()=>this.textContent=\'コピー\',2000)">コピー</button>' +
+    '</div></details>' +
     '<textarea class="ai-textarea" id="ai-input" placeholder="ここにAIとの対話結果・思考整理テキストを貼り付けてください..."></textarea>' +
     '<div class="ai-btn-row">' +
       '<button class="btn-p" onclick="registerAiInput()">登録する</button>' +
