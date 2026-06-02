@@ -729,13 +729,23 @@ const TYPE_MAP = {
   '思想変化':'philosophy','philosophy':'philosophy',
 };
 
-function extractField(block, keys){
+function extractField(block, keys, multiline=false){
   for(const key of keys){
-    const re = new RegExp(key + '[：:：]\\s*([\\s\\S]+?)(?=\\n[^\\n\\s]|$)', 'i');
+    // 次のラベル行（「キー：」）か【ブロック】が来るまで取得
+    const re = new RegExp(key + '[：:：][ \\t]*([\\s\\S]+?)(?=\\n[ \\t]*[ァ-ヺぁ-ゔA-Za-z一-龥々・]+[：:：]|\\n【[^】]+】|$)', 'i');
     const m = block.match(re);
-    if(m && m[1].trim()) return m[1].trim().split('\n')[0].trim();
+    if(m && m[1].trim()){
+      const raw = m[1].trim();
+      if(multiline) return raw;
+      return raw.split('\n')[0].trim();
+    }
   }
   return '';
+}
+
+// 番号付きリスト・箇条書きを含む複数行フィールド用
+function extractMultiField(block, keys){
+  return extractField(block, keys, true);
 }
 
 function parseAiReflect(text){
@@ -751,16 +761,24 @@ function parseAiReflect(text){
     const title      = extractField(block, ['タイトル','title']);
     const rawDate    = extractField(block, ['日付','date']);
     const date       = (rawDate.match(/\d{4}-\d{2}-\d{2}/) || [tod()])[0];
-    const body       = extractField(block, ['内容','本文','body']);
-    const learned    = extractField(block, ['気づき・学び','気づき','学び','learned']);
-    const question   = extractField(block, ['問い','question']);
-    const next_action= extractField(block, ['次のアクション','ネクスト','next_action','next']);
+    const body       = extractMultiField(block, ['内容','本文','body']);
+    const learned    = extractMultiField(block, ['気づき・学び','気づき','学び','learned']);
+    const question   = extractMultiField(block, ['問い','question']);
+    const next_action= extractMultiField(block, ['次のアクション','ネクスト','next_action','next']);
 
-    if(!title && !body) return;
+    if(!title && !body && !learned) return;
+    // 「内容」と「気づき・学び」を lesson に統合表示
+    const lessonVal = (body && learned)
+      ? body + '\n\n【気づき・学び】\n' + learned
+      : (learned || body);
     const entry = {
       id:uid(), type:typKey, date, status:'published',
-      title: title || body.slice(0,40),
-      body, learned, question, next_action
+      title: title || (body||learned||'').slice(0,40),
+      lesson: lessonVal,
+      learned,              // 後方互換
+      body,                 // 内容（生データ保持）
+      nextExp: next_action, // 実験タブ・ログカードに表示
+      question, next_action
     };
     if(typKey==='moya')        entry.moya_what    = extractField(block, ['何にモヤモヤ','モヤモヤ詳細']);
     if(typKey==='vision')      entry.vision_change= extractField(block, ['VISIONの変化','変化']);
