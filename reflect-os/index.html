@@ -931,7 +931,7 @@ async function syncFromProjectOS(){
     const raw=localStorage.getItem('pos_v4');
     if(!raw){console.info('pos_v4 not found. Open Project OS first.');return -1;}
     const pos=JSON.parse(raw);
-    const projects=(pos.projects||[]).filter(p=>p.title&&p.status!=='完了'&&p.status!=='中止');
+    const projects=(pos.projects||[]).filter(p=>p.name&&p.status!=='完了'&&p.status!=='中止');
     const existing=await dball('themes');
     let added=0;
     for(const p of projects){
@@ -939,16 +939,17 @@ async function syncFromProjectOS(){
       const already=existing.find(t=>t.id===syncId);
       const mapped={
         id:syncId,
-        title:p.title,
+        title:p.name,
         status:POS_STATUS_MAP[p.status]||'構想中',
         priority:p.priority==='高'?'A':p.priority==='中'?'B':'C',
         goal:p.goal||'',
+        summary:p.goal||(p.nextAction||'').slice(0,60)||'',
         createdAt:tod(),
         updatedAt:tod(),
         _fromProjectOS:true
       };
       if(!already){await dbput('themes',mapped);added++;}
-      else if(already.title!==p.title||already.status!==mapped.status){
+      else if(already.title!==p.name||already.status!==mapped.status){
         await dbput('themes',{...already,...mapped,updatedAt:tod()});
       }
     }
