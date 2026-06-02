@@ -1845,8 +1845,8 @@ const AREA_KEYS = {
 
 /* ── 上部エリア解析
    方式：ヘッダー行より前の全行を走査し、
-   「A列（最初の非空セル）がラベル名に一致する行」を見つけ
-   その行の「最初の非空値セル（ラベルの次）」を値として取得。
+   「A列がラベル名に完全一致する行」を見つけ
+   その行のラベル列より後の値を取得。
    複数行にまたがる値（前提条件など）はラベル検出後の連続行も収集。
 ── */
 function parseHeaderArea(lines, headerRowIdx, delim) {
@@ -1860,24 +1860,34 @@ function parseHeaderArea(lines, headerRowIdx, delim) {
     return cells.some(c => c.trim());
   }
 
+  // スキップ対象ラベル（「項目」「内容」「Phase」「テーマ」などの構造行）
+  const SKIP_LABELS = ['項目', '内容', 'phase', 'テーマ', 'フェーズ', 'フェーズマップ', 'イベント一覧'];
+
   // ヘッダー行より前を走査
   for (let i = 0; i < headerRowIdx; i++) {
     const cells = splitCells(lines[i]);
     if (!nonEmpty(cells)) continue; // 全空行スキップ
 
-    // 最初の非空セルをラベルとして検出（A列でもB列でも対応）
+    // 最初の非空セルをラベルとして検出
     const labelIdx = cells.findIndex(c => c.trim());
     if (labelIdx === -1) continue;
     const labelCell = cells[labelIdx];
     const labelNorm = normH(labelCell);
     if (!labelNorm) continue;
 
-    // ラベルマッチ
+    // 構造行（項目・内容・フェーズマップ等）はスキップ
+    if (SKIP_LABELS.some(sl => normH(sl) === labelNorm)) continue;
+
+    // ラベルマッチ（完全一致優先・部分一致は短いラベルのみ）
     for (const [field, candidates] of Object.entries(AREA_KEYS)) {
       if (result[field]) continue;
       const matched = candidates.some(cand => {
         const nc = normH(cand);
-        return labelNorm === nc || labelNorm.includes(nc) || nc.includes(labelNorm);
+        // 完全一致
+        if (labelNorm === nc) return true;
+        // 部分一致はラベル側が候補より短い場合のみ（誤マッチ防止）
+        if (nc.includes(labelNorm) && labelNorm.length >= 2) return true;
+        return false;
       });
       if (!matched) continue;
 
@@ -1886,15 +1896,18 @@ function parseHeaderArea(lines, headerRowIdx, delim) {
       let val = valCells.join(' ').trim();
 
       // 値が空の場合: 後続の非空行（次のラベルまで）から値を収集
-      if (!val) {
+      // ただし projectName は同行に値がある場合のみ（後続行連結しない）
+      if (!val && field !== 'projectName') {
         const collected = [];
         for (let j = i + 1; j < headerRowIdx; j++) {
           const nc = splitCells(lines[j]);
-          if (!nonEmpty(nc)) continue; // 空行はスキップして続行
-          // 次のラベル行か判定（AREA_KEYSのどれかにマッチするなら終了）
+          if (!nonEmpty(nc)) continue;
+          // 次のラベル行か判定
           const firstNonEmpty = nc.find(c => c.trim()) || '';
+          const fnorm = normH(firstNonEmpty);
+          if (SKIP_LABELS.some(sl => normH(sl) === fnorm)) break;
           const isNextLabel = Object.values(AREA_KEYS).flat()
-            .some(cand => normH(firstNonEmpty) === normH(cand));
+            .some(cand => fnorm === normH(cand));
           if (isNextLabel) break;
           const rowVal = nc.filter(c => c.trim()).join(' ');
           if (rowVal) collected.push(rowVal);
@@ -1902,14 +1915,7 @@ function parseHeaderArea(lines, headerRowIdx, delim) {
         val = collected.join('\n').trim();
       }
 
-      if (val) {
-        if (field === 'premises') {
-          // 「・」や改行で始まる項目を個別に保持
-          result[field] = val;
-        } else {
-          result[field] = val;
-        }
-      }
+      if (val) result[field] = val;
     }
   }
   return result;
