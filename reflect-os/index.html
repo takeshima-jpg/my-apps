@@ -566,6 +566,24 @@ function renderHome(){
     if(!t._fromProjectOS){
       const acts2=D({cls:'tcard-acts'});
       const editBtn=Bt({cls:'btn-g',css:'font-size:13px'},'編集');editBtn.addEventListener('click',e=>{e.stopPropagation();openThemeForm(t);});acts2.appendChild(editBtn);
+      if(t.status!=='完了'){
+        const doneBtn=Bt({cls:'btn-s',css:'font-size:13px;color:var(--go);border-color:var(--go)'},'✓ 完了');
+        doneBtn.addEventListener('click',async e=>{
+          e.stopPropagation();
+          if(!confirm('「'+t.title+'」を完了にしますか？'))return;
+          await dbput('themes',{...t,status:'完了',completedAt:tod(),updatedAt:tod()});
+          const th2=await dball('themes');S.themes=th2;ra();
+        });
+        acts2.appendChild(doneBtn);
+      } else {
+        const undoBtn=Bt({cls:'btn-s',css:'font-size:13px'},'↩ 再開');
+        undoBtn.addEventListener('click',async e=>{
+          e.stopPropagation();
+          await dbput('themes',{...t,status:'実行中',updatedAt:tod()});
+          const th2=await dball('themes');S.themes=th2;ra();
+        });
+        acts2.appendChild(undoBtn);
+      }
       det.appendChild(acts2);
     }
     card.appendChild(det);
@@ -576,17 +594,38 @@ function renderHome(){
   // ── 探求テーマ（手動追加のみ） ──
   const myThemes=themes.filter(t=>!t._fromProjectOS);
   const pjThemes=themes.filter(t=>t._fromProjectOS);
+  const activeThemes=myThemes.filter(t=>t.status!=='完了');
+  const doneThemes=myThemes.filter(t=>t.status==='完了').sort((a,b)=>(b.completedAt||b.updatedAt||'').localeCompare(a.completedAt||a.updatedAt||''));
 
   const tsec=D({cls:'sec'});
   const tHd=D({css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:16px'});
   tHd.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0'},'探求テーマ'));
   const addTh=Bt({cls:'btn-g'},'＋ テーマ追加');addTh.addEventListener('click',()=>openThemeForm(null));
   tHd.appendChild(addTh);tsec.appendChild(tHd);
-  if(!myThemes.length){tsec.appendChild(D({cls:'empty'},'テーマを追加してください'));}
+  if(!activeThemes.length){tsec.appendChild(D({cls:'empty'},'テーマを追加してください'));}
   else{
     const grid=D({cls:'theme-grid'});
-    myThemes.forEach(t=>grid.appendChild(buildThemeCard(t)));
+    activeThemes.forEach(t=>grid.appendChild(buildThemeCard(t)));
     tsec.appendChild(grid);
+  }
+  // 完了済みテーマ（折りたたみ）
+  if(doneThemes.length){
+    const doneSec=D({css:'margin-top:16px'});
+    const doneToggle=D({css:'display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 0'});
+    const doneArrow=Sp({css:'font-size:11px;color:var(--mu);transition:transform .2s'},'▶');
+    doneToggle.appendChild(doneArrow);
+    doneToggle.appendChild(Sp({css:'font-size:13px;color:var(--mu)'},'完了済み（'+doneThemes.length+'件）'));
+    const doneBody=D({css:'display:none;margin-top:12px'});
+    const doneGrid=D({cls:'theme-grid'});
+    doneThemes.forEach(t=>doneGrid.appendChild(buildThemeCard(t)));
+    doneBody.appendChild(doneGrid);
+    doneSec.appendChild(doneToggle);doneSec.appendChild(doneBody);
+    doneToggle.addEventListener('click',()=>{
+      const open=doneBody.style.display==='block';
+      doneBody.style.display=open?'none':'block';
+      doneArrow.style.transform=open?'':'rotate(90deg)';
+    });
+    tsec.appendChild(doneSec);
   }
   f.appendChild(tsec);
 
