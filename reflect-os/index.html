@@ -941,7 +941,7 @@ function renderAiImport(){
     '<details class="ai-prompt-box"><summary>📋 AIへの指示プロンプト（コピーして使う）</summary>' +
     '<div class="ai-prompt-inner">' +
     '<p class="ai-prompt-note">以下をClaudeに渡すと、取り込みフォーマットで返してくれます。</p>' +
-    '<pre class="ai-prompt-pre" id="ai-prompt-text">以下の振り返りメモを、Reflect OS の取り込みフォーマットに整形してください。\n\n【ルール】\n・タイプは【振り返り】【モヤモヤ】【VISION点検】【戦略テーマ】【思想変化】のいずれか\n・気づき・学び：は箇条書きで要点のみ（最大5項目）\n・問い：は未解決・本質的なものを絞って（最大3つ）\n・次の実験：は「〜してみる」形式の具体的アクション（最大4つ）\n・冗長な説明は省き、エッセンスだけを残す\n\n【出力フォーマット】\n【振り返り】\nタイトル：（ひと言で）\n日付：YYYY-MM-DD\n気づき・学び：\n・〇〇\n問い：\n・〇〇\n次の実験：\n・〇〇\n\n【メモ】\n（ここに振り返りの元テキストを貼る）</pre>' +
+    '<pre class="ai-prompt-pre" id="ai-prompt-text">以下の振り返りメモを、Reflect OS の取り込みフォーマットに整形してください。\n\n【ルール】\n・タイプは【振り返り】【モヤモヤ】【VISION点検】【戦略テーマ】【思想変化】のいずれか\n・気づき・学び：は箇条書きで要点のみ（最大5項目）\n・問い：は「〜か？」形式で未解決・本質的なものを絞って（最大3つ）\n・次の実験：は「〜してみる」形式の具体的アクション（最大4つ）\n・すべてのタイプで問いと次の実験を必ず出力する\n・冗長な説明は省き、エッセンスだけを残す\n\n【出力フォーマット】\n【振り返り】\nタイトル：（ひと言で）\n日付：YYYY-MM-DD\n気づき・学び：\n・〇〇\n問い：\n・〇〇か？\n次の実験：\n・〇〇してみる\n\n【メモ】\n（ここに振り返りの元テキストを貼る）</pre>' +
     '<button class="btn-s" onclick="navigator.clipboard.writeText(document.getElementById(\'ai-prompt-text\').textContent);this.textContent=\'コピーしました ✓\';setTimeout(()=>this.textContent=\'コピー\',2000)">コピー</button>' +
     '</div></details>' +
     '<textarea class="ai-textarea" id="ai-input" placeholder="ここにAIとの対話結果・思考整理テキストを貼り付けてください..."></textarea>' +
