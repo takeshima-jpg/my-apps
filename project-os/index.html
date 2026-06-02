@@ -388,6 +388,20 @@ input, select, textarea { font-family: var(--f0); }
 }
 .ov-phase-goal { font-size: .75rem; color: var(--gray4); line-height: 1.5; }
 
+/* センターピン強調 */
+.ov-centerpin {
+  background: linear-gradient(135deg, rgba(15,30,60,.03) 0%, transparent 100%);
+  border-left: 3px solid var(--navy) !important;
+  padding-left: 20px;
+  margin-left: -20px;
+}
+.ov-centerpin-body {
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: var(--navy) !important;
+  line-height: 1.7;
+}
+
 /* 旧CSS互換 */
 .ov-card { display: none; }
 .ov-card.full { display: none; }
@@ -1530,9 +1544,27 @@ function paneOv(p){
         ${succHtml}
       </div>` : ''}
 
+      ${p.badFuture ? `
+      <div class="ov-section">
+        <div class="ov-section-lbl" style="color:var(--red);">💀 悪い未来</div>
+        <div class="ov-section-body" style="color:var(--gray4);">${esc(p.badFuture)}</div>
+      </div>` : ''}
+
+      ${p.centerPin ? `
+      <div class="ov-section ov-centerpin">
+        <div class="ov-section-lbl" style="color:var(--navy);">🎯 センターピン</div>
+        <div class="ov-section-body ov-centerpin-body">${esc(p.centerPin)}</div>
+      </div>` : ''}
+
       ${phaseMapHtml}
 
-    </div>`;
+    </div>
+    ${!p.badFuture || !p.centerPin ? `
+    <div style="margin-top:12px;max-width:760px;">
+      <button class="btn btn-outline btn-sm" onclick="openProjModal('${p.id}')">
+        ✏ ${!p.badFuture && !p.centerPin ? '悪い未来・センターピンを入力' : !p.badFuture ? '悪い未来を入力' : 'センターピンを入力'}
+      </button>
+    </div>` : ''}`;
 }
 
 /* ── FORKS ── */
@@ -1702,12 +1734,15 @@ function openProjModal(pid){
     <div class="fg"><label class="fl">スプレッドシート URL</label>${inp('fsurl',p?.sheetUrl,'https://docs.google.com/spreadsheets/...')}</div>
     <div class="fg"><label class="fl">ゴール</label>${ta('fgo',p?.goal)}</div>
     <div class="fg"><label class="fl">注意論点</label>${inp('fat',p?.attentionIssue,'リスク・要注意事項')}</div>
-    <div class="fg"><label class="fl">成功条件</label>${ta('fsc',p?.successConditions)}</div>`,
+    <div class="fg"><label class="fl">成功条件</label>${ta('fsc',p?.successConditions)}</div>
+    <div class="fg"><label class="fl">悪い未来</label>${ta('fbf',p?.badFuture,'このプロジェクトが失敗したらどうなるか')}</div>
+    <div class="fg"><label class="fl">センターピン</label>${ta('fcp',p?.centerPin,'成功の鍵となる最重要ポイント')}</div>`,
   ()=>{
     const name=g('fn'); if(!name){alert('プロジェクト名を入力してください');return;}
     const data={name,status:g('fst'),priority:g('fpr'),
       sheetUrl:g('fsurl'),
       goal:g('fgo'),attentionIssue:g('fat'),successConditions:g('fsc'),
+      badFuture:g('fbf'),centerPin:g('fcp'),
       updatedAt:today()};
     if(p) Object.assign(proj(pid),data);
     else S.projects.push({id:uid(),...data,stakeholders:[],issues:[],forks:[],decisions:[],learnings:[],events:[],constraints:[]});
