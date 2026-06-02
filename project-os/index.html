@@ -1590,7 +1590,6 @@ function paneRecords(p) {
         </div>
         ${r.body ? `<div class="rec-body">${esc(r.body)}</div>` : ''}
         ${r.sub  ? `<div class="rec-sub">${esc(r.sub)}</div>`  : ''}
-        ${r.nextStep ? `<div class="rec-next"><span class="rec-next-lbl">次の一手</span>${esc(r.nextStep)}</div>` : ''}
         ${r.stakeholders ? `<div class="rec-meta">👤 ${esc(r.stakeholders)}</div>` : ''}
       </div>`;
   }).join('');
