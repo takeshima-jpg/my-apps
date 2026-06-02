@@ -639,14 +639,25 @@ textarea.fc.tall { min-height: 130px; }
 .si-proj-card{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:10px 14px;border:2px solid var(--gray2);border-radius:var(--r);
+  border-left:4px solid var(--gray2);
   cursor:pointer;transition:all .14s;background:var(--white);
 }
-.si-proj-card:hover{border-color:var(--navy);}
-.si-proj-card.selected{border-color:var(--navy);background:var(--navy);color:#fff;}
-.si-proj-card.selected .si-proj-meta{color:rgba(255,255,255,.55);}
+.si-proj-card:hover{border-color:var(--gray3);border-left-color:var(--navy);}
+.si-proj-card.selected{
+  border-color:var(--blue);border-left-color:var(--blue);
+  background:var(--blu-s);color:var(--ink);
+  box-shadow:0 0 0 1px var(--blue);
+}
+.si-proj-card.selected .si-proj-meta{color:var(--blue);}
+.si-proj-card.selected .si-proj-name{color:var(--navy);}
 .si-proj-name{font-weight:600;font-size:.9rem;}
 .si-proj-meta{font-size:.72rem;color:var(--gray3);}
-.si-proj-check{font-size:1.125rem;flex-shrink:0;opacity:0;}
+.si-proj-check{
+  font-size:.72rem;font-weight:700;letter-spacing:.04em;
+  color:var(--white);background:var(--blue);
+  border-radius:20px;padding:2px 9px;
+  flex-shrink:0;opacity:0;white-space:nowrap;
+}
 .si-proj-card.selected .si-proj-check{opacity:1;}
 .preview-scroll{overflow-x:auto;max-height:260px;overflow-y:auto;border-radius:var(--r)}
 .preview-table{width:100%;border-collapse:collapse;font-size:.75rem;min-width:400px}
@@ -2159,7 +2170,7 @@ function siRefreshProjSel() {
           ${sheetBtn}
           <button onclick="event.stopPropagation();siDeleteProj('${p.id}')"
             style="font-size:.65rem;color:var(--red);background:var(--red-s);border:1px solid var(--red-b);border-radius:4px;padding:2px 7px;cursor:pointer;white-space:nowrap;">削除</button>
-          <span class="si-proj-check">✓</span>
+          <span class="si-proj-check">✓ 選択中</span>
         </div>
       </div>`;
   }).join('');
