@@ -608,7 +608,8 @@ function renderHome(){
       }
       // 問い・実験セクションを再描画
       const clSec=document.getElementById('cl-section');
-      if(clSec)clSec.replaceWith(buildClSection(pub));
+      const freshPub=S.logs.filter(r=>r.status!=='draft');
+      if(clSec)clSec.replaceWith(buildClSection(freshPub));
     });
     return card;
   }
@@ -716,7 +717,7 @@ function renderHome(){
       lbl.appendChild(Sp({css:'font-size:12px;background:var(--go);color:#fff;border-radius:10px;padding:2px 10px'},theme.title));
       lbl.appendChild(Sp({css:'font-size:12px;color:var(--mu)'},'の問い・実験'));
       const clr=Bt({cls:'btn-s',css:'font-size:11px;padding:2px 8px'},'✕ 全て表示');
-      clr.addEventListener('click',()=>{S._activeTheme=null;document.querySelectorAll('.tcard-active').forEach(el=>el.classList.remove('tcard-active'));document.querySelectorAll('.tcard-detail.open').forEach(el=>el.classList.remove('open'));const s=document.getElementById('cl-section');if(s)s.replaceWith(buildClSection(pub));});
+      clr.addEventListener('click',()=>{S._activeTheme=null;document.querySelectorAll('.tcard-active').forEach(el=>el.classList.remove('tcard-active'));document.querySelectorAll('.tcard-detail.open').forEach(el=>el.classList.remove('open'));const s=document.getElementById('cl-section');const fp=S.logs.filter(r=>r.status!=='draft');if(s)s.replaceWith(buildClSection(fp));});
       lbl.appendChild(clr);
       sec.appendChild(lbl);
     }
@@ -805,8 +806,7 @@ function renderLog(){
 function renderExp(){
   const f=document.createDocumentFragment();
   f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:20px'},'実験ボード'));
-  const pub=S.logs.filter(r=>r.status!=='draft'&&r.nextExp?.trim());
-  const cols=[['未着手',pub.filter(r=>!r.expStatus||r.expStatus==='todo'),'todo'],['実行中',pub.filter(r=>r.expStatus==='doing'),'doing'],['完了',pub.filter(r=>r.expStatus==='done'),'done']];
+
   const board=D({cls:'exp-board'});
   cols.forEach(([title,items,st])=>{
     const col=D({cls:'exp-col'});
