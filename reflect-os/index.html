@@ -160,9 +160,6 @@ nav{display:flex;flex-direction:column;gap:0;}
 .gdoc-no{font-size:10px;color:var(--di);opacity:.6}
 
 /* ── Question items ── */
-.q-item{padding:12px 0;border-bottom:1px solid var(--bd);font-size:16px;color:var(--bl);line-height:1.7}
-.q-item:first-child{border-top:1px solid var(--bd)}
-.q-from{font-size:10px;color:var(--di);font-family:var(--mono);margin-top:3px}
 
 /* ── Form ── */
 .form-wrap{max-width:640px;margin:0 auto}
@@ -194,9 +191,6 @@ nav{display:flex;flex-direction:column;gap:0;}
 .url-wrap input{flex:1}
 
 /* ── Lesson/exp strip ── */
-.learn-item{padding:12px 0;border-bottom:1px solid var(--bd);font-size:16px;color:var(--mu);line-height:1.7}
-.learn-item:first-child{border-top:1px solid var(--bd)}
-.learn-from{font-size:10px;color:var(--di);font-family:var(--mono);margin-top:3px}
 .learn-exp{color:var(--go)}
 
 /* ── Record buttons ── */
@@ -207,21 +201,9 @@ nav{display:flex;flex-direction:column;gap:0;}
 .rec-btn-desc{font-size:10px;color:var(--di)}
 
 /* ── Dash ── */
-.dash-tabs{display:flex;gap:2px;margin-bottom:24px}
-.dash-tab{padding:6px 14px;font-size:13px;background:transparent;color:var(--di);border:1px solid var(--bd);border-radius:3px;cursor:pointer;font-family:var(--serif)}
-.dash-tab.on{background:var(--go-lt);color:var(--go);border-color:var(--go-bd)}
 
 /* ── Exp board ── */
-.exp-board{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
-.exp-col{padding:16px}
-.exp-col-hd{font-size:10px;color:var(--di);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px}
 .exp-cnt{font-size:10px;color:var(--di);font-family:var(--mono)}
-.exp-item{padding:10px 0;border-bottom:1px solid var(--bd);font-size:15px;color:var(--tx);line-height:1.6}
-.exp-item:first-of-type{border-top:1px solid var(--bd)}
-.exp-src{font-size:10px;color:var(--di);margin-top:3px;font-family:var(--mono)}
-.exp-btns{display:flex;gap:4px;margin-top:6px}
-.exp-btn{padding:2px 8px;font-size:10px;border-radius:3px;background:transparent;border:1px solid var(--bd);color:var(--di);cursor:pointer;font-family:var(--serif)}
-.exp-btn:hover{border-color:var(--mu);color:var(--mu)}
 
 /* ── Search ── */
 .srch-wrap{position:relative;margin-bottom:16px}
@@ -240,19 +222,9 @@ nav{display:flex;flex-direction:column;gap:0;}
 .fu{animation:fu .22s ease}
 
 /* ── Philosophy log ── */
-.phil-keep{font-size:15px;color:#2a6a3a;background:#f0f5f1;border-left:2px solid #a8c8b4;padding:6px 12px;margin-top:5px;line-height:1.7}
-.phil-drop{font-size:15px;color:#8a3030;background:#fdf0f0;border-left:2px solid #e0b0b0;padding:6px 12px;margin-top:5px;line-height:1.7}
-.phil-pivot{display:inline-flex;font-size:13px;color:#5a4a8a;background:#f4f1fa;border:1px solid #c8b8e8;border-radius:10px;padding:2px 10px;margin-top:5px}
 .phil-field{font-size:15px;color:var(--mu);line-height:1.75;margin-top:5px}
-.phil-lbl{font-size:10px;color:var(--di);letter-spacing:.1em;text-transform:uppercase;margin-top:12px;margin-bottom:2px}
 /* Timeline */
-.tl-wrap{position:relative;padding-left:28px}
-.tl-wrap::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:1px;background:var(--bd)}
-.tl-item{position:relative;margin-bottom:28px}
-.tl-dot{position:absolute;left:-24px;top:4px;width:9px;height:9px;border-radius:50%;background:#5a4a8a;border:2px solid #f4f1fa}
-.tl-date{font-size:10px;color:var(--di);font-family:var(--mono);margin-bottom:4px}
 .tl-title{font-size:16px;color:var(--tx);margin-bottom:4px}
-.tl-change{font-size:15px;color:var(--mu);line-height:1.7}
 </style>
 </head>
 <body>
@@ -265,8 +237,7 @@ nav{display:flex;flex-direction:column;gap:0;}
     <nav id="nav">
       <button class="nb on" data-tab="home"><span class="nav-icon">◉</span> ホーム</button>
       <button class="nb" data-tab="log"><span class="nav-icon">≡</span> ログ</button>
-      <button class="nb" data-tab="exp"><span class="nav-icon">◇</span> 実験</button>
-      <button class="nb" data-tab="dash"><span class="nav-icon">◈</span> 分析</button>
+
       <button class="nb" data-tab="search"><span class="nav-icon">⌕</span> 検索</button>
       <button class="nb" data-tab="ai-import"><span class="nav-icon">⬇</span> 取り込む</button>
     </nav>
@@ -327,7 +298,7 @@ const Sel=(a,...c)=>h('select',a,...c);
 const Opt=(v,t,sel)=>h('option',{value:v,...(sel?{selected:''}:{})},t);
 
 /* ── State ── */
-let S={vision:{vision:'',yearGoal:''},themes:[],logs:[],checks:{},tab:'home',forming:null,editing:null,fd:{},_dashTab:'lessons',_activeTheme:null};
+let S={vision:{vision:'',yearGoal:''},themes:[],logs:[],checks:{},tab:'home',forming:null,editing:null,fd:{},_activeTheme:null};
 
 /* ── Constants ── */
 const TM={note:{label:'振り返り',bg:'#f0f5f1',ac:'#2a6a3a'},moya:{label:'モヤモヤ',bg:'#f0f0f8',ac:'#4a4a8a'},vision:{label:'VISION点検',bg:'#faf0e8',ac:'#7a5020'},strategy:{label:'戦略テーマ',bg:'#f0f5f0',ac:'#1a6050'},philosophy:{label:'思想変化',bg:'#f4f1fa',ac:'#5a4a8a'}};
@@ -861,61 +832,6 @@ function renderExp(){
   return f;
 }
 
-/* ── DASH tab ── */
-function renderDash(){
-  const f=document.createDocumentFragment();
-  let dashTab=S._dashTab||'lessons';
-  const tabBar=D({cls:'dash-tabs'});
-  const tabs=[['lessons','教訓'],['questions','問い'],['metaphors','メタファー'],['philosophy','思想変化']];
-  const tabBtns={};
-  tabs.forEach(([id,lb])=>{const tb=Bt({cls:'dash-tab'+(dashTab===id?' on':'')},lb);tabBtns[id]=tb;tb.addEventListener('click',()=>{dashTab=id;S._dashTab=id;Object.entries(tabBtns).forEach(([k,v])=>v.className='dash-tab'+(k===id?' on':''));tabBody.innerHTML='';renderDashTab(tabBody,dashTab);});tabBar.appendChild(tb);});
-  f.appendChild(tabBar);
-  const pub=S.logs.filter(r=>r.status!=='draft');
-  const tabBody=D({});f.appendChild(tabBody);
-  function renderDashTab(container,tab){
-    if(tab==='lessons'){
-      const ls=pub.filter(r=>r.lesson?.trim());
-      container.appendChild(D({cls:'sec-lbl'},'よく出る教訓（'+ls.length+'件）'));
-      if(!ls.length){container.appendChild(D({cls:'empty'},'まだなし'));return;}
-      ls.forEach(r=>{const it=D({cls:'learn-item'});it.appendChild(document.createTextNode(r.lesson));it.appendChild(D({cls:'learn-from'},r.date+' / '+(r.title||'')));container.appendChild(it);});
-    }else if(tab==='questions'){
-      const qs=pub.filter(r=>r.question?.trim());
-      container.appendChild(D({cls:'sec-lbl'},'未解決の問い（'+qs.length+'件）'));
-      if(!qs.length){container.appendChild(D({cls:'empty'},'まだなし'));return;}
-      qs.forEach(r=>{const qi=D({cls:'q-item'});qi.appendChild(document.createTextNode('？ '+r.question));qi.appendChild(D({cls:'q-from'},r.date+' / '+(r.title||'')));container.appendChild(qi);});
-    }else if(tab==='experiments'){
-      const es=pub.filter(r=>r.nextExp?.trim());
-      container.appendChild(D({cls:'sec-lbl'},'次の実験（'+es.length+'件）'));
-      if(!es.length){container.appendChild(D({cls:'empty'},'まだなし'));return;}
-      es.forEach(r=>{const it=D({cls:'learn-item'});it.appendChild(document.createTextNode(r.nextExp));it.appendChild(D({cls:'learn-from'},r.date+' / '+(r.title||'')));container.appendChild(it);});
-    }else if(tab==='philosophy'){
-      const ps=pub.filter(r=>r.type==='philosophy').sort((a,b)=>a.date.localeCompare(b.date));
-      container.appendChild(D({cls:'sec-lbl'},'思想タイムライン（'+ps.length+'件）'));
-      if(!ps.length){container.appendChild(D({cls:'empty'},'思想変化の記録がまだありません'));return;}
-      const tl=D({cls:'tl-wrap'});
-      ps.forEach(r=>{
-        const item=D({cls:'tl-item'});
-        item.appendChild(D({cls:'tl-dot'}));
-        item.appendChild(D({cls:'tl-date'},r.date+(r.title?' — '+r.title:'')));
-        if(r.what_changed)item.appendChild(D({cls:'tl-change'},r.what_changed));
-        if(r.pivot)item.appendChild(Sp({cls:'phil-pivot',css:'margin-top:6px;display:inline-flex'},'転換点: '+r.pivot));
-        if(r.keep_belief){
-          item.appendChild(D({cls:'phil-lbl'},'残す'));
-          item.appendChild(D({cls:'phil-keep'},r.keep_belief));
-        }
-        if(r.drop_belief){
-          item.appendChild(D({cls:'phil-lbl'},'手放す'));
-          item.appendChild(D({cls:'phil-drop'},r.drop_belief));
-        }
-        tl.appendChild(item);
-      });
-      container.appendChild(tl);
-    }
-  }
-  renderDashTab(tabBody,dashTab);
-  return f;
-}
-
 /* ── SEARCH tab ── */
 function renderSearch(){
   const f=document.createDocumentFragment();
@@ -1047,8 +963,7 @@ function ra(){
   const wrap=D({cls:'fu'});
   if(S.tab==='home')wrap.appendChild(renderHome());
   else if(S.tab==='log')wrap.appendChild(renderLog());
-  else if(S.tab==='exp')wrap.appendChild(renderExp());
-  else if(S.tab==='dash')wrap.appendChild(renderDash());
+
   else if(S.tab==='search')wrap.appendChild(renderSearch());
   else if(S.tab==='ai-import')wrap.appendChild(renderAiImport());
   main.appendChild(wrap);
