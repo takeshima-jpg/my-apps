@@ -408,46 +408,14 @@ function openThemeForm(existing){
 
 /* ── Log form ── */
 function buildLogForm(type){
-  const hint=D({cls:'hint'},'必要なものだけ記録してください。全部埋める必要はありません。');
-  const required=[D({cls:'g2'},tI('タイトル','title','ひと言で'),tI('日付','date','','date')),thChipsF('themes'),taF('教訓','lesson','腹落ちした学び。一言でも可。',70),taF('次の実験','nextExp','「〜してみる」で書く',55),tI('未解決の問い','question','まだ答えが出ていない問い','text',true)];
-  const optional=[urlF('gdocUrl'),tI('関連人物','people','名前をカンマ区切り','text',true),tI('タグ','tags','カンマ区切り','text',true)];
-  let detail=[];
-  if(type==='note'||type==='moya'){detail=[chipsF('感情','emotions',EMOTIONS,false,true),chipsF('バイアス','biases',BIASES,false,true),taF('身体感覚','body','胸・喉・胃・頭など',50,true),tI('メタファー','metaphor','この経験を一言で','text',true)];}
-  if(type==='moya'){
-    detail.unshift(taF('何にモヤモヤしたか','moya_what','違和感・引っかかり',55,true));
-    // モヤモヤも問い・実験を持つ（テーマ連携のため）
-    if(!S.fd.question)S.fd.question='';
-    if(!S.fd.nextExp)S.fd.nextExp='';
-  }
-  if(type==='vision'){
-    // VISION点検：問い・実験を必須欄に追加
-    if(!S.fd.question)S.fd.question='';
-    if(!S.fd.nextExp)S.fd.nextExp='';
-    optional.push(taF('VISIONの変化','vision_change','このVISION点検で何が変わったか',55,true),taF('変えること','next_change','',50,true),taF('捨てること','next_drop','',50,true));
-    detail=[...detail,sldrF('確信度','confidence'),sldrF('違和感','discomfort')];
-  }
-  if(type==='strategy'){optional.push(taF('進捗','progress','',55,true),chipsF('判断','decision_choice',['継続','修正','撤退','保留'],true,true));detail=[...detail,taF('動機の源','motivation','',55,true)];}
-  if(type==='philosophy'){
-    return [
-      hint,
-      D({cls:'g2'},tI('タイトル','title','ひと言で'),tI('日付','date','','date')),
-      taF('当時の思想','old_belief','その頃、何を信じていたか',70),
-      taF('何が変わったか','what_changed','どう変わったか。一言でも可。',70),
-      taF('転換点','pivot','何がきっかけで変わったか',60),
-      taF('今の理解','new_belief','今、どう理解しているか',70),
-      D({css:'border-top:1px solid var(--bd);margin:16px 0'}),
-      taF('残したい思想','keep_belief','今後も持ち続けたいこと',55,true),
-      taF('捨てたい思想','drop_belief','手放したいこと',55,true),
-      taF('今のVISIONとの接続','vision_connection','このテーマがVISIONのどこと繋がるか',55,true),
-      thChipsF('themes'),
-      tI('未解決の問い','question','まだ答えが出ていない問い','text',true),
-      taF('次の実験','nextExp','「〜してみる」で書く',55,true),
-      tI('関連人物','people','名前をカンマ区切り','text',true),
-      urlF('gdocUrl'),
-      tI('タグ','tags','カンマ区切り','text',true),
-    ].filter(Boolean);
-  }
-  return [hint,...required,D({css:'border-top:1px solid var(--bd);margin:16px 0'}),...optional,detail.length?expandSec('詳細（感情・バイアス）',detail):null].filter(Boolean);
+  // 全タイプ共通：5フィールドに統一
+  return [
+    D({cls:'g2'},tI('タイトル','title','ひと言で'),tI('日付','date','','date')),
+    taF('気づき・学び','lesson','腹落ちした学び。箇条書き可。',80),
+    tI('問い','question','まだ答えが出ていない問い','text',true),
+    taF('次の実験','nextExp','「〜してみる」で書く',55,true),
+    thChipsF('themes'),
+  ].filter(Boolean);
 }
 
 function renderLogForm(type){
