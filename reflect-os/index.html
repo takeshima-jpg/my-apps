@@ -76,6 +76,13 @@ nav{display:flex;flex-direction:column;gap:0;}
 .cl-row input[type=checkbox]:checked~.cl-label{text-decoration:line-through;color:var(--mu);}
 .cl-done .cl-label{text-decoration:line-through;color:var(--mu);}
 .cl-done .cl-from{color:var(--di);}
+.cl-doing{background:#f0f8f0;}
+.cl-doing .cl-label{color:var(--go);font-weight:500;}
+.cl-skip .cl-label{text-decoration:line-through;color:var(--di);opacity:.6;}
+.exp-state-btn{font-size:11px;padding:2px 7px;border:1px solid var(--bd);border-radius:3px;background:var(--bg);cursor:pointer;color:var(--mu);margin-left:4px;flex-shrink:0;}
+.exp-state-btn:hover{border-color:var(--mu);}
+.exp-state-btn.doing{color:var(--go);border-color:var(--go-bd);background:var(--go-lt);}
+.exp-state-btn.skip{color:var(--di);}
 .cl-from{font-size:11px;color:var(--di);white-space:nowrap;flex-shrink:0;}
 .ai-prompt-box{border:1px solid var(--bd);border-radius:5px;margin-bottom:16px;background:var(--sf);}
 .ai-prompt-box summary{padding:10px 14px;font-size:13px;cursor:pointer;color:var(--mu);}
@@ -245,6 +252,7 @@ nav{display:flex;flex-direction:column;gap:0;}
       <button class="nb" data-tab="ai-import"><span class="nav-icon">⬇</span> 取り込む</button>
       <button class="nb" data-tab="questions"><span class="nav-icon">？</span> 問い <span id="q-badge" class="sb-badge"></span></button>
       <button class="nb" data-tab="experiments"><span class="nav-icon">▶</span> 実験 <span id="e-badge" class="sb-badge"></span></button>
+      <button class="nb" data-tab="archive"><span class="nav-icon">□</span> アーカイブ</button>
     </nav>
   </div>
 
@@ -954,6 +962,41 @@ async function registerAiInput(){
 
 function renderV26(){const area=document.getElementById('v26');if(!area)return;const seed=parseInt(new Date().toLocaleDateString('sv').replace(/-/g,''))%100;const types=['vision','principle','direction'];const type=types[seed%3];let inner='';if(type==='vision'){const item=VD.vision[seed%VD.vision.length];inner=`<span class="v26t">VISION</span><span class="v26b">${item}</span>`;}else if(type==='principle'){const item=VD.principles[seed%VD.principles.length];inner=`<span class="v26t">原則</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}else{const item=VD.directions[seed%VD.directions.length];inner=`<span class="v26t">指針</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}area.innerHTML=`<div class="v26c">${inner}</div>`;}
 
+/* ── ARCHIVE tab ── */
+function renderArchive(){
+  const f=document.createDocumentFragment();
+  f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:20px'},'アーカイブ'));
+  const pub=S.logs.filter(r=>r.status!=='draft'&&r.nextExp?.trim());
+  const rows=[];
+  pub.forEach(r=>{
+    const lines=r.nextExp.split(/\n/).filter(l=>l.trim());
+    lines.forEach((line,i)=>{
+      const ckId='e_'+r.id+'_'+i;
+      const st=S.checks[ckId]||'todo';
+      if(st!=='done'&&st!=='skip') return;
+      rows.push({line,ckId,r,st});
+    });
+  });
+  if(!rows.length){f.appendChild(D({cls:'empty'},'完了・やらないに移した実験がここに蓄積されます'));return f;}
+  // 完了
+  const done=rows.filter(x=>x.st==='done');
+  if(done.length){
+    f.appendChild(D({cls:'sec-lbl',css:'margin-top:0;margin-bottom:12px;font-size:11px'},'完了（'+done.length+'件）'));
+    const dl=D({cls:'checklist'});
+    done.forEach(({line,ckId,r})=>dl.appendChild(buildExpRow(line,ckId,r)));
+    f.appendChild(dl);
+  }
+  // やらない
+  const skip=rows.filter(x=>x.st==='skip');
+  if(skip.length){
+    f.appendChild(D({cls:'sec-lbl',css:'margin-top:24px;margin-bottom:12px;font-size:11px'},'やらない（'+skip.length+'件）'));
+    const sl=D({cls:'checklist'});
+    skip.forEach(({line,ckId,r})=>sl.appendChild(buildExpRow(line,ckId,r)));
+    f.appendChild(sl);
+  }
+  return f;
+}
+
 /* ── Main render ── */
 function ra(){
   const main=document.getElementById('body');main.innerHTML='';
@@ -987,27 +1030,50 @@ function renderQuestions(){
 }
 
 /* ── EXPERIMENTS tab ── */
+function buildExpRow(line, ckId, r){
+  const st=S.checks[ckId]||'todo'; // todo / doing / done / skip
+  const row=D({cls:'cl-row'+(st==='doing'?' cl-doing':st==='done'?' cl-done':st==='skip'?' cl-skip':'')});
+  const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\d\.）\)\s]+/,'');
+  const thNames=(r.themes||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
+  const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'')+(thNames.length?' ／ '+thNames.join('・'):'');
+  // 状態ボタン
+  async function setSt(newSt){
+    S.checks[ckId]=newSt;
+    await dbput('checks',{id:ckId,done:newSt==='done',state:newSt});
+    ra();
+  }
+  const doingBtn=D({cls:'exp-state-btn'+(st==='doing'?' doing':'')});doingBtn.textContent='実験中';
+  doingBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='doing'?'todo':'doing');});
+  const doneBtn=D({cls:'exp-state-btn'+(st==='done'?' doing':'')});doneBtn.textContent='完了';
+  doneBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='done'?'todo':'done');});
+  const skipBtn=D({cls:'exp-state-btn'+(st==='skip'?' skip':'')});skipBtn.textContent='やらない';
+  skipBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='skip'?'todo':'skip');});
+  row.appendChild(lbl);row.appendChild(from);
+  const btns=D({css:'display:flex;gap:2px;margin-left:auto;flex-shrink:0'});
+  btns.appendChild(doingBtn);btns.appendChild(doneBtn);btns.appendChild(skipBtn);
+  row.appendChild(btns);
+  return row;
+}
+
 function renderExperiments(){
   const f=document.createDocumentFragment();
   const pub=S.logs.filter(r=>r.status!=='draft'&&r.nextExp?.trim());
-  f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:20px'},'次の実験（'+pub.length+'件）'));
   if(!pub.length){f.appendChild(D({cls:'empty'},'実験の記録がまだありません'));return f;}
+  // アクティブ（todo/doing）のみ表示
   const list=D({cls:'checklist'});
+  let activeCount=0;
   pub.forEach(r=>{
     const lines=r.nextExp.split(/\n/).filter(l=>l.trim());
     lines.forEach((line,i)=>{
-      const row=D({cls:'cl-row'});
-      const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
-      const ckId='e_'+r.id+'_'+i;cb.checked=!!S.checks[ckId];
-      if(cb.checked)row.classList.add('cl-done');
-      cb.addEventListener('change',async()=>{S.checks[ckId]=cb.checked;await dbput('checks',{id:ckId,done:cb.checked});row.classList.toggle('cl-done',cb.checked);});
-      const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\d\.）\)\s]+/,'');
-      const thNames=(r.themes||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
-      const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'')+(thNames.length?' ／ '+thNames.join('・'):'');
-      row.appendChild(cb);row.appendChild(lbl);row.appendChild(from);
-      list.appendChild(row);
+      const ckId='e_'+r.id+'_'+i;
+      const st=S.checks[ckId]||'todo';
+      if(st==='done'||st==='skip') return; // アーカイブ側へ
+      activeCount++;
+      list.appendChild(buildExpRow(line,ckId,r));
     });
   });
+  f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:16px'},'実験中・未着手（'+activeCount+'件）'));
+  f.appendChild(list);
   f.appendChild(list);
   return f;
 }
@@ -1018,6 +1084,7 @@ function renderExperiments(){
   else if(S.tab==='search')wrap.appendChild(renderSearch());
   else if(S.tab==='questions')wrap.appendChild(renderQuestions());
   else if(S.tab==='experiments')wrap.appendChild(renderExperiments());
+  else if(S.tab==='archive')wrap.appendChild(renderArchive());
   else if(S.tab==='ai-import')wrap.appendChild(renderAiImport());
   main.appendChild(wrap);
 }
