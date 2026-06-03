@@ -118,18 +118,14 @@ header {
 
 /* PANELS */
 .left-panel {
-  border-right: 1px solid var(--border);
-}
-.left-panel, .right-panel {
   background: var(--surface);
+  border-right: 1px solid var(--border);
   position: sticky;
   top: 48px;
   height: calc(100vh - 48px);
   overflow-y: auto;
   padding: 16px 14px;
 }
-
-.right-panel { border-left: 1px solid var(--border); }
 
 .panel-label {
   font-family: var(--font-mono);
@@ -697,43 +693,18 @@ input[type=checkbox] {
 .tbl-filter-btn:hover { border-color: var(--green); color: var(--green); }
 .tbl-filter-btn.active { border-color: var(--green); color: var(--green); background: var(--green-bg); }
 
-/* カテゴリ管理 */
-
-
-
-
-
-/* 編集モード：カテゴリ行 */
-
-
-.cat-drag-handle:active { cursor: grabbing; }
-
-
-
-
-
-
-
-/* カテゴリ追加フォーム */
-
-.cat-add-row.visible { display: flex; }
-
-
-
 
 /* ── MOBILE RESPONSIVE ── */
 .mob-panel-btns{display:none;gap:4px;margin-left:auto;}
 .mob-panel-btn{background:none;border:1px solid var(--border);color:var(--text2);font-size:13px;padding:4px 10px;border-radius:4px;cursor:pointer;font-family:var(--font-mono);}
 .mob-panel-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-@media(max-width:800px){
+@media(max-width:600px){
   .mob-panel-btns{display:flex;}
   .layout{grid-template-columns:1fr;}
   .left-panel{display:none;border-right:none;border-bottom:1px solid var(--border);}
   .left-panel.mob-show{display:block;}
   .center{display:none;}
   .center.mob-show{display:block;}
-  .right-panel{display:none;position:static;height:auto;}
-  .right-panel.mob-show{display:block;}
   .header-nav{margin-left:0;}
 }
 </style>
@@ -744,9 +715,8 @@ input[type=checkbox] {
   <div class="header-icon"><img src="icons/icon-64.png" alt="icon"></div>
   <div class="logo">Shot Task OS</div>
   <div class="mob-panel-btns">
-    <button class="mob-panel-btn" onclick="showPanel('left')">カテゴリ</button>
+    <button class="mob-panel-btn" onclick="showPanel('left')">サマリー</button>
     <button class="mob-panel-btn active" onclick="showPanel('center')">タスク</button>
-    <button class="mob-panel-btn" onclick="showPanel('right')">詳細</button>
   </div>
   <div class="header-nav">
     <button class="nav-btn active" id="navMain" onclick="switchView('main')">実行判断</button>
@@ -929,24 +899,10 @@ const DEFAULT_CATEGORIES = [
   '増資プロジェクト','海外事業撤退','セキュリティ事業',
   '前田COO作戦','その他','学習・インプット','自己探求','ネットワーキング'
 ];
-let CATEGORIES = [...DEFAULT_CATEGORIES];
-const CAT_STORAGE_KEY = 'shot-task-os-categories-v1';
-
-function loadCategories() {
-  try {
-    const raw = localStorage.getItem(CAT_STORAGE_KEY);
-    if (raw) CATEGORIES = JSON.parse(raw);
-  } catch(e) {}
-}
-function saveCategories() {
-  localStorage.setItem(CAT_STORAGE_KEY, JSON.stringify(CATEGORIES));
-}
+const CATEGORIES = [...DEFAULT_CATEGORIES];
 
 // ── STATE ──
 let tasks = [];
-let selectedCat = null;
-let catEditMode = false;
-let dragSrcIndex = null;
 let addPriority = 'high';
 let showDone = false;
 let currentView = 'main';
@@ -1237,10 +1193,9 @@ function render() {
   updateSummary();
   populateSelect('addCategory', CATEGORIES[0]);
 
-  const filtered = (selectedCat ? tasks.filter(t => t.category === selectedCat) : tasks)
-    .filter(t => showDone || t.status !== 'done');
+  const filtered = tasks.filter(t => showDone || t.status !== 'done');
 
-  document.getElementById('viewTitle').textContent = selectedCat || '実行判断ビュー';
+  document.getElementById('viewTitle').textContent = '実行判断ビュー';
   document.getElementById('taskCountBadge').textContent = filtered.filter(t=>t.status!=='done').length + '件';
 
   // Sort
@@ -1418,112 +1373,8 @@ function updateSummary() {
   document.getElementById('s-done').textContent    = tasks.filter(t => t.status==='done').length;
 }
 
-// ── CAT LIST ──
-function renderCatList() {
-  const el = document.getElementById('catList');
-  if (!el) return;
-  const activeTasks = tasks.filter(t => t.status !== 'done');
-  if (!catEditMode) {
-    // 通常モード（未完了のみ件数）
-    const allBtn = `<div class="cat-item${!selectedCat?' active':''}" onclick="filterCat(null)">
-      <span>すべて</span><span class="cat-count">${activeTasks.length}</span></div>`;
-    const cats = CATEGORIES.map(cat => {
-      const n = activeTasks.filter(t => t.category===cat).length;
-      return `<div class="cat-item${selectedCat===cat?' active':''}" onclick="filterCat('${escH(cat)}')">
-        <span>${escH(cat)}</span><span class="cat-count">${n}</span></div>`;
-    });
-    el.innerHTML = allBtn + cats.join('');
-  } else {
-    // 編集モード（未完了のみ件数）
-    const items = CATEGORIES.map((cat, i) => {
-      const n = activeTasks.filter(t => t.category===cat).length;
-      return `<div class="cat-item-wrap" draggable="true"
-          ondragstart="onDragStart(event,${i})"
-          ondragover="onDragOver(event,${i})"
-          ondrop="onDrop(event,${i})"
-          ondragend="onDragEnd(event)"
-          id="cat-wrap-${i}">
-        <span class="cat-drag-handle">⠿</span>
-        <div class="cat-item" style="cursor:default">
-          <span>${escH(cat)}</span><span class="cat-count">${n}</span>
-        </div>
-        <button class="cat-del-btn" onclick="deleteCategory(${i})" title="削除">×</button>
-      </div>`;
-    });
-    el.innerHTML = items.join('');
-  }
-}
-function filterCat(cat) { selectedCat = cat || null; render(); }
 
-// ── カテゴリ編集モード ──
-function toggleCatEdit() {
-  catEditMode = !catEditMode;
-  const btn = document.getElementById('catEditToggle');
-  const addRow = document.getElementById('catAddRow');
-  btn.classList.toggle('active', catEditMode);
-  btn.textContent = catEditMode ? '完了' : '編集';
-  addRow.classList.toggle('visible', catEditMode);
-}
 
-function addCategory() {
-  const input = document.getElementById('catAddInput');
-  const name = input.value.trim();
-  if (!name) return;
-  if (CATEGORIES.includes(name)) { alert('同名のカテゴリが既に存在します'); return; }
-  CATEGORIES.push(name);
-  saveCategories();
-  input.value = '';
-  // addModalのselectも更新
-  populateSelect('addCategory', name);
-}
-
-function deleteCategory(idx) {
-  const name = CATEGORIES[idx];
-  const count = tasks.filter(t => t.category === name).length;
-  const msg = count > 0
-    ? `「${name}」を削除しますか？\nこのカテゴリの ${count} 件は「今日のタスク」に移動されます。`
-    : `「${name}」を削除しますか？`;
-  if (!confirm(msg)) return;
-  // タスクを今日のタスクへ移動
-  tasks.forEach(t => { if (t.category === name) t.category = '今日のタスク'; });
-  CATEGORIES.splice(idx, 1);
-  saveCategories();
-  save();
-  if (selectedCat === name) selectedCat = null;
-  render();
-}
-
-// ── ドラッグ&ドロップ（並び替え） ──
-function onDragStart(e, idx) {
-  dragSrcIndex = idx;
-  setTimeout(() => {
-    const el = document.getElementById('cat-wrap-' + idx);
-    if (el) el.classList.add('dragging');
-  }, 0);
-  e.dataTransfer.effectAllowed = 'move';
-}
-function onDragOver(e, idx) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  document.querySelectorAll('.cat-item-wrap').forEach(el => el.classList.remove('drag-over'));
-  const el = document.getElementById('cat-wrap-' + idx);
-  if (el && idx !== dragSrcIndex) el.classList.add('drag-over');
-}
-function onDrop(e, idx) {
-  e.preventDefault();
-  if (dragSrcIndex === null || dragSrcIndex === idx) return;
-  const moved = CATEGORIES.splice(dragSrcIndex, 1)[0];
-  CATEGORIES.splice(idx, 0, moved);
-  saveCategories();
-  dragSrcIndex = null;
-  renderCatList();
-}
-function onDragEnd(e) {
-  dragSrcIndex = null;
-  document.querySelectorAll('.cat-item-wrap').forEach(el => {
-    el.classList.remove('dragging', 'drag-over');
-  });
-}
 
 
 // ── テーブルフィルター ──
@@ -1772,7 +1623,6 @@ document.addEventListener('keydown', e => {
 
 // ── INIT ──
 function init() {
-  loadCategories();
   load();
   seedIfEmpty();
   renderVision();
@@ -1802,9 +1652,9 @@ function showPanel(name){
   });
 }
 // 初期表示: center
-if(window.innerWidth<=800) showPanel('center');
+if(window.innerWidth<=600) showPanel('center');
 window.addEventListener('resize',()=>{
-  if(window.innerWidth>800){
+  if(window.innerWidth>600){
     ['.left-panel','.center'].forEach(sel=>{
       const el = document.querySelector(sel);
       if(el) el.classList.remove('mob-show');
@@ -1818,6 +1668,9 @@ window.addEventListener('resize',()=>{
       navigator.serviceWorker.getRegistrations().then(regs => {
         regs.forEach(r => r.unregister());
       });
+    }
+    if ("caches" in window) {
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
     }
   </script>
 </body>
