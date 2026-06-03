@@ -1655,10 +1655,16 @@ function showPanel(name){
 if(window.innerWidth<=600) showPanel('center');
 window.addEventListener('resize',()=>{
   if(window.innerWidth>600){
+    // デスクトップ幅に戻ったらmob-showを外してグリッド表示に戻す
     ['.left-panel','.center'].forEach(sel=>{
       const el = document.querySelector(sel);
       if(el) el.classList.remove('mob-show');
     });
+    document.querySelectorAll('.mob-panel-btn').forEach(btn=>btn.classList.remove('active'));
+  } else {
+    // モバイル幅に縮んだとき、何も表示されていなければcenterを表示
+    const anyVisible = document.querySelector('.left-panel.mob-show, .center.mob-show');
+    if(!anyVisible) showPanel('center');
   }
 });
 
