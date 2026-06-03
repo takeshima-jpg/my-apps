@@ -798,6 +798,23 @@ function renderLog(){
   const fc=D({css:'display:flex;gap:4px;flex-wrap:wrap'});
   let ft='all';const fB={};
   ['all',...Object.keys(TM)].forEach(t=>{const lb=t==='all'?'すべて':TM[t]?.label||t;const c=Bt({cls:'chip'+(t==='all'?' on':'')},lb);fB[t]=c;c.addEventListener('click',()=>{ft=t;Object.entries(fB).forEach(([k,v])=>v.className='chip'+(k===t?' on':''));upd();});fc.appendChild(c);});
+  hd.appendChild(fc);
+  // テーマフィルター
+  const myThemesLog=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
+  if(myThemesLog.length){
+    const tfc=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px'});
+    let thFilt='all';const thB={};
+    const allThBtn=Bt({cls:'chip on'},'全テーマ');thB['all']=allThBtn;
+    allThBtn.addEventListener('click',()=>{thFilt='all';Object.entries(thB).forEach(([k,v])=>v.className='chip'+(k==='all'?' on':''));upd();});
+    tfc.appendChild(allThBtn);
+    myThemesLog.forEach(t=>{const c=Bt({cls:'chip'},t.title);thB[t.id]=c;c.addEventListener('click',()=>{thFilt=t.id;Object.entries(thB).forEach(([k,v])=>v.className='chip'+(k===t.id?' on':''));upd();});tfc.appendChild(c);});
+    hd.appendChild(tfc);
+    // updをthFilt対応に上書き
+    f.appendChild(hd);
+    const lw=D({});f.appendChild(lw);
+    function upd(){lw.innerHTML='';let rs=ft==='all'?S.logs:S.logs.filter(r=>r.type===ft);if(thFilt!=='all')rs=rs.filter(r=>(r.themes||[]).includes(thFilt));if(!rs.length){lw.appendChild(D({cls:'empty'},'記録がありません'));return;}rs.forEach(r=>lw.appendChild(logCard(r)));}
+    upd();return f;
+  }
   hd.appendChild(fc);f.appendChild(hd);
   const lw=D({});f.appendChild(lw);
   function upd(){lw.innerHTML='';const rs=ft==='all'?S.logs:S.logs.filter(r=>r.type===ft);if(!rs.length){lw.appendChild(D({cls:'empty'},'記録がありません'));return;}rs.forEach(r=>lw.appendChild(logCard(r)));}
@@ -1031,10 +1048,25 @@ function ra(){
 function renderQuestions(){
   const f=document.createDocumentFragment();
   const pub=S.logs.filter(r=>r.status!=='draft'&&r.question?.trim());
-  f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:20px'},'未解決の問い（'+pub.length+'件）'));
-  if(!pub.length){f.appendChild(D({cls:'empty'},'問いの記録がまだありません'));return f;}
-  const list=D({cls:'checklist'});
-  pub.forEach(r=>{
+  // テーマフィルター
+  const qThemes=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
+  let qThFilt='all';
+  const qfc=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px'});
+  const qThB={};
+  const qAllBtn=Bt({cls:'chip on'},'全テーマ');qThB['all']=qAllBtn;
+  qAllBtn.addEventListener('click',()=>{qThFilt='all';Object.entries(qThB).forEach(([k,v])=>v.className='chip'+(k==='all'?' on':''));rebuildQ();});
+  qfc.appendChild(qAllBtn);
+  qThemes.forEach(t=>{const c=Bt({cls:'chip'},t.title);qThB[t.id]=c;c.addEventListener('click',()=>{qThFilt=t.id;Object.entries(qThB).forEach(([k,v])=>v.className='chip'+(k===t.id?' on':''));rebuildQ();});qfc.appendChild(c);});
+  f.appendChild(qfc);
+  const qWrap=D({});f.appendChild(qWrap);
+  const lbl=D({cls:'sec-lbl',css:'margin-bottom:16px'});f.insertBefore(lbl,qfc);
+  function rebuildQ(){
+    qWrap.innerHTML='';
+    const filtered=qThFilt==='all'?pub:pub.filter(r=>(r.themes||[]).includes(qThFilt));
+    lbl.textContent='未解決の問い（'+filtered.reduce((n,r)=>n+r.question.split(/\n/).filter(l=>l.trim()).length,0)+'件）';
+    if(!filtered.length){qWrap.appendChild(D({cls:'empty'},'このテーマの問いはありません'));return;}
+    const list=D({cls:'checklist'});
+    filtered.forEach(r=>{
     const lines=r.question.split(/\n/).filter(l=>l.trim());
     lines.forEach((line,i)=>{
       const row=D({cls:'cl-row'});
@@ -1049,8 +1081,10 @@ function renderQuestions(){
       row.appendChild(cb);row.appendChild(lbl);row.appendChild(from);
       list.appendChild(row);
     });
-  });
-  f.appendChild(list);
+    });
+    qWrap.appendChild(list);
+  }
+  rebuildQ();
   return f;
 }
 
@@ -1058,22 +1092,38 @@ function renderQuestions(){
 function renderExperiments(){
   const f=document.createDocumentFragment();
   const pub=S.logs.filter(r=>r.status!=='draft'&&r.nextExp?.trim());
-  if(!pub.length){f.appendChild(D({cls:'empty'},'実験の記録がまだありません'));return f;}
-  // アクティブ（todo/doing）のみ表示
-  const list=D({cls:'checklist'});
-  let activeCount=0;
-  pub.forEach(r=>{
-    const lines=r.nextExp.split(/\n/).filter(l=>l.trim());
-    lines.forEach((line,i)=>{
-      const ckId='e_'+r.id+'_'+i;
-      const st=S.checks[ckId]||'todo';
-      if(st==='done'||st==='skip') return; // アーカイブ側へ
-      activeCount++;
-      list.appendChild(buildExpRow(line,ckId,r));
+  // テーマフィルター
+  const eThemes=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
+  let eThFilt='all';
+  const efc=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px'});
+  const eThB={};
+  const eAllBtn=Bt({cls:'chip on'},'全テーマ');eThB['all']=eAllBtn;
+  eAllBtn.addEventListener('click',()=>{eThFilt='all';Object.entries(eThB).forEach(([k,v])=>v.className='chip'+(k==='all'?' on':''));rebuildE();});
+  efc.appendChild(eAllBtn);
+  eThemes.forEach(t=>{const c=Bt({cls:'chip'},t.title);eThB[t.id]=c;c.addEventListener('click',()=>{eThFilt=t.id;Object.entries(eThB).forEach(([k,v])=>v.className='chip'+(k===t.id?' on':''));rebuildE();});efc.appendChild(c);});
+  f.appendChild(efc);
+  const eLbl=D({cls:'sec-lbl',css:'margin-bottom:16px'});f.appendChild(eLbl);
+  const eWrap=D({});f.appendChild(eWrap);
+  if(!pub.length){eWrap.appendChild(D({cls:'empty'},'実験の記録がまだありません'));return f;}
+  function rebuildE(){
+    eWrap.innerHTML='';
+    const filtered=eThFilt==='all'?pub:pub.filter(r=>(r.themes||[]).includes(eThFilt));
+    const list=D({cls:'checklist'});
+    let activeCount=0;
+    filtered.forEach(r=>{
+      const lines=r.nextExp.split(/\n/).filter(l=>l.trim());
+      lines.forEach((line,i)=>{
+        const ckId='e_'+r.id+'_'+i;
+        const st=S.checks[ckId]||'todo';
+        if(st==='done'||st==='skip') return;
+        activeCount++;
+        list.appendChild(buildExpRow(line,ckId,r));
+      });
     });
-  });
-  f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:16px'},'実験中・未着手（'+activeCount+'件）'));
-  f.appendChild(list);
+    eLbl.textContent='実験中・未着手（'+activeCount+'件）';
+    eWrap.appendChild(list);
+  }
+  rebuildE();
   f.appendChild(list);
   return f;
 }
