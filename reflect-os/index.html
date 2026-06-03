@@ -122,12 +122,12 @@ nav{display:flex;flex-direction:column;gap:0;}
 .vp-text{color:var(--mu);line-height:1.7}
 
 /* ── Theme cards ── */
-.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));grid-auto-rows:auto;gap:8px;margin-bottom:8px}
+.theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:8px}
 @media(max-width:640px){.theme-grid{grid-template-columns:1fr}}
 .tcard{background:var(--sf);border:1px solid var(--bd);border-radius:5px;overflow:hidden;transition:border-color .15s;cursor:pointer}
 .tcard:hover{border-color:var(--go-bd)}
-.tcard-main{padding:14px 16px}
-.tcard-name{font-size:16px;color:var(--tx);margin-bottom:5px;line-height:1.4}
+.tcard-main{padding:16px 18px}
+.tcard-name{font-size:17px;color:var(--tx);margin-bottom:6px;line-height:1.4;font-weight:500}
 .tcard-meta{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .tcard-status{font-size:10px;padding:1px 8px;border-radius:10px;border:1px solid}
 .st-active{color:var(--go);border-color:var(--go-bd);background:var(--go-lt)}
@@ -136,7 +136,8 @@ nav{display:flex;flex-direction:column;gap:0;}
 .st-done{color:var(--bl);border-color:#b0c0e0;background:var(--bl-lt)}
 .st-exit{color:#b05050;border-color:#e0b0b0;background:#fdf0f0}
 .tcard-summary{font-size:14px;color:var(--mu);line-height:1.6}
-.tcard-detail{display:none;border-top:1px solid var(--bd);padding:12px 16px;font-size:14px;color:var(--mu);line-height:1.7}
+.tcard-detail{display:none;border-top:1px solid var(--bd);padding:14px 16px;font-size:14px;color:var(--mu);line-height:1.7}
+.tcard-detail-inner{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .tcard-detail.open{display:block}
 .tcard-active{border-color:var(--go)!important;box-shadow:0 0 0 2px var(--go)33;}
 .tcard-dl{font-size:9px;color:var(--di);letter-spacing:.1em;text-transform:uppercase;margin:10px 0 4px}
@@ -535,28 +536,34 @@ function renderHome(){
     const summaryText=t.currentState||t.summary||'';if(summaryText){const st=summaryText.split('\n')[0].trim();main2.appendChild(D({cls:'tcard-summary'},st.slice(0,60)+(st.length>60?'…':'')));}
     card.appendChild(main2);
     const det=D({cls:'tcard-detail'});
-    if(t.currentState){det.appendChild(D({cls:'tcard-dl'},'問い'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:8px'},t.currentState));}
-    if(t.summary){det.appendChild(D({cls:'tcard-dl'},'現在の仮説'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:8px'},t.summary));}
-    if(t.nextAction){det.appendChild(D({cls:'tcard-dl'},'次の実験'));det.appendChild(D({css:'font-size:15px;color:var(--go);line-height:1.7;white-space:pre-wrap;margin-bottom:8px'},t.nextAction));}
-    // 関連PJ
+    const inner=D({cls:'tcard-detail-inner'});
+    // 左：問い・仮説
+    const left=D({});
+    if(t.currentState){left.appendChild(D({cls:'tcard-dl'},'問い'));left.appendChild(D({css:'font-size:14px;color:var(--tx);line-height:1.7;white-space:pre-wrap;margin-bottom:10px'},t.currentState));}
+    if(t.summary){left.appendChild(D({cls:'tcard-dl'},'現在の仮説'));left.appendChild(D({css:'font-size:14px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:10px'},t.summary));}
+    inner.appendChild(left);
+    // 右：関連PJ・振り返り
+    const right=D({});
     const relPjs=(t.relatedPj||[]).map(id=>S.themes.find(x=>x.id===id)).filter(Boolean);
     if(relPjs.length){
-      det.appendChild(D({cls:'tcard-dl'},'関連PJ'));
-      const pjRow=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px'});
-      relPjs.forEach(p=>pjRow.appendChild(Sp({css:'font-size:12px;background:var(--sf2,#e8f4f8);color:#4a7a9b;border-radius:3px;padding:2px 8px'},p.title)));
-      det.appendChild(pjRow);
+      right.appendChild(D({cls:'tcard-dl'},'関連PJ'));
+      const pjRow=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px'});
+      relPjs.forEach(p=>pjRow.appendChild(Sp({css:'font-size:12px;background:#e8f4f8;color:#4a7a9b;border-radius:3px;padding:2px 8px'},p.title)));
+      right.appendChild(pjRow);
     }
     if(relLogs.length){
-      det.appendChild(D({cls:'tcard-dl'},'関連振り返り'));
-      const recentLogs=relLogs.slice(0,3);
-      recentLogs.forEach(rl=>{
-        const row=D({css:'font-size:13px;color:var(--mu);padding:3px 0;border-bottom:1px solid var(--bd);cursor:pointer'});
-        row.textContent=rl.date+' '+( rl.title||'');
+      right.appendChild(D({cls:'tcard-dl'},'関連振り返り'));
+      relLogs.slice(0,4).forEach(rl=>{
+        const row=D({css:'font-size:13px;color:var(--mu);padding:4px 0;border-bottom:1px solid var(--bd);cursor:pointer;display:flex;gap:8px'});
+        row.appendChild(Sp({css:'font-size:11px;color:var(--di);white-space:nowrap;flex-shrink:0'},rl.date));
+        row.appendChild(document.createTextNode(rl.title||''));
         row.addEventListener('click',e=>{e.stopPropagation();S.editing=rl;S.forming=null;S.fd=JSON.parse(JSON.stringify(rl));ra();});
-        det.appendChild(row);
+        right.appendChild(row);
       });
-      if(relLogs.length>3)det.appendChild(D({css:'font-size:12px;color:var(--di);margin-top:4px'},'+' +(relLogs.length-3)+'件'));
+      if(relLogs.length>4)right.appendChild(D({css:'font-size:12px;color:var(--di);margin-top:4px'},'+' +(relLogs.length-4)+'件'));
     }
+    inner.appendChild(right);
+    det.appendChild(inner);
     if(!t._fromProjectOS){
       const acts2=D({cls:'tcard-acts'});
       const editBtn=Bt({cls:'btn-g',css:'font-size:13px'},'編集');editBtn.addEventListener('click',e=>{e.stopPropagation();openThemeForm(t);});acts2.appendChild(editBtn);
