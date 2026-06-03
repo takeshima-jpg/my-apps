@@ -690,12 +690,7 @@ function renderHome(){
 
   // Record buttons moved to sidebar
 
-  // Recent logs
-  if(pub.length){
-    f.appendChild(D({cls:'sec-lbl'},'最近の振り返り'));
-    pub.slice(0,5).forEach(r=>f.appendChild(logCard(r)));
-    if(pub.length>5){const more=Bt({cls:'more-lnk',onclick:()=>{S.tab='log';ra();updateNav();}},'→ すべて見る（'+pub.length+'件）');f.appendChild(more);}
-  }
+
 
   // 問い・実験セクション（テーマフィルター対応）
   function buildClSection(logs){
