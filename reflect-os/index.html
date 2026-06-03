@@ -467,6 +467,8 @@ function logCard(r){
     const thRow=D({css:'display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 2px'});
     thNames.forEach(n=>thRow.appendChild(Sp({css:'font-size:11px;background:var(--go-lt);color:var(--go);border-radius:10px;padding:1px 8px;'},n)));
     item.appendChild(thRow);
+  } else {
+    item.appendChild(Sp({css:'font-size:11px;color:#b09040;background:#fdf8e8;border:1px solid #e8d880;border-radius:10px;padding:1px 8px;margin:4px 0 2px;display:inline-block'},'テーマ未紐づけ'));
   }
   // 気づき・学び（1行）
   if(r.lesson){const ls=r.lesson.split(/\n/).find(l=>l.trim())||'';const lsc=ls.trim();item.appendChild(D({cls:'log-lesson'},lsc.length>100?lsc.slice(0,100)+'…':lsc));}
