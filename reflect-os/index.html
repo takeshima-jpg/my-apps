@@ -962,6 +962,31 @@ async function registerAiInput(){
 
 function renderV26(){const area=document.getElementById('v26');if(!area)return;const seed=parseInt(new Date().toLocaleDateString('sv').replace(/-/g,''))%100;const types=['vision','principle','direction'];const type=types[seed%3];let inner='';if(type==='vision'){const item=VD.vision[seed%VD.vision.length];inner=`<span class="v26t">VISION</span><span class="v26b">${item}</span>`;}else if(type==='principle'){const item=VD.principles[seed%VD.principles.length];inner=`<span class="v26t">原則</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}else{const item=VD.directions[seed%VD.directions.length];inner=`<span class="v26t">指針</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}area.innerHTML=`<div class="v26c">${inner}</div>`;}
 
+function buildExpRow(line, ckId, r){
+  const st=S.checks[ckId]||'todo'; // todo / doing / done / skip
+  const row=D({cls:'cl-row'+(st==='doing'?' cl-doing':st==='done'?' cl-done':st==='skip'?' cl-skip':'')});
+  const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\d\.）\)\s]+/,'');
+  const thNames=(r.themes||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
+  const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'')+(thNames.length?' ／ '+thNames.join('・'):'');
+  // 状態ボタン
+  async function setSt(newSt){
+    S.checks[ckId]=newSt;
+    await dbput('checks',{id:ckId,done:newSt==='done',state:newSt});
+    ra();
+  }
+  const doingBtn=D({cls:'exp-state-btn'+(st==='doing'?' doing':'')});doingBtn.textContent='実験中';
+  doingBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='doing'?'todo':'doing');});
+  const doneBtn=D({cls:'exp-state-btn'+(st==='done'?' doing':'')});doneBtn.textContent='完了';
+  doneBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='done'?'todo':'done');});
+  const skipBtn=D({cls:'exp-state-btn'+(st==='skip'?' skip':'')});skipBtn.textContent='やらない';
+  skipBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='skip'?'todo':'skip');});
+  row.appendChild(lbl);row.appendChild(from);
+  const btns=D({css:'display:flex;gap:2px;margin-left:auto;flex-shrink:0'});
+  btns.appendChild(doingBtn);btns.appendChild(doneBtn);btns.appendChild(skipBtn);
+  row.appendChild(btns);
+  return row;
+}
+
 /* ── ARCHIVE tab ── */
 function renderArchive(){
   const f=document.createDocumentFragment();
@@ -1030,31 +1055,6 @@ function renderQuestions(){
 }
 
 /* ── EXPERIMENTS tab ── */
-function buildExpRow(line, ckId, r){
-  const st=S.checks[ckId]||'todo'; // todo / doing / done / skip
-  const row=D({cls:'cl-row'+(st==='doing'?' cl-doing':st==='done'?' cl-done':st==='skip'?' cl-skip':'')});
-  const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\d\.）\)\s]+/,'');
-  const thNames=(r.themes||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
-  const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'')+(thNames.length?' ／ '+thNames.join('・'):'');
-  // 状態ボタン
-  async function setSt(newSt){
-    S.checks[ckId]=newSt;
-    await dbput('checks',{id:ckId,done:newSt==='done',state:newSt});
-    ra();
-  }
-  const doingBtn=D({cls:'exp-state-btn'+(st==='doing'?' doing':'')});doingBtn.textContent='実験中';
-  doingBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='doing'?'todo':'doing');});
-  const doneBtn=D({cls:'exp-state-btn'+(st==='done'?' doing':'')});doneBtn.textContent='完了';
-  doneBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='done'?'todo':'done');});
-  const skipBtn=D({cls:'exp-state-btn'+(st==='skip'?' skip':'')});skipBtn.textContent='やらない';
-  skipBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='skip'?'todo':'skip');});
-  row.appendChild(lbl);row.appendChild(from);
-  const btns=D({css:'display:flex;gap:2px;margin-left:auto;flex-shrink:0'});
-  btns.appendChild(doingBtn);btns.appendChild(doneBtn);btns.appendChild(skipBtn);
-  row.appendChild(btns);
-  return row;
-}
-
 function renderExperiments(){
   const f=document.createDocumentFragment();
   const pub=S.logs.filter(r=>r.status!=='draft'&&r.nextExp?.trim());
