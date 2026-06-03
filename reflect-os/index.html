@@ -160,8 +160,6 @@ nav{display:flex;flex-direction:column;gap:0;}
 .log-exp{font-size:14px;color:var(--go);margin-top:4px}
 .log-acts{display:flex;gap:6px;margin-top:10px}
 .tbadge{font-size:9px;padding:1px 7px;border-radius:10px}
-.gdoc-ok{font-size:10px;color:var(--bl);opacity:.7}
-.gdoc-no{font-size:10px;color:var(--di);opacity:.6}
 
 /* ── Question items ── */
 
@@ -454,24 +452,26 @@ async function saveLog(status){
 function logCard(r){
   const meta=TM[r.type]||{};
   const item=D({cls:'log-item'});
+  // 日付行：日付・タイプバッジ・下書き
   const dr=D({cls:'log-date'});
   dr.appendChild(document.createTextNode(r.date));
   dr.appendChild(Sp({cls:'tbadge',css:`background:${meta.bg||'#f5f5f5'};color:${meta.ac||'#888'}`},meta.label||r.type));
   if(r.status==='draft')dr.appendChild(Sp({cls:'draft-badge'},'下書き'));
-  if(r.gdocUrl)dr.appendChild(Sp({cls:'gdoc-ok'},'● GDoc'));else dr.appendChild(Sp({cls:'gdoc-no'},'○ GDoc'));
   item.appendChild(dr);
+  // タイトル
   item.appendChild(D({cls:'log-title'},r.title||'（無題）'));
+  // テーマバッジ
+  const thNames=(r.themes||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
+  if(thNames.length){
+    const thRow=D({css:'display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 2px'});
+    thNames.forEach(n=>thRow.appendChild(Sp({css:'font-size:11px;background:var(--go-lt);color:var(--go);border-radius:10px;padding:1px 8px;'},n)));
+    item.appendChild(thRow);
+  }
+  // 気づき・学び（1行）
   if(r.lesson){const ls=r.lesson.split(/\n/).find(l=>l.trim())||'';const lsc=ls.trim();item.appendChild(D({cls:'log-lesson'},lsc.length>100?lsc.slice(0,100)+'…':lsc));}
   if(r.question){const ql=r.question.split(/\n/).find(l=>l.trim())||'';const qt=ql.trim();item.appendChild(D({cls:'log-q'},'？ '+(qt.length>80?qt.slice(0,80)+'…':qt)));}
   if(r.nextExp){const nl=r.nextExp.split(/\n/).find(l=>l.trim())||'';const nt=nl.trim();item.appendChild(D({cls:'log-exp'},'▶ '+(nt.length>80?nt.slice(0,80)+'…':nt)));}
-  // Philosophy extras
-  if(r.type==='philosophy'){
-    if(r.pivot)item.appendChild(Sp({cls:'phil-pivot'},'転換点: '+r.pivot.slice(0,60)));
-    if(r.keep_belief)item.appendChild(D({cls:'phil-keep'},'残す: '+r.keep_belief.slice(0,80)+(r.keep_belief.length>80?'…':'')));
-    if(r.drop_belief)item.appendChild(D({cls:'phil-drop'},'手放す: '+r.drop_belief.slice(0,80)+(r.drop_belief.length>80?'…':'')));
-  }
   const acts=D({cls:'log-acts'});
-  if(r.gdocUrl){const gl=h('a',{href:r.gdocUrl,target:'_blank',cls:'btn-g',style:'display:inline-flex;align-items:center;gap:4px',onclick:e=>e.stopPropagation()},'GDocを開く');acts.appendChild(gl);}
   acts.appendChild(D({css:'flex:1'}));
   const ed=Bt({cls:'btn-g',onclick:e=>{e.stopPropagation();S.editing=r;S.forming=null;S.fd=JSON.parse(JSON.stringify(r));ra();}},'編集');
   const dl=Bt({cls:'btn-d',onclick:async e=>{e.stopPropagation();if(!confirm('削除しますか？'))return;await dbdel('logs',r.id);S.logs=S.logs.filter(x=>x.id!==r.id);ra();}},'削除');
