@@ -392,7 +392,7 @@ function buildThemeForm(tfd){
 }
 
 function openThemeForm(existing){
-  const tfd=existing?JSON.parse(JSON.stringify(existing)):{id:uid(),title:'',category:'戦略',status:'構想中',priority:'A',milestones:[],metrics:[],createdAt:tod()};
+  const tfd=existing?JSON.parse(JSON.stringify(existing)):{id:uid(),title:'',milestones:[],metrics:[],createdAt:tod()};
   const main=document.getElementById('body');main.innerHTML='';
   const wrap=D({cls:'form-wrap fu'});
   const bk=Bt({cls:'btn-s',css:'margin-bottom:20px',onclick:()=>ra()},'← 戻る');
@@ -529,7 +529,7 @@ function renderHome(){
     const main2=D({cls:'tcard-main'});
     main2.appendChild(D({cls:'tcard-name'},t.title));
     const meta2=D({cls:'tcard-meta'});
-    if(t.status)meta2.appendChild(Sp({cls:'tcard-status '+stClass(t.status)},t.status));
+
     if(t.priority==='S')meta2.appendChild(Sp({css:'font-size:10px;color:#9a7000;font-family:var(--mono)'},'S'));
     main2.appendChild(meta2);
     const summaryText=t.currentState||t.summary||'';if(summaryText){const st=summaryText.split('\n')[0].trim();main2.appendChild(D({cls:'tcard-summary'},st.slice(0,60)+(st.length>60?'…':'')));}
