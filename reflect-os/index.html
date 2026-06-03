@@ -381,12 +381,12 @@ function buildThemeForm(tfd){
       });
       w.appendChild(c);
     });
-    return fld('関連PJ',w,true);
+    return fld('関連PJ（この問いを探求しているプロジェクト）',w,true);
   }
   return [
-    tI('テーマ名','title','例：M&A実行に向けた意思決定軸','text',false,tfd),
-    taF('現在の仮説','currentState','今どう考えているか・何を信じているか',80,false,tfd),
-    taF('次の実験','nextAction','「〜してみる」形式で',55,false,tfd),
+    tI('テーマ名','title','探求しているテーマ（例：資本政策は関係性の設計か？）','text',false,tfd),
+    taF('問い','currentState','今、自分が探求している問い',80,false,tfd),
+    taF('現在の仮説','summary','今どう考えているか・何を信じているか',80,false,tfd),
     pjSelectF(),
   ].filter(Boolean);
 }
@@ -532,10 +532,11 @@ function renderHome(){
     if(t.status)meta2.appendChild(Sp({cls:'tcard-status '+stClass(t.status)},t.status));
     if(t.priority==='S')meta2.appendChild(Sp({css:'font-size:10px;color:#9a7000;font-family:var(--mono)'},'S'));
     main2.appendChild(meta2);
-    const summaryText=t.currentState||t.summary||'';if(summaryText)main2.appendChild(D({cls:'tcard-summary'},summaryText.split('\n')[0].slice(0,60)+(summaryText.length>60?'…':'')));
+    const summaryText=t.currentState||t.summary||'';if(summaryText){const st=summaryText.split('\n')[0].trim();main2.appendChild(D({cls:'tcard-summary'},st.slice(0,60)+(st.length>60?'…':'')));}
     card.appendChild(main2);
     const det=D({cls:'tcard-detail'});
-    if(t.currentState){det.appendChild(D({cls:'tcard-dl'},'現在の仮説'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:8px'},t.currentState));}
+    if(t.currentState){det.appendChild(D({cls:'tcard-dl'},'問い'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:8px'},t.currentState));}
+    if(t.summary){det.appendChild(D({cls:'tcard-dl'},'現在の仮説'));det.appendChild(D({css:'font-size:15px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:8px'},t.summary));}
     if(t.nextAction){det.appendChild(D({cls:'tcard-dl'},'次の実験'));det.appendChild(D({css:'font-size:15px;color:var(--go);line-height:1.7;white-space:pre-wrap;margin-bottom:8px'},t.nextAction));}
     // 関連PJ
     const relPjs=(t.relatedPj||[]).map(id=>S.themes.find(x=>x.id===id)).filter(Boolean);
