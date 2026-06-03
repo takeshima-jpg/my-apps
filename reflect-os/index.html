@@ -962,8 +962,7 @@ function renderQuestions(){
   if(!pub.length){f.appendChild(D({cls:'empty'},'問いの記録がまだありません'));return f;}
   const list=D({cls:'checklist'});
   pub.forEach(r=>{
-    const lines=r.question.split(/
-/).filter(l=>l.trim());
+    const lines=r.question.split(/\n/).filter(l=>l.trim());
     lines.forEach((line,i)=>{
       const row=D({cls:'cl-row'});
       const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
@@ -990,8 +989,7 @@ function renderExperiments(){
   if(!pub.length){f.appendChild(D({cls:'empty'},'実験の記録がまだありません'));return f;}
   const list=D({cls:'checklist'});
   pub.forEach(r=>{
-    const lines=r.nextExp.split(/
-/).filter(l=>l.trim());
+    const lines=r.nextExp.split(/\n/).filter(l=>l.trim());
     lines.forEach((line,i)=>{
       const row=D({cls:'cl-row'});
       const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
