@@ -772,35 +772,14 @@ function clearListFilter(){
   rList();
 }
 
-function quickAdd(){
-  var title=document.getElementById('q-title').value.trim();
-  if(!title){document.getElementById('q-title').focus();return;}
-  var cycle=normalizeCycle(document.getElementById('q-cycle').value)||'不定期';
-  var layer=parseInt(document.getElementById('q-layer').value)||4;
-  var nextDate=document.getElementById('q-date').value||'';
-  // サイクルから addDays を自動計算（Task OS 側の stoppage 判定に使用）
-  var cycleToAddDays={'週次':7,'隔週':14,'月次':30,'隔月':60,'四半期':91,'半期':182,'年次':365};
-  var addDays=cycleToAddDays[cycle]||null;
-  tasks.push({id:nid++,title:title,cycle:cycle,layer:layer,nextDate:nextDate,
-    status:'未完了',addType:'calendar',addBase:'from_next',addDays:addDays,
-    lastScheduledDate:'',notifyMsg:'',deliverable:'',url:'',note:'',
-    excludeWeekends:false,excludeHolidays:false,skippable:true,
-    updatedAt:new Date().toISOString()});
-  document.getElementById('q-title').value='';
-  document.getElementById('q-date').value='';
-  saveData();rAll();
-}
 
 // ========== DASHBOARD ==========
 function rDash(){
   var tod=tasks.filter(isTod),ov=tasks.filter(isOv);  var thisMonth=tds.slice(0,7);
-  var nextMonthDate=new Date(today.getFullYear(),today.getMonth()+1,1);
-  var nextMonth=(nextMonthDate.getFullYear()+'-'+String(nextMonthDate.getMonth()+1).padStart(2,'0'));
-  var thisMonthTasks=tasks.filter(function(t){return t.nextDate&&t.nextDate.slice(0,7)===thisMonth&&t.status!=='停止'&&!isOv(t)&&!isTod(t);});
+  var next30Date=new Date(today); next30Date.setDate(next30Date.getDate()+30);
+  var next30Str=ds(next30Date);
+  var thisMonthTasks=tasks.filter(function(t){return t.nextDate&&t.nextDate>tds&&t.nextDate<=next30Str&&t.status!=='停止'&&!isOv(t)&&!isTod(t);});
   thisMonthTasks.sort(function(a,b){return (a.nextDate||'9999')<(b.nextDate||'9999')?-1:1;});
-  var inc=tasks.filter(function(t){
-    return (!t.status||t.status==='未完了')&&t.status!=='停止'&&t.nextDate&&isValidDate(t.nextDate);
-  });
   // Layer1: overdue + today + this week + top5 by nextDate
   var l1shown=tasks.filter(function(t){
     return t.layer==1&&t.status!=='停止'&&(isOv(t)||isTod(t));
@@ -830,28 +809,15 @@ function rDash(){
     '<div class="mets">'+
     '<div class="met'+(ov.length?' dan':'')+'"><div class="ml">期限切れ</div><div class="mv">'+ov.length+'</div><div class="ms">要対応</div></div>'+
     '<div class="met'+(tod.length?' inf':'')+'"><div class="ml">今日のタスク</div><div class="mv">'+tod.length+'</div><div class="ms">本日中</div></div>'+
-    '<div class="met"><div class="ml">今月の予定</div><div class="mv">'+thisMonthTasks.length+'</div><div class="ms">今月中</div></div>'+
+    '<div class="met"><div class="ml">直近30日</div><div class="mv">'+thisMonthTasks.length+'</div><div class="ms">予定</div></div>'+
     '<div class="met"><div class="ml">総タスク数</div><div class="mv">'+tasks.length+'</div><div class="ms">件</div></div>'+
     '</div>'+
     '<div class="dg">'+
     (tod.length?'<div class="card" style="margin-bottom:0;border-color:#F0C000;border-width:1.5px;background:#FFFDE6;">'+
     '<div class="ch" style="background:#FFFDE6;"><span class="ct" style="color:#856404;">今日のタスク</span><span class="cc" style="background:rgba(240,192,0,.2);color:#856404;">'+tod.length+'</span></div>'+
     '<div style="background:#FFFDE6;">'+tod.map(function(t){return tRow(t);}).join('')+'</div></div>':'')+
-    '<div class="card"><div class="ch"><span class="ct">今月予定のタスク</span><span class="cc">'+thisMonthTasks.length+'</span></div>'+(thisMonthTasks.length?thisMonthTasks.map(function(t){return tRow(t);}).join(''):'<div class="empty">今月の追加タスクはありません</div>')+'</div>'+
-    '<div class="card"><div class="ch"><span class="ct">未完了タスク</span><span class="cc">'+inc.length+'</span></div>'+(inc.length?inc.slice(0,5).map(function(t){return tRow(t);}).join('')+(inc.length>5?'<div class="empty">他'+(inc.length-5)+'件</div>':''):'<div class="empty">未完了タスクはありません</div>')+'</div>'+
-    '</div>'+
-    // クイック新規タスク追加フォーム
-    '<div class="card" style="margin-top:4px;">'+
-    '<div class="ch"><span class="ct">新規タスクをここから追加</span></div>'+
-    '<div style="padding:14px 16px;">'+
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">'+
-    '<div style="flex:2;min-width:160px;"><label class="fl">タイトル *</label><input class="fi" id="q-title" placeholder="タスク名を入力" style="padding:7px 10px;font-size:16px;"></div>'+
-    '<div style="width:90px;"><label class="fl">サイクル</label><select class="fs" id="q-cycle" style="padding:7px 8px;font-size:15px;"><option>週次</option><option>隔週</option><option selected>月次</option><option>隔月</option><option>四半期</option><option>半期</option><option>年次</option><option>不定期</option></select></div>'+
-    '<div style="width:128px;"><label class="fl">レイヤー</label><select class="fs" id="q-layer" style="padding:7px 8px;font-size:15px;"><option value="1">意思決定・経営</option><option value="2">重要運用</option><option value="3">改善・振り返り</option><option value="4" selected>任意・保守</option></select></div>'+
-    '<div style="width:130px;"><label class="fl">次回予定日</label><input type="date" class="fi" id="q-date" style="padding:7px 8px;font-size:15px;"></div>'+
-    '<button class="btn btn-p" onclick="quickAdd()" style="padding:8px 16px;white-space:nowrap;align-self:flex-end;margin-bottom:1px;">追加</button>'+
-    '</div>'+
-    '</div></div>';
+    '<div class="card"><div class="ch"><span class="ct">直近30日のタスク</span><span class="cc">'+thisMonthTasks.length+'</span></div>'+(thisMonthTasks.length?thisMonthTasks.map(function(t){return tRow(t);}).join(''):'<div class="empty">直近30日のタスクはありません</div>')+'</div>'+
+    '</div>';
 }
 
 // ========== TODAY EXECUTION MODE ==========
