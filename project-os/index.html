@@ -1402,7 +1402,7 @@ function renderProjs() {
       ${p.goal ? `<div class="pc-goal">${esc(p.goal)}</div>` : ''}
       ${p.attentionIssue ? `<div class="pc-attention">⚠ ${esc(p.attentionIssue)}</div>` : ''}
       <div class="pc-stats">
-        ${curPhase ? `<span class="pc-stat" style="color:var(--navy);font-weight:600;">Phase ${esc(curPhase.phase)} ${esc(curPhase.theme)}</span>` : ''}
+        ${curPhase ? `<span class="pc-stat" style="color:var(--navy);font-weight:600;">テーマ ${esc(curPhase.phase)} ${esc(curPhase.theme)}</span>` : ''}
         ${fkFuture ? `<span class="pc-stat">予定分岐 ${fkFuture}</span>` : ''}
         ${cstN     ? `<span class="pc-stat" style="color:var(--blue);">制約 ${cstN}</span>` : ''}
         ${evtN     ? `<span class="pc-stat">実行 ${evtN}</span>` : ''}
