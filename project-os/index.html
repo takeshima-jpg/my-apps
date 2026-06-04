@@ -371,7 +371,7 @@ input, select, textarea { font-family: var(--f0); }
   background: var(--navy); flex-shrink: 0; margin-top: 9px;
 }
 
-/* フェーズマップ */
+/* 重点テーマ（旧:フェーズマップ） */
 .ov-phase-map { display: flex; gap: 0; overflow-x: auto; padding-bottom: 4px; }
 .ov-phase-item {
   flex: 1; min-width: 90px; text-align: center;
@@ -1524,7 +1524,7 @@ function paneOv(p){
 
   const phaseMapHtml = phases.length ? `
     <div class="ov-section">
-      <div class="ov-section-lbl">フェーズマップ</div>
+      <div class="ov-section-lbl">重点テーマ</div>
       <div class="ov-phase-map">
         ${phases.map(ph => `
           <div class="ov-phase-item">
@@ -1969,7 +1969,7 @@ function normH(s) {
 // ※旧フォーマット（月・日分割 / 温度感）も後方互換として継続サポート
 const SS_COLS = {
   NO:        ['id','no'],
-  PHASE:     ['phase','フェーズ','ph'],
+  PHASE:     ['phase','テーマ','フェーズ','ph'],
   KIND:      ['種別'],
   DATE:      ['期日','日付','date'],
   MONTH:     ['月'],   // 旧フォーマット後方互換
@@ -1987,7 +1987,7 @@ const SS_COLS = {
 /* ── ヘッダー行検出 ── */
 // 新フォーマット：ID / Phase / 期日 / 状態 / イベント のうち3つ以上
 // 旧フォーマット：NO / 種別 / 月 / 日 / 状態 のうち3つ以上
-const HEADER_SIGNALS_NEW = ['id', '期日', '状態', 'イベント', '種別', 'phase'];
+const HEADER_SIGNALS_NEW = ['id', '期日', '状態', 'イベント', '種別', 'phase', 'テーマ'];
 const HEADER_SIGNALS_OLD = ['no', '種別', '月', '日', '状態'];
 function isHeaderRow(cells) {
   const norms = cells.map(c => normH(c));
@@ -2030,7 +2030,7 @@ function parseHeaderArea(lines, headerRowIdx, delim) {
   }
 
   // スキップ対象ラベル（「項目」「内容」「Phase」「テーマ」などの構造行）
-  const SKIP_LABELS = ['項目', '内容', 'phase', 'テーマ', 'フェーズ', 'フェーズマップ', 'イベント一覧'];
+  const SKIP_LABELS = ['項目', '内容', 'phase', 'no', 'テーマ', '到達状態', 'フェーズ', 'フェーズマップ', '重点テーマ', 'イベント一覧'];
 
   // ヘッダー行より前を走査
   for (let i = 0; i < headerRowIdx; i++) {
@@ -2096,7 +2096,7 @@ function parseHeaderArea(lines, headerRowIdx, delim) {
   for (let i = 0; i < headerRowIdx; i++) {
     const cells = splitCells(lines[i]);
     const firstNorm = normH(cells.find(c => c.trim()) || '');
-    if (firstNorm === normH('フェーズマップ')) { phaseSectionStart = i; break; }
+    if (firstNorm === normH('フェーズマップ') || firstNorm === normH('重点テーマ')) { phaseSectionStart = i; break; }
   }
   if (phaseSectionStart !== -1) {
     // フェーズマップ以降の行で「Phase / テーマ / 成功条件」ヘッダー行をスキップし数字行を取得
@@ -2105,8 +2105,8 @@ function parseHeaderArea(lines, headerRowIdx, delim) {
       if (!cells.some(c => c.trim())) continue;
       const first = cells.find(c => c.trim()) || '';
       const firstNorm = normH(first);
-      // ヘッダー行スキップ（phase, テーマ, 成功条件）
-      if (firstNorm === normH('phase') || firstNorm === normH('テーマ')) continue;
+      // ヘッダー行スキップ（phase, テーマ, no, 到達状態）
+      if (firstNorm === normH('phase') || firstNorm === normH('テーマ') || firstNorm === normH('no') || firstNorm === normH('到達状態')) continue;
       // 数値または全角数字（１〜６）始まりの行をフェーズデータとして取得
       if (/^[0-9１２３４５６７８９]/.test(first.trim())) {
         const nonEmpty = cells.filter(c => c.trim());
@@ -2385,7 +2385,100 @@ function updateClearBtn() {
   btn.style.display = hasData ? 'inline-flex' : 'none';
 }
 
-const SI_UPDATE_PROMPT = 'あなたはプロジェクトマネジメントの専門家です。\n以下の「現在のスプレッドシートデータ」を読み込み、私の指示に従ってプロジェクトを更新した上で、Project OS に貼り付けられる形式でスプレッドシートを出力してください。\n\n## 出力フォーマット（厳守）\nタブ区切りテキスト（TSV）のみ出力。コードブロック・説明文は不要です。\n\n### 上部エリア構造\n1行目: プロジェクトタイトル（A1のみ）\n2行目: 空行\n3行目: 項目[TAB]内容\n4行目: PJ名[TAB]（プロジェクト名）\n5行目: ゴール[TAB]（ゴール）\n6行目: 成功条件[TAB]（成功条件）\n7行目: 注意論点[TAB]（注意論点を「・」区切りで1行に）\n8行目: 空行\n9行目: フェーズマップ\n10行目: Phase[TAB]テーマ[TAB]成功条件\n11〜16行目: 各フェーズ（１〜６[TAB]テーマ[TAB]フェーズ成功条件）\n17行目: 空行\n18行目: イベント一覧\n\n### イベントヘッダー行\nID[TAB]Phase[TAB]種別[TAB]期日[TAB]状態[TAB]イベント[TAB]担当[TAB]対象[TAB]施策[TAB]ゴール（狙い）[TAB]結果\n\n### イベント行（各列の定義）\n- ID: Phase番号×10＋枝番（例：11,12,21,22...）\n- Phase: 全角数字（「１」「２」...）\n- 種別: 「分岐」「制約」または空欄（通常イベント）\n- 期日: YYYY/MM/DD形式\n- 状態: 「未着手」「進行中」「完了」\n- イベント: イベント名\n- 担当/対象/施策/ゴール（狙い）/結果: 各内容（未実施の結果は空欄）\n\n## 種別ルール\n- 空欄: 通常タスク\n- 分岐: 意思決定・分岐点\n- 制約: 期限・締め切りなど動かせない制約\n\n---\n\n## 現在のスプレッドシートデータ\n（ここにGoogleスプレッドシートのデータを全選択→コピーして貼り付け）\n\n---\n\n## 私の指示\n（更新内容を記載。例：）\n- 〇〇のイベントをPhase2に追加（期日：2026/07/15、担当：竹嶋、種別：分岐）\n- ID=21を完了にして結果を記載\n- ××の期日を1ヶ月後ろ倒し\n\n---\n出力はTSVのみ、説明文なしでお願いします。';
+const SI_UPDATE_PROMPT = `あなたはプロジェクトマネジメントの専門家です。
+
+以下の「現在のスプレッドシートデータ」を読み込み、私の指示に従ってプロジェクトを更新した上で、Project OS に貼り付けられる形式でスプレッドシートを出力してください。
+
+---
+
+## 出力フォーマット（厳守）
+
+タブ区切りテキスト（TSV）のみ出力してください。
+
+コードブロック・説明文・補足コメントは不要です。
+
+### 上部エリア構造
+
+1行目: プロジェクトタイトル（A1のみ）
+2行目: 空行
+3行目: 項目[TAB]内容
+4行目: PJ名[TAB]（プロジェクト名）
+5行目: ゴール[TAB]（ゴール）
+6行目: 成功条件[TAB]（成功条件）
+7行目: 注意論点[TAB]（注意論点を「・」区切りで1行に）
+8行目: 空行
+
+---
+
+### 重点テーマ
+
+9行目: 重点テーマ
+10行目: No[TAB]テーマ[TAB]到達状態
+11行目以降: 各重点テーマ（「１」「２」...）
+
+重点テーマ行が終わったら空行、次に「イベント一覧」を出力。
+
+---
+
+### イベントヘッダー行
+
+ID[TAB]テーマ[TAB]種別[TAB]期日[TAB]状態[TAB]イベント[TAB]担当[TAB]対象[TAB]施策[TAB]ゴール（狙い）[TAB]結果
+
+---
+
+### イベント行（各列の定義）
+
+- ID: テーマ番号×10＋枝番（例：11,12,21,22...）
+- テーマ: 全角数字（「１」「２」...）
+- 種別: 「分岐」「制約」または空欄（通常イベント）
+- 期日: YYYY/MM/DD形式
+- 状態: 「未着手」「進行中」「完了」
+- イベント: イベント名
+- 担当/対象/施策/ゴール（狙い）/結果: 各内容（未実施の結果は空欄）
+
+イベント一覧は期日順で並び替えること。
+
+---
+
+## 種別ルール
+
+- 空欄: 通常イベント
+- 分岐: 意思決定ポイント・未来が分岐するイベント
+- 制約: 期限・法律・契約・資本政策・外部条件など動かせない制約
+
+---
+
+## 重点テーマの考え方
+
+重点テーマはフェーズではありません。順番に進むものではなく、プロジェクトを構成する重要な探求領域・論点です。
+イベントは期日順に管理し、重点テーマはプロジェクトの羅針盤として扱います。
+
+---
+
+## 全体見直しルール
+
+更新依頼を受けた場合は単純な追記を行わず、ゴール・成功条件・注意論点・重点テーマ・イベント一覧を全体最適の観点で見直すこと。
+不要なイベントの削除・重複の統合・非現実的なスケジュールの修正も提案すること。
+
+---
+
+## 現在のスプレッドシートデータ
+
+（ここにGoogleスプレッドシートのデータを全選択→コピーして貼り付け）
+
+---
+
+## 私の指示
+
+（更新内容を記載。例：）
+- 〇〇のイベントをテーマ２に追加（期日：2026/07/15、担当：竹嶋、種別：分岐）
+- ID=21を完了にして結果を記載
+- ××の期日を1ヶ月後ろ倒し
+- 重点テーマを見直して再整理
+
+---
+
+出力はTSVのみ、説明文なしでお願いします。`;
 
 function copyUpdatePrompt() {
   navigator.clipboard.writeText(SI_UPDATE_PROMPT).then(() => {
