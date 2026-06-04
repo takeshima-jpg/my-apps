@@ -268,10 +268,9 @@ h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px
   .card, [class*="card"]{margin-bottom:10px;}
 }
 
-/* モバイル用データ管理バー */
-.mob-data-bar{display:none;gap:8px;padding:8px 14px;background:var(--sidebar-bg);}
+/* モバイル用データ管理バー — サイドバーフッターに統合したため非表示 */
+.mob-data-bar{display:none!important;}
 .mob-data-btn{flex:1;padding:8px;font-size:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#e2e8f0;cursor:pointer;font-family:inherit;}
-@media(max-width:720px){.mob-data-bar{display:flex;}}
 </style>
 </head>
 <body>
@@ -306,7 +305,10 @@ h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px
     <button data-page="review"><span class="nav-icon">◈</span>振り返り</button>
     <button data-page="settings"><span class="nav-icon">⚙</span>設定</button>
   </nav>
-  <div id="sidebar-footer"></div>
+  <div id="sidebar-footer">
+    <button onclick="backupJSON()" style="background:rgba(255,255,255,.08);color:#a0aec0;">⬇ バックアップ</button>
+    <button onclick="document.getElementById('import-json-input').click()" style="background:rgba(255,255,255,.08);color:#a0aec0;">⬆ 復元</button>
+  </div>
 </div>
 
 <div id="main">
