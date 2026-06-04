@@ -23,25 +23,32 @@
 }
 body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;background:var(--bg);color:var(--text);font-size:17px;line-height:1.6;display:flex;min-height:100vh}
 
-/* SIDEBAR */
-#sidebar{width:228px;min-height:100vh;background:var(--sidebar-bg);color:#e2e8f0;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto}
-#sidebar-logo{padding:22px 18px 18px;border-bottom:1px solid #2d3748;font-size:18px;font-weight:700;line-height:1.4;cursor:pointer}
-#sidebar-logo span{font-size:13px;font-weight:400;color:#a0aec0;display:block;margin-top:3px}
-#sidebar nav{flex:1;padding:10px 8px}
-#sidebar nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 13px;border-radius:8px;border:none;background:none;color:#cbd5e0;font-size:15px;font-weight:500;cursor:pointer;margin-bottom:2px;transition:background .15s,color .15s}
-#sidebar nav button:hover{background:var(--sidebar-hover);color:#fff}
-#sidebar nav button.active{background:rgba(246,173,85,0.15);color:#f6ad55;font-weight:600;border-left:3px solid #f6ad55;padding-left:10px}
-#sidebar nav button .nav-icon{font-size:17px;flex-shrink:0;width:18px;text-align:center;opacity:.8}
-.nav-badge{background:#fc8181;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:auto}
-#sidebar-footer{padding:10px 8px 18px;border-top:1px solid #2d3748}
-#sidebar-footer button{display:block;width:100%;text-align:center;padding:9px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:5px;transition:background .15s}
-.btn-new{background:var(--accent);color:#1a202c;font-size:15px!important;padding:11px!important}
-.btn-new:hover{background:var(--accent-dark)!important}
-.btn-sm-side{background:#2d3748;color:#cbd5e0}
-.btn-sm-side:hover{background:#4a5568!important}
+/* TOP HEADER */
+#top-header{background:var(--sidebar-bg);color:#e2e8f0;position:sticky;top:0;z-index:200;flex-shrink:0;}
+#top-header-inner{display:flex;align-items:center;gap:12px;padding:10px 18px;}
+#top-logo{display:flex;align-items:center;gap:9px;cursor:pointer;flex-shrink:0;}
+#top-logo-text{font-size:15px;font-weight:700;color:#fff;letter-spacing:.01em;}
+#vision-header{flex:1;min-width:0;overflow:hidden;}
+.vision-card{background:transparent;border:none;border-radius:0;padding:0;display:flex;align-items:baseline;gap:10px;}
+.vision-type{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.56rem;color:#4a5568;letter-spacing:0.12em;white-space:nowrap;min-width:44px;flex-shrink:0}
+.vision-body{font-size:0.82rem;color:#718096;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vision-keyword{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.62rem;color:#4a5568;margin-right:6px}
+#top-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+#top-add-btn{background:var(--accent);color:#1a202c;border:none;border-radius:7px;padding:7px 14px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;}
+#top-add-btn:hover{background:var(--accent-dark);}
+
+/* TAB NAV */
+#tab-nav{background:#111827;border-bottom:1px solid #2d3748;overflow-x:auto;scrollbar-width:none;}
+#tab-nav::-webkit-scrollbar{display:none;}
+#nav{display:flex;padding:0 10px;}
+#nav button{display:flex;align-items:center;gap:6px;padding:9px 12px;border:none;border-bottom:2px solid transparent;background:none;color:#718096;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;margin-bottom:-1px;}
+#nav button:hover{color:#cbd5e0;}
+#nav button.active{color:#f6ad55;border-bottom-color:#f6ad55;font-weight:600;}
+#nav button .nav-icon{font-size:14px;opacity:.8;}
+.nav-badge{background:#fc8181;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:999px;}
 
 /* MAIN */
-#main{flex:1;overflow:auto;padding:30px 34px;max-width:1180px}
+#main{flex:1;overflow:auto;padding:24px 28px;max-width:1180px}
 h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px}
 .page-sub{color:var(--text-sub);font-size:15px;margin-bottom:24px}
 
@@ -246,55 +253,49 @@ h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px
   .card{box-shadow:none;border:1px solid #ccc}
   body{background:#fff}
 }
-.vision-area{padding:10px 10px 4px;border-bottom:1px solid #2d3748}
-.vision-card{background:#1e2533;border:1px solid #2d3748;border-radius:8px;padding:10px 14px;display:flex;align-items:baseline;gap:12px}
-.vision-type{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.58rem;color:#5a6478;letter-spacing:0.12em;white-space:nowrap;min-width:48px;flex-shrink:0}
-.vision-body{font-size:0.905rem;color:#7a8499;line-height:1.65}
-.vision-keyword{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.66rem;color:#5a6478;margin-right:8px}
-
-/* ── MOBILE RESPONSIVE ── */
-.mob-header{display:none;align-items:center;gap:10px;padding:0 14px;height:48px;background:var(--sidebar-bg);position:sticky;top:0;z-index:200;flex-shrink:0;}
-.mob-logo{font-size:18px;font-weight:800;color:#fff;letter-spacing:.05em;}
-.mob-menu-btn{background:none;border:none;color:rgba(255,255,255,.7);font-size:22px;cursor:pointer;padding:4px 8px;margin-left:auto;line-height:1;}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:299;}
-#layout{display:flex;min-height:100vh;}
-@media(max-width:720px){
-  .mob-header{display:flex;}
-  #layout{flex-direction:column;}
-  #sidebar{position:fixed;left:-100%;top:0;height:100%;min-height:unset;z-index:300;transition:left .25s ease;}
-  #sidebar.open{left:0;}
-  .sidebar-overlay.open{display:block;}
-  #main{padding:16px 14px;max-width:100%;}
-  .card, [class*="card"]{margin-bottom:10px;}
+/* PRINT */
+@media print{
+  @page{size:A3;margin:14mm}
+  #top-header,#tab-nav,.no-print{display:none!important}
+  #main{padding:0;max-width:100%}
+  .card{box-shadow:none;border:1px solid #ccc}
+  body{background:#fff}
 }
 
-/* モバイル用データ管理バー — サイドバーフッターに統合したため非表示 */
+/* ── LAYOUT ── */
+body{flex-direction:column;}
+#layout{display:flex;flex-direction:column;min-height:0;flex:1;}
+
+/* モバイル用 */
+.mob-header{display:none!important;}
 .mob-data-bar{display:none!important;}
-.mob-data-btn{flex:1;padding:8px;font-size:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#e2e8f0;cursor:pointer;font-family:inherit;}
+.mob-data-btn{display:none;}
+.sidebar-overlay{display:none!important;}
+
+@media(max-width:600px){
+  #top-header-inner{padding:8px 12px;gap:8px;}
+  #main{padding:14px 12px;}
+  #nav button{padding:8px 9px;font-size:12px;}
+}
 </style>
 </head>
+
 <body>
-<div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
-<div class="mob-header">
-  <div style="display:flex;align-items:center;gap:8px;"><img src="icons/icon-32x32.png" style="width:28px;height:28px;border-radius:7px;"><span style="font-size:15px;font-weight:700;color:#fff;">100LIST</span></div>
-  <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
+<div id="top-header">
+  <div id="top-header-inner">
+    <div id="top-logo" onclick="navigate('dashboard')">
+      <img src="icons/icon-32x32.png" style="width:26px;height:26px;border-radius:6px;flex-shrink:0;">
+      <span id="top-logo-text">100LIST</span>
+    </div>
+    <div id="vision-header">
+      <div id="visionArea"></div>
+    </div>
+    <div id="top-actions">
+      <button id="top-add-btn" onclick="openForm(null)">＋ 新規登録</button>
+    </div>
+  </div>
 </div>
-<div class="mob-data-bar">
-  <button class="mob-data-btn" onclick="backupJSON()">⬇ バックアップ</button>
-  <button class="mob-data-btn" onclick="document.getElementById('import-json-input').click()">⬆ 復元</button>
-</div>
-<div id="layout">
-<div id="sidebar">
-  <div id="sidebar-logo" onclick="navigate('dashboard')">
-    <div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
-    <img src="icons/icon-32x32.png" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
-    <span style="font-size:16px;font-weight:700;color:#fff;letter-spacing:.01em;">100LIST</span>
-  </div>
-  </div>
-  <div class="vision-area" id="visionArea"></div>
-  <div style="padding:10px 10px 4px">
-    <button onclick="openForm(null)" style="width:100%;padding:13px;border-radius:8px;border:none;background:#38a169;color:#fff;font-size:16px;font-weight:700;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#276749'" onmouseout="this.style.background='#38a169'">＋ 新規登録</button>
-  </div>
+<div id="tab-nav">
   <nav id="nav">
     <button class="active" data-page="dashboard"><span class="nav-icon">◉</span>ダッシュボード</button>
     <button data-page="list"><span class="nav-icon">≡</span>リスト一覧</button>
@@ -305,12 +306,8 @@ h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px
     <button data-page="review"><span class="nav-icon">◈</span>振り返り</button>
     <button data-page="settings"><span class="nav-icon">⚙</span>設定</button>
   </nav>
-  <div id="sidebar-footer">
-    <button onclick="backupJSON()" style="background:rgba(255,255,255,.08);color:#a0aec0;">⬇ バックアップ</button>
-    <button onclick="document.getElementById('import-json-input').click()" style="background:rgba(255,255,255,.08);color:#a0aec0;">⬆ 復元</button>
-  </div>
 </div>
-
+<div id="layout">
 <div id="main">
   <div id="page-dashboard"></div>
   <div id="page-list" style="display:none"></div>
@@ -1040,14 +1037,8 @@ function duplicateForYear(id, year){
 
 // ===== ROUTER =====
 let currentPage = 'dashboard';
-function toggleSidebar(){
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sbOverlay').classList.toggle('open');
-}
-function closeSidebar(){
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sbOverlay').classList.remove('open');
-}
+function toggleSidebar(){ /* noop */ }
+function closeSidebar(){ /* noop */ }
 function navigate(page){closeSidebar();
   document.querySelectorAll('#nav button').forEach(b=>{
     b.classList.toggle('active', b.dataset.page===page);
