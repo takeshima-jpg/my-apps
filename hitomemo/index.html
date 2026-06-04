@@ -566,6 +566,8 @@ const App = () => {
   const [query, setQuery] = useState('');
   const [filterStar, setFilterStar] = useState(false);
   const [current, setCurrent] = useState(null);
+  const currentRef = useRef(null); // onBlur用：最新のcurrentを常に保持
+  const profilesRef = useRef([]); // onBlur用：最新のprofilesを常に保持
   const [answers, setAnswers] = useState(Array(19).fill(''));
   const [qIdx, setQIdx] = useState(0);
   const [importText, setImportText] = useState('');
@@ -578,6 +580,9 @@ const App = () => {
   const [starOrder, setStarOrder] = useState(null);       // ★の手動順
 
   useEffect(() => { setProfiles(loadProfiles()); }, []);
+  // refを常に最新stateに同期
+  currentRef.current = current;
+  profilesRef.current = profiles;
 
   const updateList = (list) => { setProfiles(list); saveProfiles(list); };
 
@@ -855,12 +860,16 @@ const App = () => {
     const upd = (field, val) => {
       const updated = { ...current, [field]: { value: val }, updatedAt: new Date().toISOString() };
       setCurrent(updated);
-      updateList(profiles.map(p => p.id === updated.id ? updated : p));
     };
     const updDirect = (field, val) => {
       const updated = { ...current, [field]: val, updatedAt: new Date().toISOString() };
       setCurrent(updated);
-      updateList(profiles.map(p => p.id === updated.id ? updated : p));
+    };
+    // フォーカスを外したときだけ保存（1文字ごとの再レンダリング防止）
+    const saveCurrentBlur = () => {
+      const latest = currentRef.current;
+      if (!latest) return;
+      updateList(profilesRef.current.map(p => p.id === latest.id ? latest : p));
     };
     const toggleStar = () => {
       const flag = current.relationFlag === 'star' ? 'normal' : 'star';
@@ -901,8 +910,8 @@ const App = () => {
       <div className="field-group">
         <label className="field-label">{label}</label>
         {multi
-          ? <textarea className="field-textarea" value={fv(field)} onChange={e => upd(field, e.target.value)} />
-          : <input type="text" className="field-input" value={fv(field)} onChange={e => upd(field, e.target.value)} />
+          ? <textarea className="field-textarea" value={fv(field)} onChange={e => upd(field, e.target.value)} onBlur={saveCurrentBlur} />
+          : <input type="text" className="field-input" value={fv(field)} onChange={e => upd(field, e.target.value)} onBlur={saveCurrentBlur} />
         }
       </div>
     );
@@ -938,6 +947,7 @@ const App = () => {
           <textarea className="ai-summary-textarea"
             value={current.meetingSummary || ''}
             onChange={e => updDirect('meetingSummary', e.target.value)}
+            onBlur={saveCurrentBlur}
             placeholder={'この人が大切にしていること： \nこの人が嫌うこと： \n最近の関心： \n接し方： '} />
         </div>
 
