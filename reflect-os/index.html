@@ -979,6 +979,26 @@ async function registerAiInput(){
 
 function renderV26(){const area=document.getElementById('v26');if(!area)return;const seed=parseInt(new Date().toLocaleDateString('sv').replace(/-/g,''))%100;const types=['vision','principle','direction'];const type=types[seed%3];let inner='';if(type==='vision'){const item=VD.vision[seed%VD.vision.length];inner=`<span class="v26t">VISION</span><span class="v26b">${item}</span>`;}else if(type==='principle'){const item=VD.principles[seed%VD.principles.length];inner=`<span class="v26t">原則</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}else{const item=VD.directions[seed%VD.directions.length];inner=`<span class="v26t">指針</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}area.innerHTML=`<div class="v26c">${inner}</div>`;}
 
+function buildQRow(line, ckId, r){
+  const st=S.checks[ckId]||'todo';
+  const row=D({cls:'cl-row'+(st==='important'?' cl-doing':st==='done'?' cl-done':st==='skip'?' cl-skip':'')});
+  const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\s]+/,'');
+  const thNames=(r.themes||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
+  const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'')+(thNames.length?' ／ '+thNames.join('・'):'');
+  async function setSt(newSt){S.checks[ckId]=newSt;await dbput('checks',{id:ckId,done:newSt==='done',state:newSt});ra();}
+  const impBtn=D({cls:'exp-state-btn'+(st==='important'?' doing':'')});impBtn.textContent='重要';
+  impBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='important'?'todo':'important');});
+  const doneBtn=D({cls:'exp-state-btn'+(st==='done'?' doing':'')});doneBtn.textContent='完了';
+  doneBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='done'?'todo':'done');});
+  const skipBtn=D({cls:'exp-state-btn'+(st==='skip'?' skip':'')});skipBtn.textContent='捨てる';
+  skipBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='skip'?'todo':'skip');});
+  row.appendChild(lbl);row.appendChild(from);
+  const btns=D({css:'display:flex;gap:2px;margin-left:auto;flex-shrink:0'});
+  btns.appendChild(impBtn);btns.appendChild(doneBtn);btns.appendChild(skipBtn);
+  row.appendChild(btns);
+  return row;
+}
+
 function buildExpRow(line, ckId, r){
   const st=S.checks[ckId]||'todo'; // todo / doing / done / skip
   const row=D({cls:'cl-row'+(st==='doing'?' cl-doing':st==='done'?' cl-done':st==='skip'?' cl-skip':'')});
@@ -1008,34 +1028,48 @@ function buildExpRow(line, ckId, r){
 function renderArchive(){
   const f=document.createDocumentFragment();
   f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:20px'},'アーカイブ'));
-  const pub=S.logs.filter(r=>r.status!=='draft'&&r.nextExp?.trim());
-  const rows=[];
-  pub.forEach(r=>{
-    const lines=r.nextExp.split(/\n/).filter(l=>l.trim());
-    lines.forEach((line,i)=>{
-      const ckId='e_'+r.id+'_'+i;
-      const st=S.checks[ckId]||'todo';
-      if(st!=='done'&&st!=='skip') return;
-      rows.push({line,ckId,r,st});
-    });
-  });
-  if(!rows.length){f.appendChild(D({cls:'empty'},'完了・やらないに移した実験がここに蓄積されます'));return f;}
-  // 完了
-  const done=rows.filter(x=>x.st==='done');
-  if(done.length){
-    f.appendChild(D({cls:'sec-lbl',css:'margin-top:0;margin-bottom:12px;font-size:11px'},'完了（'+done.length+'件）'));
-    const dl=D({cls:'checklist'});
-    done.forEach(({line,ckId,r})=>dl.appendChild(buildExpRow(line,ckId,r)));
-    f.appendChild(dl);
+
+  // ── 問い ──
+  const qPub=S.logs.filter(r=>r.status!=='draft'&&r.question?.trim());
+  const qRows=[];
+  qPub.forEach(r=>{r.question.split(/\n/).filter(l=>l.trim()).forEach((line,i)=>{const ckId='q_'+r.id+'_'+i;const st=S.checks[ckId]||'todo';if(st==='done'||st==='skip')qRows.push({line,ckId,r,st});});});
+  if(qRows.length){
+    f.appendChild(D({cls:'sec-lbl',css:'margin-top:0;margin-bottom:8px;color:var(--mu)'},'問い'));
+    const qDone=qRows.filter(x=>x.st==='done');
+    const qSkip=qRows.filter(x=>x.st==='skip');
+    if(qDone.length){
+      f.appendChild(D({css:'font-size:11px;color:var(--di);margin-bottom:6px'},'完了（'+qDone.length+'件）'));
+      const dl=D({cls:'checklist',css:'margin-bottom:16px'});
+      qDone.forEach(({line,ckId,r})=>dl.appendChild(buildQRow(line,ckId,r)));f.appendChild(dl);
+    }
+    if(qSkip.length){
+      f.appendChild(D({css:'font-size:11px;color:var(--di);margin-bottom:6px'},'捨てた（'+qSkip.length+'件）'));
+      const sl=D({cls:'checklist',css:'margin-bottom:24px'});
+      qSkip.forEach(({line,ckId,r})=>sl.appendChild(buildQRow(line,ckId,r)));f.appendChild(sl);
+    }
   }
-  // やらない
-  const skip=rows.filter(x=>x.st==='skip');
-  if(skip.length){
-    f.appendChild(D({cls:'sec-lbl',css:'margin-top:24px;margin-bottom:12px;font-size:11px'},'やらない（'+skip.length+'件）'));
-    const sl=D({cls:'checklist'});
-    skip.forEach(({line,ckId,r})=>sl.appendChild(buildExpRow(line,ckId,r)));
-    f.appendChild(sl);
+
+  // ── 実験 ──
+  const ePub=S.logs.filter(r=>r.status!=='draft'&&r.nextExp?.trim());
+  const eRows=[];
+  ePub.forEach(r=>{r.nextExp.split(/\n/).filter(l=>l.trim()).forEach((line,i)=>{const ckId='e_'+r.id+'_'+i;const st=S.checks[ckId]||'todo';if(st==='done'||st==='skip')eRows.push({line,ckId,r,st});});});
+  if(eRows.length){
+    f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:8px;color:var(--mu)'},'実験'));
+    const eDone=eRows.filter(x=>x.st==='done');
+    const eSkip=eRows.filter(x=>x.st==='skip');
+    if(eDone.length){
+      f.appendChild(D({css:'font-size:11px;color:var(--di);margin-bottom:6px'},'完了（'+eDone.length+'件）'));
+      const dl=D({cls:'checklist',css:'margin-bottom:16px'});
+      eDone.forEach(({line,ckId,r})=>dl.appendChild(buildExpRow(line,ckId,r)));f.appendChild(dl);
+    }
+    if(eSkip.length){
+      f.appendChild(D({css:'font-size:11px;color:var(--di);margin-bottom:6px'},'やらない（'+eSkip.length+'件）'));
+      const sl=D({cls:'checklist'});
+      eSkip.forEach(({line,ckId,r})=>sl.appendChild(buildExpRow(line,ckId,r)));f.appendChild(sl);
+    }
   }
+
+  if(!qRows.length&&!eRows.length){f.appendChild(D({cls:'empty'},'完了・捨てた問いと実験がここに蓄積されます'));}
   return f;
 }
 
@@ -1063,24 +1097,18 @@ function renderQuestions(){
   function rebuildQ(){
     qWrap.innerHTML='';
     const filtered=qThFilt==='all'?pub:pub.filter(r=>(r.themes||[]).includes(qThFilt));
-    lbl.textContent='未解決の問い（'+filtered.reduce((n,r)=>n+r.question.split(/\n/).filter(l=>l.trim()).length,0)+'件）';
+    const activeQCount=filtered.reduce((n,r)=>n+r.question.split(/\n/).filter(l=>l.trim()&&(S.checks['q_'+r.id+'_'+r.question.split(/\n/).filter(l=>l.trim()).indexOf(l)]||'todo')!=='done'&&(S.checks['q_'+r.id+'_'+r.question.split(/\n/).filter(l=>l.trim()).indexOf(l)]||'todo')!=='skip').length,0);
+    lbl.textContent='未解決の問い（'+filtered.reduce((n,r)=>n+r.question.split(/\n/).filter((l,i)=>{const st=S.checks['q_'+r.id+'_'+i]||'todo';return l.trim()&&st!=='done'&&st!=='skip';}).length,0)+'件）';
     if(!filtered.length){qWrap.appendChild(D({cls:'empty'},'このテーマの問いはありません'));return;}
     const list=D({cls:'checklist'});
     filtered.forEach(r=>{
-    const lines=r.question.split(/\n/).filter(l=>l.trim());
-    lines.forEach((line,i)=>{
-      const row=D({cls:'cl-row'});
-      const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
-      const ckId='q_'+r.id+'_'+i;cb.checked=!!S.checks[ckId];
-      if(cb.checked)row.classList.add('cl-done');
-      cb.addEventListener('change',async()=>{S.checks[ckId]=cb.checked;await dbput('checks',{id:ckId,done:cb.checked});row.classList.toggle('cl-done',cb.checked);});
-      const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\s]+/,'');
-      // テーマバッジ
-      const thNames=(r.themes||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
-      const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'')+(thNames.length?' ／ '+thNames.join('・'):'');
-      row.appendChild(cb);row.appendChild(lbl);row.appendChild(from);
-      list.appendChild(row);
-    });
+      const qlines=r.question.split(/\n/).filter(l=>l.trim());
+      qlines.forEach((line,i)=>{
+        const ckId='q_'+r.id+'_'+i;
+        const st=S.checks[ckId]||'todo';
+        if(st==='done'||st==='skip') return;
+        list.appendChild(buildQRow(line,ckId,r));
+      });
     });
     qWrap.appendChild(list);
   }
