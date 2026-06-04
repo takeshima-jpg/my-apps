@@ -839,6 +839,21 @@ textarea.fc.tall { min-height: 130px; }
         </div>
       </div>
       <div class="import-panel" style="margin-bottom:14px;">
+        <div class="import-panel-h">① AIでシートを更新する</div>
+        <div class="import-panel-b" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div style="font-size:.8rem;color:var(--gray4);line-height:1.7;flex:1;min-width:200px;">
+            AIにシートの更新を依頼するためのプロンプトです。<br>
+            コピー → AIに貼り付け → 現在のシートデータと指示を追記 → 出力されたTSVを下の欄に貼り付け。
+          </div>
+          <button id="si-prompt-btn" class="btn btn-outline btn-sm"
+            onclick="copyUpdatePrompt()"
+            style="font-size:.8rem;padding:9px 16px;white-space:nowrap;flex-shrink:0;">
+            📋 AI更新プロンプトをコピー
+          </button>
+        </div>
+      </div>
+
+      <div class="import-panel" style="margin-bottom:14px;">
         <div class="import-panel-h">
           ② スプレッドシートをそのまま貼り付け
           <span style="font-weight:400;font-size:.65rem;color:var(--gray3);">Google Sheets / Excel / TSV / CSV 対応</span>
@@ -2368,6 +2383,23 @@ function updateClearBtn() {
   const p = siSelPid ? S.projects.find(x => x.id === siSelPid) : null;
   const hasData = p && ((p.events||[]).length || (p.forks||[]).length || (p.decisions||[]).length);
   btn.style.display = hasData ? 'inline-flex' : 'none';
+}
+
+const SI_UPDATE_PROMPT = 'あなたはプロジェクトマネジメントの専門家です。\n以下の「現在のスプレッドシートデータ」を読み込み、私の指示に従ってプロジェクトを更新した上で、Project OS に貼り付けられる形式でスプレッドシートを出力してください。\n\n## 出力フォーマット（厳守）\nタブ区切りテキスト（TSV）のみ出力。コードブロック・説明文は不要です。\n\n### 上部エリア構造\n1行目: プロジェクトタイトル（A1のみ）\n2行目: 空行\n3行目: 項目[TAB]内容\n4行目: PJ名[TAB]（プロジェクト名）\n5行目: ゴール[TAB]（ゴール）\n6行目: 成功条件[TAB]（成功条件）\n7行目: 注意論点[TAB]（注意論点を「・」区切りで1行に）\n8行目: 空行\n9行目: フェーズマップ\n10行目: Phase[TAB]テーマ[TAB]成功条件\n11〜16行目: 各フェーズ（１〜６[TAB]テーマ[TAB]フェーズ成功条件）\n17行目: 空行\n18行目: イベント一覧\n\n### イベントヘッダー行\nID[TAB]Phase[TAB]種別[TAB]期日[TAB]状態[TAB]イベント[TAB]担当[TAB]対象[TAB]施策[TAB]ゴール（狙い）[TAB]結果\n\n### イベント行（各列の定義）\n- ID: Phase番号×10＋枝番（例：11,12,21,22...）\n- Phase: 全角数字（「１」「２」...）\n- 種別: 「分岐」「制約」または空欄（通常イベント）\n- 期日: YYYY/MM/DD形式\n- 状態: 「未着手」「進行中」「完了」\n- イベント: イベント名\n- 担当/対象/施策/ゴール（狙い）/結果: 各内容（未実施の結果は空欄）\n\n## 種別ルール\n- 空欄: 通常タスク\n- 分岐: 意思決定・分岐点\n- 制約: 期限・締め切りなど動かせない制約\n\n---\n\n## 現在のスプレッドシートデータ\n（ここにGoogleスプレッドシートのデータを全選択→コピーして貼り付け）\n\n---\n\n## 私の指示\n（更新内容を記載。例：）\n- 〇〇のイベントをPhase2に追加（期日：2026/07/15、担当：竹嶋、種別：分岐）\n- ID=21を完了にして結果を記載\n- ××の期日を1ヶ月後ろ倒し\n\n---\n出力はTSVのみ、説明文なしでお願いします。';
+
+function copyUpdatePrompt() {
+  navigator.clipboard.writeText(SI_UPDATE_PROMPT).then(() => {
+    const btn = document.getElementById('si-prompt-btn');
+    if (!btn) return;
+    btn.textContent = '✓ コピーしました';
+    btn.style.color = 'var(--green)';
+    btn.style.borderColor = 'var(--green)';
+    setTimeout(() => {
+      btn.textContent = '📋 AI更新プロンプトをコピー';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2000);
+  });
 }
 
 function renderImport() {
