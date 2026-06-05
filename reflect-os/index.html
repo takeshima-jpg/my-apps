@@ -724,45 +724,33 @@ function renderHome(){
       sec.appendChild(lbl);
     }
 
-    const qs=filtered.filter(r=>r.question?.trim());
-    if(qs.length){
-      sec.appendChild(D({cls:'sec-lbl',css:'margin-top:theme?0:32px'},'未解決の問い'+(theme?'':'')));
-      const qList=D({cls:'checklist'});
-      qs.forEach(r=>{
-        const lines=r.question.split(/\n/).filter(l=>l.trim());
-        lines.forEach((line,i)=>{
-          const row=D({cls:'cl-row'});
-          const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
-          const ckId='q_'+r.id+'_'+i;cb.checked=!!S.checks[ckId];
-          if(cb.checked)row.classList.add('cl-done');
-          cb.addEventListener('change',async()=>{S.checks[ckId]=cb.checked;await dbput('checks',{id:ckId,done:cb.checked});row.classList.toggle('cl-done',cb.checked);});
-          const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\s]+/,'');
-          const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'');
-          row.appendChild(cb);row.appendChild(lbl);row.appendChild(from);
-          qList.appendChild(row);
-        });
+    // HOME: 重要マークした問いのみ表示
+    const importantQs=[];
+    filtered.filter(r=>r.question?.trim()).forEach(r=>{
+      r.question.split(/\n/).filter(l=>l.trim()).forEach((line,i)=>{
+        const ckId='q_'+r.id+'_'+i;
+        if((S.checks[ckId]||'todo')==='important') importantQs.push({line,ckId,r});
       });
+    });
+    if(importantQs.length){
+      sec.appendChild(D({cls:'sec-lbl',css:'margin-top:0'},'重要な問い'));
+      const qList=D({cls:'checklist'});
+      importantQs.forEach(({line,ckId,r})=>qList.appendChild(buildQRow(line,ckId,r)));
       sec.appendChild(qList);
     }
 
-    const exps=filtered.filter(r=>r.nextExp?.trim());
-    if(exps.length){
-      sec.appendChild(D({cls:'sec-lbl',css:'margin-top:32px'},'次の実験'));
-      const eList=D({cls:'checklist'});
-      exps.forEach(r=>{
-        const lines=r.nextExp.split(/\n/).filter(l=>l.trim());
-        lines.forEach((line,i)=>{
-          const row=D({cls:'cl-row'});
-          const cb=document.createElement('input');cb.type='checkbox';cb.className='cl-cb';
-          const ckId='e_'+r.id+'_'+i;cb.checked=!!S.checks[ckId];
-          if(cb.checked)row.classList.add('cl-done');
-          cb.addEventListener('change',async()=>{S.checks[ckId]=cb.checked;await dbput('checks',{id:ckId,done:cb.checked});row.classList.toggle('cl-done',cb.checked);});
-          const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\d\.）\)\s]+/,'');
-          const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'');
-          row.appendChild(cb);row.appendChild(lbl);row.appendChild(from);
-          eList.appendChild(row);
-        });
+    // HOME: 実験中のみ表示
+    const doingExps=[];
+    filtered.filter(r=>r.nextExp?.trim()).forEach(r=>{
+      r.nextExp.split(/\n/).filter(l=>l.trim()).forEach((line,i)=>{
+        const ckId='e_'+r.id+'_'+i;
+        if((S.checks[ckId]||'todo')==='doing') doingExps.push({line,ckId,r});
       });
+    });
+    if(doingExps.length){
+      sec.appendChild(D({cls:'sec-lbl',css:'margin-top:32px'},'実験中'));
+      const eList=D({cls:'checklist'});
+      doingExps.forEach(({line,ckId,r})=>eList.appendChild(buildExpRow(line,ckId,r)));
       sec.appendChild(eList);
     }
 
@@ -985,7 +973,7 @@ function buildQRow(line, ckId, r){
   const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\s]+/,'');
   const thNames=(r.themes||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
   const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'')+(thNames.length?' ／ '+thNames.join('・'):'');
-  async function setSt(newSt){S.checks[ckId]=newSt;await dbput('checks',{id:ckId,done:newSt==='done',state:newSt});ra();}
+  async function setSt(newSt){S.checks[ckId]=newSt;await dbput('checks',{id:ckId,state:newSt,done:newSt==='done'});ra();}
   const impBtn=D({cls:'exp-state-btn'+(st==='important'?' doing':'')});impBtn.textContent='重要';
   impBtn.addEventListener('click',e=>{e.stopPropagation();setSt(st==='important'?'todo':'important');});
   const doneBtn=D({cls:'exp-state-btn'+(st==='done'?' doing':'')});doneBtn.textContent='完了';
@@ -1008,7 +996,7 @@ function buildExpRow(line, ckId, r){
   // 状態ボタン
   async function setSt(newSt){
     S.checks[ckId]=newSt;
-    await dbput('checks',{id:ckId,done:newSt==='done',state:newSt});
+    await dbput('checks',{id:ckId,state:newSt,done:newSt==='done'});
     ra();
   }
   const doingBtn=D({cls:'exp-state-btn'+(st==='doing'?' doing':'')});doingBtn.textContent='実験中';
@@ -1241,7 +1229,7 @@ async function syncFromProjectOS(){
     const lg=await dball('logs');
     S.logs=lg.sort((a,b)=>b.date.localeCompare(a.date));
     const chks=await dball('checks');
-    chks.forEach(c=>{S.checks[c.id]=c.done;});
+    chks.forEach(c=>{S.checks[c.id]=c.state||(c.done?'done':'todo');});
   }catch(e){console.warn(e);}
   // サイドバーの記録ボタンを生成
 
