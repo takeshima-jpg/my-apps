@@ -253,6 +253,7 @@ nav{display:flex;flex-direction:column;gap:0;}
       <button class="nb" data-tab="questions"><span class="nav-icon">？</span> 問い <span id="q-badge" class="sb-badge"></span></button>
       <button class="nb" data-tab="experiments"><span class="nav-icon">▶</span> 実験 <span id="e-badge" class="sb-badge"></span></button>
       <button class="nb" data-tab="archive"><span class="nav-icon">□</span> アーカイブ</button>
+      <button class="nb" data-tab="vision-edit"><span class="nav-icon">◎</span> VISION設定</button>
     </nav>
   </div>
 
@@ -1165,6 +1166,7 @@ function renderExperiments(){
   else if(S.tab==='questions')wrap.appendChild(renderQuestions());
   else if(S.tab==='experiments')wrap.appendChild(renderExperiments());
   else if(S.tab==='archive')wrap.appendChild(renderArchive());
+  else if(S.tab==='vision-edit')wrap.appendChild(renderVisionEdit());
   else if(S.tab==='ai-import')wrap.appendChild(renderAiImport());
   main.appendChild(wrap);
 }
@@ -1233,6 +1235,120 @@ async function syncFromProjectOS(){
     }
     return added;
   }catch(e){console.warn('Project OS sync error:',e);return 0;}
+}
+
+/* ── VISION localStorage 共有 ── */
+const VISION_KEY = 'myapps_vision';
+function loadSharedVision(){
+  try{
+    const raw = localStorage.getItem(VISION_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return null;
+}
+function saveSharedVision(data){
+  localStorage.setItem(VISION_KEY, JSON.stringify(data));
+}
+
+/* ── VISION編集タブ ── */
+function renderVisionEdit(){
+  const f = document.createDocumentFragment();
+  const current = loadSharedVision() || {
+    vision:[''],
+    principles:[{title:'',text:''}],
+    directions:[{title:'',text:''}]
+  };
+
+  f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:8px'},'VISION設定'));
+  f.appendChild(D({css:'font-size:13px;color:var(--mu);margin-bottom:20px'},'ここで保存したVISIONは全OSに反映されます'));
+
+  // AIプロンプト
+  const promptBox = D({css:'background:var(--sf);border:1px solid var(--bd);border-radius:5px;margin-bottom:20px'});
+  const promptToggle = D({css:'padding:10px 14px;font-size:13px;cursor:pointer;color:var(--mu)'});
+  promptToggle.textContent = '📋 AIへの整形プロンプト（コピーして使う）';
+  const promptBody = D({css:'display:none;padding:0 14px 14px'});
+  const promptPre = document.createElement('pre');
+  promptPre.id = 'vision-prompt-text';
+  promptPre.style.cssText = 'font-size:12px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:12px;white-space:pre-wrap;word-break:break-all;margin-bottom:8px;line-height:1.7;color:var(--tx)';
+  const promptText = `以下のVISION・原則・指針の内容を、下記のJSONフォーマットに整形してください。
+
+【ルール】
+・visionは1つの文字列（ミッション文全体）
+・principlesは原則（title＋text）の配列。titleは漢字1〜2文字
+・directionsは指針（title＋text）の配列。titleは漢字1〜2文字
+・textは1〜2文の簡潔な文章
+・JSONのみ出力し、説明文・コードブロック記号は不要
+・ダブルクォート・カンマ・波括弧など JSON の記法を正確に守る
+
+【出力フォーマット】
+{
+  "vision": ["ミッション文をここに"],
+  "principles": [
+    {"title": "原則1", "text": "説明文"},
+    {"title": "原則2", "text": "説明文"}
+  ],
+  "directions": [
+    {"title": "指針1", "text": "説明文"},
+    {"title": "指針2", "text": "説明文"}
+  ]
+}
+
+【現在の内容】
+（ここに変更したい内容を貼る）`;
+  promptPre.textContent = promptText;
+  const copyBtn = Bt({cls:'btn-s'},'コピー');
+  copyBtn.addEventListener('click',()=>{
+    navigator.clipboard.writeText(promptPre.textContent);
+    copyBtn.textContent='コピーしました ✓';
+    setTimeout(()=>copyBtn.textContent='コピー',2000);
+  });
+  promptBody.appendChild(promptPre);
+  promptBody.appendChild(copyBtn);
+  promptBox.appendChild(promptToggle);
+  promptBox.appendChild(promptBody);
+  promptToggle.addEventListener('click',()=>{
+    const open = promptBody.style.display==='block';
+    promptBody.style.display = open?'none':'block';
+  });
+  f.appendChild(promptBox);
+
+  // JSONテキストエリア
+  f.appendChild(D({css:'font-size:13px;font-weight:600;margin-bottom:6px'},'VISIONデータ（JSON）'));
+  f.appendChild(D({css:'font-size:12px;color:var(--mu);margin-bottom:8px'},'AIが出力したJSONをそのまま貼り付けて「保存」を押してください'));
+  const ta = document.createElement('textarea');
+  ta.style.cssText = 'width:100%;height:320px;font-size:12px;font-family:var(--mono);padding:12px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);resize:vertical;box-sizing:border-box';
+  ta.value = JSON.stringify(current, null, 2);
+  f.appendChild(ta);
+
+  // エラー表示
+  const errEl = D({css:'font-size:13px;color:#b05050;margin-top:8px;min-height:20px'});
+  f.appendChild(errEl);
+
+  // 保存ボタン
+  const saveBtn = Bt({cls:'btn-g',css:'margin-top:12px;font-size:14px;padding:10px 24px'},'全OSに保存する');
+  saveBtn.addEventListener('click',()=>{
+    try{
+      const parsed = JSON.parse(ta.value);
+      // バリデーション
+      if(!parsed.vision||!Array.isArray(parsed.vision)||!parsed.vision[0]) throw new Error('vision が見つかりません');
+      if(!parsed.principles||!Array.isArray(parsed.principles)) throw new Error('principles が配列ではありません');
+      if(!parsed.directions||!Array.isArray(parsed.directions)) throw new Error('directions が配列ではありません');
+      parsed.principles.forEach((p,i)=>{if(!p.title||!p.text) throw new Error('principles['+i+'] に title または text がありません');});
+      parsed.directions.forEach((d,i)=>{if(!d.title||!d.text) throw new Error('directions['+i+'] に title または text がありません');});
+      saveSharedVision(parsed);
+      // Reflect OSのvisionも更新
+      S.vision = {vision: parsed.vision[0], yearGoal: S.vision.yearGoal||''};
+      dbput('settings',{id:'vision',value:S.vision});
+      errEl.style.color='var(--go)';
+      errEl.textContent='✓ 保存しました。全OSを開き直すと反映されます。';
+      setTimeout(()=>errEl.textContent='',4000);
+    }catch(e){
+      errEl.style.color='#b05050';
+      errEl.textContent='エラー: '+e.message;
+    }
+  });
+  f.appendChild(saveBtn);
+  return f;
 }
 
 /* ── Boot ── */

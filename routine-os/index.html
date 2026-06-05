@@ -1650,6 +1650,21 @@ var VISION_DATA={
     {title:'健康',text:'心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。'},
   ],
 };
+
+// ── VISION localStorage 共有読み込み ──
+(function(){
+  try{
+    const raw = localStorage.getItem('myapps_vision');
+    if(raw){
+      const d = JSON.parse(raw);
+      if(d.vision && d.principles && d.directions){
+        VISION_DATA.vision = d.vision;
+        VISION_DATA.principles = d.principles;
+        VISION_DATA.directions = d.directions;
+      }
+    }
+  }catch(e){ console.warn('VISION load error:', e); }
+})();
 function renderVision(){
   var area=document.getElementById('visionArea');
   if(!area)return;

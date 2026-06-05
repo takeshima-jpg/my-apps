@@ -793,6 +793,21 @@ const VISION_DATA = {
   ],
 };
 
+// ── VISION localStorage 共有読み込み ──
+(function(){
+  try{
+    const raw = localStorage.getItem('myapps_vision');
+    if(raw){
+      const d = JSON.parse(raw);
+      if(d.vision && d.principles && d.directions){
+        VISION_DATA.vision = d.vision;
+        VISION_DATA.principles = d.principles;
+        VISION_DATA.directions = d.directions;
+      }
+    }
+  }catch(e){ console.warn('VISION load error:', e); }
+})();
+
 function loadData() {
   try { state.logs    = JSON.parse(localStorage.getItem(DB_KEY)) || []; } catch { state.logs = []; }
   try { state.reviews = JSON.parse(localStorage.getItem(RV_KEY)) || []; } catch { state.reviews = []; }
