@@ -1612,7 +1612,7 @@ function renderList(){
 
   // フィルター（statusはtabで上書き）
   let allRows = items.filter(i=>!i.discarded).filter(i=>{
-    if(listF.search && !i.title.includes(listF.search) && !(i.memo||'').includes(listF.search)) return false;
+    if(listF.search){const q=listF.search.toLowerCase(); if(!i.title.toLowerCase().includes(q) && !(i.memo||'').toLowerCase().includes(q)) return false;}
     if(listF.year!=='all' && String(i.year)!==listF.year) return false;
     if(listF.month!=='all' && String(i.month)!==listF.month) return false;
     if(listF.cat!=='all'){
