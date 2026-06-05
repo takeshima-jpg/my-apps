@@ -1,4 +1,4 @@
-const CACHE_NAME = '100list-v2-icons-20260526b';
+const CACHE_NAME = '100list-v3-20260606';
 const ASSETS = [
   './',
   './index.html'
