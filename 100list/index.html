@@ -342,9 +342,25 @@ html,body{max-width:100%;overflow-x:hidden;}
   .form-grid{grid-template-columns:1fr!important;}
   .form-grid-3{grid-template-columns:1fr 1fr!important;}
 
-  /* テーブル列を間引く */
-  .list-table th:nth-child(4),.list-table td:nth-child(4),
-  .list-table th:nth-child(5),.list-table td:nth-child(5){display:none;}
+  /* リストテーブル → スマホ用カードリスト */
+  .list-table thead{display:none;}
+  .list-table,.list-table tbody,.list-table tr,.list-table td{display:block;width:100%;box-sizing:border-box;}
+  .list-table tr{border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;padding:10px 12px;background:#fff;position:relative;}
+  .list-table tr.done{opacity:.6;background:#f7fafc;}
+  .list-table td{padding:2px 0;border:none;}
+  /* 完了ボタンを右上に */
+  .list-table td:first-child{position:absolute;top:10px;right:10px;width:auto;}
+  /* NO非表示 */
+  .list-table td:nth-child(2){display:none;}
+  /* カテゴリ・優先度・タグ非表示（タイトル行に集約） */
+  .list-table td:nth-child(4),.list-table td:nth-child(5),
+  .list-table td:nth-child(6),.list-table td:nth-child(7){display:none;}
+  /* 操作ボタン */
+  .list-table td:last-child{margin-top:6px;}
+
+  /* filter-bar */
+  .filter-bar input[type=text]{width:100%!important;min-width:0!important;box-sizing:border-box!important;}
+  .filter-bar select{width:calc(50% - 4px)!important;min-width:0!important;}
 
   /* 月別チャート */
   #month-chart-inner{overflow-x:auto;-webkit-overflow-scrolling:touch;}
