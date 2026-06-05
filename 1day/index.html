@@ -349,23 +349,41 @@ function gdriveHandleRedirect() {
 }
 
 function gdriveUpdateUI(connected) {
+  // デスクトップサイドバー
   const dot = document.getElementById('gdriveDot');
   const status = document.getElementById('gdriveStatusText');
   const connectBtn = document.getElementById('gdriveConnectBtn');
   const saveBtn = document.getElementById('gdriveSaveBtn');
   const loadBtn = document.getElementById('gdriveLoadBtn');
+  // モバイルドロワー
+  const dotMob = document.getElementById('gdriveDotMob');
+  const statusMob = document.getElementById('gdriveStatusMob');
+  const connectMob = document.getElementById('gdriveConnectMob');
+  const saveMob = document.getElementById('gdriveSaveMob');
+  const loadMob = document.getElementById('gdriveLoadMob');
+
   if (connected) {
-    dot.className = 'gdrive-dot connected';
-    status.textContent = 'Googleドライブ接続済み';
-    connectBtn.style.display = 'none';
-    saveBtn.style.display = '';
-    loadBtn.style.display = '';
+    if (dot) dot.style.background = '#34a853';
+    if (status) status.textContent = 'Googleドライブ接続済み';
+    if (connectBtn) connectBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = '';
+    if (loadBtn) loadBtn.style.display = '';
+    if (dotMob) dotMob.style.background = '#34a853';
+    if (statusMob) statusMob.textContent = '接続済み';
+    if (connectMob) connectMob.style.display = 'none';
+    if (saveMob) saveMob.style.display = '';
+    if (loadMob) loadMob.style.display = '';
   } else {
-    dot.className = 'gdrive-dot';
-    status.textContent = 'Googleドライブ未接続';
-    connectBtn.style.display = '';
-    saveBtn.style.display = 'none';
-    loadBtn.style.display = 'none';
+    if (dot) dot.style.background = 'var(--border2)';
+    if (status) status.textContent = 'Googleドライブ未接続';
+    if (connectBtn) connectBtn.style.display = '';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (loadBtn) loadBtn.style.display = 'none';
+    if (dotMob) dotMob.style.background = 'var(--border2)';
+    if (statusMob) statusMob.textContent = '未接続';
+    if (connectMob) connectMob.style.display = '';
+    if (saveMob) saveMob.style.display = 'none';
+    if (loadMob) loadMob.style.display = 'none';
   }
 }
 
@@ -447,8 +465,10 @@ function gdriveAutoSave() {
   if (gdriveToken) gdriveSave();
 }
 
-// ページ読み込み時にリダイレクト後トークンを処理
-gdriveHandleRedirect();
+// ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
+document.addEventListener('DOMContentLoaded', function() {
+  gdriveHandleRedirect();
+});
 
 
 </script>
