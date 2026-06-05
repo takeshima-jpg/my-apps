@@ -308,28 +308,44 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const GDRIVE_FILE_NAME = '1day-backup.json';
+const GDRIVE_REDIRECT_URI = location.origin + location.pathname;
 
 let gdriveToken = null;
 let gdriveFolderId = null;
 let gdriveFileId = null;
 
+// リダイレクト方式（スマホ対応）
 function gdriveConnect() {
-  if (typeof google === 'undefined') {
-    alert('Googleのスクリプトが読み込まれていません。ページを再読み込みしてください。');
-    return;
-  }
-  const client = google.accounts.oauth2.initTokenClient({
+  // OAuthコード取得後のリダイレクト処理
+  const params = new URLSearchParams({
     client_id: GDRIVE_CLIENT_ID,
+    redirect_uri: GDRIVE_REDIRECT_URI,
+    response_type: 'token',
     scope: GDRIVE_SCOPE,
-    callback: (resp) => {
-      if (resp.error) { alert('ログイン失敗: ' + resp.error); return; }
-      gdriveToken = resp.access_token;
-      localStorage.setItem('gdrive_token', gdriveToken);
-      gdriveUpdateUI(true);
-      gdriveAutoLoad();
-    }
+    prompt: 'select_account',
   });
-  client.requestAccessToken();
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+}
+
+// リダイレクト後にURLフラグメントからトークンを取得
+function gdriveHandleRedirect() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const token = hash.get('access_token');
+  if (token) {
+    gdriveToken = token;
+    localStorage.setItem('gdrive_token', token);
+    // トークンをURLから消す
+    history.replaceState(null, '', location.pathname);
+    gdriveUpdateUI(true);
+    gdriveAutoLoad();
+  } else {
+    // 保存済みトークンを確認
+    const saved = localStorage.getItem('gdrive_token');
+    if (saved) {
+      gdriveToken = saved;
+      gdriveUpdateUI(true);
+    }
+  }
 }
 
 function gdriveUpdateUI(connected) {
@@ -430,6 +446,9 @@ async function gdriveAutoLoad() {
 function gdriveAutoSave() {
   if (gdriveToken) gdriveSave();
 }
+
+// ページ読み込み時にリダイレクト後トークンを処理
+gdriveHandleRedirect();
 
 
 </script>
