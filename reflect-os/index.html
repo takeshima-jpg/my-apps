@@ -1172,8 +1172,9 @@ function updateNav(){
   document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
   // バッジ更新
   const pub=S.logs.filter(r=>r.status!=='draft');
-  const qCount=pub.filter(r=>r.question?.trim()).reduce((n,r)=>n+r.question.split(/\n/).filter(l=>l.trim()).length,0);
-  const eCount=pub.filter(r=>r.nextExp?.trim()).reduce((n,r)=>n+r.nextExp.split(/\n/).filter(l=>l.trim()).length,0);
+  // アーカイブ（done/skip）を除いた件数のみカウント
+  const qCount=pub.filter(r=>r.question?.trim()).reduce((n,r)=>n+r.question.split(/\n/).filter((l,i)=>{const st=S.checks['q_'+r.id+'_'+i]||'todo';return l.trim()&&st!=='done'&&st!=='skip';}).length,0);
+  const eCount=pub.filter(r=>r.nextExp?.trim()).reduce((n,r)=>n+r.nextExp.split(/\n/).filter((l,i)=>{const st=S.checks['e_'+r.id+'_'+i]||'todo';return l.trim()&&st!=='done'&&st!=='skip';}).length,0);
   const qb=document.getElementById('q-badge');if(qb)qb.textContent=qCount||'';
   const eb=document.getElementById('e-badge');if(eb)eb.textContent=eCount||'';
 }
