@@ -445,7 +445,7 @@ function gdriveConnect() {
 
   // 新しいタブで開く（iframe内でもTask OS経由でも動作）
   window.open(authUrl, '_blank');
-  showToast('Googleのログイン画面を新しいタブで開きました。ログイン後、このページに戻ってください。', 'info');
+  toast('Googleのログイン画面を新しいタブで開きました。ログイン後、このページに戻ってください。', 'info');
 }
 
 // 認証後のURLフラグメントからトークンを取得
@@ -482,7 +482,7 @@ function gdriveHandleRedirect() {
     gdriveToken = token;
     gdriveUpdateUI(true);
     gdriveAutoLoad();
-    showToast('Googleドライブに接続しました', 'success');
+    toast('Googleドライブに接続しました', 'success');
   } else {
     // 保存済みトークンを確認
     const saved = localStorage.getItem('gdrive_token');
