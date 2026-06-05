@@ -983,6 +983,21 @@ async function registerAiInput(){
 
 function renderV26(){const area=document.getElementById('v26');if(!area)return;const seed=parseInt(new Date().toLocaleDateString('sv').replace(/-/g,''))%100;const types=['vision','principle','direction'];const type=types[seed%3];let inner='';if(type==='vision'){const item=VD.vision[seed%VD.vision.length];inner=`<span class="v26t">VISION</span><span class="v26b">${item}</span>`;}else if(type==='principle'){const item=VD.principles[seed%VD.principles.length];inner=`<span class="v26t">原則</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}else{const item=VD.directions[seed%VD.directions.length];inner=`<span class="v26t">指針</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}area.innerHTML=`<div class="v26c">${inner}</div>`;}
 
+/* ── 問い・実験の直接追加 ── */
+async function addDirectEntry(type, text, themeId){
+  if(!text.trim()) return;
+  const entry = {
+    id: uid(), type: 'note', date: tod(), status: 'published',
+    title: text.trim().slice(0,40),
+    themes: themeId && themeId!=='none' ? [themeId] : [],
+  };
+  if(type==='q') entry.question = text.trim();
+  else           entry.nextExp  = text.trim();
+  await dbput('logs', entry);
+  S.logs.unshift(entry);
+  S.logs.sort((a,b)=>b.date.localeCompare(a.date));
+}
+
 function buildQRow(line, ckId, r){
   const st=S.checks[ckId]||'todo';
   const row=D({cls:'cl-row'+(st==='important'?' cl-doing':st==='done'?' cl-done':st==='skip'?' cl-skip':'')});
@@ -1085,6 +1100,25 @@ function ra(){
 /* ── QUESTIONS tab ── */
 function renderQuestions(){
   const f=document.createDocumentFragment();
+  // 直接追加エリア
+  const addRow=D({css:'display:flex;gap:8px;margin-bottom:20px;align-items:flex-start'});
+  const addInput=document.createElement('textarea');
+  addInput.placeholder='問いを直接追加（例：自分が本当にやりたいことは何か？）';
+  addInput.style.cssText='flex:1;font-size:14px;padding:8px 10px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);resize:none;height:38px;font-family:inherit;line-height:1.5';
+  // テーマ選択セレクト
+  const thSel=document.createElement('select');
+  thSel.style.cssText='font-size:13px;padding:6px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);height:38px';
+  const noOpt=document.createElement('option');noOpt.value='none';noOpt.textContent='テーマなし';thSel.appendChild(noOpt);
+  S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了').forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.title;thSel.appendChild(o);});
+  const addBtn=Bt({cls:'btn-g',css:'white-space:nowrap;height:38px;padding:0 14px'},'＋ 追加');
+  addBtn.addEventListener('click',async()=>{
+    const v=addInput.value.trim();if(!v)return;
+    await addDirectEntry('q',v,thSel.value);
+    addInput.value='';rebuildQ();updateNav();
+  });
+  addInput.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){addBtn.click();}});
+  addRow.appendChild(addInput);addRow.appendChild(thSel);addRow.appendChild(addBtn);
+  f.appendChild(addRow);
   const pub=S.logs.filter(r=>r.status!=='draft'&&r.question?.trim());
   // テーマフィルター
   const qThemes=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
@@ -1123,6 +1157,24 @@ function renderQuestions(){
 /* ── EXPERIMENTS tab ── */
 function renderExperiments(){
   const f=document.createDocumentFragment();
+  // 直接追加エリア
+  const addRowE=D({css:'display:flex;gap:8px;margin-bottom:20px;align-items:flex-start'});
+  const addInputE=document.createElement('textarea');
+  addInputE.placeholder='実験を直接追加（例：〇〇してみる）';
+  addInputE.style.cssText='flex:1;font-size:14px;padding:8px 10px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);resize:none;height:38px;font-family:inherit;line-height:1.5';
+  const thSelE=document.createElement('select');
+  thSelE.style.cssText='font-size:13px;padding:6px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);height:38px';
+  const noOptE=document.createElement('option');noOptE.value='none';noOptE.textContent='テーマなし';thSelE.appendChild(noOptE);
+  S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了').forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.title;thSelE.appendChild(o);});
+  const addBtnE=Bt({cls:'btn-g',css:'white-space:nowrap;height:38px;padding:0 14px'},'＋ 追加');
+  addBtnE.addEventListener('click',async()=>{
+    const v=addInputE.value.trim();if(!v)return;
+    await addDirectEntry('e',v,thSelE.value);
+    addInputE.value='';rebuildE();updateNav();
+  });
+  addInputE.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){addBtnE.click();}});
+  addRowE.appendChild(addInputE);addRowE.appendChild(thSelE);addRowE.appendChild(addBtnE);
+  f.appendChild(addRowE);
   const pub=S.logs.filter(r=>r.status!=='draft'&&r.nextExp?.trim());
   // テーマフィルター
   const eThemes=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
