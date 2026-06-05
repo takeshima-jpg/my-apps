@@ -22,24 +22,24 @@
   --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
   --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.05);
 }
-body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;background:var(--bg);color:var(--text);font-size:17px;line-height:1.6;display:flex;min-height:100vh}
+body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;background:var(--bg);color:var(--text);font-size:17px;line-height:1.6;display:flex;min-height:100vh;overflow-x:hidden}
 
 /* TOP HEADER */
-#top-header{background:var(--sidebar-bg);color:#e2e8f0;position:sticky;top:0;z-index:200;flex-shrink:0;}
-#top-header-inner{display:flex;align-items:center;gap:12px;padding:10px 18px;}
+#top-header{background:var(--sidebar-bg);color:#e2e8f0;position:sticky;top:0;z-index:200;flex-shrink:0;width:100%;overflow:hidden;}
+#top-header-inner{display:flex;align-items:center;gap:12px;padding:10px 18px;min-width:0;}
 #top-logo{display:flex;align-items:center;gap:9px;cursor:pointer;flex-shrink:0;}
 #top-logo-text{font-size:15px;font-weight:700;color:#fff;letter-spacing:.01em;}
 #vision-header{flex:1;min-width:0;overflow:hidden;}
-.vision-card{background:transparent;border:none;border-radius:0;padding:0;display:flex;align-items:baseline;gap:10px;}
+.vision-card{background:transparent;border:none;border-radius:0;padding:0;display:flex;align-items:baseline;gap:10px;min-width:0;}
 .vision-type{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.56rem;color:#4a5568;letter-spacing:0.12em;white-space:nowrap;min-width:44px;flex-shrink:0}
-.vision-body{font-size:0.82rem;color:#718096;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vision-body{font-size:0.82rem;color:#718096;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
 .vision-keyword{font-family:'JetBrains Mono','Courier New',monospace;font-size:0.62rem;color:#4a5568;margin-right:6px}
 #top-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
 #top-add-btn{background:var(--accent);color:#1a202c;border:none;border-radius:7px;padding:7px 14px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;}
 #top-add-btn:hover{background:var(--accent-dark);}
 
 /* TAB NAV */
-#tab-nav{background:#111827;border-bottom:1px solid #2d3748;overflow-x:auto;scrollbar-width:none;}
+#tab-nav{background:#111827;border-bottom:1px solid #2d3748;overflow-x:auto;scrollbar-width:none;width:100%;}
 #tab-nav::-webkit-scrollbar{display:none;}
 #nav{display:flex;padding:0 10px;}
 #nav button{display:flex;align-items:center;gap:6px;padding:9px 12px;border:none;border-bottom:2px solid transparent;background:none;color:#718096;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;margin-bottom:-1px;}
@@ -49,7 +49,7 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;backgroun
 .nav-badge{background:#fc8181;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:999px;}
 
 /* MAIN */
-#main{flex:1;overflow:auto;padding:24px 28px;max-width:1180px}
+#main{flex:1;overflow-x:hidden;overflow-y:auto;padding:24px 28px;max-width:1180px;box-sizing:border-box;width:100%;}
 h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px}
 .page-sub{color:var(--text-sub);font-size:15px;margin-bottom:24px}
 
@@ -84,9 +84,9 @@ h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px
 .progress-bar.red{background:var(--red)}
 
 /* GRID LAYOUT */
-.dash-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;align-items:start}
 .dash-grid .card{margin-bottom:0}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start}
 .two-col .card{margin-bottom:0}
 
 /* LIST */
@@ -249,14 +249,6 @@ h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px
 /* PRINT */
 @media print{
   @page{size:A3;margin:14mm}
-  #sidebar,.no-print{display:none!important}
-  #main{padding:0;max-width:100%}
-  .card{box-shadow:none;border:1px solid #ccc}
-  body{background:#fff}
-}
-/* PRINT */
-@media print{
-  @page{size:A3;margin:14mm}
   #top-header,#tab-nav,.no-print{display:none!important}
   #main{padding:0;max-width:100%}
   .card{box-shadow:none;border:1px solid #ccc}
@@ -265,6 +257,7 @@ h2.page-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:5px
 
 /* ── LAYOUT ── */
 body{flex-direction:column;}
+html,body{max-width:100%;overflow-x:hidden;}
 #layout{display:flex;flex-direction:column;min-height:0;flex:1;}
 
 /* モバイル用 */
@@ -273,11 +266,51 @@ body{flex-direction:column;}
 .mob-data-btn{display:none;}
 .sidebar-overlay{display:none!important;}
 
+/* ── MOBILE RESPONSIVE ── */
+/* ── MOBILE RESPONSIVE ── */
 @media(max-width:600px){
-  #top-header-inner{padding:8px 12px;gap:8px;}
-  #main{padding:14px 12px;}
-  #nav button{padding:8px 9px;font-size:12px;}
+  /* ヘッダー */
+  #top-header-inner{padding:8px 10px;gap:7px;}
+  #top-logo-text{font-size:14px;}
+  #top-add-btn{padding:6px 10px;font-size:13px;}
+  #vision-header{display:none;}
+
+  /* タブ */
+  #nav button{padding:7px 8px;font-size:12px;}
+
+  /* メイン */
+  #layout{overflow-x:hidden;}
+  #main{padding:12px 10px;overflow-x:hidden;}
+  .page-title{font-size:20px;}
+  .page-sub{font-size:13px;margin-bottom:14px;}
+
+  /* カード */
+  .card{padding:14px 14px;margin-bottom:12px;}
+
+  /* グリッド → 1列化 */
+  .dash-grid{grid-template-columns:1fr!important;gap:10px!important;}
+  .two-col{grid-template-columns:1fr!important;}
+  .stat-grid-3,.stat-grid-4,.stat-grid-5{grid-template-columns:1fr 1fr!important;}
+
+  /* 統計カード内flex wrapはインラインで対応済み */
+  .stat-value{font-size:26px;}
+  .stat-sub{font-size:12px;}
+
+  /* フィルター */
+  .filter-bar input[type=text]{min-width:100%;width:100%;}
+  .filter-bar select{min-width:calc(50% - 4px);}
+  .truncate{max-width:180px;}
+  .form-grid{grid-template-columns:1fr!important;}
+  .form-grid-3{grid-template-columns:1fr 1fr!important;}
+
+  /* テーブル列を間引く */
+  .list-table th:nth-child(4),.list-table td:nth-child(4),
+  .list-table th:nth-child(5),.list-table td:nth-child(5){display:none;}
+
+  /* 月別チャート */
+  #month-chart-inner{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 }
+
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -1334,7 +1367,9 @@ function buildMonthChart(activeItems, yr, mo){
   return '<div class="card" style="margin-bottom:0">'
     +'<div class="card-title">📆 月別タスク分布（'+yr+'年・未完了）'
     +'<span style="font-size:13px;color:var(--text-sub);font-weight:400;margin-left:8px">クリックでその月のリストへ</span></div>'
-    +'<div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;align-items:end;height:130px">'+bars.join('')+'</div>'
+    +'<div id="month-chart-inner" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">'
+    +'<div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;align-items:end;height:130px;min-width:340px">'+bars.join('')+'</div>'
+    +'</div>'
     +'<div style="display:flex;gap:14px;margin-top:8px;font-size:13px;color:var(--text-sub)">'
     +'<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#fc8181;border-radius:2px;display:inline-block"></span>高</span>'
     +'<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#fbd38d;border-radius:2px;display:inline-block"></span>中</span>'
@@ -1393,7 +1428,7 @@ function renderDashboard(){
 <h2 class="page-title">ダッシュボード</h2>
 <p class="page-sub">${yr}年${mo}月${now.getDate()}日</p>
 
-<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+<div class="stat-grid stat-grid-3" style="margin-bottom:16px">
   <div class="stat-card">
     <div class="stat-label">今年の達成率</div>
     <div class="stat-value" style="color:#276749">${yrRate}%</div>
@@ -1406,7 +1441,7 @@ function renderDashboard(){
     <div class="stat-sub">${focusDone}件完了 / ${focus.length}件</div>
     <div style="margin-top:8px">${progressBar(focusDone,focus.length,'orange')}</div>
   </div>
-  <div class="stat-card" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start">
+  <div class="stat-card stat-grid-4-inner" style="display:flex;flex-wrap:wrap;gap:10px 16px;align-items:start">
     <div>
       <div class="stat-label">未完了</div>
       <div style="font-size:28px;font-weight:800;color:#c05621">${undone}</div>
@@ -1560,15 +1595,15 @@ function renderList(){
   </div>
 </div>
 
-<div class="flex gap-8" style="margin-bottom:14px;align-items:center">
-  <button onclick="listTab='incomplete';renderList()" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${listTab==='incomplete'?'#f6ad55':'#e2e8f0'};background:${listTab==='incomplete'?'#fffaf0':'#fff'};font-size:16px;font-weight:700;cursor:pointer;color:${listTab==='incomplete'?'#c05621':'#718096'}">
-    📋 未完了リスト <span style="background:#f6ad55;color:#1a202c;border-radius:999px;padding:1px 10px;font-size:14px;margin-left:6px">${incompleteRows.length}</span>
+<div class="flex gap-8" style="margin-bottom:14px;align-items:center;flex-wrap:nowrap">
+  <button onclick="listTab='incomplete';renderList()" style="flex:1;padding:8px 6px;border-radius:10px;border:2px solid ${listTab==='incomplete'?'#f6ad55':'#e2e8f0'};background:${listTab==='incomplete'?'#fffaf0':'#fff'};font-size:14px;font-weight:700;cursor:pointer;color:${listTab==='incomplete'?'#c05621':'#718096'};white-space:nowrap;text-align:center;min-width:0;">
+    📋 未完了 <span style="background:#f6ad55;color:#1a202c;border-radius:999px;padding:1px 8px;font-size:13px;margin-left:4px">${incompleteRows.length}</span>
   </button>
-  <button onclick="listTab='complete';renderList()" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${listTab==='complete'?'#48bb78':'#e2e8f0'};background:${listTab==='complete'?'#f0fff4':'#fff'};font-size:16px;font-weight:700;cursor:pointer;color:${listTab==='complete'?'#276749':'#718096'}">
-    ✅ 完了リスト <span style="background:#48bb78;color:#fff;border-radius:999px;padding:1px 10px;font-size:14px;margin-left:6px">${completeRows.length}</span>
+  <button onclick="listTab='complete';renderList()" style="flex:1;padding:8px 6px;border-radius:10px;border:2px solid ${listTab==='complete'?'#48bb78':'#e2e8f0'};background:${listTab==='complete'?'#f0fff4':'#fff'};font-size:14px;font-weight:700;cursor:pointer;color:${listTab==='complete'?'#276749':'#718096'};white-space:nowrap;text-align:center;min-width:0;">
+    ✅ 完了 <span style="background:#48bb78;color:#fff;border-radius:999px;padding:1px 8px;font-size:13px;margin-left:4px">${completeRows.length}</span>
   </button>
   <button onclick="renderList()" title="インライン編集した内容を期日順に並び替えます"
-    style="flex-shrink:0;padding:10px 18px;border-radius:10px;border:2px solid #63b3ed;background:#ebf8ff;font-size:15px;font-weight:700;cursor:pointer;color:#2b6cb0;white-space:nowrap">
+    style="flex-shrink:0;padding:8px 12px;border-radius:10px;border:2px solid #63b3ed;background:#ebf8ff;font-size:13px;font-weight:700;cursor:pointer;color:#2b6cb0;white-space:nowrap">
     🔃 並び替え確定
   </button>
 </div>
