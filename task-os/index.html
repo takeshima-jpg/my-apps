@@ -556,6 +556,8 @@ const LAUNCHER_OVERLAY_MAP = {
 };
 
 function nav(v){
+  // Reflect OSは新タブで開く
+  if(v === 'reflect'){ window.open('../reflect-os/index.html', '_blank'); return; }
   // Routine/Shot/Project/ランチャーOSはフルスクリーンオーバーレイで開く
   const osConf = OS_OVERLAY_MAP[v] || LAUNCHER_OVERLAY_MAP[v];
   if(osConf){ openOsOverlay(osConf.src, osConf.title); return; }
@@ -991,12 +993,19 @@ function renderLauncherList(q){
           <div class="launcher-item-name">${esc(item.name)}</div>
         </div>`;
       } else if(item.frameId){
-        // Task OS 内 iframe で表示
         const viewId = item.frameId.replace('frame-','view-');
-        h += `<div class="launcher-item" onclick="closeLauncher();openFrameOS('${viewId}','${item.frameId}','${item.frameSrc}')">
-          <div class="launcher-item-icon">${iconHtml}</div>
-          <div class="launcher-item-name">${esc(item.name)}</div>
-        </div>`;
+        // Reflect OSは新タブで開く
+        if(item.frameId === 'frame-reflect'){
+          h += `<div class="launcher-item" onclick="closeLauncher();window.open('${item.frameSrc}','_blank')">
+            <div class="launcher-item-icon">${iconHtml}</div>
+            <div class="launcher-item-name">${esc(item.name)}</div>
+          </div>`;
+        } else {
+          h += `<div class="launcher-item" onclick="closeLauncher();openFrameOS('${viewId}','${item.frameId}','${item.frameSrc}')">
+            <div class="launcher-item-icon">${iconHtml}</div>
+            <div class="launcher-item-name">${esc(item.name)}</div>
+          </div>`;
+        }
       }
     });
   });
