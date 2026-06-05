@@ -47,7 +47,7 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;backgroun
 #tab-nav #nav button.active{color:#f6ad55;border-bottom-color:#f6ad55;font-weight:600;}
 
 /* SIDEBAR（PC専用） */
-#sidebar{width:220px;min-height:100vh;background:var(--sidebar-bg);color:#e2e8f0;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;}
+#sidebar{width:220px;background:var(--sidebar-bg);color:#e2e8f0;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;}
 #sidebar-logo{padding:20px 16px 16px;border-bottom:1px solid #2d3748;cursor:pointer;}
 #sidebar-logo-inner{display:flex;align-items:center;gap:10px;}
 #sidebar-logo-text{font-size:16px;font-weight:700;color:#fff;}
@@ -430,7 +430,7 @@ let gdriveToken = null;
 let gdriveFolderId = null;
 let gdriveFileId = null;
 
-// popup方式（iframe内・スマホ両対応）
+// 新しいタブで開く方式（iframe内・Task OS両対応）
 function gdriveConnect() {
   const params = new URLSearchParams({
     client_id: GDRIVE_CLIENT_ID,
@@ -441,59 +441,46 @@ function gdriveConnect() {
   });
   const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
 
-  // iframeの中かどうかを判定
-  const inIframe = window.self !== window.top;
-
-  if (inIframe) {
-    // popup方式（iframe内ではリダイレクト不可）
-    const popup = window.open(authUrl, 'gdrive_auth',
-      'width=500,height=620,left=200,top=100,resizable=yes,scrollbars=yes');
-    if (!popup) {
-      showToast('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。', 'error');
-      return;
-    }
-    // popupからのメッセージを受け取る
-    const handler = (e) => {
-      if (e.data && e.data.type === 'gdrive_token') {
-        window.removeEventListener('message', handler);
-        gdriveToken = e.data.token;
-        localStorage.setItem('gdrive_token', gdriveToken);
-        gdriveUpdateUI(true);
-        gdriveAutoLoad();
-        showToast('Googleドライブに接続しました', 'success');
-      }
-    };
-    window.addEventListener('message', handler);
-    // popupが閉じられたか監視（キャンセル時）
-    const timer = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(timer);
-        window.removeEventListener('message', handler);
-      }
-    }, 500);
-  } else {
-    // 通常のリダイレクト方式（直接アクセス時）
-    location.href = authUrl;
-  }
+  // 新しいタブで開く（iframe内でもTask OS経由でも動作）
+  window.open(authUrl, '_blank');
+  showToast('Googleのログイン画面を新しいタブで開きました。ログイン後、このページに戻ってください。', 'info');
 }
 
-// リダイレクト後にURLフラグメントからトークンを取得
+// 認証後のURLフラグメントからトークンを取得
 function gdriveHandleRedirect() {
   const hash = new URLSearchParams(location.hash.slice(1));
   const token = hash.get('access_token');
   if (token) {
-    // popupとして開かれた場合は親ウィンドウにトークンを送って閉じる
+    // localStorageに保存（新しいタブ・リダイレクト共通）
+    localStorage.setItem('gdrive_token', token);
+    history.replaceState(null, '', location.pathname);
+
     if (window.opener) {
-      window.opener.postMessage({ type: 'gdrive_token', token }, location.origin);
+      // popupとして開かれた場合は親に通知して閉じる（旧方式の互換性維持）
+      try {
+        window.opener.postMessage({ type: 'gdrive_token', token }, '*');
+      } catch(e) {}
       window.close();
       return;
     }
+
+    // 新しいタブとして開かれた場合：トークン保存済みメッセージを表示して閉じる
+    if (window.history.length <= 1) {
+      document.body.innerHTML = `
+        <div style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;background:#0f172a;color:#e2e8f0;">
+          <div style="font-size:48px">✅</div>
+          <div style="font-size:18px;font-weight:700;">Googleドライブの接続が完了しました</div>
+          <div style="font-size:14px;color:#718096;">このタブを閉じて100LISTに戻ってください</div>
+          <button onclick="window.close()" style="margin-top:8px;padding:10px 24px;background:#f6ad55;color:#1a202c;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">このタブを閉じる</button>
+        </div>`;
+      return;
+    }
+
     // 通常リダイレクトの場合
     gdriveToken = token;
-    localStorage.setItem('gdrive_token', token);
-    history.replaceState(null, '', location.pathname);
     gdriveUpdateUI(true);
     gdriveAutoLoad();
+    showToast('Googleドライブに接続しました', 'success');
   } else {
     // 保存済みトークンを確認
     const saved = localStorage.getItem('gdrive_token');
@@ -503,7 +490,6 @@ function gdriveHandleRedirect() {
     }
   }
 }
-
 function gdriveUpdateUI(connected) {
   // デスクトップサイドバー
   const dot = document.getElementById('gdriveDot');
