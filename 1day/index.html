@@ -406,7 +406,7 @@ async function gdriveFetch(url, options={}) {
 
 async function gdriveFindFile() {
   const res = await gdriveFetch(
-    'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%221day-backup.json%22&fields=files(id,name)'
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22${GDRIVE_FILE_NAME}%22&fields=files(id,name)`
   );
   const data = await res.json();
   return data.files && data.files.length > 0 ? data.files[0].id : null;
