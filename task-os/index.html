@@ -561,7 +561,11 @@ function nav(v){
   if(v === 'project'){ window.open('../project-os/index.html', '_blank'); return; }
   // Routine/Shot/Project/ランチャーOSはフルスクリーンオーバーレイで開く
   const osConf = OS_OVERLAY_MAP[v] || LAUNCHER_OVERLAY_MAP[v];
-  if(osConf){ openOsOverlay(osConf.src, osConf.title); return; }
+  if(osConf){
+    if(osConf.newTab){ window.open(osConf.src, '_blank'); return; }
+    openOsOverlay(osConf.src, osConf.title);
+    return;
+  }
 
   curView = v;
   document.querySelectorAll('.ni').forEach(n => {
