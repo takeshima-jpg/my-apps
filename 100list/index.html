@@ -305,6 +305,7 @@ html,body{max-width:100%;overflow-x:hidden;}
   #top-logo-text{font-size:14px;}
   #top-add-btn{padding:6px 10px;font-size:13px;}
   #vision-header{display:none;}
+  #vision-bar-mob{display:block!important;}
 
   /* タブ */
   #tab-nav #nav button{padding:7px 8px;font-size:12px;}
@@ -396,6 +397,10 @@ html,body{max-width:100%;overflow-x:hidden;}
     <button data-page="review"><span class="nav-icon">◈</span>振り返り</button>
     <button data-page="settings"><span class="nav-icon">⚙</span>設定</button>
   </nav>
+</div>
+<!-- スマホ専用VISIONバー -->
+<div id="vision-bar-mob" style="display:none;background:#1a202c;padding:6px 14px;border-bottom:1px solid #2d3748;">
+  <div id="visionAreaMob"></div>
 </div>
 <div id="layout">
 <!-- PC用サイドバー -->
@@ -683,11 +688,13 @@ function renderVision(){
     const item = VISION_DATA.directions[seed % VISION_DATA.directions.length];
     h = '<div class="vision-card"><span class="vision-type">指針</span><span class="vision-body"><span class="vision-keyword">'+item.title+'</span>'+item.text+'</span></div>';
   }
-  // スマホ用ヘッダー と PC用サイドバー 両方に反映
+  // スマホ用・PC用ヘッダー・サイドバー全部に反映
   const area = document.getElementById('visionArea');
   const side = document.getElementById('visionAreaSide');
+  const mob  = document.getElementById('visionAreaMob');
   if(area) area.innerHTML = h;
   if(side) side.innerHTML = h;
+  if(mob)  mob.innerHTML  = h;
 }
 
 
