@@ -696,14 +696,22 @@ async function gdriveLoad() {
     if (!fileId) { alert('Googleドライブにバックアップが見つかりません'); return; }
     const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
     const data = await res.json();
-    if (data.logs) {
-      if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
-      state.logs = data.logs || [];
-      state.reviews = data.reviews || [];
-      saveData();
-      saveReviews();
-      render();
-      toast('Googleドライブから読み込みました');
+    if (data.savedAt) {
+      if (!confirm('全OSのデータをGoogleドライブから読み込みます。\n現在のデータは上書きされます。よろしいですか？')) return;
+      if (data.shotTaskOS)         localStorage.setItem('shot-task-os-v1',      JSON.stringify(data.shotTaskOS));
+      if (data.routineOS?.tasks)   localStorage.setItem('routineOS_tasks',       JSON.stringify(data.routineOS.tasks));
+      if (data.routineOS?.logs)    localStorage.setItem('routineOS_logs',        JSON.stringify(data.routineOS.logs));
+      if (data.projectOS)          localStorage.setItem('pos_v4',                JSON.stringify(data.projectOS));
+      if (data.list100)            localStorage.setItem('yaritai_items_v4',      JSON.stringify(data.list100));
+      if (data.onedayLogs)         localStorage.setItem('oneday_logs_v1',        JSON.stringify(data.onedayLogs));
+      if (data.onedayReviews)      localStorage.setItem('oneday_reviews_v1',     JSON.stringify(data.onedayReviews));
+      if (data.kosoLog?.items)     localStorage.setItem('kouso_backlog_v1',      JSON.stringify(data.kosoLog.items));
+      if (data.kosoLog?.archives)  localStorage.setItem('kouso_archive_v1',      JSON.stringify(data.kosoLog.archives));
+      if (data.socialUniverse)     localStorage.setItem('su-v6-persons',         JSON.stringify(data.socialUniverse));
+      if (data.hitomemo)           localStorage.setItem('hitomemo_profiles_v1',  JSON.stringify(data.hitomemo));
+      if (data.reflectOS)          await writeReflectDB(data.reflectOS);
+      renderHome();
+      toast('✅ 全OSのデータを読み込みました');
     }
   } catch(e) {
     alert('読込エラー: ' + e.message);
@@ -737,6 +745,9 @@ async function exportAllJSON() {
     onedayLogs:    JSON.parse(localStorage.getItem('oneday_logs_v1') || 'null'),
     onedayReviews: JSON.parse(localStorage.getItem('oneday_reviews_v1') || 'null'),
     reflectOS:     reflectData,
+    kosoLog:       { items: JSON.parse(localStorage.getItem('kouso_backlog_v1') || 'null'), archives: JSON.parse(localStorage.getItem('kouso_archive_v1') || 'null') },
+    socialUniverse: JSON.parse(localStorage.getItem('su-v6-persons') || 'null'),
+    hitomemo:      JSON.parse(localStorage.getItem('hitomemo_profiles_v1') || 'null'),
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -940,6 +951,9 @@ async function exportAllJSON() {
     onedayLogs:    JSON.parse(localStorage.getItem('oneday_logs_v1') || 'null'),
     onedayReviews: JSON.parse(localStorage.getItem('oneday_reviews_v1') || 'null'),
     reflectOS:     reflectData,
+    kosoLog:       { items: JSON.parse(localStorage.getItem('kouso_backlog_v1') || 'null'), archives: JSON.parse(localStorage.getItem('kouso_archive_v1') || 'null') },
+    socialUniverse: JSON.parse(localStorage.getItem('su-v6-persons') || 'null'),
+    hitomemo:      JSON.parse(localStorage.getItem('hitomemo_profiles_v1') || 'null'),
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
