@@ -449,7 +449,8 @@ async function gdriveLoad() {
       if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
       state.logs = data.logs || [];
       state.reviews = data.reviews || [];
-      save();
+      saveData();
+      saveReviews();
       render();
       toast('Googleドライブから読み込みました');
     }
