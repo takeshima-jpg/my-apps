@@ -662,10 +662,7 @@ function renderHome(){
   // ── プロジェクト（Project OS同期・折りたたみ） ──
   const pjsec=D({cls:'sec',css:'margin-top:32px'});
   const pjHd=D({css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'});
-  const pjToggle=D({css:'display:flex;align-items:center;gap:8px;cursor:pointer'});
-  const pjArrow=Sp({css:'font-size:11px;color:var(--mu);transition:transform .2s'},'▶');
-  const pjLbl=D({cls:'sec-lbl',css:'margin-bottom:0'},'プロジェクト');
-  pjToggle.appendChild(pjArrow);pjToggle.appendChild(pjLbl);
+  pjHd.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0'},'プロジェクト'));
   const syncBtn=Bt({cls:'btn-s',css:'font-size:11px'},`↺ PJ同期`);
   syncBtn.addEventListener('click',async()=>{
     syncBtn.textContent='同期中...';syncBtn.disabled=true;
@@ -678,22 +675,16 @@ function renderHome(){
     const priOrd2={S:0,A:1,B:2,C:3};
     const th2=await dball('themes');
     S.themes=th2.sort((a,b)=>(priOrd2[a.priority]||9)-(priOrd2[b.priority]||9));
+    syncBtn.textContent='↺ PJ同期';syncBtn.disabled=false;
     ra();
   });
-  pjHd.appendChild(pjToggle);pjHd.appendChild(syncBtn);pjsec.appendChild(pjHd);
-  const pjBody=D({css:'display:none'});
-  if(!pjThemes.length){pjBody.appendChild(D({cls:'empty',css:'font-size:13px'},'PJ同期ボタンで取り込めます'));}
+  pjHd.appendChild(syncBtn);pjsec.appendChild(pjHd);
+  if(!pjThemes.length){pjsec.appendChild(D({cls:'empty',css:'font-size:13px'},'PJ同期ボタンで取り込めます'));}
   else{
     const pjGrid=D({cls:'theme-grid'});
     pjThemes.forEach(t=>pjGrid.appendChild(buildThemeCard(t)));
-    pjBody.appendChild(pjGrid);
+    pjsec.appendChild(pjGrid);
   }
-  pjsec.appendChild(pjBody);
-  pjToggle.addEventListener('click',()=>{
-    const open=pjBody.style.display==='block';
-    pjBody.style.display=open?'none':'block';
-    pjArrow.style.transform=open?'':'rotate(90deg)';
-  });
   f.appendChild(pjsec);
 
   // Record buttons moved to sidebar
@@ -1184,9 +1175,12 @@ const POS_STATUS_MAP={'進行中':'実行中','構想中':'構想中','保留':'
 async function syncFromProjectOS(){
   try{
     const raw=localStorage.getItem('pos_v4');
-    if(!raw){console.info('pos_v4 not found. Open Project OS first.');return -1;}
+    if(!raw){console.warn('pos_v4 not found');return -1;}
+    console.log('pos_v4 found, length:', raw.length);
     const pos=JSON.parse(raw);
+    console.log('全プロジェクト数:', (pos.projects||[]).length);
     const projects=(pos.projects||[]).filter(p=>p.name&&p.status!=='完了'&&p.status!=='中止');
+    console.log('同期対象プロジェクト数:', projects.length, projects.map(p=>p.name));
     const existing=await dball('themes');
     let added=0;
     for(const p of projects){
