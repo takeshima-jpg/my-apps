@@ -69,8 +69,10 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;backgroun
 /* PC: サイドバーレイアウト */
 @media(min-width:768px){
   #top-header,#tab-nav{display:none!important;}
-  #layout{display:flex;flex-direction:row;}
+  body{flex-direction:row;overflow:hidden;}
+  #layout{display:flex;flex-direction:row;flex:1;height:100vh;overflow:hidden;}
   #sidebar{display:flex;}
+  #main{overflow-y:auto;height:100vh;}
 }
 
 /* MAIN */
