@@ -298,6 +298,7 @@ select.fi{cursor:pointer;}
 /* ── EMPTY ── */
 .empty{padding:40px 20px;text-align:center;color:var(--text3);font-size:15px;}
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
@@ -326,7 +327,19 @@ select.fi{cursor:pointer;}
     <div class="sb-sep"></div>
     <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
   </nav>
-  <div class="sb-ft" id="sbDate"></div>
+  <div class="sb-ft">
+  <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.07);">
+    <div style="font-size:9px;letter-spacing:.1em;color:rgba(255,255,255,0.3);margin-bottom:6px;text-transform:uppercase;">All OS Backup</div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+      <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;"></span>
+      <span id="gdriveStatusText" style="font-size:11px;color:rgba(255,255,255,0.4);">未接続</span>
+    </div>
+    <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:5px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.7);font-size:11px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
+    <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:5px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.7);font-size:11px;cursor:pointer;margin-bottom:3px;">⬆ 全OS保存</button>
+    <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:5px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.7);font-size:11px;cursor:pointer;">⬇ 全OS読込</button>
+  </div>
+  <div id="sbDate"></div>
+</div>
 </div>
 
 <!-- MAIN -->
@@ -530,6 +543,238 @@ select.fi{cursor:pointer;}
 </div>
 
 <script>
+// ── GOOGLE DRIVE SYNC (ALL OS BACKUP) ──
+const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
+const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const GDRIVE_FILE_NAME = 'myapps-all-backup.json';
+const GDRIVE_REDIRECT_URI = location.origin + location.pathname;
+
+let gdriveToken = null;
+let gdriveFolderId = null;
+let gdriveFileId = null;
+
+// リダイレクト方式（スマホ対応）
+function gdriveConnect() {
+  // OAuthコード取得後のリダイレクト処理
+  const params = new URLSearchParams({
+    client_id: GDRIVE_CLIENT_ID,
+    redirect_uri: GDRIVE_REDIRECT_URI,
+    response_type: 'token',
+    scope: GDRIVE_SCOPE,
+    prompt: 'select_account',
+  });
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+}
+
+// リダイレクト後にURLフラグメントからトークンを取得
+function gdriveHandleRedirect() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const token = hash.get('access_token');
+  if (token) {
+    gdriveToken = token;
+    localStorage.setItem('gdrive_token', token);
+    // トークンをURLから消す
+    history.replaceState(null, '', location.pathname);
+    gdriveUpdateUI(true);
+    gdriveAutoLoad();
+  } else {
+    // 保存済みトークンを確認
+    const saved = localStorage.getItem('gdrive_token');
+    if (saved) {
+      gdriveToken = saved;
+      gdriveUpdateUI(true);
+    }
+  }
+}
+
+function gdriveUpdateUI(connected) {
+  // デスクトップサイドバー
+  const dot = document.getElementById('gdriveDot');
+  const status = document.getElementById('gdriveStatusText');
+  const connectBtn = document.getElementById('gdriveConnectBtn');
+  const saveBtn = document.getElementById('gdriveSaveBtn');
+  const loadBtn = document.getElementById('gdriveLoadBtn');
+  // モバイルドロワー
+  const dotMob = document.getElementById('gdriveDotMob');
+  const statusMob = document.getElementById('gdriveStatusMob');
+  const connectMob = document.getElementById('gdriveConnectMob');
+  const saveMob = document.getElementById('gdriveSaveMob');
+  const loadMob = document.getElementById('gdriveLoadMob');
+
+  if (connected) {
+    if (dot) dot.style.background = '#34a853';
+    if (status) status.textContent = 'Googleドライブ接続済み';
+    if (connectBtn) connectBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = '';
+    if (loadBtn) loadBtn.style.display = '';
+    if (dotMob) dotMob.style.background = '#34a853';
+    if (statusMob) statusMob.textContent = '接続済み';
+    if (connectMob) connectMob.style.display = 'none';
+    if (saveMob) saveMob.style.display = '';
+    if (loadMob) loadMob.style.display = '';
+  } else {
+    if (dot) dot.style.background = 'var(--border2)';
+    if (status) status.textContent = 'Googleドライブ未接続';
+    if (connectBtn) connectBtn.style.display = '';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (loadBtn) loadBtn.style.display = 'none';
+    if (dotMob) dotMob.style.background = 'var(--border2)';
+    if (statusMob) statusMob.textContent = '未接続';
+    if (connectMob) connectMob.style.display = '';
+    if (saveMob) saveMob.style.display = 'none';
+    if (loadMob) loadMob.style.display = 'none';
+  }
+}
+
+async function gdriveFetch(url, options={}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { 'Authorization': 'Bearer ' + gdriveToken, ...(options.headers||{}) }
+  });
+  if (res.status === 401) {
+    gdriveToken = null;
+    localStorage.removeItem('gdrive_token');
+    gdriveUpdateUI(false);
+    if (confirm('Googleの認証が切れました。再ログインしますか？')) {
+      gdriveConnect();
+    }
+    throw new Error('認証切れ');
+  }
+  return res;
+}
+
+async function gdriveFindFile() {
+  const res = await gdriveFetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22${GDRIVE_FILE_NAME}%22&fields=files(id,name)`
+  );
+  const data = await res.json();
+  return data.files && data.files.length > 0 ? data.files[0].id : null;
+}
+
+async function gdriveSave() {
+  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
+  const dot = document.getElementById('gdriveDot');
+  const status = document.getElementById('gdriveStatusText');
+  dot.className = 'gdrive-dot saving';
+  status.textContent = '保存中...';
+  try {
+    // Reflect OSのIndexedDBを読む
+    const reflectData = await readReflectDB();
+    const payload = JSON.stringify({
+      savedAt: new Date().toISOString(),
+      shotTaskOS:    JSON.parse(localStorage.getItem('shot-task-os-v1') || 'null'),
+      routineOS:     { tasks: JSON.parse(localStorage.getItem('routineOS_tasks') || 'null'), logs: JSON.parse(localStorage.getItem('routineOS_logs') || 'null') },
+      projectOS:     JSON.parse(localStorage.getItem('pos_v4') || 'null'),
+      list100:       JSON.parse(localStorage.getItem('yaritai_items_v4') || 'null'),
+      onedayLogs:    JSON.parse(localStorage.getItem('oneday_logs_v1') || 'null'),
+      onedayReviews: JSON.parse(localStorage.getItem('oneday_reviews_v1') || 'null'),
+      reflectOS:     reflectData,
+    }, null, 2);
+    const fileId = await gdriveFindFile();
+    const metadata = { name: GDRIVE_FILE_NAME, parents: fileId ? undefined : ['appDataFolder'] };
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], {type:'application/json'}));
+    form.append('file', new Blob([payload], {type:'application/json'}));
+    const url = fileId
+      ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    await gdriveFetch(url, { method: fileId ? 'PATCH' : 'POST', body: form });
+    dot.className = 'gdrive-dot connected';
+    status.textContent = 'Googleドライブに保存済み (' + new Date().toLocaleTimeString('ja-JP') + ')';
+    toast('Googleドライブに保存しました');
+  } catch(e) {
+    dot.className = 'gdrive-dot connected';
+    status.textContent = '保存エラー: ' + e.message;
+  }
+}
+
+async function gdriveLoad() {
+  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
+  try {
+    const fileId = await gdriveFindFile();
+    if (!fileId) { alert('Googleドライブにバックアップが見つかりません'); return; }
+    const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    const data = await res.json();
+    if (data.logs) {
+      if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
+      state.logs = data.logs || [];
+      state.reviews = data.reviews || [];
+      saveData();
+      saveReviews();
+      render();
+      toast('Googleドライブから読み込みました');
+    }
+  } catch(e) {
+    alert('読込エラー: ' + e.message);
+  }
+}
+
+async function gdriveAutoLoad() {
+  // 接続直後に自動でファイルの存在確認
+  try {
+    const fileId = await gdriveFindFile();
+    if (fileId) {
+      document.getElementById('gdriveStatusText').textContent = 'Googleドライブ接続済み（バックアップあり）';
+    }
+  } catch(e) {}
+}
+
+// 起動時に自動保存（ログインしている場合）
+function gdriveAutoSave() {
+  if (gdriveToken) gdriveSave();
+}
+
+// ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
+document.addEventListener('DOMContentLoaded', function() {
+  gdriveHandleRedirect();
+});
+
+// Reflect OS IndexedDB 読み書きヘルパー
+async function readReflectDB() {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open('ReflectOS7');
+      req.onsuccess = (e) => {
+        const db = e.target.result;
+        const result = {};
+        const stores = ['logs','themes','settings','checks'];
+        let done = 0;
+        stores.forEach(s => {
+          if (!db.objectStoreNames.contains(s)) { result[s] = []; done++; if(done===stores.length) resolve(result); return; }
+          const tx = db.transaction(s,'readonly');
+          const r = tx.objectStore(s).getAll();
+          r.onsuccess = () => { result[s] = r.result; done++; if(done===stores.length) resolve(result); };
+          r.onerror = () => { result[s] = []; done++; if(done===stores.length) resolve(result); };
+        });
+      };
+      req.onerror = () => resolve({});
+    } catch(e) { resolve({}); }
+  });
+}
+
+async function writeReflectDB(data) {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open('ReflectOS7');
+      req.onsuccess = (e) => {
+        const db = e.target.result;
+        const stores = ['logs','themes','settings','checks'];
+        let done = 0;
+        stores.forEach(s => {
+          if (!db.objectStoreNames.contains(s) || !Array.isArray(data[s])) { done++; if(done===stores.length) resolve(); return; }
+          const tx = db.transaction(s,'readwrite');
+          const store = tx.objectStore(s);
+          store.clear();
+          data[s].forEach(item => store.put(item));
+          tx.oncomplete = () => { done++; if(done===stores.length) resolve(); };
+          tx.onerror = () => { done++; if(done===stores.length) resolve(); };
+        });
+      };
+      req.onerror = () => resolve();
+    } catch(e) { resolve(); }
+  });
+}
+
 'use strict';
 
 const _d = new Date(); const TODAY = _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');
