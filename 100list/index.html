@@ -376,9 +376,8 @@ let gdriveToken = null;
 let gdriveFolderId = null;
 let gdriveFileId = null;
 
-// リダイレクト方式（スマホ対応）
+// popup方式（iframe内・スマホ両対応）
 function gdriveConnect() {
-  // OAuthコード取得後のリダイレクト処理
   const params = new URLSearchParams({
     client_id: GDRIVE_CLIENT_ID,
     redirect_uri: GDRIVE_REDIRECT_URI,
@@ -386,7 +385,42 @@ function gdriveConnect() {
     scope: GDRIVE_SCOPE,
     prompt: 'select_account',
   });
-  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+
+  // iframeの中かどうかを判定
+  const inIframe = window.self !== window.top;
+
+  if (inIframe) {
+    // popup方式（iframe内ではリダイレクト不可）
+    const popup = window.open(authUrl, 'gdrive_auth',
+      'width=500,height=620,left=200,top=100,resizable=yes,scrollbars=yes');
+    if (!popup) {
+      showToast('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。', 'error');
+      return;
+    }
+    // popupからのメッセージを受け取る
+    const handler = (e) => {
+      if (e.data && e.data.type === 'gdrive_token') {
+        window.removeEventListener('message', handler);
+        gdriveToken = e.data.token;
+        localStorage.setItem('gdrive_token', gdriveToken);
+        gdriveUpdateUI(true);
+        gdriveAutoLoad();
+        showToast('Googleドライブに接続しました', 'success');
+      }
+    };
+    window.addEventListener('message', handler);
+    // popupが閉じられたか監視（キャンセル時）
+    const timer = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(timer);
+        window.removeEventListener('message', handler);
+      }
+    }, 500);
+  } else {
+    // 通常のリダイレクト方式（直接アクセス時）
+    location.href = authUrl;
+  }
 }
 
 // リダイレクト後にURLフラグメントからトークンを取得
@@ -394,9 +428,15 @@ function gdriveHandleRedirect() {
   const hash = new URLSearchParams(location.hash.slice(1));
   const token = hash.get('access_token');
   if (token) {
+    // popupとして開かれた場合は親ウィンドウにトークンを送って閉じる
+    if (window.opener) {
+      window.opener.postMessage({ type: 'gdrive_token', token }, location.origin);
+      window.close();
+      return;
+    }
+    // 通常リダイレクトの場合
     gdriveToken = token;
     localStorage.setItem('gdrive_token', token);
-    // トークンをURLから消す
     history.replaceState(null, '', location.pathname);
     gdriveUpdateUI(true);
     gdriveAutoLoad();
