@@ -660,6 +660,9 @@ function renderHome(){
   f.appendChild(tsec);
 
   // ── プロジェクト（Project OS同期・折りたたみ） ──
+  const activePjThemes=pjThemes.filter(t=>t.status!=='完了');
+  const donePjThemes=pjThemes.filter(t=>t.status==='完了');
+
   const pjsec=D({cls:'sec',css:'margin-top:32px'});
   const pjHd=D({css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'});
   pjHd.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0'},'プロジェクト'));
@@ -679,11 +682,32 @@ function renderHome(){
     ra();
   });
   pjHd.appendChild(syncBtn);pjsec.appendChild(pjHd);
-  if(!pjThemes.length){pjsec.appendChild(D({cls:'empty',css:'font-size:13px'},'PJ同期ボタンで取り込めます'));}
-  else{
-    const pjGrid=D({cls:'theme-grid'});
-    pjThemes.forEach(t=>pjGrid.appendChild(buildThemeCard(t)));
-    pjsec.appendChild(pjGrid);
+  if(!activePjThemes.length&&!donePjThemes.length){
+    pjsec.appendChild(D({cls:'empty',css:'font-size:13px'},'PJ同期ボタンで取り込めます'));
+  } else {
+    if(activePjThemes.length){
+      const pjGrid=D({cls:'theme-grid'});
+      activePjThemes.forEach(t=>pjGrid.appendChild(buildThemeCard(t)));
+      pjsec.appendChild(pjGrid);
+    }
+    if(donePjThemes.length){
+      const doneSec=D({css:'margin-top:16px'});
+      const doneToggle=D({css:'display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 0'});
+      const doneArrow=Sp({css:'font-size:11px;color:var(--mu);transition:transform .2s'},'▶');
+      doneToggle.appendChild(doneArrow);
+      doneToggle.appendChild(Sp({css:'font-size:13px;color:var(--mu)'},'完了済み（'+donePjThemes.length+'件）'));
+      const doneBody=D({css:'display:none;margin-top:12px'});
+      const doneGrid=D({cls:'theme-grid'});
+      donePjThemes.forEach(t=>doneGrid.appendChild(buildThemeCard(t)));
+      doneBody.appendChild(doneGrid);
+      doneSec.appendChild(doneToggle);doneSec.appendChild(doneBody);
+      doneToggle.addEventListener('click',()=>{
+        const open=doneBody.style.display==='block';
+        doneBody.style.display=open?'none':'block';
+        doneArrow.style.transform=open?'':'rotate(90deg)';
+      });
+      pjsec.appendChild(doneSec);
+    }
   }
   f.appendChild(pjsec);
 
@@ -1178,9 +1202,8 @@ async function syncFromProjectOS(){
     if(!raw){console.warn('pos_v4 not found');return -1;}
     console.log('pos_v4 found, length:', raw.length);
     const pos=JSON.parse(raw);
-    console.log('全プロジェクト数:', (pos.projects||[]).length);
-    const projects=(pos.projects||[]).filter(p=>p.name&&p.status!=='完了'&&p.status!=='中止');
-    console.log('同期対象プロジェクト数:', projects.length, projects.map(p=>p.name));
+    const projects=(pos.projects||[]).filter(p=>p.name);
+    console.log('同期対象:', projects.length, projects.map(p=>p.name));
     const existing=await dball('themes');
     let added=0;
     for(const p of projects){
