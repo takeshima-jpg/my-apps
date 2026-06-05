@@ -337,6 +337,7 @@ select.fi{cursor:pointer;}
     <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:5px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.7);font-size:11px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
     <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:5px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.7);font-size:11px;cursor:pointer;margin-bottom:3px;">⬆ 全OS保存</button>
     <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:5px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.7);font-size:11px;cursor:pointer;">⬇ 全OS読込</button>
+    <button onclick="exportAllJSON()" style="width:100%;padding:5px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.7);font-size:11px;cursor:pointer;margin-top:3px;">📥 全OS JSONダウンロード</button>
   </div>
   <div id="sbDate"></div>
 </div>
@@ -724,6 +725,30 @@ function gdriveAutoSave() {
   if (gdriveToken) gdriveSave();
 }
 
+// 全OS一括JSONダウンロード
+async function exportAllJSON() {
+  const reflectData = await readReflectDB();
+  const data = {
+    savedAt: new Date().toISOString(),
+    shotTaskOS:    JSON.parse(localStorage.getItem('shot-task-os-v1') || 'null'),
+    routineOS:     { tasks: JSON.parse(localStorage.getItem('routineOS_tasks') || 'null'), logs: JSON.parse(localStorage.getItem('routineOS_logs') || 'null') },
+    projectOS:     JSON.parse(localStorage.getItem('pos_v4') || 'null'),
+    list100:       JSON.parse(localStorage.getItem('yaritai_items_v4') || 'null'),
+    onedayLogs:    JSON.parse(localStorage.getItem('oneday_logs_v1') || 'null'),
+    onedayReviews: JSON.parse(localStorage.getItem('oneday_reviews_v1') || 'null'),
+    reflectOS:     reflectData,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const d = new Date().toLocaleDateString('sv');
+  a.href = url;
+  a.download = `myapps-all-backup-${d}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ 全OSのJSONをダウンロードしました');
+}
+
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
   gdriveHandleRedirect();
@@ -901,6 +926,29 @@ function renderVision() {
     h = `<div class="vision-card"><span class="vision-type">指針</span><span class="vision-body"><span class="vision-keyword">${item.title}</span>${item.text}</span></div>`;
   }
   area.innerHTML = h;
+}
+
+// ── ALL OS JSON EXPORT ──
+async function exportAllJSON() {
+  const reflectData = await readReflectDB();
+  const data = {
+    exportedAt: new Date().toISOString(),
+    shotTaskOS:    JSON.parse(localStorage.getItem('shot-task-os-v1') || 'null'),
+    routineOS:     { tasks: JSON.parse(localStorage.getItem('routineOS_tasks') || 'null'), logs: JSON.parse(localStorage.getItem('routineOS_logs') || 'null') },
+    projectOS:     JSON.parse(localStorage.getItem('pos_v4') || 'null'),
+    list100:       JSON.parse(localStorage.getItem('yaritai_items_v4') || 'null'),
+    onedayLogs:    JSON.parse(localStorage.getItem('oneday_logs_v1') || 'null'),
+    onedayReviews: JSON.parse(localStorage.getItem('oneday_reviews_v1') || 'null'),
+    reflectOS:     reflectData,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'myapps-all-' + new Date().toLocaleDateString('sv') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ JSONダウンロード完了');
 }
 
 // ── DATE ──
