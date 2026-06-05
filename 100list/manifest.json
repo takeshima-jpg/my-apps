@@ -1,18 +1,18 @@
 {
-  "name": "100list",
-  "short_name": "100list",
+  "name": "100LIST",
+  "short_name": "100LIST",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#FFFBEB",
   "theme_color": "#F59E0B",
   "icons": [
     {
-      "src": "./icons/icon-192.png?v=20260526b",
+      "src": "./icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "./icons/icon-512.png?v=20260526b",
+      "src": "./icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
