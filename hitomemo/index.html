@@ -654,7 +654,7 @@ const App = () => {
           </button>
         </div>
         <div className="backup-row">
-          <button className="backup-link" onClick={() => backupJSON(profiles)}>⬇ バックアップ</button>
+          <button className="backup-link" onClick={() => backupJSON(profiles)}>⬇ JSON保存</button>
           <span style={{ color: '#ccc', fontSize: 11 }}>|</span>
           <button className="backup-link" onClick={() => restoreJSON((list) => { setProfiles(list); })}>📥 JSONから復元</button>
         </div>
