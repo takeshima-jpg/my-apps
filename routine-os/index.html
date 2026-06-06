@@ -1609,7 +1609,7 @@ function saveT(){
   var ndRaw=document.getElementById('f-nd').value;
   var nd=ndRaw?normalizeDate(ndRaw)||ndRaw:'';
   var data={title:ti,cycle:normalizeCycle(document.getElementById('f-cy').value),layer:parseInt(document.getElementById('f-la').value),nextDate:nd,addType:document.getElementById('f-at').value,addBase:document.getElementById('f-ab').value||'from_next',addDays:parseInt(document.getElementById('f-ad').value)||null,deliverable:document.getElementById('f-dl').value,notifyMsg:document.getElementById('f-nm').value,url:document.getElementById('f-url').value,note:document.getElementById('f-nt').value,excludeWeekends:document.getElementById('f-ew').checked,excludeHolidays:document.getElementById('f-eh').checked,skippable:document.getElementById('f-sk').checked};
-  if(eid){var t=tasks.find(function(x){return x.id===eid;});if(t){Object.assign(t,data);t.updatedAt=new Date().toISOString();}}
+  if(eid !== null){var t=tasks.find(function(x){return x.id==eid;});if(t){Object.assign(t,data);t.updatedAt=new Date().toISOString();}}
   else{tasks.push(Object.assign({id:nid++,status:'未完了',lastScheduledDate:'',updatedAt:new Date().toISOString()},data));}
   cModal();saveData();rAll();
 }
