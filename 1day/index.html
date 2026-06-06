@@ -72,8 +72,9 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .btn-review:hover { border-color: var(--accent); color: var(--accent); }
 
 /* FILTER BAR */
-.filter-bar { padding: 12px 32px; border-bottom: 1px solid var(--border); overflow-x: auto; }
-.filter-tags { display: flex; gap: 6px; flex-wrap: nowrap; }
+.filter-bar { padding: 8px 32px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
+.filter-tags { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.filter-tags::-webkit-scrollbar { display: none; }
 .filter-chip { background: none; border: 1px solid var(--border); border-radius: 20px; color: var(--text2); font-size: 0.875rem; padding: 4px 12px; cursor: pointer; white-space: nowrap; transition: all var(--transition); font-family: var(--font-body); }
 .filter-chip:hover { border-color: var(--border2); color: var(--text); }
 .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
