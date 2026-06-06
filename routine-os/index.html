@@ -1579,7 +1579,7 @@ function importPreset(year){
 // ========== MODAL ==========
 function showAdd(){eid=null;document.getElementById('mtt').textContent='タスク追加';clrForm();document.getElementById('tm').classList.remove('hid');}
 function openEdit(id){
-  eid=id;var t=tasks.find(function(x){return x.id===id;});if(!t)return;
+  eid=id;var t=tasks.find(function(x){return x.id==id;});if(!t)return;
   document.getElementById('mtt').textContent='タスク編集：'+t.title;
   document.getElementById('f-ti').value=t.title||'';
   document.getElementById('f-cy').value=t.cycle||'月次';
