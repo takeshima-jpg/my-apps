@@ -369,6 +369,7 @@ select,input,textarea{font-family:inherit;}
     </div>
     <div class="mf">
       <button class="btn" onclick="cModal()">キャンセル</button>
+      <button class="btn" style="color:var(--red);border-color:var(--red);margin-right:auto;" onclick="deleteT()">削除</button>
       <button class="btn btn-p" onclick="saveT()">保存</button>
     </div>
   </div>
@@ -1617,6 +1618,16 @@ function saveT(){
   if(eid !== null){var t=tasks.find(function(x){return x.id==eid;});if(t){Object.assign(t,data);t.updatedAt=new Date().toISOString();}}
   else{tasks.push(Object.assign({id:nid++,status:'未完了',lastScheduledDate:'',updatedAt:new Date().toISOString()},data));}
   cModal();saveData();rAll();
+}
+
+function deleteT(){
+  if(eid === null) return;
+  var t=tasks.find(function(x){return x.id==eid;});
+  if(!t) return;
+  if(!confirm('「'+t.title+'」を削除します。よろしいですか？')) return;
+  tasks=tasks.filter(function(x){return x.id!=eid;});
+  cModal();saveData(true);rAll();
+  toast('削除しました');
 }
 
 // ========== CSV IMPORT ==========
