@@ -1078,6 +1078,8 @@ async function gdriveLoad() {
     if (btn) { btn.textContent = origText; btn.disabled = false; }
   }
 }
+
+async function gdriveAutoLoad() {
   // 接続直後に自動でファイルの存在確認
   try {
     const fileId = await gdriveFindFile();
