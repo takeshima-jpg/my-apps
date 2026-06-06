@@ -36,7 +36,22 @@ button{cursor:pointer;font-family:var(--serif);border:none;border-radius:3px;tra
 
 /* ── Layout ── */
 .app{display:flex;height:100vh;overflow:hidden;}
-.sidebar{width:200px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+.sidebar{width:200px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;transition:transform .25s;}
+/* モバイル */
+@media(max-width:640px){
+  .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:500;transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,.15);}
+  .mob-topbar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--sf);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100;}
+  .mob-topbar img{width:24px;height:24px;border-radius:6px;}
+  .mob-topbar span{font-size:15px;font-weight:700;color:var(--go);}
+  .hamburger{background:none;border:none;cursor:pointer;font-size:22px;color:var(--mu);padding:2px 6px;margin-left:auto;}
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:499;}
+  .overlay.open{display:block;}
+}
+@media(min-width:641px){
+  .mob-topbar{display:none;}
+  .overlay{display:none;}
+}
 .sb-hd{padding:14px 16px;border-bottom:1px solid var(--bd);}
 .sb-logo{display:flex;align-items:center;gap:8px;}
 .sb-logo img{width:28px;height:28px;border-radius:7px;flex-shrink:0;}
@@ -239,6 +254,11 @@ nav{display:flex;flex-direction:column;gap:0;}
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<div class="mob-topbar">
+  <img src="icons/icon-32.png"><span>Reflect OS</span>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+</div>
 <div class="app">
 <div class="sidebar">
   <div class="sb-hd">
@@ -1624,6 +1644,21 @@ function renderVisionEdit(){
 }
 
 /* ── Boot ── */
+function toggleSidebar(){
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+function closeSidebar(){
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+// ナビボタンクリック時にモバイルではサイドバーを閉じる
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.nb').forEach(btn=>{
+    btn.addEventListener('click',()=>{ if(window.innerWidth<=640) closeSidebar(); });
+  });
+});
+
 async function boot(){
   try{const v=await dbget('settings','vision');if(v?.value)S.vision=v.value;}catch(e){}
   try{
