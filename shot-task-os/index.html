@@ -1723,51 +1723,12 @@ function handleImportFile(event) {
         alert('有効なデータが見つかりませんでした。');
         return;
       }
-
-      // バックアップ保存
-      try {
-        localStorage.setItem('shot_backup_' + Date.now(), JSON.stringify(tasks));
-      } catch(be) {}
-
-      // タイトル正規化マップを構築
-      const normMap = new Map();
-      tasks.forEach((t, i) => { normMap.set(normalizeTitle(t.title), i); });
-
-      let addedCount = 0, mergedCount = 0, skippedCount = 0;
-      const dupList = [];
-
-      imported.forEach(inc => {
-        const normInc = normalizeTitle(inc.title);
-        if (normMap.has(normInc)) {
-          const idx = normMap.get(normInc);
-          const orig = tasks[idx];
-          // 完全一致ならスキップ、表記ゆれならマージ
-          if (orig.title.trim() === (inc.title||'').trim()) {
-            skippedCount++;
-          } else {
-            tasks[idx] = mergeTasks(orig, inc);
-            mergedCount++;
-            dupList.push(`「${orig.title}」←「${inc.title}」`);
-          }
-        } else {
-          tasks.push(inc);
-          normMap.set(normInc, tasks.length - 1);
-          addedCount++;
-        }
-      });
-
+      if (!confirm(imported.length + '件のデータで復元します。\n現在のデータは上書きされます。よろしいですか？')) return;
+      tasks = imported;
       save();
       render();
       event.target.value = '';
-
-      let msg = `インポート完了\n\n`;
-      msg += `✅ 追加：${addedCount} 件\n`;
-      msg += `🔀 マージ：${mergedCount} 件\n`;
-      msg += `⏭ スキップ：${skippedCount} 件\n`;
-      if (dupList.length > 0) {
-        msg += `\n─ 表記ゆれマージ一覧 ─\n` + dupList.join('\n');
-      }
-      alert(msg);
+      toast(imported.length + '件を復元しました');
     } catch(err) {
       alert('JSONの読み込みに失敗しました。\n' + err.message);
     }
