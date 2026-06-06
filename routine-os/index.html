@@ -630,13 +630,13 @@ var VTITLES={dashboard:'ダッシュボード',list:'タスク一覧',calendar:'
 document.getElementById('td-disp').textContent=today.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
 
 // ========== STORAGE ==========
-function saveData(){
+function saveData(silent){
   try{
     localStorage.setItem('routineOS_tasks', JSON.stringify(tasks));
     localStorage.setItem('routineOS_logs', JSON.stringify(taskLogs));
     localStorage.setItem('routineOS_holidays', JSON.stringify(holidays));
     localStorage.setItem('routineOS_nid', String(nid));
-    showToast();
+    if(!silent) showToast();
   }catch(e){console.warn('save failed',e);}
 }
 function loadData(){
@@ -1900,7 +1900,7 @@ function renderVision(){
 loadData();
 seedInitialTasksIfNeeded();
 migrateRoutineFields();
-saveData();
+saveData(true);
 renderVision();
 rDash();
 uQB();
