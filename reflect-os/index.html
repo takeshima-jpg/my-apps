@@ -794,7 +794,10 @@ function renderHome(){
           e.stopPropagation();
           if(!confirm('「'+t.title+'」を完了にしますか？'))return;
           await dbput('themes',{...t,status:'完了',completedAt:tod(),updatedAt:tod()});
-          const th2=await dball('themes');S.themes=th2;ra();
+          const th2=await dball('themes');
+          const priOrd={S:0,A:1,B:2,C:3};
+          S.themes=th2.sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));
+          ra();
         });
         acts2.appendChild(doneBtn);
       } else {
@@ -802,7 +805,10 @@ function renderHome(){
         undoBtn.addEventListener('click',async e=>{
           e.stopPropagation();
           await dbput('themes',{...t,status:'実行中',updatedAt:tod()});
-          const th2=await dball('themes');S.themes=th2;ra();
+          const th2=await dball('themes');
+          const priOrd={S:0,A:1,B:2,C:3};
+          S.themes=th2.sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));
+          ra();
         });
         acts2.appendChild(undoBtn);
       }
