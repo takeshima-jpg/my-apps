@@ -470,7 +470,12 @@
     <img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;flex-shrink:0;">
     <span>ヒトメモ</span>
   </div>
-  <div class="sb-body"></div>
+  <div class="sb-body">
+    <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+      <button id="sbNewPersonBtn" class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;">＋ 新しい人物を記録</button>
+      <button id="sbImportMemoBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;">メモからインポート</button>
+    </div>
+  </div>
   <div class="sb-ft">
     <div class="sb-status">
       <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;"></span>
@@ -652,6 +657,8 @@ const App = () => {
   useEffect(() => {
     window.__hitomemoBackup = () => backupJSON(profiles);
     window.__hitomemoRestore = (list) => updateList(list);
+    window.__hitomemoNewPerson = () => { setAnswers(Array(19).fill('')); setQIdx(0); setView('interview'); };
+    window.__hitomemoImportMemo = () => { setImportText(''); setView('import'); };
   }, [profiles]);
 
   const updateList = (list) => { setProfiles(list); saveProfiles(list); };
@@ -711,16 +718,6 @@ const App = () => {
           <button className={`filter-chip ${!filterStar ? 'active' : ''}`} onClick={() => setFilterStar(false)}>すべて</button>
           <button className={`filter-chip ${filterStar ? 'active' : ''}`} onClick={() => setFilterStar(true)}>★ 深めたい</button>
           <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>✥ ドラッグで並び替え</span>
-        </div>
-
-        {/* アクションボタン */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={() => { setAnswers(Array(19).fill('')); setQIdx(0); setView('interview'); }}>
-            ＋ 新しい人物を記録
-          </button>
-          <button className="btn btn-ghost" onClick={() => { setImportText(''); setView('import'); }}>
-            メモからインポート
-          </button>
         </div>
 
         {/* ★ 深めたい人 */}
@@ -1305,6 +1302,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('gdriveConnectBtn')?.addEventListener('click', () => gdriveConnect());
     document.getElementById('gdriveSaveBtn')?.addEventListener('click', () => gdriveSave());
     document.getElementById('gdriveLoadBtn')?.addEventListener('click', () => gdriveLoad());
+    document.getElementById('sbNewPersonBtn')?.addEventListener('click', () => window.__hitomemoNewPerson?.());
+    document.getElementById('sbImportMemoBtn')?.addEventListener('click', () => window.__hitomemoImportMemo?.());
   }, 500);
   // JSON保存・読込ボタンのイベント設定
   document.getElementById('jsonBackupBtn')?.addEventListener('click', () => {
