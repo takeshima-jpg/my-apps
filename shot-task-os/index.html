@@ -1057,12 +1057,10 @@ async function gdriveLoad() {
     if (!fileId) { alert('Googleドライブにバックアップが見つかりません'); return; }
     const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
     const data = await res.json();
-    if (data.logs) {
+    if (data.tasks) {
       if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
-      state.logs = data.logs || [];
-      state.reviews = data.reviews || [];
+      tasks = data.tasks || [];
       saveData();
-      saveReviews();
       render();
       toast('Googleドライブから読み込みました');
     }
