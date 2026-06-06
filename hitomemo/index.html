@@ -476,9 +476,9 @@
       <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;"></span>
       <span id="gdriveStatusText">未接続</span>
     </div>
-    <button id="gdriveConnectBtn" class="sb-btn" onclick="gdriveConnect()">🔗 Googleでログイン</button>
-    <button id="gdriveSaveBtn" class="sb-btn" onclick="gdriveSave()" style="display:none">⬆ GDrive保存</button>
-    <button id="gdriveLoadBtn" class="sb-btn" onclick="gdriveLoad()" style="display:none">⬇ GDrive読込</button>
+    <button id="gdriveConnectBtn" class="sb-btn">🔗 Googleでログイン</button>
+    <button id="gdriveSaveBtn" class="sb-btn" style="display:none">⬆ GDrive保存</button>
+    <button id="gdriveLoadBtn" class="sb-btn" style="display:none">⬇ GDrive読込</button>
     <div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>
     <button class="sb-btn" id="jsonBackupBtn">⬇ JSON保存</button>
     <label class="sb-btn" style="cursor:pointer;">⬆ JSON読込<input type="file" id="jsonImportInput" accept=".json" style="display:none"></label>
@@ -1299,6 +1299,12 @@ function gdriveAutoSave() {
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
+  // GDriveボタンのイベントリスナー（Babel実行後に確実に設定）
+  setTimeout(() => {
+    document.getElementById('gdriveConnectBtn')?.addEventListener('click', () => gdriveConnect());
+    document.getElementById('gdriveSaveBtn')?.addEventListener('click', () => gdriveSave());
+    document.getElementById('gdriveLoadBtn')?.addEventListener('click', () => gdriveLoad());
+  }, 500);
   // JSON保存・読込ボタンのイベント設定
   document.getElementById('jsonBackupBtn')?.addEventListener('click', () => {
     const list = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } })();
