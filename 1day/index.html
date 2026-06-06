@@ -309,7 +309,7 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const GDRIVE_FILE_NAME = '1day-backup.json';
-const GDRIVE_REDIRECT_URI = (location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html'));
+const GDRIVE_REDIRECT_URI = (location.origin + location.pathname).replace(/\/$/, '') + '/index.html';
 
 let gdriveToken = null;
 let gdriveFolderId = null;
@@ -666,8 +666,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <button class="drawer-btn" id="gdriveLoadMob" onclick="gdriveLoad()" style="display:none">⬇ 読込</button>
   </div>
   <div class="drawer-ft">
-    <button onclick="exportData();closeMobDrawer()">⬇ バックアップ</button>
-    <label>⬆ 復元<input type="file" id="importFileInputMob" accept=".json" style="display:none"></label>
+    <button onclick="exportData();closeMobDrawer()">⬇ JSON保存</button>
+    <label>⬆ JSON読込<input type="file" id="importFileInputMob" accept=".json" style="display:none"></label>
   </div>
 </div>
 <div class="app">
@@ -714,8 +714,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <button class="sb-action" id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none">⬇ 読込</button>
   </div>
   <div class="sb-ft">
-    <button onclick="exportData()">⬇ バックアップ</button>
-    <label>⬆ 復元<input type="file" id="importFileInput" accept=".json" style="display:none"></label>
+    <button onclick="exportData()">⬇ JSON保存</button>
+    <label>⬆ JSON読込<input type="file" id="importFileInput" accept=".json" style="display:none"></label>
   </div>
 </div>
 
@@ -1359,6 +1359,9 @@ function handleImport(e) {
       render();
       e.target.value = '';
       toast('インポートしました（' + logCount + '件）');
+      if (gdriveToken) {
+        setTimeout(() => { gdriveSave(); }, 2400);
+      }
     } catch(err) { alert('インポートに失敗しました: ' + err.message); }
   };
   reader.readAsText(file, 'utf-8');
