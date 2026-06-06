@@ -472,8 +472,8 @@
   </div>
   <div class="sb-body">
     <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
-      <button id="sbNewPersonBtn" class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;">＋ 新しい人物を記録</button>
-      <button id="sbImportMemoBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;">メモからインポート</button>
+      <button id="sbNewPersonBtn" class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;" onclick="window.__hitomemoNewPerson?.()">＋ 新しい人物を記録</button>
+      <button id="sbImportMemoBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoImportMemo?.()">メモからインポート</button>
     </div>
   </div>
   <div class="sb-ft">
@@ -481,11 +481,11 @@
       <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;"></span>
       <span id="gdriveStatusText">未接続</span>
     </div>
-    <button id="gdriveConnectBtn" class="sb-btn">🔗 Googleでログイン</button>
-    <button id="gdriveSaveBtn" class="sb-btn" style="display:none">⬆ GDrive保存</button>
-    <button id="gdriveLoadBtn" class="sb-btn" style="display:none">⬇ GDrive読込</button>
+    <button id="gdriveConnectBtn" class="sb-btn" onclick="window.__gdriveConnect?.()">🔗 Googleでログイン</button>
+    <button id="gdriveSaveBtn" class="sb-btn" style="display:none" onclick="window.__gdriveSave?.()">⬆ GDrive保存</button>
+    <button id="gdriveLoadBtn" class="sb-btn" style="display:none" onclick="window.__gdriveLoad?.()">⬇ GDrive読込</button>
     <div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>
-    <button class="sb-btn" id="jsonBackupBtn">⬇ JSON保存</button>
+    <button class="sb-btn" id="jsonBackupBtn" onclick="window.__hitomemoBackup?.() || (()=>{const l=JSON.parse(localStorage.getItem('hitomemo_profiles_v1')||'[]');backupJSON(l)})()">⬇ JSON保存</button>
     <label class="sb-btn" style="cursor:pointer;">⬆ JSON読込<input type="file" id="jsonImportInput" accept=".json" style="display:none"></label>
   </div>
 </div>
@@ -1114,8 +1114,7 @@ let gdriveFolderId = null;
 let gdriveFileId = null;
 
 // リダイレクト方式（スマホ対応）
-function gdriveConnect() {
-  // OAuthコード取得後のリダイレクト処理
+function gdriveConnect() {  // OAuthコード取得後のリダイレクト処理
   const params = new URLSearchParams({
     client_id: GDRIVE_CLIENT_ID,
     redirect_uri: GDRIVE_REDIRECT_URI,
@@ -1336,6 +1335,10 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   // UI生成後にリダイレクト処理
   gdriveHandleRedirect();
+  // window経由でsidebar onclickから呼べるようにする
+  window.__gdriveConnect = gdriveConnect;
+  window.__gdriveSave = gdriveSave;
+  window.__gdriveLoad = gdriveLoad;
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => {
