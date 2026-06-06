@@ -3025,10 +3025,8 @@ function renderVision() {
 document.addEventListener('DOMContentLoaded', ()=>{migrateProjectItems();nav('dash');renderVision();});
 </script>
   <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        regs.forEach(r => r.unregister());
-      });
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js');
     }
   </script>
 </body>
