@@ -309,7 +309,7 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const GDRIVE_FILE_NAME = '1day-backup.json';
-const GDRIVE_REDIRECT_URI = (location.origin + location.pathname).replace(/\/$/, '') + '/index.html';
+const GDRIVE_REDIRECT_URI = (location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html'));
 
 let gdriveToken = null;
 let gdriveFolderId = null;
