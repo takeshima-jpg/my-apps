@@ -648,6 +648,12 @@ const App = () => {
   currentRef.current = current;
   profilesRef.current = profiles;
 
+  // サイドバーのJSON保存ボタン用にwindowに公開
+  useEffect(() => {
+    window.__hitomemoBackup = () => backupJSON(profiles);
+    window.__hitomemoRestore = (list) => updateList(list);
+  }, [profiles]);
+
   const updateList = (list) => { setProfiles(list); saveProfiles(list); };
 
   // 手動順でソート（初回はcreatedAt降順）
@@ -715,11 +721,6 @@ const App = () => {
           <button className="btn btn-ghost" onClick={() => { setImportText(''); setView('import'); }}>
             メモからインポート
           </button>
-        </div>
-        <div className="backup-row">
-          <button className="backup-link" onClick={() => backupJSON(profiles)}>⬇ JSON保存</button>
-          <span style={{ color: '#ccc', fontSize: 11 }}>|</span>
-          <button className="backup-link" onClick={() => restoreJSON((list) => { setProfiles(list); })}>📥 JSONから復元</button>
         </div>
 
         {/* ★ 深めたい人 */}
@@ -1307,8 +1308,11 @@ document.addEventListener('DOMContentLoaded', function() {
   }, 500);
   // JSON保存・読込ボタンのイベント設定
   document.getElementById('jsonBackupBtn')?.addEventListener('click', () => {
-    const list = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } })();
-    backupJSON(list);
+    if (window.__hitomemoBackup) window.__hitomemoBackup();
+    else {
+      const list = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } })();
+      backupJSON(list);
+    }
   });
   document.getElementById('jsonImportInput')?.addEventListener('change', (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -1319,9 +1323,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const list = d.profiles || (Array.isArray(d) ? d : []);
         if (!list.length) { alert('有効なデータが見つかりませんでした'); return; }
         if (!confirm(list.length + '件のデータで復元します。現在のデータは上書きされます。よろしいですか？')) return;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-        alert('インポートしました（' + list.length + '件）');
-        location.reload();
+        if (window.__hitomemoRestore) {
+          window.__hitomemoRestore(list);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+          toast('復元しました（' + list.length + '件）');
+        } else {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+          location.reload();
+        }
       } catch(err) { alert('エラー: ' + err.message); }
     };
     reader.readAsText(file);
