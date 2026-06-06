@@ -1209,8 +1209,8 @@ async function gdriveLoad() {
       if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
       list = data.profiles || [];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-      render();
       toast('Googleドライブから読み込みました');
+      setTimeout(() => location.reload(), 1000);
     }
   } catch(e) {
     alert('読込エラー: ' + e.message);
