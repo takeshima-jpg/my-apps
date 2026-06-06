@@ -384,7 +384,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
     <button id="gdriveConnectBtn" class="hbtn hbtn-ghost" onclick="gdriveConnect()">GDrive接続</button>
     <button id="gdriveSaveBtn" class="hbtn hbtn-ghost" onclick="gdriveSave()" style="display:none">⬆ GDrive保存</button>
     <button id="gdriveLoadBtn" class="hbtn hbtn-ghost" onclick="gdriveLoad()" style="display:none">⬇ GDrive読込</button>
-    <button class="hbtn hbtn-ghost" onclick="openBackup()">⬇ バックアップ</button>
+    <button class="hbtn hbtn-ghost" onclick="openBackup()">⬇ JSON保存</button>
     <button class="hbtn hbtn-ghost" onclick="doPrint()">⊟ A3印刷</button>
     <button class="hbtn hbtn-ghost" onclick="doSnapshot()" title="A3印刷プレビューをHTMLファイルで保存">◈ スナップショット</button>
     <button class="hbtn hbtn-ghost" onclick="openSnapshotHistory()" id="snapHistBtn" title="保存済みスナップショット一覧">≡ 履歴</button>
@@ -584,7 +584,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 
 <div id="backupOverlay" style="display:none" class="mo" onclick="if(event.target===this)closeBackup()">
 <div class="md" onclick="event.stopPropagation()">
-  <div class="md-hd"><div class="md-ttl">⬇ バックアップ</div><button class="md-cls" onclick="closeBackup()">✕</button></div>
+  <div class="md-hd"><div class="md-ttl">⬇ JSON保存</div><button class="md-cls" onclick="closeBackup()">✕</button></div>
   <div class="md-bd">
     <div id="backupStatus"></div>
     <div class="bk-grid">
