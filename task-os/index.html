@@ -837,9 +837,10 @@ const LAUNCHER_OVERLAY_MAP = {
 };
 
 function nav(v){
-  // Reflect OS・Project OSは新タブで開く
+  // Reflect OS・Project OS・Routine OSは新タブで開く
   if(v === 'reflect'){ window.open('../reflect-os/index.html', '_blank'); return; }
   if(v === 'project'){ window.open('../project-os/index.html', '_blank'); return; }
+  if(v === 'routine'){ window.open('../routine-os/index.html', '_blank'); return; }
   // Routine/Shot/Project/ランチャーOSはフルスクリーンオーバーレイで開く
   const osConf = OS_OVERLAY_MAP[v] || LAUNCHER_OVERLAY_MAP[v];
   if(osConf){
