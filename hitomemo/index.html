@@ -737,12 +737,9 @@ document.addEventListener('DOMContentLoaded', function() {
   window.__gdriveSave = gdriveSave;
   window.__gdriveLoad = gdriveLoad;
 
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations().then(regs => {
-      regs.forEach(r => r.unregister());
+  if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js');
     });
-  }
-});
 </script>
 </head>
 <body>
