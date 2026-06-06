@@ -481,11 +481,11 @@
       <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;"></span>
       <span id="gdriveStatusText">未接続</span>
     </div>
-    <button id="gdriveConnectBtn" class="sb-btn" onclick="window.__gdriveConnect?.()">🔗 Googleでログイン</button>
-    <button id="gdriveSaveBtn" class="sb-btn" style="display:none" onclick="window.__gdriveSave?.()">⬆ GDrive保存</button>
-    <button id="gdriveLoadBtn" class="sb-btn" style="display:none" onclick="window.__gdriveLoad?.()">⬇ GDrive読込</button>
+    <button id="gdriveConnectBtn" class="sb-btn" onclick="gdriveConnect()">🔗 Googleでログイン</button>
+    <button id="gdriveSaveBtn" class="sb-btn" style="display:none" onclick="gdriveSave()">⬆ GDrive保存</button>
+    <button id="gdriveLoadBtn" class="sb-btn" style="display:none" onclick="gdriveLoad()">⬇ GDrive読込</button>
     <div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>
-    <button class="sb-btn" id="jsonBackupBtn" onclick="window.__hitomemoBackup?.() || (()=>{const l=JSON.parse(localStorage.getItem('hitomemo_profiles_v1')||'[]');backupJSON(l)})()">⬇ JSON保存</button>
+    <button class="sb-btn" onclick="sidebarBackupJSON()">⬇ JSON保存</button>
     <label class="sb-btn" style="cursor:pointer;">⬆ JSON読込<input type="file" id="jsonImportInput" accept=".json" style="display:none"></label>
   </div>
 </div>
@@ -1113,6 +1113,24 @@ let gdriveToken = null;
 let gdriveFolderId = null;
 let gdriveFileId = null;
 
+const _STORAGE_KEY = 'hitomemo_profiles_v1';
+
+// サイドバーから直接呼べるJSON保存関数
+function sidebarBackupJSON() {
+  const list = window.__hitomemoBackup
+    ? (window.__hitomemoBackup(), null) // Reactから呼ぶ
+    : null;
+  if (list === null && !window.__hitomemoBackup) {
+    // フォールバック：localStorageから直接
+    const data = JSON.parse(localStorage.getItem(_STORAGE_KEY) || '[]');
+    const blob = new Blob([JSON.stringify({ profiles: data, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'hitomemo-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+  }
+}
 // リダイレクト方式（スマホ対応）
 function gdriveConnect() {  // OAuthコード取得後のリダイレクト処理
   const params = new URLSearchParams({
@@ -1296,14 +1314,11 @@ function gdriveAutoSave() {
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
-  // GDriveボタンのイベントリスナー（Babel実行後に確実に設定）
-  setTimeout(() => {
-    document.getElementById('gdriveConnectBtn')?.addEventListener('click', () => gdriveConnect());
-    document.getElementById('gdriveSaveBtn')?.addEventListener('click', () => gdriveSave());
-    document.getElementById('gdriveLoadBtn')?.addEventListener('click', () => gdriveLoad());
-    document.getElementById('sbNewPersonBtn')?.addEventListener('click', () => window.__hitomemoNewPerson?.());
-    document.getElementById('sbImportMemoBtn')?.addEventListener('click', () => window.__hitomemoImportMemo?.());
-  }, 500);
+  // GDriveボタンはonclick属性で直接呼ぶため不要
+  // window経由でsidebar onclickから呼べるようにする
+  window.__gdriveConnect = gdriveConnect;
+  window.__gdriveSave = gdriveSave;
+  window.__gdriveLoad = gdriveLoad;
   // JSON保存・読込ボタンのイベント設定
   document.getElementById('jsonBackupBtn')?.addEventListener('click', () => {
     if (window.__hitomemoBackup) window.__hitomemoBackup();
