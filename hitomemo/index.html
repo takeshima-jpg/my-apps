@@ -61,10 +61,16 @@
       padding: 16px 14px 12px;
       border-bottom: 1px solid rgba(255,255,255,0.1);
       display: flex;
-      align-items: center;
-      gap: 8px;
+      flex-direction: column;
+      gap: 6px;
     }
+    .sb-hd-top { display: flex; align-items: center; gap: 8px; }
     .sb-hd span { font-size: 15px; font-weight: 700; color: #fff; }
+    .vision-pill {
+      font-size: 9px; color: rgba(255,255,255,0.5);
+      line-height: 1.5; padding: 4px 0;
+      letter-spacing: 0.02em;
+    }
     .sb-body { flex: 1; overflow-y: auto; padding: 10px 0; }
     .sb-ft {
       padding: 10px 12px;
@@ -707,6 +713,27 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     reader.readAsText(file);
   });
+  // VISION表示
+  (function(){
+    const VISION_TEXTS = [
+      '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。',
+      '安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。',
+    ];
+    const pill = document.getElementById('visionPill');
+    if (!pill) return;
+    try {
+      const raw = localStorage.getItem('myapps_vision');
+      const data = raw ? JSON.parse(raw) : null;
+      const texts = (data && data.vision && data.vision.length) ? data.vision : VISION_TEXTS;
+      let idx = 0;
+      const show = () => { pill.textContent = texts[idx % texts.length]; idx++; };
+      show();
+      setInterval(show, 6000);
+    } catch(e) {
+      pill.textContent = VISION_TEXTS[0];
+    }
+  })();
+
   // UI生成後にリダイレクト処理
   gdriveHandleRedirect();
   // window経由でsidebar onclickから呼べるようにする
@@ -726,8 +753,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="layout">
 <div class="sidebar">
   <div class="sb-hd">
-    <img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;flex-shrink:0;">
-    <span>ヒトメモ</span>
+    <div class="sb-hd-top">
+      <img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;flex-shrink:0;">
+      <span>ヒトメモ</span>
+    </div>
+    <div class="vision-pill" id="visionPill">VISION</div>
   </div>
   <div class="sb-body">
     <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
