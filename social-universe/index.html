@@ -797,6 +797,9 @@ async function gdriveSave() {
   if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
   const dot = document.getElementById('gdriveDot');
   const status = document.getElementById('gdriveStatusText');
+  const btn = document.getElementById('gdriveSaveBtn');
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '保存中...'; btn.disabled = true; }
   dot.className = 'gdrive-dot saving';
   status.textContent = '保存中...';
   try {
@@ -816,27 +819,32 @@ async function gdriveSave() {
   } catch(e) {
     dot.className = 'gdrive-dot connected';
     status.textContent = '保存エラー: ' + e.message;
+  } finally {
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
   }
 }
 
 async function gdriveLoad() {
   if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
+  const btn = document.getElementById('gdriveLoadBtn');
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '読込中...'; btn.disabled = true; }
   try {
     const fileId = await gdriveFindFile();
     if (!fileId) { alert('Googleドライブにバックアップが見つかりません'); return; }
     const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
     const data = await res.json();
-    if (data.logs) {
+    if (data.persons) {
       if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
-      state.logs = data.logs || [];
-      state.reviews = data.reviews || [];
-      saveData();
-      saveReviews();
-      render();
+      persons = data.persons || [];
+      sv();
+      renderMap();
       toast('Googleドライブから読み込みました');
     }
   } catch(e) {
     alert('読込エラー: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
   }
 }
 
