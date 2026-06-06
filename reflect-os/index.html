@@ -1620,7 +1620,7 @@ function renderVisionEdit(){
 }
 
 /* ── Boot ── */
-(async()=>{
+async function boot(){
   try{const v=await dbget('settings','vision');if(v?.value)S.vision=v.value;}catch(e){}
   try{
     await seedDefaultThemes();
@@ -1633,10 +1633,9 @@ function renderVisionEdit(){
     const chks=await dball('checks');
     chks.forEach(c=>{S.checks[c.id]=c.state||(c.done?'done':'todo');});
   }catch(e){console.warn(e);}
-  // サイドバーの記録ボタンを生成
-
   renderV26();ra();updateNav();
-})();
+}
+boot();
 </script>
   <script>
     if ('serviceWorker' in navigator) {
