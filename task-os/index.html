@@ -330,6 +330,9 @@ select.fi{cursor:pointer;}
     <div class="sb-sep"></div>
     <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
   </nav>
+  <div style="padding:8px 12px;">
+    <button onclick="exportAllJSON()" style="width:100%;padding:5px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;">📥 全OS バックアップ</button>
+  </div>
   <div class="sb-ft" id="sbDate"></div>
 </div>
 
@@ -638,6 +641,31 @@ function renderVision() {
     h = `<div class="vision-card"><span class="vision-type">指針</span><span class="vision-body"><span class="vision-keyword">${item.title}</span>${item.text}</span></div>`;
   }
   area.innerHTML = h;
+}
+
+// ── ALL OS JSON EXPORT ──
+async function exportAllJSON() {
+  // Reflect OSはIndexedDBのため省略（localStorage対象のみ）
+  const data = {
+    savedAt: new Date().toISOString(),
+    shotTaskOS:     JSON.parse(localStorage.getItem('shot-task-os-v1')      || 'null'),
+    routineOS:      { tasks: JSON.parse(localStorage.getItem('routineOS_tasks') || 'null'), logs: JSON.parse(localStorage.getItem('routineOS_logs') || 'null') },
+    projectOS:      JSON.parse(localStorage.getItem('pos_v4')               || 'null'),
+    list100:        JSON.parse(localStorage.getItem('yaritai_items_v4')     || 'null'),
+    onedayLogs:     JSON.parse(localStorage.getItem('oneday_logs_v1')       || 'null'),
+    onedayReviews:  JSON.parse(localStorage.getItem('oneday_reviews_v1')    || 'null'),
+    kosoLog:        { items: JSON.parse(localStorage.getItem('kouso_backlog_v1') || 'null'), archives: JSON.parse(localStorage.getItem('kouso_archive_v1') || 'null') },
+    socialUniverse: JSON.parse(localStorage.getItem('su-v6-persons')        || 'null'),
+    hitomemo:       JSON.parse(localStorage.getItem('hitomemo_profiles_v1') || 'null'),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `myapps-all-backup-${new Date().toLocaleDateString('sv')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ 全OSのJSONをダウンロードしました');
 }
 
 // ── DATE ──
