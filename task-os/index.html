@@ -56,6 +56,12 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
 .ni-dot-g{background:rgba(255,255,255,0.2);}
 .sb-sep{margin:6px 18px;height:1px;background:rgba(255,255,255,0.05);}
 .sb-ft{padding:12px 18px;border-top:1px solid rgba(255,255,255,0.05);font-size:10px;color:rgba(255,255,255,0.2);line-height:1.8;}
+.sb-backup-panel{padding:10px 12px;border-top:1px solid rgba(255,255,255,0.06);}
+.sb-backup-label{display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,0.35);margin-bottom:6px;padding:0 2px;}
+.sb-backup-btn{width:100%;padding:5px 8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;margin-bottom:3px;text-align:left;}
+.sb-backup-btn:hover{background:rgba(255,255,255,0.12);}
+.sb-backup-sep{height:1px;background:rgba(255,255,255,0.06);margin:5px 0;}
+.gdrive-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;transition:background .3s;}
 
 /* ── TOP BAR ── */
 .topbar{height:48px;background:var(--surface);border-bottom:1px solid var(--border);
@@ -330,8 +336,18 @@ select.fi{cursor:pointer;}
     <div class="sb-sep"></div>
     <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
   </nav>
-  <div style="padding:8px 12px;">
-    <button onclick="exportAllJSON()" style="width:100%;padding:5px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;">📥 全OS バックアップ</button>
+  <div class="sb-backup-panel">
+    <div class="sb-backup-label">
+      <span class="gdrive-dot" id="gdriveDot"></span>
+      <span id="gdriveStatusText">Google Drive 未接続</span>
+    </div>
+    <button id="gdriveConnectBtn" class="sb-backup-btn" onclick="gdriveConnect()">Googleでログイン</button>
+    <button id="gdriveSaveBtn"    class="sb-backup-btn" style="display:none" onclick="gdriveSave()">⬆ GDrive保存</button>
+    <button id="gdriveLoadBtn"    class="sb-backup-btn" style="display:none" onclick="gdriveLoad()">⬇ GDrive読込</button>
+    <div class="sb-backup-sep"></div>
+    <button class="sb-backup-btn" onclick="exportAllJSON()">📥 JSON保存</button>
+    <button class="sb-backup-btn" onclick="importAllJSON()">📤 JSON読込</button>
+    <input type="file" id="jsonImportInput" accept=".json" style="display:none" onchange="handleJSONImport(event)">
   </div>
   <div class="sb-ft" id="sbDate"></div>
 </div>
@@ -644,20 +660,176 @@ function renderVision() {
 }
 
 // ── ALL OS JSON EXPORT ──
-async function exportAllJSON() {
-  // Reflect OSはIndexedDBのため省略（localStorage対象のみ）
-  const data = {
-    savedAt: new Date().toISOString(),
-    shotTaskOS:     JSON.parse(localStorage.getItem('shot-task-os-v1')      || 'null'),
-    routineOS:      { tasks: JSON.parse(localStorage.getItem('routineOS_tasks') || 'null'), logs: JSON.parse(localStorage.getItem('routineOS_logs') || 'null') },
-    projectOS:      JSON.parse(localStorage.getItem('pos_v4')               || 'null'),
-    list100:        JSON.parse(localStorage.getItem('yaritai_items_v4')     || 'null'),
-    onedayLogs:     JSON.parse(localStorage.getItem('oneday_logs_v1')       || 'null'),
-    onedayReviews:  JSON.parse(localStorage.getItem('oneday_reviews_v1')    || 'null'),
-    kosoLog:        { items: JSON.parse(localStorage.getItem('kouso_backlog_v1') || 'null'), archives: JSON.parse(localStorage.getItem('kouso_archive_v1') || 'null') },
-    socialUniverse: JSON.parse(localStorage.getItem('su-v6-persons')        || 'null'),
-    hitomemo:       JSON.parse(localStorage.getItem('hitomemo_profiles_v1') || 'null'),
+// ── ALL OS BACKUP (GDrive + JSON) ──
+const GDRIVE_CLIENT_ID   = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
+const GDRIVE_SCOPE       = 'https://www.googleapis.com/auth/drive.appdata';
+const GDRIVE_FILE_NAME   = 'task-os-all-backup.json';
+const GDRIVE_REDIRECT_URI = (location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html'));
+
+let gdriveToken = null;
+
+// 全OSのデータを収集
+function collectAllOSData() {
+  return {
+    savedAt:        new Date().toISOString(),
+    shotTaskOS:     JSON.parse(localStorage.getItem('shot-task-os-v1')       || 'null'),
+    routineOS:      { tasks:    JSON.parse(localStorage.getItem('routineOS_tasks')    || 'null'),
+                      logs:     JSON.parse(localStorage.getItem('routineOS_logs')     || 'null') },
+    projectOS:      JSON.parse(localStorage.getItem('pos_v4')                || 'null'),
+    list100:        JSON.parse(localStorage.getItem('yaritai_items_v4')      || 'null'),
+    onedayLogs:     JSON.parse(localStorage.getItem('oneday_logs_v1')        || 'null'),
+    onedayReviews:  JSON.parse(localStorage.getItem('oneday_reviews_v1')     || 'null'),
+    kosoLog:        { items:    JSON.parse(localStorage.getItem('kouso_backlog_v1')   || 'null'),
+                      archives: JSON.parse(localStorage.getItem('kouso_archive_v1')   || 'null') },
+    socialUniverse: JSON.parse(localStorage.getItem('su-v6-persons')         || 'null'),
+    hitomemo:       JSON.parse(localStorage.getItem('hitomemo_profiles_v1')  || 'null'),
+    taskOSWaiting:  JSON.parse(localStorage.getItem('taskos_waiting_v1')     || 'null'),
   };
+}
+
+// 全OSのデータを復元
+function restoreAllOSData(data) {
+  if (data.shotTaskOS)     localStorage.setItem('shot-task-os-v1',        JSON.stringify(data.shotTaskOS));
+  if (data.routineOS?.tasks)  localStorage.setItem('routineOS_tasks',     JSON.stringify(data.routineOS.tasks));
+  if (data.routineOS?.logs)   localStorage.setItem('routineOS_logs',      JSON.stringify(data.routineOS.logs));
+  if (data.projectOS)      localStorage.setItem('pos_v4',                 JSON.stringify(data.projectOS));
+  if (data.list100)        localStorage.setItem('yaritai_items_v4',       JSON.stringify(data.list100));
+  if (data.onedayLogs)     localStorage.setItem('oneday_logs_v1',         JSON.stringify(data.onedayLogs));
+  if (data.onedayReviews)  localStorage.setItem('oneday_reviews_v1',      JSON.stringify(data.onedayReviews));
+  if (data.kosoLog?.items)     localStorage.setItem('kouso_backlog_v1',   JSON.stringify(data.kosoLog.items));
+  if (data.kosoLog?.archives)  localStorage.setItem('kouso_archive_v1',   JSON.stringify(data.kosoLog.archives));
+  if (data.socialUniverse) localStorage.setItem('su-v6-persons',          JSON.stringify(data.socialUniverse));
+  if (data.hitomemo)       localStorage.setItem('hitomemo_profiles_v1',   JSON.stringify(data.hitomemo));
+  if (data.taskOSWaiting)  localStorage.setItem('taskos_waiting_v1',      JSON.stringify(data.taskOSWaiting));
+}
+
+// ── Google Drive ──
+function gdriveConnect() {
+  const params = new URLSearchParams({
+    client_id:     GDRIVE_CLIENT_ID,
+    redirect_uri:  GDRIVE_REDIRECT_URI,
+    response_type: 'token',
+    scope:         GDRIVE_SCOPE,
+    prompt:        'select_account',
+  });
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+}
+
+function gdriveHandleRedirect() {
+  const hash  = new URLSearchParams(location.hash.slice(1));
+  const token = hash.get('access_token');
+  if (token) {
+    gdriveToken = token;
+    localStorage.setItem('gdrive_token_taskos', token);
+    history.replaceState(null, '', location.pathname);
+    gdriveUpdateUI(true);
+    gdriveAutoLoad();
+  } else {
+    const saved = localStorage.getItem('gdrive_token_taskos');
+    if (saved) { gdriveToken = saved; gdriveUpdateUI(true); }
+  }
+}
+
+function gdriveUpdateUI(connected) {
+  const dot    = document.getElementById('gdriveDot');
+  const status = document.getElementById('gdriveStatusText');
+  const conBtn = document.getElementById('gdriveConnectBtn');
+  const savBtn = document.getElementById('gdriveSaveBtn');
+  const lodBtn = document.getElementById('gdriveLoadBtn');
+  if (connected) {
+    if (dot)    dot.style.background = '#34a853';
+    if (status) status.textContent   = 'Drive 接続済み';
+    if (conBtn) conBtn.style.display = 'none';
+    if (savBtn) savBtn.style.display = '';
+    if (lodBtn) lodBtn.style.display = '';
+  } else {
+    if (dot)    dot.style.background = 'rgba(255,255,255,0.2)';
+    if (status) status.textContent   = 'Google Drive 未接続';
+    if (conBtn) conBtn.style.display = '';
+    if (savBtn) savBtn.style.display = 'none';
+    if (lodBtn) lodBtn.style.display = 'none';
+  }
+}
+
+async function gdriveFetch(url, options={}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { 'Authorization': 'Bearer ' + gdriveToken, ...(options.headers||{}) }
+  });
+  if (res.status === 401) {
+    gdriveToken = null;
+    localStorage.removeItem('gdrive_token_taskos');
+    gdriveUpdateUI(false);
+    if (confirm('Googleの認証が切れました。再ログインしますか？')) gdriveConnect();
+    throw new Error('認証切れ');
+  }
+  return res;
+}
+
+async function gdriveFindFile() {
+  const res  = await gdriveFetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22${GDRIVE_FILE_NAME}%22&fields=files(id,name)`
+  );
+  const data = await res.json();
+  return data.files && data.files.length > 0 ? data.files[0].id : null;
+}
+
+async function gdriveSave() {
+  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
+  const btn = document.getElementById('gdriveSaveBtn');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '保存中...'; btn.disabled = true; }
+  try {
+    const payload  = JSON.stringify(collectAllOSData(), null, 2);
+    const fileId   = await gdriveFindFile();
+    const metadata = { name: GDRIVE_FILE_NAME, parents: fileId ? undefined : ['appDataFolder'] };
+    const form     = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file',     new Blob([payload],                  { type: 'application/json' }));
+    const url = fileId
+      ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    await gdriveFetch(url, { method: fileId ? 'PATCH' : 'POST', body: form });
+    document.getElementById('gdriveStatusText').textContent = 'Drive 保存済み ' + new Date().toLocaleTimeString('ja-JP');
+    toast('✅ Google Driveに保存しました');
+  } catch(e) {
+    if (e.message !== '認証切れ') toast('❌ 保存エラー: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = orig; btn.disabled = false; }
+  }
+}
+
+async function gdriveLoad() {
+  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
+  const btn  = document.getElementById('gdriveLoadBtn');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '読込中...'; btn.disabled = true; }
+  try {
+    const fileId = await gdriveFindFile();
+    if (!fileId) { alert('Google Driveにバックアップが見つかりません'); return; }
+    const res  = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    const data = await res.json();
+    if (!confirm(`Google Driveから読み込みます。現在のデータは上書きされます。よろしいですか？\n（保存日時: ${data.savedAt || '不明'}）`)) return;
+    restoreAllOSData(data);
+    renderHome();
+    toast('✅ Google Driveから読み込みました');
+  } catch(e) {
+    if (e.message !== '認証切れ') toast('❌ 読込エラー: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = orig; btn.disabled = false; }
+  }
+}
+
+async function gdriveAutoLoad() {
+  try {
+    const fileId = await gdriveFindFile();
+    if (fileId) document.getElementById('gdriveStatusText').textContent = 'Drive 接続済み（バックアップあり）';
+  } catch(e) {}
+}
+
+// ── JSON 保存 / 読込 ──
+async function exportAllJSON() {
+  const data = collectAllOSData();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
@@ -665,7 +837,30 @@ async function exportAllJSON() {
   a.download = `myapps-all-backup-${new Date().toLocaleDateString('sv')}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  toast('✅ 全OSのJSONをダウンロードしました');
+  toast('✅ JSONをダウンロードしました');
+}
+
+function importAllJSON() {
+  document.getElementById('jsonImportInput').click();
+}
+
+function handleJSONImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!confirm(`JSONから読み込みます。現在のデータは上書きされます。よろしいですか？\n（保存日時: ${data.savedAt || '不明'}）`)) return;
+      restoreAllOSData(data);
+      renderHome();
+      toast('✅ JSONから読み込みました');
+    } catch(err) {
+      alert('読込エラー: JSONファイルが正しくありません');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 // ── DATE ──
@@ -1486,6 +1681,7 @@ function updateClock(){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
+  gdriveHandleRedirect();
   updateWaitingCount();
   updateClock();
   setInterval(updateClock, 30000);
