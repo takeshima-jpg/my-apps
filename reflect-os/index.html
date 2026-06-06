@@ -260,13 +260,13 @@ nav{display:flex;flex-direction:column;gap:0;}
 
   <div class="sb-ft">
     <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1);">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,0.5);">
-        <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;"></span>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--mu);">
+        <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:var(--di);flex-shrink:0;"></span>
         <span id="gdriveStatusText">GDrive未接続</span>
       </div>
-      <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:5px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:5px;color:#fff;font-size:12px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
-      <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:5px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:5px;color:#fff;font-size:12px;cursor:pointer;margin-bottom:3px;">⬆ GDrive保存</button>
-      <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:5px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:5px;color:#fff;font-size:12px;cursor:pointer;">⬇ GDrive読込</button>
+      <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:5px;background:transparent;border:1px solid var(--bd);border-radius:5px;color:var(--mu);font-size:12px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
+      <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:5px;background:transparent;border:1px solid var(--bd);border-radius:5px;color:var(--mu);font-size:12px;cursor:pointer;margin-bottom:3px;">⬆ GDrive保存</button>
+      <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:5px;background:transparent;border:1px solid var(--bd);border-radius:5px;color:var(--mu);font-size:12px;cursor:pointer;">⬇ GDrive読込</button>
     </div>
     <button id="btn-exp">⬇ エクスポート</button>
     <label style="cursor:pointer">⬆ インポート<input type="file" accept=".json" id="imp" style="display:none"></label>
@@ -1635,7 +1635,7 @@ function renderVisionEdit(){
   }catch(e){console.warn(e);}
   // サイドバーの記録ボタンを生成
 
-  renderV26();ra();
+  renderV26();ra();updateNav();
 })();
 </script>
   <script>
