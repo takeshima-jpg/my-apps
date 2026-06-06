@@ -454,12 +454,12 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
     <div class="lp-sec">
       <div class="lp-ttl">GOOGLE DRIVE</div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-        <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;"></span>
-        <span id="gdriveStatusText" style="font-size:10px;color:rgba(255,255,255,0.6);">未接続</span>
+        <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:var(--s300);flex-shrink:0;"></span>
+        <span id="gdriveStatusText" style="font-size:10px;color:var(--s500);">未接続</span>
       </div>
-      <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
-      <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;margin-bottom:3px;">⬆ GDrive保存</button>
-      <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;">⬇ GDrive読込</button>
+      <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:4px 8px;background:white;border:1px solid var(--s300);border-radius:4px;color:var(--s700);font-size:11px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
+      <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:4px 8px;background:white;border:1px solid var(--s300);border-radius:4px;color:var(--s700);font-size:11px;cursor:pointer;margin-bottom:3px;">⬆ GDrive保存</button>
+      <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:4px 8px;background:white;border:1px solid var(--s300);border-radius:4px;color:var(--s700);font-size:11px;cursor:pointer;">⬇ GDrive読込</button>
       <hr class="leg-sep" style="margin:8px 0">
       <button class="sort-btn" onclick="openBackup()">⬇ JSON保存</button>
     </div>
