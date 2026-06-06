@@ -734,31 +734,6 @@ function gdriveAutoSave() {
 }
 
 // 全OS一括JSONダウンロード
-async function exportAllJSON() {
-  const reflectData = await readReflectDB();
-  const data = {
-    savedAt: new Date().toISOString(),
-    shotTaskOS:    JSON.parse(localStorage.getItem('shot-task-os-v1') || 'null'),
-    routineOS:     { tasks: JSON.parse(localStorage.getItem('routineOS_tasks') || 'null'), logs: JSON.parse(localStorage.getItem('routineOS_logs') || 'null') },
-    projectOS:     JSON.parse(localStorage.getItem('pos_v4') || 'null'),
-    list100:       JSON.parse(localStorage.getItem('yaritai_items_v4') || 'null'),
-    onedayLogs:    JSON.parse(localStorage.getItem('oneday_logs_v1') || 'null'),
-    onedayReviews: JSON.parse(localStorage.getItem('oneday_reviews_v1') || 'null'),
-    reflectOS:     reflectData,
-    kosoLog:       { items: JSON.parse(localStorage.getItem('kouso_backlog_v1') || 'null'), archives: JSON.parse(localStorage.getItem('kouso_archive_v1') || 'null') },
-    socialUniverse: JSON.parse(localStorage.getItem('su-v6-persons') || 'null'),
-    hitomemo:      JSON.parse(localStorage.getItem('hitomemo_profiles_v1') || 'null'),
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const d = new Date().toLocaleDateString('sv');
-  a.href = url;
-  a.download = `myapps-all-backup-${d}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('✅ 全OSのJSONをダウンロードしました');
-}
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
