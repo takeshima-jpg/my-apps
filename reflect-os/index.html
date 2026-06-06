@@ -450,7 +450,11 @@ async function gdriveLoad() {
       for(const log of (data.logs||[])) await dbput('logs', log);
       for(const th of (data.themes||[])) await dbput('themes', th);
       if(data.vision){ S.vision=data.vision; await dbput('settings',{id:'vision',value:data.vision}); }
-      await boot();
+      // syncFromProjectOSをスキップして再描画のみ
+      const priOrd={S:0,A:1,B:2,C:3};
+      S.themes=(await dball('themes')).sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));
+      S.logs=(await dball('logs')).sort((a,b)=>b.date.localeCompare(a.date));
+      renderV26();ra();updateNav();
       toast('Googleドライブから読み込みました');
     }
   } catch(e) {
