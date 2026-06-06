@@ -428,7 +428,6 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
       <div class="leg-row">大 → 中 → 小 の3段階</div>
       <div class="lp-ttl" style="margin-top:6px">バッジ</div>
       <div class="leg-row"><span style="font-size:13px">★</span> Top10</div>
-      <div class="leg-row"><span style="font-size:13px">⚠</span> isDraining</div>
       <div class="leg-row" style="font-size:13px;color:var(--s400)">[タグ] 関係タイプ</div>
     </div>
     <hr class="leg-sep">
@@ -436,7 +435,6 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
       <div class="lp-ttl">フィルター</div>
       <label class="filter-item"><input type="checkbox" id="fTop10"    onchange="renderMap()"> Top10のみ</label>
       <label class="filter-item"><input type="checkbox" id="fDrain"    onchange="renderMap()"> 消耗のみ</label>
-      <label class="filter-item"><input type="checkbox" id="fDraining" onchange="renderMap()"> isDrainingのみ</label>
       <label class="filter-item"><input type="checkbox" id="fDormant"  onchange="renderMap()"> 余白も表示</label>
       <div class="lp-ttl" style="margin-top:7px">関係タイプ別</div>
       <select class="filter-sel" id="fType" onchange="renderMap()">
@@ -547,8 +545,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
     <div style="display:flex;gap:14px;margin-top:4px">
       <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:14px;color:var(--s700)">
         <input type="checkbox" id="fIsTop10" style="width:13px;height:13px;accent-color:var(--t10)"> ⭐ Top10</label>
-      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:14px;color:var(--s700)">
-        <input type="checkbox" id="fIsDraining" style="width:13px;height:13px;accent-color:#dc2626"> ⚠ isDraining</label>
+      
       <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:14px;color:var(--s700)">
         <input type="checkbox" id="fIsDormant" style="width:13px;height:13px;accent-color:var(--s400)"> 🌿 余白</label>
     </div>
@@ -665,7 +662,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
         <div class="pp-leg-row"><span style="font-size:9pt;color:#1d4ed8">〇</span>もらっている</div>
         <div class="pp-leg-row"><span style="font-size:9pt;color:#dc2626">●</span>与えている</div>
         <div class="pp-leg-ttl" style="margin-top:1.5mm">バッジ</div>
-        <div class="pp-leg-row">★ Top10　⚠ isDraining</div>
+        <div class="pp-leg-row">★ Top10</div>
       </div>
       <div class="pp-leg-blk">
         <div class="pp-leg-ttl">⚡ 3秒判断ガイド</div>
@@ -1019,7 +1016,6 @@ function getFilters(){
   return{
     top10:   document.getElementById('fTop10')?.checked,
     drain:   document.getElementById('fDrain')?.checked,
-    draining:document.getElementById('fDraining')?.checked,
     dormant: document.getElementById('fDormant')?.checked,
     type:    document.getElementById('fType')?.value||'',
   };
@@ -1031,7 +1027,6 @@ function getMapPersons(){
     if(p.isDormant&&!f.dormant) return false;
     if(f.top10    &&!p.isTop10) return false;
     if(f.drain    &&p.energyState!=='消耗') return false;
-    if(f.draining &&!p.isDraining) return false;
     if(f.type     &&p.relationshipType!==f.type) return false;
     return true;
   });
@@ -1498,7 +1493,6 @@ function openModal(id){
   document.getElementById('fDueDate').value=p?.actionDueDate??'';
   document.getElementById('fMemo').value=p?.memo??'';
   document.getElementById('fIsTop10').checked=p?.isTop10??false;
-  document.getElementById('fIsDraining').checked=p?.isDraining??false;
   document.getElementById('fIsDormant').checked=p?.isDormant??false;
   document.getElementById('moOverlay').style.display='flex';
   setTimeout(()=>document.getElementById('fName').focus(),50);
@@ -1525,7 +1519,7 @@ function doSave(){
     actionDueDate:document.getElementById('fDueDate').value,
     memo:document.getElementById('fMemo').value,
     isTop10:document.getElementById('fIsTop10').checked,
-    isDraining:document.getElementById('fIsDraining').checked,
+    isDraining:false,
     isDormant:document.getElementById('fIsDormant').checked,
     updatedAt:ts(),
   };
