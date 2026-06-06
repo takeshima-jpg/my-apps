@@ -445,10 +445,11 @@ async function gdriveLoad() {
     const data = await res.json();
     if (data.logs) {
       if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
-      // IndexedDBに書き込み
+      // IndexedDB完全クリア→上書き
+      await dbclear('logs'); await dbclear('themes');
       for(const log of (data.logs||[])) await dbput('logs', log);
       for(const th of (data.themes||[])) await dbput('themes', th);
-      if(data.vision) S.vision = data.vision;
+      if(data.vision){ S.vision=data.vision; await dbput('settings',{id:'vision',value:data.vision}); }
       await boot();
       toast('Googleドライブから読み込みました');
     }
@@ -508,6 +509,7 @@ function odb(){
 async function dbput(s,v){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).put(v);tx.oncomplete=res;tx.onerror=rej;});}
 async function dbget(s,k){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readonly');const r=tx.objectStore(s).get(k);r.onsuccess=()=>res(r.result);r.onerror=rej;});}
 async function dball(s){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readonly');const r=tx.objectStore(s).getAll();r.onsuccess=()=>res(r.result);r.onerror=rej;});}
+async function dbclear(s){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).clear();tx.oncomplete=res;tx.onerror=rej;});}
 async function dbdel(s,k){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).delete(k);tx.oncomplete=res;tx.onerror=rej;});}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
 const tod=()=>new Date().toISOString().split('T')[0];
