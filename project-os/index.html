@@ -2757,10 +2757,8 @@ function siDeleteProj(pid) {
 }
 
 function siNewProj() {
-  const name = prompt('新しいプロジェクト名を入力してください：');
-  if (!name || !name.trim()) return;
   const p = {
-    id: uid(), name: name.trim(),
+    id: uid(), name: '新しいプロジェクト',
     status:'進行中', priority:'高', deadline:'', owner:'',
     goal:'', nextAction:'', successConditions:'', premises:[],
     stakeholders:[], issues:[], forks:[], decisions:[], learnings:[], events:[], constraints:[],
