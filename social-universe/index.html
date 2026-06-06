@@ -381,10 +381,6 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
   </div>
   <div class="h-actions">
     <button class="hbtn hbtn-ghost" onclick="openDormant()">◇ 余白リスト</button>
-    <button id="gdriveConnectBtn" class="hbtn hbtn-ghost" onclick="gdriveConnect()">GDrive接続</button>
-    <button id="gdriveSaveBtn" class="hbtn hbtn-ghost" onclick="gdriveSave()" style="display:none">⬆ GDrive保存</button>
-    <button id="gdriveLoadBtn" class="hbtn hbtn-ghost" onclick="gdriveLoad()" style="display:none">⬇ GDrive読込</button>
-    <button class="hbtn hbtn-ghost" onclick="openBackup()">⬇ JSON保存</button>
     <button class="hbtn hbtn-ghost" onclick="doPrint()">⊟ A3印刷</button>
     <button class="hbtn hbtn-ghost" onclick="doSnapshot()" title="A3印刷プレビューをHTMLファイルで保存">◈ スナップショット</button>
     <button class="hbtn hbtn-ghost" onclick="openSnapshotHistory()" id="snapHistBtn" title="保存済みスナップショット一覧">≡ 履歴</button>
@@ -453,6 +449,19 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
       <button class="sort-btn" id="sTop10"  onclick="sortBy('top10')">Top10優先に整列</button>
       <button class="sort-btn" id="sUpdate" onclick="sortBy('update')">更新日順に整列</button>
       <div style="font-size:10px;color:var(--s400);margin-top:4px;line-height:1.5">整列後も自由に<br>ドラッグで位置変更できます</div>
+    </div>
+    <hr class="leg-sep">
+    <div class="lp-sec">
+      <div class="lp-ttl">GOOGLE DRIVE</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;"></span>
+        <span id="gdriveStatusText" style="font-size:10px;color:rgba(255,255,255,0.6);">未接続</span>
+      </div>
+      <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
+      <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;margin-bottom:3px;">⬆ GDrive保存</button>
+      <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;">⬇ GDrive読込</button>
+      <hr class="leg-sep" style="margin:8px 0">
+      <button class="sort-btn" onclick="openBackup()">⬇ JSON保存</button>
     </div>
   </div>
 
