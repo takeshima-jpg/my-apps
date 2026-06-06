@@ -1555,7 +1555,6 @@ function renderDash() {
             ${badge(p.status, statBd)}
           </div>
         </div>
-        ${p.nextAction ? `<div style="font-size:.78rem;color:var(--navy);font-weight:500;margin-bottom:6px;">→ ${esc(p.nextAction)}</div>` : ''}
         ${p.attentionIssue ? `<div style="font-size:.74rem;color:var(--orange);margin-bottom:5px;">⚠ ${esc(p.attentionIssue.slice(0,60))}${p.attentionIssue.length>60?'…':''}</div>` : ''}
         <div style="display:flex;gap:10px;font-size:.68rem;color:var(--gray3);margin-top:4px;flex-wrap:wrap;">
           ${fkFuture ? `<span>⑂ 予定分岐 ${fkFuture}</span>` : ''}
