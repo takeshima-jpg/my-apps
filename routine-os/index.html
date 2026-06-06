@@ -657,6 +657,11 @@ function loadData(){
     }
     if(n) nid=parseInt(n)||1;
     if(!h) initDefaultHolidays();
+    // nidが既存タスクの最大IDより小さい場合は補正
+    if(tasks.length > 0){
+      var maxId = Math.max.apply(null, tasks.map(function(t){return parseInt(t.id)||0;}));
+      if(nid <= maxId) nid = maxId + 1;
+    }
   }catch(e){console.warn('load failed',e);initDefaultHolidays();}
 }
 function initDefaultHolidays(){
