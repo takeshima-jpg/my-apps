@@ -1320,15 +1320,21 @@ function renderLauncherList(q){
           <div class="launcher-item-name">${esc(item.name)}</div>
         </div>`;
       } else if(item.frameId){
-        const viewId = item.frameId.replace('frame-','view-');
-        // Reflect OSは新タブで開く
-        if(item.frameId === 'frame-reflect' || item.frameId === 'frame-project'){
-          h += `<div class="launcher-item" onclick="closeLauncher();window.open('${item.frameSrc}','_blank')">
+        // frameIdに対応するnavキーを逆引き（shot/routine/projectはoverlay、それ以外は新タブ）
+        const navKeyMap = {
+          'frame-shot': 'shot', 'frame-routine': 'routine', 'frame-project': 'project',
+          'frame-reflect': 'reflect', 'frame-1day': '1day', 'frame-hitomemo': 'hitomemo',
+          'frame-social': 'social', 'frame-100list': '100list', 'frame-kosolog': 'kosolog'
+        };
+        const navKey = navKeyMap[item.frameId];
+        if(navKey){
+          h += `<div class="launcher-item" onclick="closeLauncher();nav('${navKey}')">
             <div class="launcher-item-icon">${iconHtml}</div>
             <div class="launcher-item-name">${esc(item.name)}</div>
           </div>`;
         } else {
-          h += `<div class="launcher-item" onclick="closeLauncher();openFrameOS('${viewId}','${item.frameId}','${item.frameSrc}')">
+          // fallback: 新タブで開く
+          h += `<div class="launcher-item" onclick="closeLauncher();window.open('${item.frameSrc}','_blank')">
             <div class="launcher-item-icon">${iconHtml}</div>
             <div class="launcher-item-name">${esc(item.name)}</div>
           </div>`;
