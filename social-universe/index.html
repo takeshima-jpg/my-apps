@@ -46,7 +46,9 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 .app-body{display:grid;grid-template-columns:186px 1fr 268px;height:calc(100vh - 50px);overflow:hidden;}
 
 /* ─── LEFT PANEL ─── */
-.left-panel{background:white;border-right:1px solid var(--s200);overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;}
+.left-panel{background:white;border-right:1px solid var(--s200);display:flex;flex-direction:column;overflow:hidden;}
+.lp-scroll{overflow-y:auto;flex:1;padding:14px 12px;}
+.lp-fixed{padding:10px 12px;border-top:1px solid var(--s200);background:white;flex-shrink:0;}
 .lp-sec{margin-bottom:2px;}
 .lp-ttl{font-size:9.5px;font-weight:700;color:var(--s400);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
 .leg-purpose-name{font-size:14px;font-weight:700;margin-bottom:1px;}
@@ -393,6 +395,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 
   <!-- LEFT -->
   <div class="left-panel">
+    <div class="lp-scroll">
     <div class="lp-sec">
       <div class="lp-ttl">凡例・判断基準</div>
       <div class="leg-purpose-name leg-biz">事業・成果</div>
@@ -450,8 +453,8 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
       <button class="sort-btn" id="sUpdate" onclick="sortBy('update')">更新日順に整列</button>
       <div style="font-size:10px;color:var(--s400);margin-top:4px;line-height:1.5">整列後も自由に<br>ドラッグで位置変更できます</div>
     </div>
-    <hr class="leg-sep">
-    <div class="lp-sec">
+    </div><!-- /.lp-scroll -->
+    <div class="lp-fixed">
       <div class="lp-ttl">GOOGLE DRIVE</div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
         <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:var(--s300);flex-shrink:0;"></span>
@@ -462,8 +465,8 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
       <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:4px 8px;background:white;border:1px solid var(--s300);border-radius:4px;color:var(--s700);font-size:11px;cursor:pointer;">⬇ GDrive読込</button>
       <hr class="leg-sep" style="margin:8px 0">
       <button class="sort-btn" onclick="openBackup()">⬇ JSON保存</button>
-    </div>
-  </div>
+    </div><!-- /.lp-fixed -->
+  </div><!-- /.left-panel -->
 
   <!-- CENTER: Free Map -->
   <div class="map-center">
