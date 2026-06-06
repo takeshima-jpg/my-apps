@@ -1242,7 +1242,11 @@ const App = () => {
     return (
       <div className="page">
         <div className="page-header">
-          <button className="page-back" onClick={() => setView('list')}>← 一覧</button>
+          <button className="page-back" onClick={() => {
+            const latest = currentRef.current;
+            if (latest) updateList(profilesRef.current.map(p => p.id === latest.id ? latest : p));
+            setView('list');
+          }}>← 一覧</button>
         </div>
 
         {/* HERO */}
@@ -1350,7 +1354,11 @@ const App = () => {
         {/* アクション */}
         <div className="action-row">
           <button className="btn btn-ghost" onClick={() => exportAsMemo(current)}>メモとしてエクスポート</button>
-          <button className="btn btn-ghost" onClick={() => { setCurrent(null); setView('list'); }}>一覧に戻る</button>
+          <button className="btn btn-ghost" onClick={() => { 
+            const latest = currentRef.current;
+            if (latest) updateList(profilesRef.current.map(p => p.id === latest.id ? latest : p));
+            setCurrent(null); setView('list'); 
+          }}>一覧に戻る</button>
           <button className="btn btn-danger" onClick={delProfile}>削除</button>
         </div>
       </div>
