@@ -1236,18 +1236,19 @@ function gdriveAutoSave() {
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
-  gdriveHandleRedirect();
   // topbar-actionsにGDrive UIを追加
   const actions = document.getElementById('topbar-actions');
   if (actions) {
     actions.innerHTML = `
       <span id="gdriveDot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ddd;margin-right:4px;vertical-align:middle;"></span>
+      <span id="gdriveStatusText" style="font-size:11px;color:#999;margin-right:6px;"></span>
       <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="padding:4px 10px;background:var(--surface,#f5f5f5);border:1px solid #ddd;border-radius:4px;font-size:12px;cursor:pointer;margin-right:4px;">GDrive接続</button>
       <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;padding:4px 10px;background:var(--surface,#f5f5f5);border:1px solid #ddd;border-radius:4px;font-size:12px;cursor:pointer;margin-right:4px;">⬆ 保存</button>
       <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;padding:4px 10px;background:var(--surface,#f5f5f5);border:1px solid #ddd;border-radius:4px;font-size:12px;cursor:pointer;">⬇ 読込</button>
     `;
   }
-});
+  // UI生成後にリダイレクト処理
+  gdriveHandleRedirect();
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => {
