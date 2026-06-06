@@ -426,6 +426,14 @@ html,body{max-width:100%;overflow-x:hidden;}
     <button data-page="settings"><span class="nav-icon">⚙</span>設定</button>
   </nav>
   <div id="sidebar-footer">
+    <div style="padding:6px 4px 4px;display:flex;align-items:center;gap:6px;">
+      <span id="gdriveDotSb" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#4a5568;flex-shrink:0;"></span>
+      <span id="gdriveStatusSb" style="font-size:11px;color:#718096;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">未接続</span>
+    </div>
+    <button id="gdriveConnectBtnSb" onclick="gdriveConnect()" class="btn-sm-side" style="background:#2d6a4f;color:#fff;">🔗 Googleログイン</button>
+    <button id="gdriveSaveBtnSb" onclick="gdriveSave()" class="btn-sm-side" style="display:none">⬆ GDrive保存</button>
+    <button id="gdriveLoadBtnSb" onclick="gdriveLoad()" class="btn-sm-side" style="display:none">⬇ GDrive読込</button>
+    <div style="border-top:1px solid #2d3748;margin:6px 0;"></div>
     <button onclick="backupJSON()" class="btn-sm-side">⬇ JSON保存</button>
     <button onclick="document.getElementById('import-json-input').click()" class="btn-sm-side">⬆ JSON読込</button>
   </div>
@@ -537,6 +545,13 @@ function gdriveUpdateUI(connected) {
   const saveMob = document.getElementById('gdriveSaveMob');
   const loadMob = document.getElementById('gdriveLoadMob');
 
+  // サイドバー
+  const dotSb = document.getElementById('gdriveDotSb');
+  const statusSb = document.getElementById('gdriveStatusSb');
+  const connectSb = document.getElementById('gdriveConnectBtnSb');
+  const saveSb = document.getElementById('gdriveSaveBtnSb');
+  const loadSb = document.getElementById('gdriveLoadBtnSb');
+
   if (connected) {
     if (dot) dot.style.background = '#34a853';
     if (status) status.textContent = 'Googleドライブ接続済み';
@@ -548,6 +563,11 @@ function gdriveUpdateUI(connected) {
     if (connectMob) connectMob.style.display = 'none';
     if (saveMob) saveMob.style.display = '';
     if (loadMob) loadMob.style.display = '';
+    if (dotSb) dotSb.style.background = '#34a853';
+    if (statusSb) statusSb.textContent = '接続済み';
+    if (connectSb) connectSb.style.display = 'none';
+    if (saveSb) saveSb.style.display = '';
+    if (loadSb) loadSb.style.display = '';
   } else {
     if (dot) dot.style.background = 'var(--border2)';
     if (status) status.textContent = 'Googleドライブ未接続';
@@ -559,6 +579,11 @@ function gdriveUpdateUI(connected) {
     if (connectMob) connectMob.style.display = '';
     if (saveMob) saveMob.style.display = 'none';
     if (loadMob) loadMob.style.display = 'none';
+    if (dotSb) dotSb.style.background = '#4a5568';
+    if (statusSb) statusSb.textContent = '未接続';
+    if (connectSb) connectSb.style.display = '';
+    if (saveSb) saveSb.style.display = 'none';
+    if (loadSb) loadSb.style.display = 'none';
   }
 }
 
