@@ -543,12 +543,12 @@ textarea.form-control { resize: vertical; min-height: 56px; }
   <div class="sidebar-footer" style="padding:8px 12px;border-top:1px solid var(--border);">
     <div style="font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:.08em;">GOOGLE DRIVE</div>
     <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;">
-      <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:var(--border2);flex-shrink:0;"></span>
-      <span id="gdriveStatusText" style="font-size:11px;color:var(--text3);">未接続</span>
+      <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;"></span>
+      <span id="gdriveStatusText" style="font-size:11px;color:rgba(255,255,255,0.6);">未接続</span>
     </div>
-    <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:4px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text2);font-size:11px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
-    <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:4px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text2);font-size:11px;cursor:pointer;margin-bottom:3px;">⬆ 保存</button>
-    <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:4px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text2);font-size:11px;cursor:pointer;">⬇ 読込</button>
+    <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
+    <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;margin-bottom:3px;">⬆ 保存</button>
+    <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;">⬇ 読込</button>
   </div>
   <div class="sidebar-footer" id="sidebar-count">0件登録</div>
 </div>
