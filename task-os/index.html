@@ -305,43 +305,6 @@ select.fi{cursor:pointer;}
 <body>
 <div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
 <div class="mob-header">
-  <div style="display:flex;align-items:center;gap:8px;"><img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;"><span style="font-size:15px;font-weight:700;color:#fff;">Task OS</span></div>
-  <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
-</div>
-<div class="app">
-
-<!-- SIDEBAR -->
-<div class="sidebar">
-  <div class="sb-brand">
-    <div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
-    <img src="icons/icon-32.png" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
-    <span style="font-size:16px;font-weight:700;color:#fff;letter-spacing:.01em;">Task OS</span>
-  </div>
-  </div>
-  <nav class="sb-nav">
-    <div class="ni act" onclick="nav('home')"><span class="ni-ico">◉</span>ホーム</div>
-    <div class="sb-sep"></div>
-    <div class="ni" onclick="nav('shot')"><span class="ni-ico"><img src="../shot-task-os/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>ショット</div>
-    <div class="ni" onclick="nav('routine')"><span class="ni-ico"><img src="../routine-os/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>ルーチンOS</div>
-    <div class="ni" onclick="nav('project')"><span class="ni-ico"><img src="../project-os/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>プロジェクト</div>
-    <div class="sb-sep"></div>
-    <div class="ni" onclick="nav('100list')"><span class="ni-ico"><img src="../100list/icons/icon-32x32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>100リスト</div>
-    <div class="sb-sep"></div>
-    <div class="ni" onclick="nav('reflect')"><span class="ni-ico"><img src="../reflect-os/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>リフレクトOS</div>
-    <div class="ni" onclick="nav('social')"><span class="ni-ico"><img src="../social-universe/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>ソーシャルU</div>
-    <div class="ni" onclick="nav('kosolog')"><span class="ni-ico"><img src="../koso-log/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>コーソーログ</div>
-    <div class="sb-sep"></div>
-    <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
-  </nav>
-  <div class="sb-backup-panel">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-      <span id="gdriveDotSb" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;display:inline-block;"></span>
-      <span id="gdriveStatusSb" style="font-size:10px;color:rgba(255,255,255,0.5);">未接続</span>
-    </div>
-    <button id="gdriveConnectBtnSb" class="sb-backup-btn" onclick="gdriveConnect()">🔗 Googleでログイン</button>
-    <button id="gdriveSaveBtnSb" class="sb-backup-btn" style="display:none" onclick="gdriveSaveAll()">⬆ GDrive保存</button>
-    <button id="gdriveLoadBtnSb" class="sb-backup-btn" style="display:none" onclick="gdriveLoadAll()">⬇ GDrive読込</button>
-    <div style="border-top:1px solid rgba(255,255,255,0.08);margin:6px 0;"></div>
     <button class="sb-backup-btn" onclick="exportAllJSON()">⬇ JSON保存</button>
     <button class="sb-backup-btn" onclick="importAllJSON()">⬆ JSON読込</button>
     <input type="file" id="jsonImportInput" accept=".json" style="display:none" onchange="handleJSONImport(event)">
@@ -701,98 +664,7 @@ function restoreAllOSData(data) {
 }
 
 // ── JSON 保存 / 読込 ──
-// ── GOOGLE DRIVE（一括バックアップ）──
-const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
-const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
-const GDRIVE_FILE_NAME = 'task-os-all-backup.json';
-const GDRIVE_REDIRECT_URI = (location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html'));
-let gdriveToken = localStorage.getItem('gdrive_token_taskos') || null;
 
-function gdriveConnect() {
-  const params = new URLSearchParams({
-    client_id: GDRIVE_CLIENT_ID, redirect_uri: GDRIVE_REDIRECT_URI,
-    response_type: 'token', scope: GDRIVE_SCOPE, prompt: 'select_account',
-  });
-  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
-}
-function gdriveUpdateUI(connected) {
-  const dot = document.getElementById('gdriveDotSb');
-  const status = document.getElementById('gdriveStatusSb');
-  const connectBtn = document.getElementById('gdriveConnectBtnSb');
-  const saveBtn = document.getElementById('gdriveSaveBtnSb');
-  const loadBtn = document.getElementById('gdriveLoadBtnSb');
-  if (connected) {
-    if (dot) dot.style.background = '#34a853';
-    if (status) status.textContent = '接続済み';
-    if (connectBtn) connectBtn.style.display = 'none';
-    if (saveBtn) saveBtn.style.display = '';
-    if (loadBtn) loadBtn.style.display = '';
-  } else {
-    if (dot) dot.style.background = 'rgba(255,255,255,0.3)';
-    if (status) status.textContent = '未接続';
-    if (connectBtn) connectBtn.style.display = '';
-    if (saveBtn) saveBtn.style.display = 'none';
-    if (loadBtn) loadBtn.style.display = 'none';
-  }
-}
-async function gdriveFetch(url, opts={}) {
-  const res = await fetch(url, { ...opts, headers: { ...opts.headers, Authorization: 'Bearer ' + gdriveToken } });
-  if (res.status === 401) { gdriveToken = null; localStorage.removeItem('gdrive_token_taskos'); gdriveUpdateUI(false); throw new Error('トークン期限切れ。再ログインしてください。'); }
-  return res;
-}
-async function gdriveFindFile() {
-  const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${GDRIVE_FILE_NAME}'&fields=files(id)`);
-  const data = await res.json();
-  return data.files && data.files.length > 0 ? data.files[0].id : null;
-}
-async function gdriveSaveAll() {
-  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
-  const btn = document.getElementById('gdriveSaveBtnSb');
-  const orig = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '保存中...'; btn.disabled = true; }
-  try {
-    const payload = JSON.stringify({ exportedAt: new Date().toISOString(), ...collectAllOSData() }, null, 2);
-    const fileId = await gdriveFindFile();
-    const metadata = { name: GDRIVE_FILE_NAME, parents: fileId ? undefined : ['appDataFolder'] };
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    form.append('file', new Blob([payload], { type: 'application/json' }));
-    const url = fileId ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart` : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-    await gdriveFetch(url, { method: fileId ? 'PATCH' : 'POST', body: form });
-    showToast('GDriveに保存しました');
-  } catch(e) { alert('保存エラー: ' + e.message); }
-  finally { if (btn) { btn.textContent = orig; btn.disabled = false; } }
-}
-async function gdriveLoadAll() {
-  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
-  const btn = document.getElementById('gdriveLoadBtnSb');
-  const orig = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '読込中...'; btn.disabled = true; }
-  try {
-    const fileId = await gdriveFindFile();
-    if (!fileId) { alert('GDriveにバックアップが見つかりません'); return; }
-    const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
-    const data = await res.json();
-    if (!confirm('GDriveのデータで全OSを上書きします。よろしいですか？')) return;
-    restoreAllOSData(data);
-    showToast('GDriveから読み込みました');
-    setTimeout(() => location.reload(), 1000);
-  } catch(e) { alert('読込エラー: ' + e.message); }
-  finally { if (btn) { btn.textContent = orig; btn.disabled = false; } }
-}
-function gdriveHandleRedirect() {
-  const hash = new URLSearchParams(location.hash.slice(1));
-  const token = hash.get('access_token');
-  if (token) {
-    gdriveToken = token;
-    localStorage.setItem('gdrive_token_taskos', token);
-    history.replaceState(null, '', location.pathname);
-    gdriveUpdateUI(true);
-  } else if (gdriveToken) {
-    gdriveUpdateUI(true);
-  }
-}
-document.addEventListener('DOMContentLoaded', gdriveHandleRedirect);
 
 async function exportAllJSON() {
   const data = collectAllOSData();
@@ -1827,9 +1699,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 </script>
 <script>
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => r.unregister());
-  });
+  navigator.serviceWorker.register('./service-worker.js');
 }
 </script>
 </body>
