@@ -341,9 +341,10 @@ html,body{max-width:100%;overflow-x:hidden;}
   .filter-bar select{min-width:calc(50% - 4px);}
   .truncate{max-width:100%;}
   .uncat-row{flex-wrap:wrap;gap:6px;}
-  .uncat-row .truncate{width:100%;max-width:100%;white-space:normal;font-weight:600;font-size:15px;}
-  .uncat-row select{flex:1;min-width:0;}
-  .uncat-row a{flex-shrink:0;}
+  .uncat-row .flex-1{width:100%;flex-basis:100%;}
+  .uncat-row select{flex:1;min-width:0;font-size:14px;}
+  .uncat-row button{flex-shrink:0;}
+  .uncat-row > select, .uncat-row > button{flex-basis:auto;}
   .form-grid{grid-template-columns:1fr!important;}
   .form-grid-3{grid-template-columns:1fr 1fr!important;}
 
