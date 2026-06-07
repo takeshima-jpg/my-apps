@@ -47,6 +47,48 @@ button{cursor:pointer;font-family:var(--serif);border:none;border-radius:3px;tra
   .hamburger{background:none;border:none;cursor:pointer;font-size:22px;color:var(--mu);padding:2px 6px;margin-left:auto;}
   .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:499;}
   .overlay.open{display:block;}
+
+  /* メインコンテンツ余白 */
+  #main{padding:0;}
+  .main-pad{padding:14px 12px;}
+
+  /* テーマグリッド → 1列 */
+  .theme-grid{grid-template-columns:1fr!important;}
+
+  /* テーマカード */
+  .tcard-main{padding:12px 14px;}
+  .tcard-name{font-size:15px;}
+  .tcard-meta{flex-wrap:wrap;gap:4px;}
+
+  /* ログ一覧 */
+  .log-row{flex-wrap:wrap;gap:4px;}
+  .log-date{flex-shrink:0;}
+  .log-title{width:100%;white-space:normal!important;}
+
+  /* 問い・実験の追加エリア */
+  .add-row{flex-wrap:wrap;gap:6px;}
+  .add-row input,.add-row select{width:100%!important;min-width:0!important;box-sizing:border-box;}
+  .add-row button{white-space:nowrap;}
+
+  /* 問い・実験カード */
+  .q-row,.exp-row{flex-wrap:wrap;gap:4px;}
+  .q-row .btn-row,.exp-row .btn-row{flex-wrap:wrap;gap:4px;}
+
+  /* VISION設定 */
+  .vision-edit-area{padding:12px;}
+
+  /* チップ（テーマ選択）*/
+  .chip-wrap{flex-wrap:wrap;gap:4px;}
+
+  /* 検索 */
+  .search-bar{width:100%;box-sizing:border-box;}
+
+  /* タイプフィルター */
+  .type-chips{flex-wrap:wrap;gap:4px;}
+
+  /* AIインポート */
+  .ai-import-area{padding:12px;}
+  .ai-import-area textarea{font-size:14px;}
 }
 @media(min-width:641px){
   .mob-topbar{display:none;}
