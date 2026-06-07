@@ -334,8 +334,16 @@ select.fi{cursor:pointer;}
     <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
   </nav>
   <div class="sb-backup-panel">
-    <button class="sb-backup-btn" onclick="exportAllJSON()">📥 JSON保存</button>
-    <button class="sb-backup-btn" onclick="importAllJSON()">📤 JSON読込</button>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+      <span id="gdriveDotSb" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;display:inline-block;"></span>
+      <span id="gdriveStatusSb" style="font-size:10px;color:rgba(255,255,255,0.5);">未接続</span>
+    </div>
+    <button id="gdriveConnectBtnSb" class="sb-backup-btn" onclick="gdriveConnect()">🔗 Googleでログイン</button>
+    <button id="gdriveSaveBtnSb" class="sb-backup-btn" style="display:none" onclick="gdriveSaveAll()">⬆ GDrive保存</button>
+    <button id="gdriveLoadBtnSb" class="sb-backup-btn" style="display:none" onclick="gdriveLoadAll()">⬇ GDrive読込</button>
+    <div style="border-top:1px solid rgba(255,255,255,0.08);margin:6px 0;"></div>
+    <button class="sb-backup-btn" onclick="exportAllJSON()">⬇ JSON保存</button>
+    <button class="sb-backup-btn" onclick="importAllJSON()">⬆ JSON読込</button>
     <input type="file" id="jsonImportInput" accept=".json" style="display:none" onchange="handleJSONImport(event)">
   </div>
   <div class="sb-ft" id="sbDate"></div>
@@ -556,21 +564,27 @@ const OS_OVERLAY_MAP = {
   routine: { src: '../routine-os/index.html',    title: 'ROUTINE OS' },
   shot:    { src: '../shot-task-os/index.html',   title: 'SHOT OS' },
   project: { src: '../project-os/index.html',     title: 'PROJECT OS' },
-  '100list': { src: '../100list/index.html',      title: '100リスト' },
+  '100list': { src: '../100list/index.html',      title: '100リスト', newTab: true },
 };
 const LAUNCHER_OVERLAY_MAP = {
-  '1day':    { src: '../1day/index.html',           title: '1day' },
-  reflect:   { src: '../reflect-os/index.html',     title: 'Reflect OS' },
-  hitomemo:  { src: '../hitomemo/index.html',        title: 'ヒトメモ' },
-  social:    { src: '../social-universe/index.html', title: 'Social Universe' },
-  '100list': { src: '../100list/index.html',         title: '100list' },
-  kosolog:   { src: '../koso-log/index.html',        title: 'KOSOLog' },
+  '1day':    { src: '../1day/index.html',           title: '1day',           newTab: true },
+  reflect:   { src: '../reflect-os/index.html',     title: 'Reflect OS',     newTab: true },
+  hitomemo:  { src: '../hitomemo/index.html',        title: 'ヒトメモ',        newTab: true },
+  social:    { src: '../social-universe/index.html', title: 'Social Universe',newTab: true },
+  '100list': { src: '../100list/index.html',         title: '100list',        newTab: true },
+  kosolog:   { src: '../koso-log/index.html',        title: 'KOSOLog',        newTab: true },
 };
 
 function nav(v){
-  // Routine/Shot/Project/ランチャーOSはフルスクリーンオーバーレイで開く
+  // Reflect OS・Project OS・Routine OSは新タブで開く
+  if(v === 'reflect'){ window.open('../reflect-os/index.html', '_blank'); return; }
+  if(v === 'project'){ window.open('../project-os/index.html', '_blank'); return; }
+  if(v === 'routine'){ window.open('../routine-os/index.html', '_blank'); return; }
   const osConf = OS_OVERLAY_MAP[v] || LAUNCHER_OVERLAY_MAP[v];
-  if(osConf){ openOsOverlay(osConf.src, osConf.title); return; }
+  if(osConf){
+    if(osConf.newTab){ window.open(osConf.src, '_blank'); return; }
+    openOsOverlay(osConf.src, osConf.title); return;
+  }
 
   curView = v;
   document.querySelectorAll('.ni').forEach(n => {
@@ -687,6 +701,99 @@ function restoreAllOSData(data) {
 }
 
 // ── JSON 保存 / 読込 ──
+// ── GOOGLE DRIVE（一括バックアップ）──
+const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
+const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const GDRIVE_FILE_NAME = 'task-os-all-backup.json';
+const GDRIVE_REDIRECT_URI = (location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html'));
+let gdriveToken = localStorage.getItem('gdrive_token_taskos') || null;
+
+function gdriveConnect() {
+  const params = new URLSearchParams({
+    client_id: GDRIVE_CLIENT_ID, redirect_uri: GDRIVE_REDIRECT_URI,
+    response_type: 'token', scope: GDRIVE_SCOPE, prompt: 'select_account',
+  });
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+}
+function gdriveUpdateUI(connected) {
+  const dot = document.getElementById('gdriveDotSb');
+  const status = document.getElementById('gdriveStatusSb');
+  const connectBtn = document.getElementById('gdriveConnectBtnSb');
+  const saveBtn = document.getElementById('gdriveSaveBtnSb');
+  const loadBtn = document.getElementById('gdriveLoadBtnSb');
+  if (connected) {
+    if (dot) dot.style.background = '#34a853';
+    if (status) status.textContent = '接続済み';
+    if (connectBtn) connectBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = '';
+    if (loadBtn) loadBtn.style.display = '';
+  } else {
+    if (dot) dot.style.background = 'rgba(255,255,255,0.3)';
+    if (status) status.textContent = '未接続';
+    if (connectBtn) connectBtn.style.display = '';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (loadBtn) loadBtn.style.display = 'none';
+  }
+}
+async function gdriveFetch(url, opts={}) {
+  const res = await fetch(url, { ...opts, headers: { ...opts.headers, Authorization: 'Bearer ' + gdriveToken } });
+  if (res.status === 401) { gdriveToken = null; localStorage.removeItem('gdrive_token_taskos'); gdriveUpdateUI(false); throw new Error('トークン期限切れ。再ログインしてください。'); }
+  return res;
+}
+async function gdriveFindFile() {
+  const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${GDRIVE_FILE_NAME}'&fields=files(id)`);
+  const data = await res.json();
+  return data.files && data.files.length > 0 ? data.files[0].id : null;
+}
+async function gdriveSaveAll() {
+  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
+  const btn = document.getElementById('gdriveSaveBtnSb');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '保存中...'; btn.disabled = true; }
+  try {
+    const payload = JSON.stringify({ exportedAt: new Date().toISOString(), ...collectAllOSData() }, null, 2);
+    const fileId = await gdriveFindFile();
+    const metadata = { name: GDRIVE_FILE_NAME, parents: fileId ? undefined : ['appDataFolder'] };
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', new Blob([payload], { type: 'application/json' }));
+    const url = fileId ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart` : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    await gdriveFetch(url, { method: fileId ? 'PATCH' : 'POST', body: form });
+    showToast('GDriveに保存しました');
+  } catch(e) { alert('保存エラー: ' + e.message); }
+  finally { if (btn) { btn.textContent = orig; btn.disabled = false; } }
+}
+async function gdriveLoadAll() {
+  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
+  const btn = document.getElementById('gdriveLoadBtnSb');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '読込中...'; btn.disabled = true; }
+  try {
+    const fileId = await gdriveFindFile();
+    if (!fileId) { alert('GDriveにバックアップが見つかりません'); return; }
+    const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    const data = await res.json();
+    if (!confirm('GDriveのデータで全OSを上書きします。よろしいですか？')) return;
+    restoreAllOSData(data);
+    showToast('GDriveから読み込みました');
+    setTimeout(() => location.reload(), 1000);
+  } catch(e) { alert('読込エラー: ' + e.message); }
+  finally { if (btn) { btn.textContent = orig; btn.disabled = false; } }
+}
+function gdriveHandleRedirect() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const token = hash.get('access_token');
+  if (token) {
+    gdriveToken = token;
+    localStorage.setItem('gdrive_token_taskos', token);
+    history.replaceState(null, '', location.pathname);
+    gdriveUpdateUI(true);
+  } else if (gdriveToken) {
+    gdriveUpdateUI(true);
+  }
+}
+document.addEventListener('DOMContentLoaded', gdriveHandleRedirect);
+
 async function exportAllJSON() {
   const data = collectAllOSData();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1077,12 +1184,23 @@ function renderLauncherList(q){
           <div class="launcher-item-name">${esc(item.name)}</div>
         </div>`;
       } else if(item.frameId){
-        // Task OS 内 iframe で表示
-        const viewId = item.frameId.replace('frame-','view-');
-        h += `<div class="launcher-item" onclick="closeLauncher();openFrameOS('${viewId}','${item.frameId}','${item.frameSrc}')">
-          <div class="launcher-item-icon">${iconHtml}</div>
-          <div class="launcher-item-name">${esc(item.name)}</div>
-        </div>`;
+        const navKeyMap = {
+          'frame-shot': 'shot', 'frame-routine': 'routine', 'frame-project': 'project',
+          'frame-reflect': 'reflect', 'frame-1day': '1day', 'frame-hitomemo': 'hitomemo',
+          'frame-social': 'social', 'frame-100list': '100list', 'frame-kosolog': 'kosolog'
+        };
+        const navKey = navKeyMap[item.frameId];
+        if(navKey){
+          h += `<div class="launcher-item" onclick="closeLauncher();nav('${navKey}')">
+            <div class="launcher-item-icon">${iconHtml}</div>
+            <div class="launcher-item-name">${esc(item.name)}</div>
+          </div>`;
+        } else {
+          h += `<div class="launcher-item" onclick="closeLauncher();window.open('${item.frameSrc}','_blank')">
+            <div class="launcher-item-icon">${iconHtml}</div>
+            <div class="launcher-item-name">${esc(item.name)}</div>
+          </div>`;
+        }
       }
     });
   });
