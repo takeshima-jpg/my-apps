@@ -363,6 +363,22 @@ html,body{max-width:100%;overflow-x:hidden;}
   /* 操作ボタン */
   .list-table td:last-child{margin-top:6px;}
 
+  /* 重点リスト・捨てるリスト カード */
+  .focus-card,.discard-card{width:100%!important;box-sizing:border-box;}
+  .focus-card .card-title,.discard-card .card-title{white-space:normal!important;}
+
+  /* 今週・今月 */
+  .week-grid{grid-template-columns:1fr!important;}
+  .month-grid{grid-template-columns:1fr!important;}
+
+  /* ボタン群の折り返し */
+  .btn-group{flex-wrap:wrap!important;gap:6px!important;}
+  .bulk-assign-grid{grid-template-columns:1fr 1fr!important;}
+
+  /* 固定幅解除 */
+  [style*="width:115px"],[style*="width:100px"]{width:auto!important;min-width:0!important;}
+  [style*="min-width:180px"]{min-width:0!important;width:100%!important;}
+
   /* filter-bar */
   .filter-bar input[type=text]{width:100%!important;min-width:0!important;box-sizing:border-box!important;}
   .filter-bar select{width:calc(50% - 4px)!important;min-width:0!important;}
