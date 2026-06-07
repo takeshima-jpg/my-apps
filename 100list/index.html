@@ -339,7 +339,11 @@ html,body{max-width:100%;overflow-x:hidden;}
   .filter-bar{flex-wrap:wrap;}
   .filter-bar input[type=text]{width:100%;min-width:0;box-sizing:border-box;}
   .filter-bar select{min-width:calc(50% - 4px);}
-  .truncate{max-width:160px;}
+  .truncate{max-width:100%;}
+  .uncat-row{flex-wrap:wrap;gap:6px;}
+  .uncat-row .truncate{width:100%;max-width:100%;white-space:normal;font-weight:600;font-size:15px;}
+  .uncat-row select{flex:1;min-width:0;}
+  .uncat-row a{flex-shrink:0;}
   .form-grid{grid-template-columns:1fr!important;}
   .form-grid-3{grid-template-columns:1fr 1fr!important;}
 
