@@ -380,6 +380,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 <header>
   <div>
     <div style="display:flex;align-items:center;gap:8px;"><img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;flex-shrink:0;"><span style="font-size:15px;font-weight:700;">ソーシャル・ユニバース</span></div>
+    <div id="visionPillSu" style="font-size:10px;color:var(--s400);margin-top:3px;line-height:1.4;max-width:300px;"></div>
   </div>
   <div class="h-actions">
     <button class="hbtn hbtn-ghost" onclick="openDormant()">◇ 余白リスト</button>
@@ -874,6 +875,17 @@ function gdriveAutoSave() {
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
+  // VISION表示
+  (function(){
+    const VISION_DEFAULT = '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。';
+    const pill = document.getElementById('visionPillSu');
+    if (!pill) return;
+    try {
+      const raw = localStorage.getItem('myapps_vision');
+      const data = raw ? JSON.parse(raw) : null;
+      pill.textContent = (data && data.vision && data.vision[0]) ? data.vision[0] : VISION_DEFAULT;
+    } catch(e) { pill.textContent = VISION_DEFAULT; }
+  })();
   gdriveHandleRedirect();
 });
 
