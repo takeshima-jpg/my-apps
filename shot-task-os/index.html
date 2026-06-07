@@ -719,6 +719,7 @@ input[type=checkbox] {
   <div class="mob-panel-btns">
     <button class="mob-panel-btn" onclick="showPanel('left')">サマリー</button>
     <button class="mob-panel-btn active" onclick="showPanel('center')">タスク</button>
+    <button class="mob-panel-btn" onclick="showPanel('gdrive')">GDrive</button>
   </div>
   <div class="header-nav">
     <button class="nav-btn active" id="navMain" onclick="switchView('main')">実行判断</button>
@@ -727,6 +728,15 @@ input[type=checkbox] {
   <div class="header-date" id="headerDate"></div>
 </header>
 <div class="vision-area" id="visionArea"></div>
+<div class="gdrive-mob-panel" id="gdriveMobPanel" style="display:none;padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--border);">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+    <span id="gdriveDotMob2" style="width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0;"></span>
+    <span id="gdriveStatusMob2" style="font-size:13px;color:var(--text2);">GDrive未接続</span>
+  </div>
+  <button id="gdriveConnectMob2" onclick="gdriveConnect()" style="width:100%;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;margin-bottom:6px;">🔗 Googleでログイン</button>
+  <button id="gdriveSaveMob2" onclick="gdriveSave()" style="display:none;width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:14px;cursor:pointer;margin-bottom:6px;">⬆ GDrive保存</button>
+  <button id="gdriveLoadMob2" onclick="gdriveLoad()" style="display:none;width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:14px;cursor:pointer;">⬇ GDrive読込</button>
+</div>
 
 <!-- MAIN VIEW -->
 <div id="mainView">
@@ -960,6 +970,12 @@ function gdriveUpdateUI(connected) {
   const connectMob = document.getElementById('gdriveConnectMob');
   const saveMob = document.getElementById('gdriveSaveMob');
   const loadMob = document.getElementById('gdriveLoadMob');
+  // モバイルGDriveパネル
+  const dotMob2 = document.getElementById('gdriveDotMob2');
+  const statusMob2 = document.getElementById('gdriveStatusMob2');
+  const connectMob2 = document.getElementById('gdriveConnectMob2');
+  const saveMob2 = document.getElementById('gdriveSaveMob2');
+  const loadMob2 = document.getElementById('gdriveLoadMob2');
 
   if (connected) {
     if (dot) dot.style.background = '#34a853';
@@ -972,6 +988,11 @@ function gdriveUpdateUI(connected) {
     if (connectMob) connectMob.style.display = 'none';
     if (saveMob) saveMob.style.display = '';
     if (loadMob) loadMob.style.display = '';
+    if (dotMob2) dotMob2.style.background = '#34a853';
+    if (statusMob2) statusMob2.textContent = 'Googleドライブ接続済み';
+    if (connectMob2) connectMob2.style.display = 'none';
+    if (saveMob2) saveMob2.style.display = '';
+    if (loadMob2) loadMob2.style.display = '';
   } else {
     if (dot) dot.style.background = 'var(--border2)';
     if (status) status.textContent = 'Googleドライブ未接続';
@@ -983,6 +1004,11 @@ function gdriveUpdateUI(connected) {
     if (connectMob) connectMob.style.display = '';
     if (saveMob) saveMob.style.display = 'none';
     if (loadMob) loadMob.style.display = 'none';
+    if (dotMob2) dotMob2.style.background = 'var(--border2)';
+    if (statusMob2) statusMob2.textContent = 'GDrive未接続';
+    if (connectMob2) connectMob2.style.display = '';
+    if (saveMob2) saveMob2.style.display = 'none';
+    if (loadMob2) loadMob2.style.display = 'none';
   }
 }
 
@@ -1827,11 +1853,16 @@ function showPanel(name){
     const el = document.querySelector(sel);
     if(el) el.classList.remove('mob-show');
   });
-  const target = panels[name];
-  if(target){ const el = document.querySelector(target); if(el) el.classList.add('mob-show'); }
-  // ボタンのactive更新
+  // GDriveパネル
+  const gdrivePanel = document.getElementById('gdriveMobPanel');
+  if(gdrivePanel) gdrivePanel.style.display = name==='gdrive' ? 'block' : 'none';
+
+  if(name !== 'gdrive'){
+    const target = panels[name];
+    if(target){ const el = document.querySelector(target); if(el) el.classList.add('mob-show'); }
+  }
   document.querySelectorAll('.mob-panel-btn').forEach((btn,i)=>{
-    const names=['left','center'];
+    const names=['left','center','gdrive'];
     btn.classList.toggle('active', names[i]===name);
   });
 }
