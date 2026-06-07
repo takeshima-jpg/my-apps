@@ -547,8 +547,13 @@ textarea.form-control { resize: vertical; min-height: 56px; }
       <span id="gdriveStatusText" style="font-size:11px;color:rgba(255,255,255,0.6);">未接続</span>
     </div>
     <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
-    <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;margin-bottom:3px;">⬆ 保存</button>
-    <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;">⬇ 読込</button>
+    <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;margin-bottom:3px;">⬆ GDrive保存</button>
+    <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;">⬇ GDrive読込</button>
+  </div>
+  <div style="border-top:1px solid rgba(255,255,255,0.1);margin:6px 12px 4px;"></div>
+  <div style="padding:0 12px 6px;display:flex;flex-direction:column;gap:3px;">
+    <button onclick="doExportJSON()" style="width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;text-align:left;">⬇ JSON保存</button>
+    <label style="width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;">⬆ JSON読込<input type="file" id="jsonImportKoso" accept=".json" style="display:none" onchange="doImportJSON(event)"></label>
   </div>
   <div class="sidebar-footer" id="sidebar-count">0件登録</div>
 </div>
@@ -912,6 +917,34 @@ function load() {
     archives = raw2 ? JSON.parse(raw2) : [];
   } catch { archives = []; }
 }
+function doExportJSON() {
+  const data = { items, archives, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'koso-log-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function doImportJSON(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.items) { alert('有効なデータが見つかりませんでした'); return; }
+      if (!confirm(data.items.length + '件のデータで復元します。現在のデータは上書きされます。よろしいですか？')) return;
+      items = data.items || [];
+      archives = data.archives || [];
+      save();
+      renderCurrentView();
+      toast('復元しました（' + items.length + '件）');
+    } catch(err) { alert('読込エラー: ' + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
 function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch(e) {}
   try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archives)); } catch(e) {}
