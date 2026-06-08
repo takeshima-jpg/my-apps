@@ -477,7 +477,6 @@ async function gdriveLoad() {
     }
   } catch(e) {
     alert('読込エラー: ' + e.message);
-  }
   } finally {
     [_loadBtn, _loadBtnMob].forEach(b => { if(b){ b.textContent=_origText; b.disabled=false; } });
   }
