@@ -1354,8 +1354,6 @@ function renderQAP(){
     <div class="qap-body">
       ${isDrain?`<div class="qap-drain-warn"><span>⚠</span>消耗フラグあり。距離・接点・テーマを再設計してください。</div>`:''}
       <div class="qap-g2">
-        <div><span class="qap-fl">アクションタイプ</span>
-          <select class="qap-sel" onchange="qapUp('${p.id}','actionType',this.value)">${atOpts}</select></div>
         <div><span class="qap-fl">期限</span>
           <input type="date" class="qap-inp" value="${p.actionDueDate||''}" onchange="qapUp('${p.id}','actionDueDate',this.value)"></div>
         <div><span class="qap-fl">関係の目的</span>
