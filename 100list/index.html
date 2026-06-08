@@ -1701,37 +1701,11 @@ function renderDashboard(){
   </div>
 </div>
 
-${nextYrCandidates.length>0?`
-<div class="card">
-  <div class="card-title">📌 来年に繰り越す候補（${nextYrCandidates.length}件）</div>
-  ${nextYrCandidates.map(i=>`
-  <div class="flex items-center gap-8 text-sm" style="padding:7px 0;border-bottom:1px solid #f0f4f8">
-    ${prioTag(i.priority)}<span class="flex-1 font-bold">${esc(i.title)}</span>
-    <span class="text-sub">${i.category||'未分類'}</span>
-  </div>`).join('')}
-</div>`:''}
 
-${outstanding.length>0?`
-<div class="card" style="background:var(--red-bg);border-color:var(--red-border)">
-  <div class="card-title" style="color:#c53030">⚠️ 未完了のまま残っているもの（${outstanding.length}件）</div>
-  ${outstanding.map(i=>`
-  <div class="flex items-center gap-8 text-sm" style="padding:6px 0;border-bottom:1px solid var(--red-border)">
-    <span style="color:#fc8181">◯</span><span class="flex-1">${esc(i.title)}</span>
-    <span style="color:#c53030">${i.year}年予定</span>
-  </div>`).join('')}
-</div>`:''}
 
-${recurring.length>0?`
-<div class="card no-print" style="background:var(--blue-bg);border-color:var(--blue-border)">
-  <div class="card-title text-blue">🔄 毎年繰り返す項目 — ${yr+1}年分を作成</div>
-  <p class="text-sm text-sub mb-12">新年度が始まったら翌年分を複製できます（同タイトル・同年が既存の場合は複製しません）</p>
-  ${recurring.map(i=>`
-  <div class="flex items-center gap-10" style="padding:9px 0;border-bottom:1px solid var(--blue-border)">
-    <div class="flex-1 font-bold text-sm">${esc(i.title)}</div>
-    <span class="text-xs text-sub">${i.category||'未分類'}</span>
-    <button class="btn btn-blue btn-sm" onclick="duplicateForYear('${i.id}',${yr+1})">${yr+1}年分を作成</button>
-  </div>`).join('')}
-</div>`:''}`;
+
+
+`;
 }
 
 // ===== SETTINGS PAGE =====
