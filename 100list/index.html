@@ -1629,6 +1629,8 @@ function renderDashboard(){
     return false;
   });
   const nextYrCandidates = activeItems.filter(i=>!i.completed&&i.year===yr+1).slice(0,5);
+  const outstanding = activeItems.filter(i=>!i.completed&&i.year&&i.year<yr);
+  const recurring = activeItems.filter(i=>i.isRecurringYearly&&!i.completed);
 
   el.innerHTML = `
 <h2 class="page-title">ダッシュボード</h2>
