@@ -305,6 +305,35 @@ select.fi{cursor:pointer;}
 <body>
 <div class="sidebar-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
 <div class="mob-header">
+  <div style="display:flex;align-items:center;gap:8px;"><img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;"><span style="font-size:15px;font-weight:700;color:#fff;">Task OS</span></div>
+  <button class="mob-menu-btn" onclick="toggleSidebar()">☰</button>
+</div>
+<div class="app">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-brand">
+    <div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
+    <img src="icons/icon-32.png" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
+    <span style="font-size:16px;font-weight:700;color:#fff;letter-spacing:.01em;">Task OS</span>
+  </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="ni act" onclick="nav('home')"><span class="ni-ico">◉</span>ホーム</div>
+    <div class="sb-sep"></div>
+    <div class="ni" onclick="nav('shot')"><span class="ni-ico"><img src="../shot-task-os/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>ショット</div>
+    <div class="ni" onclick="nav('routine')"><span class="ni-ico"><img src="../routine-os/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>ルーチンOS</div>
+    <div class="ni" onclick="nav('project')"><span class="ni-ico"><img src="../project-os/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>プロジェクト</div>
+    <div class="sb-sep"></div>
+    <div class="ni" onclick="nav('100list')"><span class="ni-ico"><img src="../100list/icons/icon-32x32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>100リスト</div>
+    <div class="sb-sep"></div>
+    <div class="ni" onclick="nav('reflect')"><span class="ni-ico"><img src="../reflect-os/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>リフレクトOS</div>
+    <div class="ni" onclick="nav('social')"><span class="ni-ico"><img src="../social-universe/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>ソーシャルU</div>
+    <div class="ni" onclick="nav('kosolog')"><span class="ni-ico"><img src="../koso-log/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>コーソーログ</div>
+    <div class="sb-sep"></div>
+    <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
+  </nav>
+  <div class="sb-backup-panel">
     <button class="sb-backup-btn" onclick="exportAllJSON()">⬇ JSON保存</button>
     <button class="sb-backup-btn" onclick="importAllJSON()">⬆ JSON読込</button>
     <input type="file" id="jsonImportInput" accept=".json" style="display:none" onchange="handleJSONImport(event)">
