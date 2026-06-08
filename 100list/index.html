@@ -541,7 +541,7 @@ function gdriveHandleRedirect() {
     // 通常リダイレクトの場合
     gdriveToken = token;
     gdriveUpdateUI(true);
-    gdriveAutoLoad();
+    // gdriveAutoLoad();
     toast('Googleドライブに接続しました', 'success');
   } else {
     // 保存済みトークンを確認
@@ -1461,20 +1461,18 @@ function buildRandomCard(activeItems) {
   if (_randomItems.length === 0) pickRandomItems(activeItems);
   const list = _randomItems;
   if (list.length === 0) return '<div class="card" style="border-left:4px solid #9f7aea;margin-top:16px;"><div class="card-title">🎲 埋もれた願いを掘り起こす</div><p style="color:#a0aec0;font-size:13px;">表示できるアイテムがありません</p></div>';
-  
   let rows = '';
   list.forEach(function(i) {
-    rows += '<div style="padding:8px;border:1px solid #e9d8fd;border-radius:8px;display:flex;flex-direction:column;gap:4px;">'
+    rows += '<div style="padding:8px;border:1px solid #e9d8fd;border-radius:8px;">'
       + '<div style="display:flex;align-items:flex-start;gap:6px;">'
       + '<button class="complete-btn" onclick="toggleComplete(\'' + i.id + '\');shuffleRandom()" title="完了にする" style="flex-shrink:0;margin-top:2px;"></button>'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:13px;font-weight:600;line-height:1.4;">' + esc(i.title) + '</div>'
       + '<div style="font-size:10px;color:#a0aec0;margin-top:2px;">' + esc(i.category||'未分類') + '</div>'
       + '</div>'
-      + '<button onclick="openForm(\'' + i.id + '\')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#a0aec0;font-size:14px;padding:1px 2px" title="編集">✏️</button>'
+      + '<button onclick="openForm(\'' + i.id + '\')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#a0aec0;font-size:14px;" title="編集">✏️</button>'
       + '</div></div>';
   });
-  
   return '<div class="card" style="border-left:4px solid #9f7aea;margin-top:16px;">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
     + '<div class="card-title" style="margin-bottom:0">🎲 埋もれた願いを掘り起こす</div>'
@@ -1705,7 +1703,17 @@ function renderDashboard(){
 
 
 
-`;
+${recurring.length>0?`
+<div class="card no-print" style="background:var(--blue-bg);border-color:var(--blue-border)">
+  <div class="card-title text-blue">🔄 毎年繰り返す項目 — ${yr+1}年分を作成</div>
+  <p class="text-sm text-sub mb-12">新年度が始まったら翌年分を複製できます（同タイトル・同年が既存の場合は複製しません）</p>
+  ${recurring.map(i=>`
+  <div class="flex items-center gap-10" style="padding:9px 0;border-bottom:1px solid var(--blue-border)">
+    <div class="flex-1 font-bold text-sm">${esc(i.title)}</div>
+    <span class="text-xs text-sub">${i.category||'未分類'}</span>
+    <button class="btn btn-blue btn-sm" onclick="duplicateForYear('${i.id}',${yr+1})">${yr+1}年分を作成</button>
+  </div>`).join('')}
+</div>`:''}`;
 }
 
 // ===== SETTINGS PAGE =====
