@@ -391,6 +391,20 @@ function gdriveHandleRedirect() {
   }
 }
 
+// 他のタブでログインした場合にUIを自動更新
+window.addEventListener('storage', function(e) {
+  if (e.key === 'gdrive_token') {
+    if (e.newValue) {
+      gdriveToken = e.newValue;
+      gdriveUpdateUI(true);
+      toast('Googleドライブに接続しました');
+    } else {
+      gdriveToken = null;
+      gdriveUpdateUI(false);
+    }
+  }
+});
+
 function gdriveUpdateUI(connected) {
   // デスクトップサイドバー
   const dot = document.getElementById('gdriveDot');
