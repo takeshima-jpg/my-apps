@@ -528,7 +528,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
           <option value="●">● 与えている</option><option value="">— なし</option>
         </select></div>
       <div class="fg"><label class="fl">アクションタイプ</label>
-        <select class="fs" id="fActionType">
+        <select class="fs" id="fActionType" style="display:none">
           <option>深める</option><option>実験</option><option>役割明確化</option>
           <option>距離を置く</option><option>手放す</option><option>維持</option>
         </select></div>
@@ -540,10 +540,8 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
       <div class="fg"><label class="fl">ズレ・課題</label><textarea class="ft" id="fGap" rows="2"></textarea></div>
       <div class="fg"><label class="fl">次のアクション</label><textarea class="ft" id="fNextAction" rows="2"></textarea></div>
     </div>
-    <div class="fg2">
-      <div class="fg"><label class="fl">期限</label><input type="date" class="fi" id="fDueDate"></div>
-      <div class="fg"><label class="fl">メモ</label><input class="fi" id="fMemo"></div>
-    </div>
+    <input type="hidden" id="fDueDate">
+    <input type="hidden" id="fMemo">
     <div style="display:flex;gap:14px;margin-top:4px">
       <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:14px;color:var(--s700)">
         <input type="checkbox" id="fIsTop10" style="width:13px;height:13px;accent-color:var(--t10)"> ⭐ Top10</label>
@@ -1151,7 +1149,7 @@ function createCircleEl(p, showDormant){
 
   // Events
   el.addEventListener('click', e=>{ e.stopPropagation(); selectPerson(p.id); });
-  el.addEventListener('dblclick', e=>{ e.stopPropagation(); openModal(p.id); });
+  // dblclick: 詳細編集モーダル廃止（右サイドバーに統一）
   el.addEventListener('dragstart', e=>onCircleDragStart(e, p.id));
   el.addEventListener('dragend',   e=>onCircleDragEnd(e));
 
@@ -1381,7 +1379,6 @@ function renderQAP(){
     </div>
     <div class="qap-ftr">
       <div class="qap-ftr-row">
-        <button class="qbtn qbtn-edit" onclick="openModal('${p.id}')">✏ 詳細編集</button>
         <button class="qbtn qbtn-t10"  onclick="toggleT10('${p.id}')">${p.isTop10?'⭐ Top10から外す':'☆ Top10に追加'}</button>
       </div>
       <div class="qap-ftr-row">
