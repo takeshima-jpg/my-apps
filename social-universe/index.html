@@ -1336,6 +1336,8 @@ function renderQAP(){
   const eOpts=['増える','普通','消耗'].map(v=>`<option${p.energyState===v?' selected':''}>${v}</option>`).join('');
   const fOpts=['毎週〜隔週','月1〜年数回','半年に1回以下'].map(v=>`<option${p.frequency===v?' selected':''}>${v}</option>`).join('');
   const vfOpts=[['◉','◉ もらい与える'],['〇','〇 もらっている'],['●','● 与えている'],['','— なし']].map(([v,l])=>`<option value="${v}"${p.valueFlow===v?' selected':''}>${l}</option>`).join('');
+  const impOpts=['大','中','小'].map(v=>`<option${p.impact===v?' selected':''}>${v}</option>`).join('');
+  const typeOpts=['チーム','メンター','スペシャリスト','親族'].map(v=>`<option${p.relationshipType===v?' selected':''}>${v}</option>`).join('');
 
   panel.innerHTML=`<div class="qap-card e-${ecls}">
     <div class="qap-hdr">
@@ -1354,14 +1356,16 @@ function renderQAP(){
     <div class="qap-body">
       ${isDrain?`<div class="qap-drain-warn"><span>⚠</span>消耗フラグあり。距離・接点・テーマを再設計してください。</div>`:''}
       <div class="qap-g2">
-        <div><span class="qap-fl">期限</span>
-          <input type="date" class="qap-inp" value="${p.actionDueDate||''}" onchange="qapUp('${p.id}','actionDueDate',this.value)"></div>
         <div><span class="qap-fl">関係の目的</span>
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','relationshipPurpose',this.value)">${purOpts}</select></div>
         <div><span class="qap-fl">エネルギー状態</span>
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','energyState',this.value)">${eOpts}</select></div>
         <div><span class="qap-fl">頻度</span>
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','frequency',this.value)">${fOpts}</select></div>
+        <div><span class="qap-fl">インパクト</span>
+          <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','impact',this.value)">${impOpts}</select></div>
+        <div><span class="qap-fl">関係タイプ</span>
+          <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','relationshipType',this.value)">${typeOpts}</select></div>
         <div><span class="qap-fl">価値の流れ</span>
           <select class="qap-sel" onchange="qapUp('${p.id}','valueFlow',this.value)">${vfOpts}</select></div>
       </div>
