@@ -1353,19 +1353,6 @@ function renderQAP(){
     </div>
     <div class="qap-body">
       ${isDrain?`<div class="qap-drain-warn"><span>⚠</span>消耗フラグあり。距離・接点・テーマを再設計してください。</div>`:''}
-      <div class="qap-rec">
-        <div class="qap-rec-ttl">💡 推奨アクション</div>
-        <div class="qap-rec-txt">${recTxt}</div>
-        <button class="qap-rec-btn" onclick="applyRec('${p.id}')">↑ 次のアクションに反映</button>
-      </div>
-      <div><span class="qap-fl">今の関係の状態</span>
-        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','currentState',this.value)">${esc(p.currentState||'')}</textarea></div>
-      <div><span class="qap-fl">本来どうしたいか</span>
-        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','desiredState',this.value)">${esc(p.desiredState||'')}</textarea></div>
-      <div><span class="qap-fl">ズレ・課題</span>
-        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','gap',this.value)">${esc(p.gap||'')}</textarea></div>
-      <div><span class="qap-fl">次のアクション${urgentNA?' <span style="color:#dc2626;font-size:9px">⚠ 未入力（Top10必須）</span>':''}</span>
-        <textarea class="qap-inp${urgentNA?' urgent':''}" rows="3" id="qap-na" onblur="qapUp('${p.id}','nextAction',this.value)">${esc(p.nextAction||'')}</textarea></div>
       <div class="qap-g2">
         <div><span class="qap-fl">アクションタイプ</span>
           <select class="qap-sel" onchange="qapUp('${p.id}','actionType',this.value)">${atOpts}</select></div>
@@ -1380,11 +1367,14 @@ function renderQAP(){
         <div><span class="qap-fl">価値の流れ</span>
           <select class="qap-sel" onchange="qapUp('${p.id}','valueFlow',this.value)">${vfOpts}</select></div>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <label class="qap-chk"><input type="checkbox" ${p.isDraining?'checked':''} style="accent-color:#dc2626" onchange="qapUpAndRedraw('${p.id}','isDraining',this.checked)"> ⚠ isDraining</label>
-      </div>
-      <div><span class="qap-fl">メモ</span>
-        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','memo',this.value)">${esc(p.memo||'')}</textarea></div>
+      <div><span class="qap-fl">今の関係の状態</span>
+        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','currentState',this.value)">${esc(p.currentState||'')}</textarea></div>
+      <div><span class="qap-fl">本来どうしたいか</span>
+        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','desiredState',this.value)">${esc(p.desiredState||'')}</textarea></div>
+      <div><span class="qap-fl">ズレ・課題</span>
+        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','gap',this.value)">${esc(p.gap||'')}</textarea></div>
+      <div><span class="qap-fl">次のアクション${urgentNA?' <span style="color:#dc2626;font-size:9px">⚠ 未入力（Top10必須）</span>':''}</span>
+        <textarea class="qap-inp${urgentNA?' urgent':''}" rows="3" id="qap-na" onblur="qapUp('${p.id}','nextAction',this.value)">${esc(p.nextAction||'')}</textarea></div>
     </div>
     <div class="qap-ftr">
       <div class="qap-ftr-row">
