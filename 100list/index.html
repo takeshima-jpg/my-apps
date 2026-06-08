@@ -1675,7 +1675,7 @@ function renderDashboard(){
   </div>
 </div>
 
-<div class="dash-grid" style="align-items:start">
+<div class="dash-grid" style="align-items:start;grid-template-columns:1fr 1fr">
   <div class="card" style="border-left:4px solid #f6ad55">
     <div class="card-title">📅 今月やること（${monthItems.length}件）<button class="btn btn-sm btn-gray no-print" style="margin-left:auto" onclick="navigate('week')">詳細</button></div>
     ${monthItems.length===0?'<p class="text-light text-sm">今月の予定はありません</p>':
