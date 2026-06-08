@@ -646,6 +646,10 @@ async function gdriveFindFile() {
 
 async function gdriveSave() {
   if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
+  const _saveBtn = document.getElementById('gdriveSaveBtn');
+  const _saveBtnMob = document.getElementById('gdriveSaveMob');
+  const _saveBtnSb = document.getElementById('gdriveSaveBtnSb');
+  [_saveBtn, _saveBtnMob, _saveBtnSb].forEach(b => { if(b){ b.textContent='保存中...'; b.disabled=true; } });
   const dot = document.getElementById('gdriveDot');
   const status = document.getElementById('gdriveStatusText');
   if (dot) dot.className = 'gdrive-dot saving';
@@ -667,6 +671,9 @@ async function gdriveSave() {
   } catch(e) {
     if (dot) dot.className = 'gdrive-dot connected';
     if (status) status.textContent = '保存エラー: ' + e.message;
+  }
+  } finally {
+    [_saveBtn, _saveBtnMob, _saveBtnSb].forEach(b => { if(b){ b.textContent=b===_saveBtnSb?'⬆ GDrive保存':'⬆ 保存'; b.disabled=false; } });
   }
 }
 
