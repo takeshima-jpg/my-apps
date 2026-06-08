@@ -658,6 +658,10 @@ async function gdriveSave() {
 
 async function gdriveLoad() {
   if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
+  const _loadBtn = document.getElementById('gdriveLoadBtn');
+  const _loadBtnMob = document.getElementById('gdriveLoadMob');
+  const _origText = _loadBtn ? _loadBtn.textContent : '';
+  [_loadBtn, _loadBtnMob].forEach(b => { if(b){ b.textContent='読込中...'; b.disabled=true; } });
   try {
     const fileId = await gdriveFindFile();
     if (!fileId) { alert('Googleドライブにバックアップが見つかりません'); return; }
@@ -672,6 +676,8 @@ async function gdriveLoad() {
     }
   } catch(e) {
     alert('読込エラー: ' + e.message);
+  } finally {
+    [_loadBtn, _loadBtnMob].forEach(b => { if(b){ b.textContent=_origText; b.disabled=false; } });
   }
 }
 
