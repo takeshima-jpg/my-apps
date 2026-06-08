@@ -634,8 +634,8 @@ async function gdriveSave() {
   if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
   const dot = document.getElementById('gdriveDot');
   const status = document.getElementById('gdriveStatusText');
-  dot.className = 'gdrive-dot saving';
-  status.textContent = '保存中...';
+  if (dot) dot.className = 'gdrive-dot saving';
+  if (status) status.textContent = '保存中...';
   try {
     const payload = JSON.stringify({ items: items, savedAt: new Date().toISOString() }, null, 2);
     const fileId = await gdriveFindFile();
@@ -2382,7 +2382,7 @@ function renderSettings(){
     <div>
       <div class="settings-label">
         <span id="gdriveDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--border2);margin-right:6px;vertical-align:middle;"></span>
-        <span id="gdriveStatusText">未接続</span>
+        <span id="gdriveDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-right:4px;vertical-align:middle;"></span><span id="gdriveStatusText">未接続</span>
       </div>
       <div class="settings-desc">Googleドライブに自動バックアップします</div>
     </div>
