@@ -671,9 +671,8 @@ async function gdriveSave() {
   } catch(e) {
     if (dot) dot.className = 'gdrive-dot connected';
     if (status) status.textContent = '保存エラー: ' + e.message;
-  }
   } finally {
-    [_saveBtn, _saveBtnMob, _saveBtnSb].forEach(b => { if(b){ b.textContent=b===_saveBtnSb?'⬆ GDrive保存':'⬆ 保存'; b.disabled=false; } });
+    [_saveBtn, _saveBtnMob, _saveBtnSb].forEach(b => { if(b){ b.textContent='⬆ GDrive保存'; b.disabled=false; } });
   }
 }
 
