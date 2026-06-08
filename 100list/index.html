@@ -2344,9 +2344,6 @@ function renderReview(){
 
 
 <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;">
-<h3 style="font-size:16px;font-weight:700;margin-bottom:12px;">📌 来年に繰り越す候補</h3>
-${(()=>{const cands=items.filter(i=>!i.discarded&&!i.completed&&i.year===yr+1).slice(0,5);return cands.length===0?'<p class="text-sub text-sm">来年予定のアイテムはありません</p>':cands.map(i=>`<div class="flex items-center gap-8 text-sm" style="padding:7px 0;border-bottom:1px solid #f0f4f8">${prioTag(i.priority)}<span class="flex-1 font-bold">${esc(i.title)}</span><span class="text-sub">${i.category||'未分類'}</span></div>`).join('');})()}
-
 <h3 style="font-size:16px;font-weight:700;margin:20px 0 12px;">🔄 毎年繰り返す項目</h3>
 ${(()=>{const rec=items.filter(i=>!i.discarded&&i.isRecurringYearly&&!i.completed);return rec.length===0?'<p class="text-sub text-sm">毎年繰り返す項目はありません</p>':rec.map(i=>`<div class="flex items-center gap-10" style="padding:9px 0;border-bottom:1px solid #e2e8f0"><div class="flex-1 font-bold text-sm">${esc(i.title)}</div><span class="text-xs text-sub">${i.category||'未分類'}</span><button class="btn btn-blue btn-sm" onclick="duplicateForYear('${i.id}',${yr+1})">${yr+1}年分を作成</button></div>`).join('');})()}
 
