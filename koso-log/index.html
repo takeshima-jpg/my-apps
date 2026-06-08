@@ -759,10 +759,7 @@ async function gdriveFetch(url, options={}) {
     gdriveToken = null;
     localStorage.removeItem('gdrive_token');
     gdriveUpdateUI(false);
-    if (confirm('Googleの認証が切れました。再ログインしますか？')) {
-      gdriveConnect();
-    }
-    throw new Error('認証切れ');
+    throw new Error('認証期限切れ。再ログインしてください。');
   }
   return res;
 }
