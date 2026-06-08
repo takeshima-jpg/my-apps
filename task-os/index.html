@@ -568,10 +568,11 @@ const LAUNCHER_OVERLAY_MAP = {
 };
 
 function nav(v){
-  // Reflect OS・Project OS・Routine OSは新タブで開く
+  // 全OS新タブで開く
   if(v === 'reflect'){ window.open('../reflect-os/index.html', '_blank'); return; }
   if(v === 'project'){ window.open('../project-os/index.html', '_blank'); return; }
   if(v === 'routine'){ window.open('../routine-os/index.html', '_blank'); return; }
+  if(v === 'shot'){    window.open('../shot-task-os/index.html', '_blank'); return; }
   const osConf = OS_OVERLAY_MAP[v] || LAUNCHER_OVERLAY_MAP[v];
   if(osConf){
     if(osConf.newTab){ window.open(osConf.src, '_blank'); return; }
