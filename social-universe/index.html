@@ -144,10 +144,11 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 /* ── CANVAS GUIDE (配置補助・評価軸ではない) ── */
 .canvas-guide{
   position:absolute;inset:0;pointer-events:none;z-index:0;
-  display:flex;flex-direction:column;
+  display:grid;flex-direction:column;
+  grid-template-rows:30% 50% 20%;
 }
 .cg-zone{
-  flex:1;display:flex;align-items:center;
+  display:flex;align-items:center;
   padding:0 10px;position:relative;
 }
 .cg-zone:not(:last-child)::after{
@@ -725,20 +726,6 @@ function gdriveHandleRedirect() {
     }
   }
 }
-
-// 他のタブでログインした場合にUIを自動更新
-window.addEventListener('storage', function(e) {
-  if (e.key === 'gdrive_token') {
-    if (e.newValue) {
-      gdriveToken = e.newValue;
-      gdriveUpdateUI(true);
-      toast('Googleドライブに接続しました');
-    } else {
-      gdriveToken = null;
-      gdriveUpdateUI(false);
-    }
-  }
-});
 
 function gdriveUpdateUI(connected) {
   // デスクトップサイドバー
