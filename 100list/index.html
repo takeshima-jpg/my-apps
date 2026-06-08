@@ -1628,6 +1628,7 @@ function renderDashboard(){
     if(i.year===yr&&i.month&&i.month<mo) return true;
     return false;
   });
+  const nextYrCandidates = activeItems.filter(i=>!i.completed&&i.year===yr+1).slice(0,5);
 
   el.innerHTML = `
 <h2 class="page-title">ダッシュボード</h2>
