@@ -518,7 +518,7 @@ function gdriveHandleRedirect() {
     // トークンをURLから消す
     history.replaceState(null, '', location.pathname);
     gdriveUpdateUI(true);
-    gdriveAutoLoad();
+    // gdriveAutoLoad(); // ログイン直後の自動確認を無効化（トークン誤削除防止）
   } else {
     // 保存済みトークンを確認
     const saved = localStorage.getItem('gdrive_token');
