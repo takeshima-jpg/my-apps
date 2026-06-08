@@ -1714,41 +1714,6 @@ ${buildMonthChart(activeItems, yr, mo)}
 `;
 }
 
-// ===== RANDOM CARD =====
-let _randomItems = [];
-function pickRandomItems(activeItems) {
-  const pool = activeItems.filter(i => !i.completed && !i.isFocus);
-  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
-  _randomItems = shuffled.slice(0, 3);
-}
-function shuffleRandom() {
-  const activeItems = items.filter(i => !i.discarded);
-  pickRandomItems(activeItems);
-  renderPage('dashboard');
-}
-function buildRandomCard(activeItems) {
-  if (_randomItems.length === 0) pickRandomItems(activeItems);
-  const list = _randomItems;
-  return `
-<div class="card" style="border-left:4px solid #9f7aea;margin-top:16px;">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-    <div class="card-title" style="margin-bottom:0">🎲 埋もれた願いを掘り起こす</div>
-    <button onclick="shuffleRandom()" style="background:none;border:1px solid #d6bcfa;border-radius:6px;padding:3px 10px;cursor:pointer;color:#6b46c1;font-size:12px;">シャッフル</button>
-  </div>
-  <p style="font-size:12px;color:#a0aec0;margin-bottom:10px;">未完了リストからランダム3件 — ページを開くたびに変わります</p>
-  ${list.length === 0 ? '<p style="color:#a0aec0;font-size:13px;">表示できるアイテムがありません</p>' :
-    list.map(i => `
-  <div style="padding:8px 0;border-bottom:1px solid #f3e8ff;display:flex;align-items:center;gap:8px;">
-    <button class="complete-btn" onclick="toggleComplete('${i.id}');shuffleRandom()" title="完了にする"></button>
-    <div style="flex:1;min-width:0;">
-      <div style="font-size:15px;font-weight:600;">${esc(i.title)}</div>
-      <div style="font-size:11px;color:#a0aec0;">${i.category||'未分類'} ${i.year ? '/ '+i.year+'年'+(i.month?i.month+'月':'') : ''}</div>
-    </div>
-    <button onclick="openForm('${i.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#a0aec0;font-size:16px;padding:2px 4px" title="編集">✏️</button>
-  </div>`).join('')
-  }
-</div>`;
-}
 
 // ===== LIST PAGE =====
 let listF = {search:'',year:'all',month:'all',cat:'all',status:'incomplete',focus:false,recurring:false,count:false,sortKey:'date',sortAsc:true};
