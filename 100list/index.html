@@ -1626,9 +1626,15 @@ function renderDashboard(){
     if(i.year===yr&&i.month&&i.month<mo) return true;
     return false;
   });
-  const nextYrCandidates = activeItems.filter(i=>!i.completed&&i.year===yr+1).slice(0,5);
-  const outstanding = activeItems.filter(i=>!i.completed&&i.year&&i.year<yr);
-  const recurring = activeItems.filter(i=>i.isRecurringYearly&&!i.completed);
+  // 次にやる候補: 今年以内 & High優先度 & 未完了、翌年以降は除外
+  const next = activeItems
+    .filter(i=>!i.completed && i.priority==='High' && (!i.year || i.year<=yr))
+    .sort((a,b)=>{
+      const ay=(a.year||9999)*100+(a.month||99);
+      const by=(b.year||9999)*100+(b.month||99);
+      return ay-by;
+    })
+    .slice(0,5);
 
   el.innerHTML = `
 <h2 class="page-title">ダッシュボード</h2>
@@ -1696,24 +1702,684 @@ function renderDashboard(){
       </div>`).join('')
     }
   </div>
+
+</div>
+
+${buildRandomCard(activeItems)}
+
+${buildRandomCard(activeItems)}
+
+${buildMonthChart(activeItems, yr, mo)}
+
+`;
+}
+
+// ===== RANDOM CARD =====
+let _randomItems = [];
+function pickRandomItems(activeItems) {
+  const pool = activeItems.filter(i => !i.completed && !i.isFocus);
+  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
+  _randomItems = shuffled.slice(0, 3);
+}
+function shuffleRandom() {
+  const activeItems = items.filter(i => !i.discarded);
+  pickRandomItems(activeItems);
+  renderPage('dashboard');
+}
+function buildRandomCard(activeItems) {
+  if (_randomItems.length === 0) pickRandomItems(activeItems);
+  const list = _randomItems;
+  return `
+<div class="card" style="border-left:4px solid #9f7aea;margin-top:16px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <div class="card-title" style="margin-bottom:0">🎲 埋もれた願いを掘り起こす</div>
+    <button onclick="shuffleRandom()" style="background:none;border:1px solid #d6bcfa;border-radius:6px;padding:3px 10px;cursor:pointer;color:#6b46c1;font-size:12px;">シャッフル</button>
+  </div>
+  <p style="font-size:12px;color:#a0aec0;margin-bottom:10px;">未完了リストからランダム3件 — ページを開くたびに変わります</p>
+  ${list.length === 0 ? '<p style="color:#a0aec0;font-size:13px;">表示できるアイテムがありません</p>' :
+    list.map(i => `
+  <div style="padding:8px 0;border-bottom:1px solid #f3e8ff;display:flex;align-items:center;gap:8px;">
+    <button class="complete-btn" onclick="toggleComplete('${i.id}');shuffleRandom()" title="完了にする"></button>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:15px;font-weight:600;">${esc(i.title)}</div>
+      <div style="font-size:11px;color:#a0aec0;">${i.category||'未分類'} ${i.year ? '/ '+i.year+'年'+(i.month?i.month+'月':'') : ''}</div>
+    </div>
+    <button onclick="openForm('${i.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#a0aec0;font-size:16px;padding:2px 4px" title="編集">✏️</button>
+  </div>`).join('')
+  }
+</div>`;
+}
+
+// ===== LIST PAGE =====
+let listF = {search:'',year:'all',month:'all',cat:'all',status:'incomplete',focus:false,recurring:false,count:false,sortKey:'date',sortAsc:true};
+let listTab = 'incomplete'; // 'incomplete' | 'complete'
+
+function renderList(){
+  const el = document.getElementById('page-list');
+  const focusName = settings.focusListName||'重点リスト';
+  const prioOrd = {High:0,Medium:1,Low:2};
+  const yr = thisYear(), mo = thisMonth();
+
+  // フィルター（statusはtabで上書き）
+  let allRows = items.filter(i=>!i.discarded).filter(i=>{
+    if(listF.search){const q=listF.search.toLowerCase(); if(!i.title.toLowerCase().includes(q) && !(i.memo||'').toLowerCase().includes(q)) return false;}
+    if(listF.year!=='all' && String(i.year)!==listF.year) return false;
+    if(listF.month!=='all' && String(i.month)!==listF.month) return false;
+    if(listF.cat!=='all'){
+      if(listF.cat==='未分類' && i.category && i.category!=='未分類') return false;
+      else if(listF.cat!=='未分類' && i.category!==listF.cat) return false;
+    }
+    if(listF.focus && !i.isFocus) return false;
+    if(listF.recurring && !i.isRecurringYearly) return false;
+    if(listF.count && !i.isCountGoal) return false;
+    return true;
+  });
+
+  const incompleteRows = allRows.filter(i=>!i.completed);
+  const completeRows = allRows.filter(i=>i.completed);
+
+  // 未完了: 期日あり→期日順、期日なし→優先度順で後ろ
+  function sortIncomplete(rows){
+    return rows.slice().sort((a,b)=>{
+      const aHasDate = a.year || a.month;
+      const bHasDate = b.year || b.month;
+      if(aHasDate && !bHasDate) return -1;
+      if(!aHasDate && bHasDate) return 1;
+      if(aHasDate && bHasDate){
+        const ay = (a.year||9999)*100+(a.month||99);
+        const by = (b.year||9999)*100+(b.month||99);
+        if(ay!==by) return ay-by;
+      }
+      // 同日付 or 両方なし → 優先度順
+      return (prioOrd[a.priority]??2)-(prioOrd[b.priority]??2);
+    });
+  }
+
+  // 完了: 完了日が新しい順
+  function sortComplete(rows){
+    return rows.slice().sort((a,b)=>{
+      const da = a.completedAt||'';
+      const db = b.completedAt||'';
+      if(da>db) return -1;
+      if(da<db) return 1;
+      return 0;
+    });
+  }
+
+  const rows = listTab==='incomplete' ? sortIncomplete(incompleteRows) : sortComplete(completeRows);
+  const years = [...new Set(items.map(i=>i.year).filter(Boolean))].sort();
+
+  el.innerHTML = `
+<h2 class="page-title">≡ リスト一覧</h2>
+<div class="card" style="padding:15px 18px;margin-bottom:14px">
+  <div class="filter-bar">
+    <input type="text" placeholder="🔍 タイトル・メモで検索" value="${esc(listF.search)}" oninput="listF.search=this.value;renderList()">
+    <select onchange="listF.year=this.value;renderList()">
+      <option value="all">年: すべて</option>
+      ${years.map(y=>`<option value="${y}" ${String(listF.year)===String(y)?'selected':''}>${y}年</option>`).join('')}
+    </select>
+    <select onchange="listF.month=this.value;renderList()">
+      <option value="all">月: すべて</option>
+      ${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${String(listF.month)===String(i+1)?'selected':''}>${i+1}月</option>`).join('')}
+    </select>
+    <select onchange="listF.cat=this.value;renderList()">
+      <option value="all">カテゴリ: すべて</option>
+      ${[...CATS,'未分類'].map(c=>`<option value="${c}" ${listF.cat===c?'selected':''}>${c}</option>`).join('')}
+    </select>
+  </div>
+  <div class="filter-bar">
+    <button class="toggle-btn ${listF.focus?'on':''}" onclick="listF.focus=!listF.focus;renderList()">◎ ${esc(focusName)}のみ</button>
+    <button class="toggle-btn ${listF.recurring?'on':''}" onclick="listF.recurring=!listF.recurring;renderList()">🔄 毎年繰り返し</button>
+    <button class="toggle-btn ${listF.count?'on':''}" onclick="listF.count=!listF.count;renderList()">🎯 カウント系</button>
+  </div>
+</div>
+
+<div class="flex gap-8" style="margin-bottom:14px;align-items:center;flex-wrap:nowrap">
+  <button onclick="listTab='incomplete';renderList()" style="flex:1;padding:8px 6px;border-radius:10px;border:2px solid ${listTab==='incomplete'?'#f6ad55':'#e2e8f0'};background:${listTab==='incomplete'?'#fffaf0':'#fff'};font-size:14px;font-weight:700;cursor:pointer;color:${listTab==='incomplete'?'#c05621':'#718096'};white-space:nowrap;text-align:center;min-width:0;">
+    📋 未完了 <span style="background:#f6ad55;color:#1a202c;border-radius:999px;padding:1px 8px;font-size:13px;margin-left:4px">${incompleteRows.length}</span>
+  </button>
+  <button onclick="listTab='complete';renderList()" style="flex:1;padding:8px 6px;border-radius:10px;border:2px solid ${listTab==='complete'?'#48bb78':'#e2e8f0'};background:${listTab==='complete'?'#f0fff4':'#fff'};font-size:14px;font-weight:700;cursor:pointer;color:${listTab==='complete'?'#276749':'#718096'};white-space:nowrap;text-align:center;min-width:0;">
+    ✅ 完了 <span style="background:#48bb78;color:#fff;border-radius:999px;padding:1px 8px;font-size:13px;margin-left:4px">${completeRows.length}</span>
+  </button>
+  <button onclick="renderList()" title="インライン編集した内容を期日順に並び替えます"
+    style="flex-shrink:0;padding:8px 12px;border-radius:10px;border:2px solid #63b3ed;background:#ebf8ff;font-size:13px;font-weight:700;cursor:pointer;color:#2b6cb0;white-space:nowrap">
+    🔃 並び替え確定
+  </button>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden">
+  <table class="list-table">
+    <thead><tr>
+      <th style="width:42px">${listTab==='complete'?'戻す':'完了'}</th>
+      <th style="width:40px">NO</th>
+      <th>やりたいこと</th>
+      <th style="width:85px">カテゴリ</th>
+      <th style="width:85px">優先度</th>
+      <th style="width:115px">${listTab==='complete'?'完了日':'予定'}</th>
+      <th style="width:80px">タグ</th>
+      <th style="width:90px">操作</th>
+    </tr></thead>
+    <tbody>
+    ${rows.length===0
+      ?`<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">${listTab==='complete'?'✅':'📭'}</div><p>${listTab==='complete'?'完了済みのタスクはありません':'条件に一致するタスクがありません'}</p></div></td></tr>`
+      :rows.map(i=>`
+      <tr class="${i.completed?'done':''}">
+        <td>
+          <button class="complete-btn ${i.completed?'done':''}"
+            onclick="toggleCompleteAndSwitch('${i.id}')"
+            title="${i.completed?'未完了に戻す':'完了にする'}">
+            ${i.completed?'✓':''}
+          </button>
+        </td>
+        <td class="text-light text-xs">${i.no}</td>
+        <td>
+          <div class="item-title" style="font-weight:600;font-size:15px">${esc(i.title)}</div>
+          ${i.isCountGoal&&i.countTarget?`<div class="text-xs text-light">${i.countCurrent||0}/${i.countTarget}</div>`:''}
+          ${i.memo?`<div class="text-xs text-light truncate">${esc(i.memo)}</div>`:''}
+        </td>
+        ${i.completed ? `
+          <td class="text-sm text-sub">${i.category||'未分類'}</td>
+          <td>${prioTag(i.priority)}</td>
+          <td class="text-sm text-sub">
+            <div><span style="color:#276749">✓ ${fmtDate(i.completedAt)}</span></div>
+            <div class="text-xs text-light">${i.year?i.year+'年':''} ${i.month?i.month+'月':''}</div>
+          </td>
+          <td>
+            ${i.isFocus?'<span class="tag tag-focus">⭐</span>':''}
+            ${i.isRecurringYearly?'<span class="tag tag-recurring">🔄</span>':''}
+          </td>
+        ` : `
+          <td style="padding:6px 8px">
+            <select onchange="updateItemInline('${i.id}',{category:this.value})"
+              style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 6px;font-size:14px;width:100%;color:${!i.category||i.category==='未分類'?'#c53030':'#718096'}">
+              <option value="">未分類</option>
+              ${CATS.map(c=>`<option value="${c}" ${i.category===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </td>
+          <td style="padding:6px 8px">
+            <div style="display:flex;gap:3px">
+              <button onclick="updateItemInline('${i.id}',{priority:'High'})"
+                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='High'?'#c53030':'#e2e8f0'};background:${i.priority==='High'?'#fed7d7':'#fff'};color:${i.priority==='High'?'#c53030':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">高</button>
+              <button onclick="updateItemInline('${i.id}',{priority:'Medium'})"
+                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='Medium'?'#c05621':'#e2e8f0'};background:${i.priority==='Medium'?'#feebc8':'#fff'};color:${i.priority==='Medium'?'#c05621':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">中</button>
+              <button onclick="updateItemInline('${i.id}',{priority:'Low'})"
+                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='Low'?'#718096':'#e2e8f0'};background:${i.priority==='Low'?'#edf2f7':'#fff'};color:${i.priority==='Low'?'#718096':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">低</button>
+            </div>
+          </td>
+          <td style="padding:6px 8px">
+            <div style="display:flex;gap:4px;align-items:center">
+              <select onchange="updateItemInline('${i.id}',{year:this.value?parseInt(this.value):null})"
+                style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 4px;font-size:13px;width:60px">
+                <option value="">年</option>
+                ${[2025,2026,2027,2028,2029].map(y=>`<option value="${y}" ${i.year===y?'selected':''}>${y}</option>`).join('')}
+              </select>
+              <select onchange="updateItemInline('${i.id}',{month:this.value?parseInt(this.value):null})"
+                style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 4px;font-size:13px;width:48px">
+                <option value="">月</option>
+                ${Array.from({length:12},(_,k)=>`<option value="${k+1}" ${i.month===k+1?'selected':''}>${k+1}</option>`).join('')}
+              </select>
+            </div>
+          </td>
+          <td style="padding:6px 8px">
+            <div style="display:flex;gap:4px;align-items:center">
+              <button onclick="updateItemInline('${i.id}',{isFocus:!${i.isFocus}})"
+                title="${i.isFocus?'重点リストから外す':'重点リストに追加'}"
+                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isFocus?'#f6ad55':'#e2e8f0'};background:${i.isFocus?'#fffaf0':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isFocus?'1':'0.35'}">⭐</button>
+              <button onclick="updateItemInline('${i.id}',{isCountGoal:!${i.isCountGoal}})"
+                title="${i.isCountGoal?'カウント系を外す':'カウント系にする'}"
+                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isCountGoal?'#9f7aea':'#e2e8f0'};background:${i.isCountGoal?'#faf5ff':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isCountGoal?'1':'0.35'}">🎯</button>
+              <button onclick="updateItemInline('${i.id}',{isRecurringYearly:!${i.isRecurringYearly}})"
+                title="${i.isRecurringYearly?'毎年繰り返しを外す':'毎年繰り返しにする'}"
+                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isRecurringYearly?'#48bb78':'#e2e8f0'};background:${i.isRecurringYearly?'#f0fff4':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isRecurringYearly?'1':'0.35'}">🔄</button>
+            </div>
+          </td>
+        `}
+        <td><div class="flex gap-8">
+          <button class="btn btn-sm btn-outline" onclick="openForm('${i.id}')">編集</button>
+          <button class="btn btn-sm" style="background:#edf2f7;color:#718096" onclick="discardItem('${i.id}')">捨てる</button>
+        </div></td>
+      </tr>`).join('')
+    }
+    </tbody>
+  </table>
+</div>`;
+}
+
+// 完了ボタン押下時: タブは切り替えずその場で再描画
+function toggleCompleteAndSwitch(id){
+  const it = getItem(id);
+  if(!it) return;
+  toggleComplete(id);
+  renderList();
+}
+
+function setListSort(key){
+  if(listF.sortKey===key) listF.sortAsc=!listF.sortAsc;
+  else{ listF.sortKey=key; listF.sortAsc=true; }
+  renderList();
+}
+
+
+// ===== WEEK/MONTH PAGE =====
+let weekTab = 'month'; // 'week' | 'month' | 'next30'
+
+function renderWeek(){
+  const el = document.getElementById('page-week');
+  const yr = thisYear(), mo = thisMonth();
+  const now = new Date();
+
+  let title='', filteredItems=[];
+
+  if(weekTab==='week'){
+    const {mon,sun} = thisWeekRange();
+    title = `今週（${mon.getMonth()+1}/${mon.getDate()}〜${sun.getMonth()+1}/${sun.getDate()}）`;
+    filteredItems = items.filter(i=>!i.discarded).filter(i=>{
+      if(i.completed) return false;
+      if(i.scheduledDate){
+        const d=new Date(i.scheduledDate);
+        return d>=mon && d<=sun;
+      }
+      return i.year===yr && i.month===mo;
+    });
+  } else if(weekTab==='month'){
+    title = `${yr}年${mo}月 やること`;
+    filteredItems = items.filter(i=>!i.discarded&&i.year===yr&&i.month===mo);
+  } else {
+    const {now:n, end} = next30Days();
+    title = `次の30日（〜${end.getMonth()+1}/${end.getDate()}）`;
+    filteredItems = items.filter(i=>!i.discarded).filter(i=>{
+      if(i.completed) return false;
+      if(i.scheduledDate){
+        const d=new Date(i.scheduledDate);
+        return d>=n && d<=end;
+      }
+      if(i.year===yr){
+        if(i.month===mo) return true;
+        if(i.month===mo+1) return true;
+      }
+      return false;
+    });
+  }
+
+  filteredItems.sort((a,b)=>{
+    if(a.completed!==b.completed) return a.completed?1:-1;
+    const po={High:0,Medium:1,Low:2};
+    return (po[a.priority]??2)-(po[b.priority]??2);
+  });
+
+  const done = filteredItems.filter(i=>i.completed).length;
+  const total = filteredItems.length;
+  const prioMap = {high:'高',medium:'中',low:'低'};
+
+  el.innerHTML = `
+<h2 class="page-title">◷ スケジュール管理</h2>
+<div class="flex gap-8 mb-16" style="margin-bottom:16px">
+  ${['week','month','next30'].map(t=>`<button onclick="weekTab='${t}';renderWeek()" class="btn ${weekTab===t?'btn-primary':'btn-outline'}">${t==='week'?'今週':t==='month'?'今月':'次の30日'}</button>`).join('')}
+</div>
+<h3 style="font-size:19px;font-weight:700;margin-bottom:12px">${title}</h3>
+<div class="flex items-center gap-12 mb-16">
+  <span class="text-sub text-sm">${done} / ${total} 件完了</span>
+  <div style="flex:1;min-width:180px">${progressBar(done,total,'green')}</div>
+</div>
+${filteredItems.length===0
+  ?`<div class="empty-state"><div class="empty-icon">🗓️</div><p>この期間の予定はありません</p></div>`
+  :filteredItems.map(i=>`
+  <div class="month-item ${i.priority.toLowerCase()} ${i.completed?'done':''}">
+    <div class="month-item-header">
+      <button class="complete-btn ${i.completed?'done':''}" onclick="toggleComplete('${i.id}');renderWeek()" style="width:36px;height:36px;font-size:19px">${i.completed?'✓':''}</button>
+      <div class="flex-1">
+        <div style="font-size:18px;font-weight:700;${i.completed?'text-decoration:line-through;color:var(--text-light)':''}">${esc(i.title)}</div>
+        <div class="flex gap-8 mt-8 flex-wrap">
+          <span class="text-sm text-sub">${i.category||'未分類'}</span>
+          ${prioTag(i.priority)}
+          ${i.isFocus?`<span class="tag tag-focus">⭐ ${esc(settings.focusListName||'重点')}</span>`:''}
+          ${i.scheduledDate?`<span class="text-sm text-sub">📆 ${i.scheduledDate}</span>`:''}
+          ${i.completed&&i.completedAt?`<span class="text-sm text-green">✓ ${fmtDate(i.completedAt)} 完了</span>`:''}
+        </div>
+        ${i.memo?`<div class="text-xs text-sub" style="margin-top:5px">${esc(i.memo).substring(0,80)}${i.memo.length>80?'…':''}</div>`:''}
+      </div>
+    </div>
+    ${!i.completed?`
+    <div class="month-item-actions">
+      <button class="btn btn-gray btn-sm" onclick="postponeToNextMonth('${i.id}');renderWeek()">⏭ 翌月へ延期</button>
+      <button class="btn btn-outline btn-sm" onclick="openForm('${i.id}')">📝 編集・メモ</button>
+    </div>`:''}
+  </div>`).join('')
+}`;
+}
+
+// ===== FOCUS LIST PAGE =====
+function renderFocus(){
+  const el = document.getElementById('page-focus');
+  const focusName = settings.focusListName||'重点リスト';
+  const yr = thisYear(), mo = thisMonth();
+
+  const focus = items.filter(i=>i.isFocus&&!i.discarded).sort((a,b)=>a.no-b.no);
+  const done = focus.filter(i=>i.completed);
+  const undone = focus.filter(i=>!i.completed);
+  const thisYrFocus = focus.filter(i=>i.year===yr&&!i.completed);
+  const rate = focus.length?Math.round(done.length/focus.length*100):0;
+
+  el.innerHTML = `
+<h2 class="page-title">◎ ${esc(focusName)}</h2>
+<p class="page-sub">重要な目標を管理します（<button onclick="navigate('settings')" style="background:none;border:none;color:#2b6cb0;cursor:pointer;font-size:15px">名称変更</button>）</p>
+
+<div class="stat-grid stat-grid-3">
+  <div class="stat-card"><div class="stat-label">登録件数</div><div class="stat-value">${focus.length}</div></div>
+  <div class="stat-card stat-green"><div class="stat-label">達成済み</div><div class="stat-value">${done.length}</div></div>
+  <div class="stat-card stat-blue"><div class="stat-label">達成率</div><div class="stat-value">${rate}%</div></div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <div class="card-title">全体の達成率</div>
+  <div class="progress-header"><span>${done.length} / ${focus.length}</span><span>${rate}%</span></div>
+  ${progressBar(done.length,focus.length,'orange')}
+</div>
+
+${thisYrFocus.length>0?`
+<div class="card" style="background:var(--blue-bg);border-color:var(--blue-border);margin-bottom:16px">
+  <div class="card-title">📅 今年の${esc(focusName)}予定（${thisYrFocus.length}件）</div>
+  ${thisYrFocus.map(i=>`
+  <div class="focus-item">
+    <button class="complete-btn" onclick="toggleComplete('${i.id}');renderFocus()"></button>
+    <span class="focus-no">${i.no}</span>
+    <div class="flex-1"><div style="font-weight:600">${esc(i.title)}</div></div>
+    ${i.month?`<span class="text-sm text-sub">${i.month}月</span>`:''}
+    <span class="text-sm text-sub">${i.category||'未分類'}</span>
+  </div>`).join('')}
+</div>`:''}
+
+<div class="card" style="margin-bottom:16px">
+  <div class="card-title">📋 未達成（${undone.length}件）</div>
+  ${undone.length===0?'<p class="text-green">すべて達成しました！ 🎉</p>':
+    undone.map(i=>`
+    <div class="focus-item">
+      <button class="complete-btn" onclick="toggleComplete('${i.id}');renderFocus()"></button>
+      <span class="focus-no">${i.no}</span>
+      <div class="flex-1">
+        <div style="font-weight:600">${esc(i.title)}</div>
+        ${i.memo?`<div class="text-xs text-light">${esc(i.memo)}</div>`:''}
+      </div>
+      ${i.year?`<span class="text-xs text-sub">${i.year}年${i.month?i.month+'月':''}</span>`:''}
+      <span class="text-sm text-sub">${i.category||'未分類'}</span>
+      ${prioTag(i.priority)}
+    </div>`).join('')
+  }
+</div>
+
+${done.length>0?`
+<div class="card">
+  <div class="card-title">✅ 達成済み（${done.length}件）</div>
+  ${done.map(i=>`
+  <div class="focus-item" style="opacity:.65">
+    <button class="complete-btn done" onclick="toggleComplete('${i.id}');renderFocus()">✓</button>
+    <span class="focus-no">${i.no}</span>
+    <div class="flex-1"><div style="text-decoration:line-through;color:var(--text-sub)">${esc(i.title)}</div></div>
+    ${i.completedAt?`<span class="text-xs text-green">${fmtDate(i.completedAt)}</span>`:''}
+  </div>`).join('')}
+</div>`:''}`;
+}
+
+// ===== COUNT PAGE (親テーマ＋マイルストーン) =====
+function renderCount(){
+  const el = document.getElementById('page-count');
+  const groups = getCountGroups();
+  const themes = Object.keys(groups);
+
+  if(themes.length===0){
+    el.innerHTML=`<h2 class="page-title">🎯 カウント系目標</h2><div class="empty-state"><div class="empty-icon">🎯</div><p>カウント系目標がありません</p><br><button class="btn btn-primary btn-lg" onclick="openForm(null)">＋ カウント系目標を追加</button></div>`;
+    return;
+  }
+
+  el.innerHTML = `<h2 class="page-title">🎯 カウント系目標</h2>
+<p class="page-sub">親テーマごとにマイルストーンを管理します</p>
+${themes.map(theme=>{
+  const grp = groups[theme].sort((a,b)=>(a.countTarget||0)-(b.countTarget||0));
+  const cur = getThemeCurrent(theme);
+  const maxTarget = Math.max(...grp.map(i=>i.countTarget||0));
+  const p = pct(cur, maxTarget);
+  const barColor = p>=100?'green':p>=70?'orange':'blue';
+  const hist = (getThemeMaster(theme)?.countHistory||[]).slice(-8).reverse();
+  const doneMs = grp.filter(i=>i.completed);
+  const undoneMs = grp.filter(i=>!i.completed);
+
+  return `
+<div class="count-group-card" style="border-left:4px solid ${p>=100?'var(--green)':p>=70?'var(--accent)':'var(--blue)'}">
+  <div class="flex items-start justify-between">
+    <div>
+      <div class="count-theme">${esc(theme)}</div>
+      <div class="flex gap-8 mt-8">
+        ${grp[0]?.category?`<span class="text-sm text-sub">${esc(grp[0].category)}</span>`:''}
+        ${grp[0]?.year?`<span class="text-sm text-sub">・${grp[0].year}年</span>`:''}
+      </div>
+    </div>
+    ${p>=100?'<span style="background:var(--green-bg);color:var(--green);padding:4px 12px;border-radius:999px;font-weight:700;font-size:14px">✅ 最終達成！</span>':''}
+  </div>
+
+  <div class="flex items-end gap-12 mt-16" style="margin-bottom:10px">
+    <div class="count-big" style="color:${p>=100?'#276749':p>=70?'#c05621':'#2b6cb0'}">${cur}</div>
+    <div style="font-size:21px;color:var(--text-light);margin-bottom:8px">/ ${maxTarget}</div>
+    <div style="flex:1"></div>
+    <div style="text-align:right">
+      <div style="font-size:26px;font-weight:800;color:${p>=100?'#276749':'var(--text-sub)'}">${p}%</div>
+      <div class="text-xs text-light">あと ${Math.max(0,maxTarget-cur)}</div>
+    </div>
+  </div>
+  ${progressBar(cur,maxTarget,barColor)}
+
+  <div style="margin:14px 0 8px;font-size:14px;font-weight:700;color:var(--text-sub)">マイルストーン</div>
+  ${grp.map(ms=>{
+    const mp = pct(cur, ms.countTarget||1);
+    const isDone = cur>=(ms.countTarget||Infinity);
+    return `<div class="milestone-row">
+      <div class="milestone-num ${isDone?'milestone-done':'milestone-undone'}">
+        ${isDone?'✅':'⬜'} ${ms.countTarget}
+      </div>
+      <div class="milestone-bar-wrap">${progressBar(cur,ms.countTarget||1,isDone?'green':'blue')}</div>
+      <div style="width:36px;text-align:right;font-size:14px;color:${isDone?'#276749':'var(--text-light)'}">
+        ${isDone?'達成':'残'+Math.max(0,(ms.countTarget||0)-cur)}
+      </div>
+      <div style="width:90px;font-size:13px;color:var(--text-sub);text-align:right">${esc(ms.title||'')}</div>
+    </div>`;
+  }).join('')}
+
+  <div class="count-controls">
+    <button class="count-btn minus" onclick="decrementTheme('${esc(theme)}');renderCount()" ${cur===0?'disabled':''}>−</button>
+    <input class="count-note" id="note-${encodeURIComponent(theme)}" type="text" placeholder="メモ（任意）" onkeydown="if(event.key==='Enter'){incrementTheme('${esc(theme).replace(/'/g,"\\'")}',this.value);this.value='';renderCount()}">
+    <button class="count-btn" onclick="incrementTheme('${esc(theme).replace(/'/g,"\\'")}',document.getElementById('note-${encodeURIComponent(theme)}').value);document.getElementById('note-${encodeURIComponent(theme)}').value='';renderCount()" style="border-color:var(--accent);background:var(--orange-bg);color:#c05621">＋</button>
+  </div>
+
+  ${hist.length>0?`
+  <details style="margin-top:12px">
+    <summary class="text-sm text-sub" style="cursor:pointer">📜 履歴（直近${hist.length}件）</summary>
+    <div style="margin-top:8px;max-height:140px;overflow-y:auto">
+      ${hist.map(r=>`<div class="flex gap-10 text-sm" style="padding:4px 0;border-bottom:1px solid #f0f4f8">
+        <span style="color:${r.delta>0?'#276749':'#c53030'};font-weight:700;width:22px">${r.delta>0?'+':''}</span>
+        <span class="text-sub" style="width:88px;font-size:14px">${r.date}</span>
+        ${r.note?`<span class="text-sub text-xs">${esc(r.note)}</span>`:''}
+      </div>`).join('')}
+    </div>
+  </details>`:''}
+</div>`;
+}).join('')}`;
+}
+
+// ===== UNCAT PAGE =====
+function discardItem(id){
+  const it = getItem(id);
+  if(!it) return;
+  if(!confirm('この項目を捨てるリストに移動します。削除はされず、あとから戻せます。')) return;
+  updateItem(id, {discarded:true, discardedAt:new Date().toISOString()});
+  toast('捨てるリストに移動しました');
+  updateUncatBadge();
+  renderPage(currentPage);
+}
+
+function restoreItem(id){
+  updateItem(id, {discarded:false, discardedAt:null});
+  toast('リスト一覧に戻しました','success');
+  updateUncatBadge();
+  renderDiscard();
+}
+
+function renderDiscard(){
+  const el = document.getElementById('page-discard');
+  const discarded = items.filter(i=>i.discarded).sort((a,b)=>{
+    const da=a.discardedAt||'', db=b.discardedAt||'';
+    return da>db?-1:da<db?1:0;
+  });
+
+  el.innerHTML = `
+<h2 class="page-title">🗑️ 捨てるリスト</h2>
+<p class="page-sub">削除せずにアーカイブした項目です。いつでも通常リストに戻せます。（${discarded.length}件）</p>
+
+${discarded.length===0
+  ?`<div class="empty-state"><div class="empty-icon">🗑️</div><p>まだ捨てた項目はありません。</p><p style="margin-top:8px;font-size:15px;color:var(--text-light)">年始の100個選定時に、今年はやらないものをここに退避できます。</p></div>`
+  :`<div class="card" style="padding:0;overflow:hidden">
+  <table class="list-table">
+    <thead><tr>
+      <th>やりたいこと</th>
+      <th style="width:85px">カテゴリ</th>
+      <th style="width:90px">予定</th>
+      <th style="width:100px">捨てた日</th>
+      <th style="width:220px">メモ</th>
+      <th style="width:80px">操作</th>
+    </tr></thead>
+    <tbody>
+    ${discarded.map(i=>`
+    <tr style="opacity:.75">
+      <td>
+        <div style="font-weight:600;font-size:15px;color:var(--text-sub)">${esc(i.title)}</div>
+      </td>
+      <td class="text-sm text-sub">${i.category||'未分類'}</td>
+      <td class="text-sm text-sub">${i.year?i.year+'年':''} ${i.month?i.month+'月':''}</td>
+      <td class="text-sm text-sub">${i.discardedAt?fmtDate(i.discardedAt):'-'}</td>
+      <td class="text-xs text-light" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(i.memo||'')}</td>
+      <td>
+        <button class="btn btn-sm btn-success" onclick="restoreItem('${i.id}')">↩ 戻す</button>
+      </td>
+    </tr>`).join('')}
+    </tbody>
+  </table>
+</div>`}`;
+}
+
+function renderUncat(){
+  const el = document.getElementById('page-uncat');
+  const uncat = items.filter(i=>!i.discarded&&(!i.category||i.category==='未分類'||!CATS.includes(i.category)));
+
+  el.innerHTML = `
+<h2 class="page-title">🏷️ 未分類の整理</h2>
+<p class="page-sub">カテゴリが未設定の項目を一括で分類できます（${uncat.length}件）</p>
+
+${uncat.length===0?`<div class="empty-state"><div class="empty-icon">✅</div><p>未分類の項目はありません！</p></div>`:`
+<div class="card">
+  <div class="flex justify-between items-center mb-12">
+    <span class="text-sub text-sm">一括設定:</span>
+    <div class="flex gap-8 flex-wrap">
+      ${CATS.map(c=>`<button class="btn btn-sm btn-outline" onclick="bulkSetCat('${c}')">${c}に一括設定</button>`).join('')}
+    </div>
+  </div>
+  ${uncat.map(i=>`
+  <div class="uncat-row">
+    <div class="flex-1">
+      <div style="font-weight:600;font-size:16px">${esc(i.title)}</div>
+      <div class="text-xs text-sub">${i.year?i.year+'年':''}${i.month?i.month+'月':''} ${i.priority}</div>
+    </div>
+    <select onchange="setItemCat('${i.id}',this.value);renderUncat()" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:15px;color:var(--text)">
+      <option value="">-- カテゴリを選択 --</option>
+      ${CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}
+    </select>
+    <button class="btn btn-sm btn-outline" onclick="openForm('${i.id}')">詳細編集</button>
+  </div>`).join('')}
+</div>`}`;
+}
+
+function setItemCat(id, cat){
+  if(!cat) return;
+  updateItem(id, {category:cat});
+  toast(`カテゴリを「${cat}」に設定しました`);
+}
+
+function bulkSetCat(cat){
+  if(!confirm(`未分類の全${items.filter(i=>!i.discarded&&(!i.category||i.category==='未分類'||!CATS.includes(i.category))).length}件を「${cat}」に設定しますか？`)) return;
+  items.filter(i=>!i.discarded&&(!i.category||i.category==='未分類'||!CATS.includes(i.category))).forEach(i=>updateItem(i.id,{category:cat}));
+  toast(`未分類をすべて「${cat}」に設定しました`);
+  renderUncat();
+}
+
+// ===== REVIEW PAGE =====
+function renderReview(){
+  const el = document.getElementById('page-review');
+  const yr = thisYear(), mo = thisMonth();
+
+  const monthly = Array.from({length:12},(_,i)=>({month:i+1,count:0}));
+  items.filter(i=>!i.discarded&&i.completed&&i.completedAt).forEach(i=>{
+    const d=new Date(i.completedAt);
+    if(d.getFullYear()===yr) monthly[d.getMonth()].count++;
+  });
+  const maxMo = Math.max(...monthly.map(s=>s.count),1);
+
+  const catStats={};
+  items.filter(i=>!i.discarded&&i.completed&&i.completedAt&&new Date(i.completedAt).getFullYear()===yr)
+    .forEach(i=>{ const c=i.category||'未分類'; catStats[c]=(catStats[c]||0)+1; });
+  const catArr = Object.entries(catStats).sort((a,b)=>b[1]-a[1]);
+  const maxCat = catArr.length?catArr[0][1]:1;
+
+  const thisYrDone = items.filter(i=>!i.discarded&&i.completed&&i.completedAt&&new Date(i.completedAt).getFullYear()===yr);
+  const outstanding = items.filter(i=>!i.discarded&&!i.completed&&i.year&&i.year<yr);
+  const nextYrCandidates = items.filter(i=>!i.discarded&&!i.completed&&i.year===yr&&i.priority!=='Low');
+  const recurring = items.filter(i=>!i.discarded&&i.isRecurringYearly);
+
+  el.innerHTML = `
+<div class="flex justify-between items-center" style="margin-bottom:6px">
+  <h2 class="page-title">◈ 振り返り</h2>
+  <button class="btn btn-gray no-print" onclick="window.print()">🖨️ 印刷 (A3)</button>
+</div>
+<p class="page-sub">${yr}年の振り返りレポート</p>
+
+<div class="card" style="margin-bottom:16px">
+  <div class="card-title">📅 月別完了数（${yr}年）</div>
+  <div class="month-chart">
+    ${monthly.map(s=>{
+      const h=s.count>0?Math.max(7,Math.round(s.count/maxMo*82)):3;
+      const cls=s.month===mo?'current':s.month<mo?'past':'future';
+      return `<div class="month-bar-wrap">
+        <div class="month-count-lbl">${s.count||''}</div>
+        <div class="month-bar ${cls}" style="height:${h}px"></div>
+        <div class="month-label">${s.month}月</div>
+      </div>`;
+    }).join('')}
+  </div>
+</div>
+
+<div class="review-grid">
+  <div class="card">
+    <div class="card-title">🏷️ カテゴリ別完了数（${yr}年）</div>
+    ${catArr.length===0?'<p class="text-light text-sm">まだ完了した項目がありません</p>':
+      catArr.map(([c,n])=>`<div class="cat-bar-row">
+        <div class="cat-label">${c}</div>
+        <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${Math.round(n/maxCat*100)}%"></div></div>
+        <div class="cat-count">${n}</div>
+      </div>`).join('')
+    }
+  </div>
+  <div class="card" style="background:var(--green-bg);border-color:var(--green-border)">
+    <div class="card-title text-green">✨ 今年やってよかったこと（${thisYrDone.length}件）</div>
+    <div style="max-height:210px;overflow-y:auto">
+      ${thisYrDone.length===0?'<p class="text-light text-sm">まだ完了した項目がありません</p>':
+        thisYrDone.slice(0,12).map(i=>`<div class="flex gap-8 text-sm" style="padding:5px 0;border-bottom:1px solid var(--green-border)">
+          <span style="color:var(--green)">✓</span><span>${esc(i.title)}</span>
+        </div>`).join('')
+      }
+      ${thisYrDone.length>12?`<p class="text-xs text-green mt-8">... 他 ${thisYrDone.length-12} 件</p>`:''}
+    </div>
   </div>
 </div>
 
 
 
-
-
-${recurring.length>0?`
-<div class="card no-print" style="background:var(--blue-bg);border-color:var(--blue-border)">
-  <div class="card-title text-blue">🔄 毎年繰り返す項目 — ${yr+1}年分を作成</div>
-  <p class="text-sm text-sub mb-12">新年度が始まったら翌年分を複製できます（同タイトル・同年が既存の場合は複製しません）</p>
-  ${recurring.map(i=>`
-  <div class="flex items-center gap-10" style="padding:9px 0;border-bottom:1px solid var(--blue-border)">
-    <div class="flex-1 font-bold text-sm">${esc(i.title)}</div>
-    <span class="text-xs text-sub">${i.category||'未分類'}</span>
-    <button class="btn btn-blue btn-sm" onclick="duplicateForYear('${i.id}',${yr+1})">${yr+1}年分を作成</button>
-  </div>`).join('')}
-</div>`:''}`;
+`;
 }
 
 // ===== SETTINGS PAGE =====
