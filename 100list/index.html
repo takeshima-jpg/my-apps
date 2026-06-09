@@ -1299,6 +1299,17 @@ function renderListInPlace(){
   window.scrollTo(0, scrollY);
 }
 
+// 検索時はフォーカスとカーソル位置を維持して再描画
+function renderListResults(){
+  const inp = document.getElementById('listSearchInput');
+  const pos = inp ? inp.selectionStart : null;
+  const scrollY = window.scrollY;
+  renderList();
+  window.scrollTo(0, scrollY);
+  const newInp = document.getElementById('listSearchInput');
+  if (newInp) { newInp.focus(); if (pos !== null) newInp.setSelectionRange(pos, pos); }
+}
+
 function deleteItem(id){
   items = items.filter(i=>i.id!==id);
   saveItems(items);
@@ -1796,7 +1807,7 @@ function renderList(){
 <h2 class="page-title">≡ リスト一覧</h2>
 <div class="card" style="padding:15px 18px;margin-bottom:14px">
   <div class="filter-bar">
-    <input type="text" placeholder="🔍 タイトル・メモで検索" value="${esc(listF.search)}" oninput="listF.search=this.value;renderList()">
+    <input type="text" id="listSearchInput" placeholder="🔍 タイトル・メモで検索" value="${esc(listF.search)}" oninput="listF.search=this.value;renderListResults()">
     <select onchange="listF.year=this.value;renderList()">
       <option value="all">年: すべて</option>
       ${years.map(y=>`<option value="${y}" ${String(listF.year)===String(y)?'selected':''}>${y}年</option>`).join('')}
