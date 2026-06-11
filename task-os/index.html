@@ -706,29 +706,44 @@ function getYesterday() {
 
 function extractAixData(allData, targetDate) {
   const result = { generatedAt: new Date().toISOString(), targetDate, shotTaskOS: [], routineOS: [], projectOS: [] };
-  // Shot Task OS: completedAt が targetDate のもの
+
+  // Shot Task OS: updatedAt が targetDate のもの
   if (Array.isArray(allData.shotTaskOS)) {
     result.shotTaskOS = allData.shotTaskOS.filter(t =>
       t.status === 'done' && t.updatedAt && t.updatedAt.startsWith(targetDate)
     ).map(t => ({ title: t.title, category: t.category || '' }));
   }
+
   // Routine OS: logs の actionDate が targetDate かつ action=完了
+  // taskId からタイトルを引くために tasks を参照
   if (Array.isArray(allData.routineOS?.logs)) {
-    result.routineOS = allData.routineOS.logs.filter(l =>
-      l.actionDate === targetDate && l.action === '完了'
-    ).map(l => ({ title: l.title || l.taskId || '' }));
+    const taskMap = {};
+    if (Array.isArray(allData.routineOS?.tasks)) {
+      allData.routineOS.tasks.forEach(t => { taskMap[t.id] = t.title || t.name || ''; });
+    }
+    result.routineOS = allData.routineOS.logs
+      .filter(l => l.actionDate === targetDate && l.action === '完了')
+      .map(l => ({ title: taskMap[l.taskId] || l.title || l.taskId || '' }))
+      .filter(l => l.title);
   }
-  // Project OS: updatedAt が targetDate のカード
+
+  // Project OS: records/forks/items の updatedAt が targetDate のもの
   if (Array.isArray(allData.projectOS)) {
-    const updated = [];
     allData.projectOS.forEach(p => {
+      const pname = p.name || p.title || '';
+      ['records','forks','constraints'].forEach(field => {
+        if (Array.isArray(p[field])) {
+          p[field].filter(i => i.updatedAt && i.updatedAt.startsWith(targetDate))
+            .forEach(i => result.projectOS.push({ project: pname, item: i.title || i.label || '' }));
+        }
+      });
       if (Array.isArray(p.items)) {
         p.items.filter(i => i.updatedAt && i.updatedAt.startsWith(targetDate))
-          .forEach(i => updated.push({ project: p.name || p.title || '', item: i.name || i.title || '' }));
+          .forEach(i => result.projectOS.push({ project: pname, item: i.name || i.title || '' }));
       }
     });
-    result.projectOS = updated;
   }
+
   return result;
 }
 
