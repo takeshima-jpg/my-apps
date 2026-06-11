@@ -727,21 +727,21 @@ function extractAixData(allData, targetDate) {
       .filter(l => l.title);
   }
 
-  // Project OS: records/forks/items の updatedAt が targetDate のもの
+  // Project OS: プロジェクト自体の updatedAt が targetDate のもの
   const projects = Array.isArray(allData.projectOS) ? allData.projectOS
                  : Array.isArray(allData.projectOS?.projects) ? allData.projectOS.projects : [];
   projects.forEach(p => {
       const pname = p.name || p.title || '';
-      ['records','forks','constraints'].forEach(field => {
+      if (p.updatedAt && p.updatedAt.startsWith(targetDate)) {
+        result.projectOS.push({ project: pname });
+      }
+      // サブフィールドも念のためチェック
+      ['forks','constraints','issues','decisions','learnings'].forEach(field => {
         if (Array.isArray(p[field])) {
           p[field].filter(i => i.updatedAt && i.updatedAt.startsWith(targetDate))
-            .forEach(i => result.projectOS.push({ project: pname, item: i.title || i.label || '' }));
+            .forEach(i => result.projectOS.push({ project: pname, item: i.title || i.label || i.content || '' }));
         }
       });
-      if (Array.isArray(p.items)) {
-        p.items.filter(i => i.updatedAt && i.updatedAt.startsWith(targetDate))
-          .forEach(i => result.projectOS.push({ project: pname, item: i.name || i.title || '' }));
-      }
     });
 
   return result;
