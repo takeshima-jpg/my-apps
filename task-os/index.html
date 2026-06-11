@@ -696,6 +696,65 @@ function restoreAllOSData(data) {
 // ── JSON 保存 / 読込 ──
 
 
+// ── AIX 前日分自動バックアップ ──
+const AIX_BACKUP_KEY = 'aix_last_backup_date';
+
+function getYesterday() {
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function extractAixData(allData, targetDate) {
+  const result = { generatedAt: new Date().toISOString(), targetDate, shotTaskOS: [], routineOS: [], projectOS: [] };
+  // Shot Task OS: completedAt が targetDate のもの
+  if (Array.isArray(allData.shotTaskOS)) {
+    result.shotTaskOS = allData.shotTaskOS.filter(t =>
+      t.status === 'done' && t.updatedAt && t.updatedAt.startsWith(targetDate)
+    ).map(t => ({ title: t.title, category: t.category || '' }));
+  }
+  // Routine OS: logs の actionDate が targetDate かつ action=完了
+  if (Array.isArray(allData.routineOS?.logs)) {
+    result.routineOS = allData.routineOS.logs.filter(l =>
+      l.actionDate === targetDate && l.action === '完了'
+    ).map(l => ({ title: l.title || l.taskId || '' }));
+  }
+  // Project OS: updatedAt が targetDate のカード
+  if (Array.isArray(allData.projectOS)) {
+    const updated = [];
+    allData.projectOS.forEach(p => {
+      if (Array.isArray(p.items)) {
+        p.items.filter(i => i.updatedAt && i.updatedAt.startsWith(targetDate))
+          .forEach(i => updated.push({ project: p.name || p.title || '', item: i.name || i.title || '' }));
+      }
+    });
+    result.projectOS = updated;
+  }
+  return result;
+}
+
+function aixAutoBackup() {
+  const lastBackup = localStorage.getItem(AIX_BACKUP_KEY);
+  if (lastBackup === TODAY) return; // 今日すでに実行済み
+  const yesterday = getYesterday();
+  const allData = collectAllOSData();
+  const aixData = extractAixData(allData, yesterday);
+  const isEmpty = aixData.shotTaskOS.length === 0 && aixData.routineOS.length === 0 && aixData.projectOS.length === 0;
+  if (isEmpty) {
+    // データなしでも日付だけ更新（毎回空ファイルを作らない）
+    localStorage.setItem(AIX_BACKUP_KEY, TODAY);
+    return;
+  }
+  const blob = new Blob([JSON.stringify(aixData, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `aix-source-${yesterday}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  localStorage.setItem(AIX_BACKUP_KEY, TODAY);
+  toast(`📋 AIX: ${yesterday}分を保存しました`);
+}
+
 async function exportAllJSON() {
   const data = collectAllOSData();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1560,6 +1619,7 @@ function updateClock(){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
+  aixAutoBackup();
   updateWaitingCount();
   updateClock();
   setInterval(updateClock, 30000);
@@ -1734,3 +1794,4 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
+
