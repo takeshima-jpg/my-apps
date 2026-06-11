@@ -1924,6 +1924,42 @@ function renderVision(){
   area.innerHTML=html;
 }
 
+// ── AIX 前日分自動バックアップ ──
+const AIX_BACKUP_KEY_ROUTINE = 'aix_last_backup_date_routine';
+function getYesterdayRoutine() {
+  const d = new Date(); d.setDate(d.getDate()-1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function getTodayRoutine() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function aixAutoBackupRoutine() {
+  const today = getTodayRoutine();
+  if (localStorage.getItem(AIX_BACKUP_KEY_ROUTINE) === today) return;
+  const yesterday = getYesterdayRoutine();
+  let logs = [];
+  try { logs = JSON.parse(localStorage.getItem('routineOS_logs')) || []; } catch { logs = []; }
+  let tasks = [];
+  try { tasks = JSON.parse(localStorage.getItem('routineOS_tasks')) || []; } catch { tasks = []; }
+  const taskMap = {};
+  tasks.forEach(t => { taskMap[t.id] = t.title || t.name || ''; });
+  const doneLogs = logs.filter(l => l.actionDate === yesterday && l.action === '完了');
+  if (doneLogs.length === 0) { localStorage.setItem(AIX_BACKUP_KEY_ROUTINE, today); return; }
+  const result = {
+    generatedAt: new Date().toISOString(),
+    targetDate: yesterday,
+    source: 'routine-os',
+    routineOS: doneLogs.map(l => ({ title: taskMap[l.taskId] || l.taskId || '' }))
+  };
+  const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `aix-routine-${yesterday}.json`; a.click();
+  URL.revokeObjectURL(url);
+  localStorage.setItem(AIX_BACKUP_KEY_ROUTINE, today);
+}
+
 // ========== INIT ==========
 loadData();
 seedInitialTasksIfNeeded();
@@ -1932,6 +1968,7 @@ saveData(true);
 renderVision();
 rDash();
 uQB();
+aixAutoBackupRoutine();
 
 </script>
   <script>
