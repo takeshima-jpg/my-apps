@@ -728,8 +728,9 @@ function extractAixData(allData, targetDate) {
   }
 
   // Project OS: records/forks/items の updatedAt が targetDate のもの
-  if (Array.isArray(allData.projectOS)) {
-    allData.projectOS.forEach(p => {
+  const projects = Array.isArray(allData.projectOS) ? allData.projectOS
+                 : Array.isArray(allData.projectOS?.projects) ? allData.projectOS.projects : [];
+  projects.forEach(p => {
       const pname = p.name || p.title || '';
       ['records','forks','constraints'].forEach(field => {
         if (Array.isArray(p[field])) {
@@ -742,7 +743,6 @@ function extractAixData(allData, targetDate) {
           .forEach(i => result.projectOS.push({ project: pname, item: i.name || i.title || '' }));
       }
     });
-  }
 
   return result;
 }
