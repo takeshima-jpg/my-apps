@@ -60,6 +60,19 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 
 /* TOPBAR */
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 32px; border-bottom: 1px solid var(--border); gap: 16px; position: sticky; top: 0; background: var(--bg); z-index: 10; }
+.aix-banner { display:none; position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:2px solid #c8f060; padding:12px 32px; gap:12px; align-items:flex-start; }
+.aix-banner.visible { display:flex; }
+.aix-banner-left { flex:1; min-width:0; }
+.aix-banner-label { font-size:11px; letter-spacing:.1em; color:#8aaa30; font-family:monospace; margin-bottom:6px; text-transform:uppercase; }
+.aix-banner-date { font-size:13px; color:var(--text2); margin-bottom:8px; }
+.aix-banner-preview { font-size:13px; line-height:1.7; color:var(--text); white-space:pre-wrap; max-height:120px; overflow-y:auto; background:var(--bg2); border:1px solid var(--border2); border-radius:6px; padding:10px 14px; }
+.aix-banner-actions { display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
+.aix-btn-approve { background:#c8f060; color:#1a2a00; border:none; border-radius:6px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.aix-btn-approve:hover { background:#b8e050; }
+.aix-btn-edit { background:transparent; color:var(--text2); border:1px solid var(--border2); border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer; white-space:nowrap; }
+.aix-btn-edit:hover { background:var(--bg2); }
+.aix-btn-dismiss { background:transparent; color:var(--text3); border:none; font-size:12px; cursor:pointer; padding:4px 0; text-align:center; }
+.aix-btn-dismiss:hover { color:var(--text2); }
 .week-display { font-family: var(--font-mono); font-size: 0.905rem; color: var(--text3); letter-spacing: 0.04em; }
 .topbar-right { display: flex; align-items: center; gap: 10px; }
 .search-input { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--font-body); font-size: 0.975rem; padding: 7px 14px; width: 180px; outline: none; transition: border-color var(--transition); }
@@ -742,6 +755,20 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
   <main class="main">
+    <!-- AIX 承認待ちバナー -->
+    <div class="aix-banner" id="aixBanner">
+      <div class="aix-banner-left">
+        <div class="aix-banner-label">▶ AIX — 承認待ち</div>
+        <div class="aix-banner-date" id="aixBannerDate"></div>
+        <div class="aix-banner-preview" id="aixBannerPreview"></div>
+      </div>
+      <div class="aix-banner-actions">
+        <button class="aix-btn-approve" onclick="aixApprove()">承認して記録</button>
+        <button class="aix-btn-edit" onclick="aixEditAndApprove()">編集して記録</button>
+        <button class="aix-btn-dismiss" onclick="aixDismiss()">今回はスキップ</button>
+      </div>
+    </div>
+
     <div class="topbar">
       <div class="week-display" id="weekDisplay"></div>
       <div class="topbar-right">
@@ -1493,10 +1520,75 @@ function setFilter(f) {
   renderLogList();
 }
 
+// ── AIX 承認待ちドラフト ──
+const AIX_DRAFT_KEY = 'aix_draft';
+
+function aixCheckDraft() {
+  const raw = localStorage.getItem(AIX_DRAFT_KEY);
+  if (!raw) return;
+  try {
+    const draft = JSON.parse(raw);
+    const banner = document.getElementById('aixBanner');
+    document.getElementById('aixBannerDate').textContent = `対象日: ${draft.targetDate || ''}`;
+    document.getElementById('aixBannerPreview').textContent = draft.events || '（データなし）';
+    banner.classList.add('visible');
+  } catch(e) { localStorage.removeItem(AIX_DRAFT_KEY); }
+}
+
+function aixApprove() {
+  const raw = localStorage.getItem(AIX_DRAFT_KEY);
+  if (!raw) return;
+  try {
+    const draft = JSON.parse(raw);
+    const targetDate = draft.targetDate;
+    const events = draft.events || '';
+    if (!targetDate) return;
+    // 既存ログを検索
+    let log = state.logs.find(l => l.date === targetDate);
+    if (log) {
+      // 既存のeventsに追記（空なら上書き）
+      log.events = log.events ? log.events + '\n' + events : events;
+    } else {
+      // 新規ログ作成
+      state.logs.push({ date: targetDate, events, satisfaction: '', tags: [], flags: [], memo: '' });
+    }
+    saveData();
+    localStorage.removeItem(AIX_DRAFT_KEY);
+    document.getElementById('aixBanner').classList.remove('visible');
+    render();
+    if (typeof toast === 'function') toast(`✅ ${targetDate} の記録を反映しました`);
+  } catch(e) { console.error('AIX approve error:', e); }
+}
+
+function aixEditAndApprove() {
+  const raw = localStorage.getItem(AIX_DRAFT_KEY);
+  if (!raw) return;
+  try {
+    const draft = JSON.parse(raw);
+    // エントリモーダルをAIXドラフトで開く
+    const dateInput = document.getElementById('entryDate');
+    const eventsInput = document.getElementById('entryEvents') || document.querySelector('[id*="event"], [id*="Event"]');
+    if (dateInput) dateInput.value = draft.targetDate || '';
+    if (eventsInput) eventsInput.value = draft.events || '';
+    // モーダルを開く
+    const openBtn = document.getElementById('openEntry');
+    if (openBtn) openBtn.click();
+    // モーダルを開いた後にドラフトを削除（承認済み扱い）
+    localStorage.removeItem(AIX_DRAFT_KEY);
+    document.getElementById('aixBanner').classList.remove('visible');
+  } catch(e) { console.error('AIX edit error:', e); }
+}
+
+function aixDismiss() {
+  localStorage.removeItem(AIX_DRAFT_KEY);
+  document.getElementById('aixBanner').classList.remove('visible');
+}
+
 // 初期化
 loadData();
 render();
 bindEvents();
+aixCheckDraft();
 </script>
   <script>
     if ('serviceWorker' in navigator) {
