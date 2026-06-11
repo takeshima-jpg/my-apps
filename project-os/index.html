@@ -3031,9 +3031,50 @@ function renderVision() {
 }
 
 /* ══════════════════════════════════
+   AIX 前日分自動バックアップ
+══════════════════════════════════ */
+const AIX_BACKUP_KEY_PROJECT = 'aix_last_backup_date_project';
+function getYesterdayProject() {
+  const d = new Date(); d.setDate(d.getDate()-1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function getTodayProject() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function aixAutoBackupProject() {
+  const today = getTodayProject();
+  if (localStorage.getItem(AIX_BACKUP_KEY_PROJECT) === today) return;
+  const yesterday = getYesterdayProject();
+  let projects = [];
+  try { projects = JSON.parse(localStorage.getItem('pos_v4')) || []; } catch { projects = []; }
+  const updated = [];
+  projects.forEach(p => {
+    const pname = p.name || p.title || '';
+    ['records','forks','constraints'].forEach(field => {
+      if (Array.isArray(p[field])) {
+        p[field].filter(i => i.updatedAt && i.updatedAt.startsWith(yesterday))
+          .forEach(i => updated.push({ project: pname, item: i.title || i.label || '', kind: field }));
+      }
+    });
+    if (Array.isArray(p.items)) {
+      p.items.filter(i => i.updatedAt && i.updatedAt.startsWith(yesterday))
+        .forEach(i => updated.push({ project: pname, item: i.name || i.title || '', kind: 'item' }));
+    }
+  });
+  if (updated.length === 0) { localStorage.setItem(AIX_BACKUP_KEY_PROJECT, today); return; }
+  const result = { generatedAt: new Date().toISOString(), targetDate: yesterday, source: 'project-os', projectOS: updated };
+  const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `aix-project-${yesterday}.json`; a.click();
+  URL.revokeObjectURL(url);
+  localStorage.setItem(AIX_BACKUP_KEY_PROJECT, today);
+}
+
+/* ══════════════════════════════════
    BOOT
 ══════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', ()=>{migrateProjectItems();nav('dash');renderVision();});
+document.addEventListener('DOMContentLoaded', ()=>{migrateProjectItems();nav('dash');renderVision();aixAutoBackupProject();});
 </script>
   <script>
     if ('serviceWorker' in navigator) {
