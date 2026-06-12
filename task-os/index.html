@@ -330,6 +330,8 @@ select.fi{cursor:pointer;}
     <div class="ni" onclick="nav('reflect')"><span class="ni-ico"><img src="../reflect-os/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>リフレクトOS</div>
     <div class="ni" onclick="nav('social')"><span class="ni-ico"><img src="../social-universe/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>ソーシャルU</div>
     <div class="ni" onclick="nav('kosolog')"><span class="ni-ico"><img src="../koso-log/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>コーソーログ</div>
+    <div class="ni" onclick="nav('1day')"><span class="ni-ico"><img src="../1day/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>1day OS</div>
+    <div class="ni" onclick="nav('hitomemo')"><span class="ni-ico"><img src="../hitomemo/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>ヒトメモ</div>
     <div class="sb-sep"></div>
     <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
   </nav>
@@ -573,6 +575,8 @@ function nav(v){
   if(v === 'project'){ window.open('../project-os/index.html', '_blank'); return; }
   if(v === 'routine'){ window.open('../routine-os/index.html', '_blank'); return; }
   if(v === 'shot'){    window.open('../shot-task-os/index.html', '_blank'); return; }
+  if(v === '1day'){    window.open('../1day/index.html', '_blank'); return; }
+  if(v === 'hitomemo'){ window.open('../hitomemo/index.html', '_blank'); return; }
   const osConf = OS_OVERLAY_MAP[v] || LAUNCHER_OVERLAY_MAP[v];
   if(osConf){
     if(osConf.newTab){ window.open(osConf.src, '_blank'); return; }
@@ -695,80 +699,6 @@ function restoreAllOSData(data) {
 
 // ── JSON 保存 / 読込 ──
 
-
-// ── AIX 前日分自動バックアップ ──
-const AIX_BACKUP_KEY = 'aix_last_backup_date';
-
-function getYesterday() {
-  const d = new Date(); d.setDate(d.getDate() - 1);
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-
-function extractAixData(allData, targetDate) {
-  const result = { generatedAt: new Date().toISOString(), targetDate, shotTaskOS: [], routineOS: [], projectOS: [] };
-
-  // Shot Task OS: updatedAt が targetDate のもの
-  if (Array.isArray(allData.shotTaskOS)) {
-    result.shotTaskOS = allData.shotTaskOS.filter(t =>
-      t.status === 'done' && t.updatedAt && t.updatedAt.startsWith(targetDate)
-    ).map(t => ({ title: t.title, category: t.category || '' }));
-  }
-
-  // Routine OS: logs の actionDate が targetDate かつ action=完了
-  // taskId からタイトルを引くために tasks を参照
-  if (Array.isArray(allData.routineOS?.logs)) {
-    const taskMap = {};
-    if (Array.isArray(allData.routineOS?.tasks)) {
-      allData.routineOS.tasks.forEach(t => { taskMap[t.id] = t.title || t.name || ''; });
-    }
-    result.routineOS = allData.routineOS.logs
-      .filter(l => l.actionDate === targetDate && l.action === '完了')
-      .map(l => ({ title: taskMap[l.taskId] || l.title || l.taskId || '' }))
-      .filter(l => l.title);
-  }
-
-  // Project OS: プロジェクト自体の updatedAt が targetDate のもの
-  const projects = Array.isArray(allData.projectOS) ? allData.projectOS
-                 : Array.isArray(allData.projectOS?.projects) ? allData.projectOS.projects : [];
-  projects.forEach(p => {
-      const pname = p.name || p.title || '';
-      if (p.updatedAt && p.updatedAt.startsWith(targetDate)) {
-        result.projectOS.push({ project: pname });
-      }
-      // サブフィールドも念のためチェック
-      ['forks','constraints','issues','decisions','learnings'].forEach(field => {
-        if (Array.isArray(p[field])) {
-          p[field].filter(i => i.updatedAt && i.updatedAt.startsWith(targetDate))
-            .forEach(i => result.projectOS.push({ project: pname, item: i.title || i.label || i.content || '' }));
-        }
-      });
-    });
-
-  return result;
-}
-
-function aixAutoBackup() {
-  const lastBackup = localStorage.getItem(AIX_BACKUP_KEY);
-  if (lastBackup === TODAY) return; // 今日すでに実行済み
-  const yesterday = getYesterday();
-  const allData = collectAllOSData();
-  const aixData = extractAixData(allData, yesterday);
-  const isEmpty = aixData.shotTaskOS.length === 0 && aixData.routineOS.length === 0 && aixData.projectOS.length === 0;
-  if (isEmpty) {
-    // データなしでも日付だけ更新（毎回空ファイルを作らない）
-    localStorage.setItem(AIX_BACKUP_KEY, TODAY);
-    return;
-  }
-  const blob = new Blob([JSON.stringify(aixData, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `aix-source-${yesterday}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  localStorage.setItem(AIX_BACKUP_KEY, TODAY);
-  toast(`📋 AIX: ${yesterday}分を保存しました`);
-}
 
 async function exportAllJSON() {
   const data = collectAllOSData();
@@ -1634,7 +1564,6 @@ function updateClock(){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
-  aixAutoBackup();
   updateWaitingCount();
   updateClock();
   setInterval(updateClock, 30000);
@@ -1809,4 +1738,3 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
-
