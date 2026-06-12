@@ -1668,34 +1668,124 @@ function renderAixDraftList() {
     return;
   }
   if (empty) empty.style.display = 'none';
+
+  const satLabels = { great:'◎', good:'〇', meh:'△', bad:'×' };
+  const satVals = ['great','good','meh','bad'];
+  const tags = ['経営','組織','人間関係','家族','健康','感情','学び','お金','未来'];
+  const flags = { unease:'△ 違和感', energy:'◉ エネルギー高', blog:'≡ ブログ候補', deep:'◎ 深掘り', vision:'◈ VISION関連' };
+
   list.innerHTML = drafts.map((d, i) => `
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:12px;">
-      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
-        <span>${d.targetDate || ''}</span>
-        <span style="font-size:10px;color:var(--text3);">${d.generatedAt ? new Date(d.generatedAt).toLocaleString('ja') : ''}</span>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:16px;">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:12px;display:flex;justify-content:space-between;">
+        <span style="font-size:13px;font-weight:600;color:var(--text);">${d.targetDate || ''}</span>
+        <span style="font-size:10px;">${d.generatedAt ? new Date(d.generatedAt).toLocaleString('ja') : ''}</span>
       </div>
-      <textarea id="aix-draft-text-${i}" style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || ''}</textarea>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button onclick="aixApproveByIdx(${i})" style="background:var(--accent);color:#1a2a00;border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;">承認して記録</button>
-        <button onclick="aixDismissByIdx(${i})" style="background:transparent;color:var(--text3);border:1px solid var(--border2);border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;">スキップ</button>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">できごと</div>
+        <textarea id="aix-events-${i}" style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || ''}</textarea>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">今週は？</div>
+        <div style="display:flex;gap:8px;">
+          ${satVals.map(v => `<button onclick="aixToggleSat(${i},'${v}')" id="aix-sat-${i}-${v}" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:16px;cursor:pointer;">${satLabels[v]}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">△ 違和感 <span style="color:var(--text3);font-size:10px;">任意</span></div>
+        <input type="text" id="aix-unease-${i}" placeholder="なんかモヤっとしたこと、一言で" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);font-family:var(--font-body);font-size:13px;">
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">タグ <span style="font-size:10px;">任意</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+          ${tags.map(t => `<button onclick="aixToggleTag(${i},'${t}')" id="aix-tag-${i}-${t}" style="padding:7px 4px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;">${t}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">フラグ <span style="font-size:10px;">任意</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${Object.entries(flags).map(([k,v]) => `<button onclick="aixToggleFlag(${i},'${k}')" id="aix-flag-${i}-${k}" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;">${v}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);">
+        <button onclick="aixApproveByIdx(${i})" style="background:var(--accent);color:#1a2a00;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">保存</button>
+        <button onclick="aixDismissByIdx(${i})" style="background:transparent;color:var(--text3);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;">スキップ</button>
       </div>
     </div>
   `).join('');
+
+  // 選択状態を初期化
+  drafts.forEach((d, i) => {
+    window['_aixSat_'+i] = d._sat || '';
+    window['_aixTags_'+i] = d._tags ? [...d._tags] : [];
+    window['_aixFlags_'+i] = d._flags ? [...d._flags] : [];
+  });
+}
+
+function aixToggleSat(i, val) {
+  window['_aixSat_'+i] = window['_aixSat_'+i] === val ? '' : val;
+  ['great','good','meh','bad'].forEach(v => {
+    const btn = document.getElementById(`aix-sat-${i}-${v}`);
+    if (btn) btn.style.background = window['_aixSat_'+i] === v ? 'var(--accent)' : 'var(--bg3)';
+    if (btn) btn.style.color = window['_aixSat_'+i] === v ? '#1a2a00' : 'var(--text2)';
+  });
+}
+
+function aixToggleTag(i, tag) {
+  const arr = window['_aixTags_'+i] || [];
+  const idx = arr.indexOf(tag);
+  if (idx >= 0) arr.splice(idx,1); else arr.push(tag);
+  window['_aixTags_'+i] = arr;
+  const btn = document.getElementById(`aix-tag-${i}-${tag}`);
+  if (btn) {
+    btn.style.background = arr.includes(tag) ? 'rgba(124,111,255,0.15)' : 'var(--bg3)';
+    btn.style.borderColor = arr.includes(tag) ? 'var(--accent)' : 'var(--border)';
+    btn.style.color = arr.includes(tag) ? 'var(--accent)' : 'var(--text2)';
+  }
+}
+
+function aixToggleFlag(i, flag) {
+  const arr = window['_aixFlags_'+i] || [];
+  const idx = arr.indexOf(flag);
+  if (idx >= 0) arr.splice(idx,1); else arr.push(flag);
+  window['_aixFlags_'+i] = arr;
+  const btn = document.getElementById(`aix-flag-${i}-${flag}`);
+  if (btn) {
+    btn.style.background = arr.includes(flag) ? 'var(--bg4)' : 'var(--bg3)';
+    btn.style.borderColor = arr.includes(flag) ? 'var(--border2)' : 'var(--border)';
+    btn.style.color = arr.includes(flag) ? 'var(--text)' : 'var(--text2)';
+  }
 }
 
 function aixApproveByIdx(i) {
   const drafts = _aixLoad();
   const d = drafts[i];
   if (!d) return;
-  const ta = document.getElementById('aix-draft-text-' + i);
-  const events = ta ? ta.value : (d.events || '');
+  const ta = document.getElementById('aix-events-' + i);
+  const events = ta ? ta.value.trim() : (d.events || '');
+  if (!events) { if (typeof toast === 'function') toast('「できごと」を入力してください'); return; }
   const targetDate = d.targetDate;
   if (!targetDate) return;
+  const unease = (document.getElementById('aix-unease-' + i) || {}).value || '';
+  const satisfaction = window['_aixSat_' + i] || '';
+  const tags = window['_aixTags_' + i] || [];
+  const flags = window['_aixFlags_' + i] || [];
+
   let log = state.logs.find(l => l.date === targetDate);
   if (log) {
     log.events = log.events ? log.events + '\n' + events : events;
+    if (unease) log.unease = unease;
+    if (satisfaction) log.satisfaction = satisfaction;
+    if (tags.length) log.tags = [...new Set([...(log.tags||[]), ...tags])];
+    if (flags.length) log.flags = [...new Set([...(log.flags||[]), ...flags])];
+    log.updatedAt = new Date().toISOString();
   } else {
-    state.logs.push({ date: targetDate, events, satisfaction: '', tags: [], flags: [], memo: '' });
+    state.logs.push({ id: Date.now().toString(), date: targetDate, satisfaction, events, unease, tags, flags, archived: false, createdAt: new Date().toISOString() });
   }
   saveData();
   drafts.splice(i, 1);
@@ -1703,7 +1793,8 @@ function aixApproveByIdx(i) {
   renderAixDraftList();
   updateAixBadge();
   aixCheckDraft();
-  if (typeof toast === 'function') toast(`✅ ${targetDate} の記録を反映しました`);
+  render();
+  if (typeof toast === 'function') toast(`✅ ${targetDate} の記録を保存しました`);
 }
 
 function aixDismissByIdx(i) {
