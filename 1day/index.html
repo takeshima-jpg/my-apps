@@ -761,11 +761,14 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="aix-banner-label">▶ AIX — 承認待ち</div>
         <div class="aix-banner-date" id="aixBannerDate"></div>
         <div class="aix-banner-preview" id="aixBannerPreview"></div>
+        <div id="aixNav" style="display:none;gap:8px;margin-top:6px;align-items:center">
+          <button class="aix-btn-dismiss" onclick="aixPrev()">◀ 前へ</button>
+          <button class="aix-btn-dismiss" onclick="aixNext()">次へ ▶</button>
+        </div>
       </div>
       <div class="aix-banner-actions">
         <button class="aix-btn-approve" onclick="aixApprove()">承認して記録</button>
-        <button class="aix-btn-edit" onclick="aixEditAndApprove()">編集して記録</button>
-        <button class="aix-btn-dismiss" onclick="aixDismiss()">今回はスキップ</button>
+        <button class="aix-btn-dismiss" onclick="aixDismiss()">スキップ</button>
       </div>
     </div>
 
@@ -1520,74 +1523,104 @@ function setFilter(f) {
   renderLogList();
 }
 
-// ── AIX 承認待ちドラフト ──
-const AIX_DRAFT_KEY = 'aix_draft';
+// ── AIX 承認待ちドラフト（複数日対応）──
+const AIX_KEY = 'aix_drafts';
+const AIX_KEY_LEGACY = 'aix_draft';
+let _aixIdx = 0;
+
+function _aixLoad() {
+  try {
+    const leg = localStorage.getItem(AIX_KEY_LEGACY);
+    if (leg) {
+      const obj = JSON.parse(leg);
+      const arr = Array.isArray(obj) ? obj : [obj];
+      localStorage.setItem(AIX_KEY, JSON.stringify(arr));
+      localStorage.removeItem(AIX_KEY_LEGACY);
+      return arr;
+    }
+    const raw = localStorage.getItem(AIX_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+function _aixSave(drafts) {
+  localStorage.setItem(AIX_KEY, JSON.stringify(drafts));
+}
 
 function aixCheckDraft() {
-  const raw = localStorage.getItem(AIX_DRAFT_KEY);
-  if (!raw) return;
-  try {
-    const draft = JSON.parse(raw);
-    const banner = document.getElementById('aixBanner');
-    document.getElementById('aixBannerDate').textContent = `対象日: ${draft.targetDate || ''}`;
-    document.getElementById('aixBannerPreview').textContent = draft.events || '（データなし）';
-    banner.classList.add('visible');
-  } catch(e) { localStorage.removeItem(AIX_DRAFT_KEY); }
+  const drafts = _aixLoad();
+  const banner = document.getElementById('aixBanner');
+  if (!drafts.length) { banner.classList.remove('visible'); return; }
+  _aixIdx = Math.min(_aixIdx, drafts.length - 1);
+  const d = drafts[_aixIdx];
+  const count = drafts.length > 1 ? ` (${_aixIdx + 1}/${drafts.length})` : '';
+  document.getElementById('aixBannerDate').textContent = `対象日: ${d.targetDate || ''}${count}`;
+  const preview = document.getElementById('aixBannerPreview');
+  preview.innerHTML = '';
+  const ta = document.createElement('textarea');
+  ta.id = 'aixEditArea';
+  ta.value = d.events || '';
+  ta.rows = 4;
+  ta.style.cssText = 'width:100%;background:transparent;border:1px solid rgba(128,128,128,0.3);border-radius:4px;resize:vertical;font:inherit;color:inherit;padding:8px;box-sizing:border-box;margin-top:6px;';
+  preview.appendChild(ta);
+  const nav = document.getElementById('aixNav');
+  if (nav) nav.style.display = drafts.length > 1 ? 'flex' : 'none';
+  banner.classList.add('visible');
+}
+
+function _aixCurrentEvents() {
+  const ta = document.getElementById('aixEditArea');
+  return ta ? ta.value : (_aixLoad()[_aixIdx]?.events || '');
 }
 
 function aixApprove() {
-  const raw = localStorage.getItem(AIX_DRAFT_KEY);
-  if (!raw) return;
+  const drafts = _aixLoad();
+  if (!drafts.length) return;
+  const d = drafts[_aixIdx];
+  const events = _aixCurrentEvents();
   try {
-    const draft = JSON.parse(raw);
-    const targetDate = draft.targetDate;
-    const events = draft.events || '';
-    if (!targetDate) return;
-    // 既存ログを検索
-    let log = state.logs.find(l => l.date === targetDate);
-    if (log) {
-      // 既存のeventsに追記（空なら上書き）
-      log.events = log.events ? log.events + '\n' + events : events;
-    } else {
-      // 新規ログ作成
-      state.logs.push({ date: targetDate, events, satisfaction: '', tags: [], flags: [], memo: '' });
-    }
+    if (!d.targetDate) return;
+    let log = state.logs.find(l => l.date === d.targetDate);
+    if (log) { log.events = log.events ? log.events + '\n' + events : events; }
+    else { state.logs.push({ date: d.targetDate, events, satisfaction: '', tags: [], flags: [], memo: '' }); }
     saveData();
-    localStorage.removeItem(AIX_DRAFT_KEY);
-    document.getElementById('aixBanner').classList.remove('visible');
+    drafts.splice(_aixIdx, 1);
+    _aixSave(drafts);
+    _aixIdx = Math.min(_aixIdx, Math.max(0, drafts.length - 1));
     render();
-    if (typeof toast === 'function') toast(`✅ ${targetDate} の記録を反映しました`);
+    aixCheckDraft();
+    if (typeof toast === 'function') toast(`✅ ${d.targetDate} の記録を反映しました`);
   } catch(e) { console.error('AIX approve error:', e); }
 }
 
 function aixEditAndApprove() {
-  const raw = localStorage.getItem(AIX_DRAFT_KEY);
-  if (!raw) return;
-  try {
-    const draft = JSON.parse(raw);
-    // エントリモーダルをAIXドラフトで開く
-    const dateInput = document.getElementById('entryDate');
-    const eventsInput = document.getElementById('entryEvents') || document.querySelector('[id*="event"], [id*="Event"]');
-    if (dateInput) dateInput.value = draft.targetDate || '';
-    if (eventsInput) eventsInput.value = draft.events || '';
-    // モーダルを開く
-    const openBtn = document.getElementById('openEntry');
-    if (openBtn) openBtn.click();
-    // モーダルを開いた後にドラフトを削除（承認済み扱い）
-    localStorage.removeItem(AIX_DRAFT_KEY);
-    document.getElementById('aixBanner').classList.remove('visible');
-  } catch(e) { console.error('AIX edit error:', e); }
+  aixApprove();
 }
 
 function aixDismiss() {
-  localStorage.removeItem(AIX_DRAFT_KEY);
-  document.getElementById('aixBanner').classList.remove('visible');
+  const drafts = _aixLoad();
+  if (!drafts.length) return;
+  drafts.splice(_aixIdx, 1);
+  _aixSave(drafts);
+  _aixIdx = Math.min(_aixIdx, Math.max(0, drafts.length - 1));
+  aixCheckDraft();
+}
+
+function aixPrev() {
+  const drafts = _aixLoad();
+  if (drafts.length) { _aixIdx = (_aixIdx - 1 + drafts.length) % drafts.length; aixCheckDraft(); }
+}
+
+function aixNext() {
+  const drafts = _aixLoad();
+  if (drafts.length) { _aixIdx = (_aixIdx + 1) % drafts.length; aixCheckDraft(); }
 }
 
 // 初期化
 loadData();
 render();
 bindEvents();
+window.addEventListener('storage', e => { if (e.key === 'aix_drafts' || e.key === 'aix_draft') { _aixIdx = 0; aixCheckDraft(); } });
 aixCheckDraft();
 </script>
   <script>
