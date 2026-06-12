@@ -662,7 +662,10 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 <!-- MOBILE NAV BAR -->
 <div class="mob-nav-bar" id="mobNavBar">
-  <button class="mob-nav-item active" id="mnav-all" onclick="setFilter('all')">すべて</button>
+  <button class="mob-nav-item active" id="mnav-log" onclick="showView('log')">≡ ログ</button>
+  <button class="mob-nav-item" id="mnav-aix" onclick="showView('aix')">▶ AIX <span id="aixNavBadgeMob" style="display:none;background:var(--accent);color:#1a2a00;border-radius:999px;font-size:10px;padding:1px 6px;font-weight:700;margin-left:2px;"></span></button>
+  <span class="mob-nav-sep"></span>
+  <button class="mob-nav-item" id="mnav-all" onclick="setFilter('all');showView('log')">すべて</button>
   <span class="mob-nav-sep"></span>
   <button class="mob-nav-item" id="mnav-unease" onclick="setFilter('flag:unease')">△ 違和感</button>
   <button class="mob-nav-item" id="mnav-energy" onclick="setFilter('flag:energy')">◉ エネ高</button>
@@ -711,7 +714,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="sb-logo"><img src="icons/icon-32.png"><span>1day</span></div>
   </div>
   <div class="sb-nav">
-    <button class="sb-nav-btn active"><span class="sb-nav-icon">≡</span> ログ</button>
+    <button class="sb-nav-btn active" id="nav-log" onclick="showView('log')"><span class="sb-nav-icon">≡</span> ログ</button>
+    <button class="sb-nav-btn" id="nav-aix" onclick="showView('aix')"><span class="sb-nav-icon">▶</span> AIX未承認 <span id="aixNavBadge" style="display:none;margin-left:auto;background:var(--accent);color:#1a2a00;border-radius:999px;font-size:10px;padding:1px 7px;font-weight:700;"></span></button>
   </div>
   <div class="sb-section">
     <div class="sb-section-lbl">アクション</div>
@@ -806,6 +810,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- VISIONエリア -->
     <div class="vision-area" id="visionArea"></div>
+
+    <!-- AIX未承認ドラフト一覧 -->
+    <div id="aix-view" style="display:none; padding: 24px 32px; max-width: 680px;">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px;">AIX — 未承認ドラフト一覧</div>
+      <div id="aixDraftList"></div>
+      <div id="aixEmptyState" style="display:none;text-align:center;padding:60px 0;color:var(--text3);font-size:14px;">未承認のドラフトはありません</div>
+    </div>
 
     <!-- 選択時のみ表示されるアーカイブバー -->
     
@@ -1604,6 +1615,8 @@ function aixDismiss() {
   _aixSave(drafts);
   _aixIdx = Math.min(_aixIdx, Math.max(0, drafts.length - 1));
   aixCheckDraft();
+  renderAixDraftList();
+  updateAixBadge();
 }
 
 function aixPrev() {
@@ -1616,12 +1629,103 @@ function aixNext() {
   if (drafts.length) { _aixIdx = (_aixIdx + 1) % drafts.length; aixCheckDraft(); }
 }
 
+// ── AIX ビュー切り替え ──
+function showView(v) {
+  document.getElementById('aix-view').style.display = v === 'aix' ? 'block' : 'none';
+  const logEls = ['logList', 'filter-bar-wrap', 'weekDisplay'];
+  logEls.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = v === 'log' ? '' : 'none'; });
+  // ダッシュボードも非表示
+  const dash = document.getElementById('dashSection');
+  if (dash) dash.style.display = v === 'log' ? '' : 'none';
+  // サイドバーナビ
+  ['log','aix'].forEach(name => {
+    const btn = document.getElementById('nav-' + name);
+    if (btn) btn.classList.toggle('active', name === v);
+    const mbtn = document.getElementById('mnav-' + name);
+    if (mbtn) mbtn.classList.toggle('active', name === v);
+  });
+  if (v === 'aix') renderAixDraftList();
+}
+
+function updateAixBadge() {
+  const count = _aixLoad().length;
+  ['aixNavBadge','aixNavBadgeMob'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (count > 0) { el.style.display = 'inline'; el.textContent = count; }
+    else { el.style.display = 'none'; }
+  });
+}
+
+function renderAixDraftList() {
+  const drafts = _aixLoad();
+  const list = document.getElementById('aixDraftList');
+  const empty = document.getElementById('aixEmptyState');
+  if (!list) return;
+  if (drafts.length === 0) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  list.innerHTML = drafts.map((d, i) => `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:12px;">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span>${d.targetDate || ''}</span>
+        <span style="font-size:10px;color:var(--text3);">${d.generatedAt ? new Date(d.generatedAt).toLocaleString('ja') : ''}</span>
+      </div>
+      <textarea id="aix-draft-text-${i}" style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || ''}</textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button onclick="aixApproveByIdx(${i})" style="background:var(--accent);color:#1a2a00;border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;">承認して記録</button>
+        <button onclick="aixDismissByIdx(${i})" style="background:transparent;color:var(--text3);border:1px solid var(--border2);border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;">スキップ</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function aixApproveByIdx(i) {
+  const drafts = _aixLoad();
+  const d = drafts[i];
+  if (!d) return;
+  const ta = document.getElementById('aix-draft-text-' + i);
+  const events = ta ? ta.value : (d.events || '');
+  const targetDate = d.targetDate;
+  if (!targetDate) return;
+  let log = state.logs.find(l => l.date === targetDate);
+  if (log) {
+    log.events = log.events ? log.events + '\n' + events : events;
+  } else {
+    state.logs.push({ date: targetDate, events, satisfaction: '', tags: [], flags: [], memo: '' });
+  }
+  saveData();
+  drafts.splice(i, 1);
+  _aixSave(drafts);
+  renderAixDraftList();
+  updateAixBadge();
+  aixCheckDraft();
+  if (typeof toast === 'function') toast(`✅ ${targetDate} の記録を反映しました`);
+}
+
+function aixDismissByIdx(i) {
+  const drafts = _aixLoad();
+  drafts.splice(i, 1);
+  _aixSave(drafts);
+  renderAixDraftList();
+  updateAixBadge();
+  aixCheckDraft();
+}
+
 // 初期化
 loadData();
 render();
 bindEvents();
-window.addEventListener('storage', e => { if (e.key === 'aix_drafts' || e.key === 'aix_draft') { _aixIdx = 0; aixCheckDraft(); } });
+window.addEventListener('storage', e => {
+  if (e.key === 'aix_drafts' || e.key === 'aix_draft') {
+    _aixIdx = 0; aixCheckDraft(); updateAixBadge();
+  }
+});
 aixCheckDraft();
+updateAixBadge();
 </script>
   <script>
     if ('serviceWorker' in navigator) {
