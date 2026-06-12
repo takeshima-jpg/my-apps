@@ -624,17 +624,19 @@ const savePjData = d => localStorage.setItem('pos_v4', JSON.stringify(d));
 // ── VISION DATA ──
 const VISION_DATA = {
   vision: [
-    '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。',
+    '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。',
+    '安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。',
   ],
   principles: [
     { title: '成長', text: '未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。' },
-    { title: '愛',   text: '周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。' },
+    { title: '愛', text: '周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。' },
     { title: '誠実', text: '自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。' },
     { title: '寛容', text: '個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。' },
+    { title: '共創', text: '自分の確信を持ちながら、相手の確信も尊重する。違いを消さずに理解し、接点を探す。互いの成長につながる未来を共に創る。' },
   ],
   directions: [
-    { title: '確信', text: '頭と心で腹落ちしそれが当たり前だと思えること。手触り感があり、ワクワクする未来。油断せず備える。' },
-    { title: '仲間', text: '弱みも未来も共有し、自立し、責任を持って、前向きに、同じゴールに向かい仮説検証ができる人を大切にする。' },
+    { title: '確信', text: '頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。油断せず備える。' },
+    { title: '仲間', text: '弱みも未来も共有し、自立し、責任を持って、前向きに、違いを尊重しながら共通の未来を創れる人を大切にする。' },
     { title: '健康', text: '心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。' },
   ],
 };
@@ -642,21 +644,18 @@ const VISION_DATA = {
 function renderVision() {
   const area = document.getElementById('visionArea');
   if (!area) return;
-  const seed = parseInt(new Date().toLocaleDateString('sv').replace(/-/g,'')) % 100;
-  const types = ['vision', 'principle', 'direction'];
-  const type = types[seed % 3];
-  let h = '';
-  if (type === 'vision') {
-    const item = VISION_DATA.vision[seed % VISION_DATA.vision.length];
-    h = `<div class="vision-card"><span class="vision-type">VISION</span><span class="vision-body">${item}</span></div>`;
-  } else if (type === 'principle') {
-    const item = VISION_DATA.principles[seed % VISION_DATA.principles.length];
-    h = `<div class="vision-card"><span class="vision-type">原則</span><span class="vision-body"><span class="vision-keyword">${item.title}</span>${item.text}</span></div>`;
-  } else {
-    const item = VISION_DATA.directions[seed % VISION_DATA.directions.length];
-    h = `<div class="vision-card"><span class="vision-type">指針</span><span class="vision-body"><span class="vision-keyword">${item.title}</span>${item.text}</span></div>`;
-  }
-  area.innerHTML = h;
+  const allItems = [
+    ...VISION_DATA.vision.map(v => ({ type: 'VISION', title: '', text: v })),
+    ...VISION_DATA.principles.map(p => ({ type: '原則', title: p.title, text: p.text })),
+    ...VISION_DATA.directions.map(d => ({ type: '指針', title: d.title, text: d.text })),
+  ];
+  const d = new Date();
+  const dayOfYear = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+  const item = allItems[dayOfYear % allItems.length];
+  const body = item.title
+    ? `<span class="vision-keyword">${item.title}</span>${item.text}`
+    : item.text;
+  area.innerHTML = `<div class="vision-card"><span class="vision-type">${item.type}</span><span class="vision-body">${body}</span></div>`;
 }
 
 // ── ALL OS JSON EXPORT ──
