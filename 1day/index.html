@@ -718,7 +718,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="sb-logo"><img src="icons/icon-32.png"><span>1day</span></div>
   </div>
   <div class="sb-nav">
-    <button class="sb-nav-btn active"><span class="sb-nav-icon">≡</span> ログ</button>
+    <button class="sb-nav-btn active" id="nav-log" onclick="showView('log')"><span class="sb-nav-icon">≡</span> ログ</button>
+    <button class="sb-nav-btn" id="nav-aix" onclick="showView('aix')"><span class="sb-nav-icon">▶</span> AIX未承認 <span id="aixNavBadge" style="display:none;margin-left:auto;background:var(--accent);color:#1a2a00;border-radius:999px;font-size:10px;padding:1px 7px;font-weight:700;"></span></button>
   </div>
   <div class="sb-section">
     <div class="sb-section-lbl">アクション</div>
@@ -797,6 +798,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- VISIONエリア -->
     <div class="vision-area" id="visionArea"></div>
+
+    <!-- AIX未承認ドラフト一覧 -->
+    <div id="aix-view" style="display:none; padding: 24px 32px; max-width: 680px;">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px;">AIX — 未承認ドラフト一覧</div>
+      <div id="aixDraftList"></div>
+      <div id="aixEmptyState" style="display:none;text-align:center;padding:60px 0;color:var(--text3);font-size:14px;">未承認のドラフトはありません</div>
+    </div>
 
     <!-- 選択時のみ表示されるアーカイブバー -->
     
@@ -1603,9 +1611,184 @@ function setFilter(f) {
 }
 
 // 初期化
+// ── AIX 未承認ビュー ──
+function _aixLoadDrafts() {
+  // aix_drafts（配列）と oneday_aix_draft（単一）の両方に対応
+  try {
+    const arr = JSON.parse(localStorage.getItem('aix_drafts') || 'null');
+    if (Array.isArray(arr) && arr.length) return arr;
+  } catch(e) {}
+  const single = localStorage.getItem('oneday_aix_draft');
+  if (single) {
+    const today = new Date(); today.setDate(today.getDate()-1);
+    const yesterday = today.toLocaleDateString('sv');
+    return [{ targetDate: yesterday, events: single, generatedAt: new Date().toISOString() }];
+  }
+  return [];
+}
+
+function _aixSaveDrafts(drafts) {
+  if (drafts.length === 0) {
+    localStorage.removeItem('aix_drafts');
+    localStorage.removeItem('oneday_aix_draft');
+  } else {
+    localStorage.setItem('aix_drafts', JSON.stringify(drafts));
+  }
+}
+
+function updateAixBadge() {
+  const count = _aixLoadDrafts().length;
+  const el = document.getElementById('aixNavBadge');
+  if (!el) return;
+  if (count > 0) { el.style.display = 'inline'; el.textContent = count; }
+  else { el.style.display = 'none'; }
+}
+
+function showView(v) {
+  const aixView = document.getElementById('aix-view');
+  const logList = document.getElementById('logList');
+  const filterBar = document.querySelector('.filter-bar-wrap') || document.querySelector('.filter-chips');
+  const weekDisplay = document.getElementById('weekDisplay');
+  const visionArea = document.getElementById('visionArea');
+
+  if (aixView) aixView.style.display = v === 'aix' ? 'block' : 'none';
+  if (logList) logList.style.display = v === 'log' ? '' : 'none';
+  if (filterBar) filterBar.style.display = v === 'log' ? '' : 'none';
+  if (weekDisplay) weekDisplay.style.display = v === 'log' ? '' : 'none';
+  if (visionArea) visionArea.style.display = v === 'log' ? '' : 'none';
+
+  ['log','aix'].forEach(name => {
+    const btn = document.getElementById('nav-' + name);
+    if (btn) btn.classList.toggle('active', name === v);
+  });
+  if (v === 'aix') renderAixDraftList();
+}
+
+function renderAixDraftList() {
+  const drafts = _aixLoadDrafts();
+  const list = document.getElementById('aixDraftList');
+  const empty = document.getElementById('aixEmptyState');
+  if (!list) return;
+  if (drafts.length === 0) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  const satLabels = { great:'◎', good:'〇', meh:'△', bad:'×' };
+  const satVals = ['great','good','meh','bad'];
+  const tags = ['経営','組織','人間関係','家族','健康','感情','学び','お金','未来'];
+  const flags = { unease:'△ 違和感', energy:'◉ エネルギー高', blog:'≡ ブログ候補', deep:'◎ 深掘り', vision:'◈ VISION関連' };
+
+  list.innerHTML = drafts.map((d, i) => `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">${d.targetDate || ''}</div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">できごと</div>
+        <textarea id="aix-events-${i}" style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || ''}</textarea>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">今週は？</div>
+        <div style="display:flex;gap:8px;">
+          ${satVals.map(v => `<button onclick="aixToggleSat(${i},'${v}')" id="aix-sat-${i}-${v}" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:16px;cursor:pointer;">${satLabels[v]}</button>`).join('')}
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">△ 違和感 <span style="font-size:10px;">任意</span></div>
+        <input type="text" id="aix-unease-${i}" placeholder="なんかモヤっとしたこと、一言で" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);font-family:var(--font-body);font-size:13px;">
+      </div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">タグ <span style="font-size:10px;">任意</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+          ${tags.map(t => `<button onclick="aixToggleTag(${i},'${t}')" id="aix-tag-${i}-${t.replace(/[・]/g,'')}" style="padding:7px 4px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;">${t}</button>`).join('')}
+        </div>
+      </div>
+      <div style="margin-bottom:18px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">フラグ <span style="font-size:10px;">任意</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${Object.entries(flags).map(([k,v]) => `<button onclick="aixToggleFlag(${i},'${k}')" id="aix-flag-${i}-${k}" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;">${v}</button>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);">
+        <button onclick="aixApproveByIdx(${i})" style="background:var(--accent);color:#1a2a00;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">保存</button>
+        <button onclick="aixDismissByIdx(${i})" style="background:transparent;color:var(--text3);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;">スキップ</button>
+      </div>
+    </div>
+  `).join('');
+
+  drafts.forEach((d, i) => {
+    window['_aixSat_'+i] = '';
+    window['_aixTags_'+i] = [];
+    window['_aixFlags_'+i] = [];
+  });
+}
+
+function aixToggleSat(i, val) {
+  window['_aixSat_'+i] = window['_aixSat_'+i] === val ? '' : val;
+  ['great','good','meh','bad'].forEach(v => {
+    const btn = document.getElementById(`aix-sat-${i}-${v}`);
+    if (btn) { btn.style.background = window['_aixSat_'+i] === v ? 'var(--accent)' : 'var(--bg3)'; btn.style.color = window['_aixSat_'+i] === v ? '#1a2a00' : 'var(--text2)'; }
+  });
+}
+
+function aixToggleTag(i, tag) {
+  const arr = window['_aixTags_'+i] || [];
+  const idx = arr.indexOf(tag); if (idx >= 0) arr.splice(idx,1); else arr.push(tag);
+  window['_aixTags_'+i] = arr;
+  const btn = document.getElementById(`aix-tag-${i}-${tag.replace(/[・]/g,'')}`);
+  if (btn) { btn.style.background = arr.includes(tag) ? 'rgba(124,111,255,0.15)' : 'var(--bg3)'; btn.style.borderColor = arr.includes(tag) ? 'var(--accent)' : 'var(--border)'; btn.style.color = arr.includes(tag) ? 'var(--accent)' : 'var(--text2)'; }
+}
+
+function aixToggleFlag(i, flag) {
+  const arr = window['_aixFlags_'+i] || [];
+  const idx = arr.indexOf(flag); if (idx >= 0) arr.splice(idx,1); else arr.push(flag);
+  window['_aixFlags_'+i] = arr;
+  const btn = document.getElementById(`aix-flag-${i}-${flag}`);
+  if (btn) { btn.style.background = arr.includes(flag) ? 'var(--bg4)' : 'var(--bg3)'; btn.style.borderColor = arr.includes(flag) ? 'var(--border2)' : 'var(--border)'; btn.style.color = arr.includes(flag) ? 'var(--text)' : 'var(--text2)'; }
+}
+
+function aixApproveByIdx(i) {
+  const drafts = _aixLoadDrafts();
+  const d = drafts[i]; if (!d) return;
+  const ta = document.getElementById('aix-events-' + i);
+  const events = ta ? ta.value.trim() : (d.events || '');
+  if (!events) { if (typeof toast === 'function') toast('「できごと」を入力してください'); return; }
+  const targetDate = d.targetDate; if (!targetDate) return;
+  const unease = (document.getElementById('aix-unease-' + i) || {}).value || '';
+  const satisfaction = window['_aixSat_' + i] || '';
+  const tags = window['_aixTags_' + i] || [];
+  const flags = window['_aixFlags_' + i] || [];
+  let log = state.logs.find(l => l.date === targetDate);
+  if (log) {
+    log.events = log.events ? log.events + '\n' + events : events;
+    if (unease) log.unease = unease;
+    if (satisfaction) log.satisfaction = satisfaction;
+    if (tags.length) log.tags = [...new Set([...(log.tags||[]), ...tags])];
+    if (flags.length) log.flags = [...new Set([...(log.flags||[]), ...flags])];
+    log.updatedAt = new Date().toISOString();
+  } else {
+    state.logs.push({ id: Date.now().toString(), date: targetDate, satisfaction, events, unease, tags, flags, archived: false, createdAt: new Date().toISOString() });
+  }
+  saveData();
+  drafts.splice(i, 1); _aixSaveDrafts(drafts);
+  renderAixDraftList(); updateAixBadge(); render();
+  if (typeof toast === 'function') toast(`✅ ${targetDate} の記録を保存しました`);
+}
+
+function aixDismissByIdx(i) {
+  const drafts = _aixLoadDrafts();
+  drafts.splice(i, 1); _aixSaveDrafts(drafts);
+  renderAixDraftList(); updateAixBadge();
+}
+
 loadData();
 render();
 bindEvents();
+updateAixBadge();
+window.addEventListener('storage', function(e) {
+  if (e.key === 'aix_drafts' || e.key === 'oneday_aix_draft') { updateAixBadge(); }
+});
 </script>
   <script>
     if ('serviceWorker' in navigator) {
