@@ -360,6 +360,8 @@ select option { background: var(--surface); }
 .act-btn.ab-del:hover { border-color: var(--red); color: var(--red); }
 .act-btn.ab-tmr:hover { border-color: var(--purple); color: var(--purple); }
 .act-btn.ab-week:hover { border-color: var(--purple); color: var(--purple); }
+.act-btn.ab-reject { color: #dc2626; }
+.act-btn.ab-reject:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
 
 /* RIGHT PANEL */
 .summary-item {
@@ -1307,6 +1309,16 @@ function addTask() {
 }
 
 // ── STATUS ──
+function rejectTask(id) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  if (!confirm(`「${t.title}」を不採用にしますか？\n（削除されず記録は残ります）`)) return;
+  t.status = 'rejected';
+  t.updatedAt = new Date().toISOString();
+  save();
+  renderView();
+}
+
 function changeStatus(id, status) {
   const t = tasks.find(x => x.id === id); if (!t) return;
   t.status = status;
@@ -1438,7 +1450,7 @@ function render() {
   updateSummary();
   populateSelect('addCategory', CATEGORIES[0]);
 
-  const filtered = tasks.filter(t => showDone || t.status !== 'done');
+  const filtered = tasks.filter(t => t.status !== 'rejected' && (showDone || t.status !== 'done'));
 
   document.getElementById('viewTitle').textContent = '実行判断ビュー';
   document.getElementById('taskCountBadge').textContent = filtered.filter(t=>t.status!=='done').length + '件';
@@ -1552,6 +1564,9 @@ function buildCardHTML(t) {
     acts += `<button class="act-btn ab-tmr" onclick="setToday('${id}')">今日</button>`;
     acts += `<button class="act-btn ab-done" onclick="changeStatus('${id}','done')">完了</button>`;
     acts += `<button class="act-btn ab-pend" onclick="changeStatus('${id}','pending')">保留</button>`;
+    if ((t.memo||'').includes('AI参謀 Morning Brief自動生成')) {
+      acts += `<button class="act-btn ab-reject" onclick="rejectTask('${id}')">不採用</button>`;
+    }
   } else {
     acts += `<button class="act-btn ab-back" onclick="changeStatus('${id}','todo')">戻す</button>`;
   }
@@ -1632,7 +1647,7 @@ function toggleFilterDone() {
 }
 // ── ALL TABLE ──
 function renderAllTable() {
-  const rows = [...tasks].filter(t => !tableFilterDone || t.status === 'done');
+  const rows = [...tasks].filter(t => t.status !== 'rejected' && (!tableFilterDone || t.status === 'done'));
   if (tableSort === 'due') rows.sort((a,b) => {
     const da = toDateKey(a.dueDate)||'9999', db = toDateKey(b.dueDate)||'9999';
     return da < db ? -1 : da > db ? 1 : 0;
