@@ -663,6 +663,49 @@ function renderVision() {
 // ── ALL OS BACKUP (JSON) ──
 
 // 全OSのデータを収集
+// ReflectOS IndexedDB から問い・実験を取得
+function readReflectOSFromIDB() {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open('ReflectOS7', 1);
+      req.onerror = () => resolve({ questions: [], experiments: [] });
+      req.onsuccess = (e) => {
+        const db = e.target.result;
+        const storeNames = Array.from(db.objectStoreNames);
+        // S（メインストア）からデータ取得
+        if (!storeNames.includes('S')) { db.close(); resolve({ questions: [], experiments: [] }); return; }
+        const tx = db.transaction('S', 'readonly');
+        const store = tx.objectStore('S');
+        const getReq = store.get('main');
+        getReq.onsuccess = (e2) => {
+          db.close();
+          const S = e2.target.result;
+          if (!S) { resolve({ questions: [], experiments: [] }); return; }
+          // 問い: logs の中から questions フィールドを集約
+          const questions = [];
+          const experiments = [];
+          if (S.logs) {
+            for (const log of S.logs) {
+              if (log.questions) questions.push(...log.questions.map(q => ({...q, fromLogId: log.id, fromLogDate: log.date})));
+              if (log.nextExp) experiments.push({text: log.nextExp, fromLogId: log.id, fromLogDate: log.date});
+            }
+          }
+          // checks から状態取得
+          const checks = S.checks || {};
+          resolve({ questions, experiments, checks });
+        };
+        getReq.onerror = () => { db.close(); resolve({ questions: [], experiments: [] }); };
+      };
+    } catch(e) { resolve({ questions: [], experiments: [] }); }
+  });
+}
+
+async function collectAllOSDataWithReflect() {
+  const base = collectAllOSData();
+  const reflectOS = await readReflectOSFromIDB();
+  return { ...base, reflectOS };
+}
+
 function collectAllOSData() {
   return {
     savedAt:        new Date().toISOString(),
@@ -701,7 +744,7 @@ function restoreAllOSData(data) {
 
 
 async function exportAllJSON() {
-  const data = collectAllOSData();
+  const data = await collectAllOSDataWithReflect();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
