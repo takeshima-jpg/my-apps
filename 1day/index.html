@@ -920,27 +920,43 @@ function setAixDraft(text) {
 
 function markdownToHtml(md) {
   if (!md) return '';
-  return md
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    .replace(/^---+$/gm, '<hr>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.+?)`/g, '<code>$1</code>')
-    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>
-?)+/g, s => `<ul>${s}</ul>`)
-    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-    .replace(/
-
-/g, '</p><p>')
-    .replace(/^(?!<[hul]|<li|<hr|<p|<\/)(.*)/gm, '$1')
-    .replace(/(<p>|^)(<h[1-3]>|<hr>|<ul>)/g, '$2')
-    .split('
-').map(l => l.match(/^<[hul]|<hr|^$/) ? l : (l ? `<p>${l}</p>` : '')).join('');
+  const lines = md.split('\n');
+  let html = '';
+  let inList = false;
+  for (let line of lines) {
+    line = line
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/`(.+?)`/g,'<code>$1</code>');
+    if (/^### (.+)/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<h3>' + line.replace(/^### /,'') + '</h3>';
+    } else if (/^## (.+)/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<h2>' + line.replace(/^## /,'') + '</h2>';
+    } else if (/^# (.+)/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<h1>' + line.replace(/^# /,'') + '</h1>';
+    } else if (/^---+$/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<hr>';
+    } else if (/^[-*] (.+)/.test(line)) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += '<li>' + line.replace(/^[-*] /,'') + '</li>';
+    } else if (/^\d+\. (.+)/.test(line)) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += '<li>' + line.replace(/^\d+\. /,'') + '</li>';
+    } else if (line.trim() === '') {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<br>';
+    } else {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<p>' + line + '</p>';
+    }
+  }
+  if (inList) html += '</ul>';
+  return html;
 }
-
 function openBriefPage() {
   const draft = getAixDraft();
   if (!draft) { toast('Morning Briefがありません'); return; }
