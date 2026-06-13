@@ -47,6 +47,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .sb-action.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .sb-action.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
 .sb-action.primary:hover { background: var(--accent2); }
+.sb-action.disabled { opacity: 0.4; cursor: default; pointer-events: none; }
 .sb-ft { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; margin-top: auto; }
 .sb-ft button, .sb-ft label { display: block; width: 100%; padding: 6px 8px; font-size: 12px; text-align: left; background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text3); cursor: pointer; font-family: var(--font-body); transition: all var(--transition); }
 .sb-ft button:hover, .sb-ft label:hover { border-color: var(--border2); color: var(--text2); }
@@ -723,6 +724,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="sb-section-lbl">アクション</div>
     <button class="sb-action primary" onclick="document.getElementById('openEntry').click()">＋ 記録する</button>
     <button class="sb-action" onclick="document.getElementById('openReview').click()">◈ 週次レビュー</button>
+    <button class="sb-action sb-brief-btn" id="sbBriefBtn" onclick="openBriefPage()">📋 Briefを見る</button>
   </div>
   <div class="sb-section">
     <div class="sb-section-lbl">フィルター</div>
@@ -979,6 +981,14 @@ function openBriefPage() {
 function closeBriefPage() {
   const page = document.getElementById('briefPage');
   if (page) page.remove();
+}
+
+function updateBriefBtn() {
+  const btn = document.getElementById('sbBriefBtn');
+  if (!btn) return;
+  const draft = getAixDraft();
+  if (draft) btn.classList.remove('disabled');
+  else btn.classList.add('disabled');
 }
 
 function render() {
@@ -1561,6 +1571,11 @@ function closeMobDrawer() {
 }
 // importFileInputMobのイベント
 document.addEventListener('DOMContentLoaded', function() {
+  updateBriefBtn();
+  // storageイベントでBriefボタン状態を更新
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'oneday_aix_draft') updateBriefBtn();
+  });
   var mobImp = document.getElementById('importFileInputMob');
   if(mobImp) {
     var origImp = document.getElementById('importFileInput');
