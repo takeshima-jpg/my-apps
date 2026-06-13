@@ -60,19 +60,6 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 
 /* TOPBAR */
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 32px; border-bottom: 1px solid var(--border); gap: 16px; position: sticky; top: 0; background: var(--bg); z-index: 10; }
-.aix-banner { display:none; position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:2px solid #c8f060; padding:12px 32px; gap:12px; align-items:flex-start; }
-.aix-banner.visible { display:flex; }
-.aix-banner-left { flex:1; min-width:0; }
-.aix-banner-label { font-size:11px; letter-spacing:.1em; color:#8aaa30; font-family:monospace; margin-bottom:6px; text-transform:uppercase; }
-.aix-banner-date { font-size:13px; color:var(--text2); margin-bottom:8px; }
-.aix-banner-preview { font-size:13px; line-height:1.7; color:var(--text); white-space:pre-wrap; max-height:120px; overflow-y:auto; background:var(--bg2); border:1px solid var(--border2); border-radius:6px; padding:10px 14px; }
-.aix-banner-actions { display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
-.aix-btn-approve { background:#c8f060; color:#1a2a00; border:none; border-radius:6px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
-.aix-btn-approve:hover { background:#b8e050; }
-.aix-btn-edit { background:transparent; color:var(--text2); border:1px solid var(--border2); border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer; white-space:nowrap; }
-.aix-btn-edit:hover { background:var(--bg2); }
-.aix-btn-dismiss { background:transparent; color:var(--text3); border:none; font-size:12px; cursor:pointer; padding:4px 0; text-align:center; }
-.aix-btn-dismiss:hover { color:var(--text2); }
 .week-display { font-family: var(--font-mono); font-size: 0.905rem; color: var(--text3); letter-spacing: 0.04em; }
 .topbar-right { display: flex; align-items: center; gap: 10px; }
 .search-input { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--font-body); font-size: 0.975rem; padding: 7px 14px; width: 180px; outline: none; transition: border-color var(--transition); }
@@ -118,6 +105,25 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .empty-icon { font-size: 2.5rem; color: var(--border2); margin-bottom: 8px; }
 .empty-text { font-size: 1.125rem; color: var(--text2); }
 .empty-sub { font-size: 0.925rem; }
+
+/* BRIEF PAGE */
+.brief-page { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: flex; flex-direction: column; overflow: hidden; }
+.brief-header { display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
+.brief-back { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 14px; color: var(--text2); }
+.brief-back:hover { background: var(--bg3); }
+.brief-title { font-size: 16px; font-weight: 700; color: var(--text); }
+.brief-body { flex: 1; overflow-y: auto; padding: 28px 32px; max-width: 760px; margin: 0 auto; width: 100%; box-sizing: border-box; line-height: 1.8; }
+.brief-body h1 { font-size: 1.4rem; font-weight: 700; margin: 24px 0 12px; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 6px; }
+.brief-body h2 { font-size: 1.15rem; font-weight: 700; margin: 20px 0 8px; color: var(--text); }
+.brief-body h3 { font-size: 1rem; font-weight: 700; margin: 16px 0 6px; color: var(--text2); }
+.brief-body p { margin: 8px 0; color: var(--text); }
+.brief-body ul, .brief-body ol { margin: 8px 0 8px 20px; color: var(--text); }
+.brief-body li { margin: 4px 0; }
+.brief-body strong { font-weight: 700; color: var(--text); }
+.brief-body hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.brief-body code { background: var(--bg3); border-radius: 4px; padding: 2px 6px; font-family: monospace; font-size: 0.9em; }
+.brief-btn { font-size: 12px; padding: 4px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--text2); white-space: nowrap; }
+.brief-btn:hover { background: var(--bg3); }
 
 /* LOG CARD */
 .log-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2); padding: 18px 22px; display: flex; flex-direction: column; gap: 10px; transition: border-color var(--transition); cursor: default; animation: fadeIn 0.22s ease; position: relative; }
@@ -662,10 +668,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 <!-- MOBILE NAV BAR -->
 <div class="mob-nav-bar" id="mobNavBar">
-  <button class="mob-nav-item active" id="mnav-log" onclick="showView('log')">≡ ログ</button>
-  <button class="mob-nav-item" id="mnav-aix" onclick="showView('aix')">▶ AIX <span id="aixNavBadgeMob" style="display:none;background:var(--accent);color:#1a2a00;border-radius:999px;font-size:10px;padding:1px 6px;font-weight:700;margin-left:2px;"></span></button>
-  <span class="mob-nav-sep"></span>
-  <button class="mob-nav-item" id="mnav-all" onclick="setFilter('all');showView('log')">すべて</button>
+  <button class="mob-nav-item active" id="mnav-all" onclick="setFilter('all')">すべて</button>
   <span class="mob-nav-sep"></span>
   <button class="mob-nav-item" id="mnav-unease" onclick="setFilter('flag:unease')">△ 違和感</button>
   <button class="mob-nav-item" id="mnav-energy" onclick="setFilter('flag:energy')">◉ エネ高</button>
@@ -714,8 +717,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="sb-logo"><img src="icons/icon-32.png"><span>1day</span></div>
   </div>
   <div class="sb-nav">
-    <button class="sb-nav-btn active" id="nav-log" onclick="showView('log')"><span class="sb-nav-icon">≡</span> ログ</button>
-    <button class="sb-nav-btn" id="nav-aix" onclick="showView('aix')"><span class="sb-nav-icon">▶</span> AIX未承認 <span id="aixNavBadge" style="display:none;margin-left:auto;background:var(--accent);color:#1a2a00;border-radius:999px;font-size:10px;padding:1px 7px;font-weight:700;"></span></button>
+    <button class="sb-nav-btn active"><span class="sb-nav-icon">≡</span> ログ</button>
   </div>
   <div class="sb-section">
     <div class="sb-section-lbl">アクション</div>
@@ -759,23 +761,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
   <main class="main">
-    <!-- AIX 承認待ちバナー -->
-    <div class="aix-banner" id="aixBanner">
-      <div class="aix-banner-left">
-        <div class="aix-banner-label">▶ AIX — 承認待ち</div>
-        <div class="aix-banner-date" id="aixBannerDate"></div>
-        <div class="aix-banner-preview" id="aixBannerPreview"></div>
-        <div id="aixNav" style="display:none;gap:8px;margin-top:6px;align-items:center">
-          <button class="aix-btn-dismiss" onclick="aixPrev()">◀ 前へ</button>
-          <button class="aix-btn-dismiss" onclick="aixNext()">次へ ▶</button>
-        </div>
-      </div>
-      <div class="aix-banner-actions">
-        <button class="aix-btn-approve" onclick="aixApprove()">承認して記録</button>
-        <button class="aix-btn-dismiss" onclick="aixDismiss()">スキップ</button>
-      </div>
-    </div>
-
     <div class="topbar">
       <div class="week-display" id="weekDisplay"></div>
       <div class="topbar-right">
@@ -811,13 +796,6 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- VISIONエリア -->
     <div class="vision-area" id="visionArea"></div>
 
-    <!-- AIX未承認ドラフト一覧 -->
-    <div id="aix-view" style="display:none; padding: 24px 32px; max-width: 680px;">
-      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px;">AIX — 未承認ドラフト一覧</div>
-      <div id="aixDraftList"></div>
-      <div id="aixEmptyState" style="display:none;text-align:center;padding:60px 0;color:var(--text3);font-size:14px;">未承認のドラフトはありません</div>
-    </div>
-
     <!-- 選択時のみ表示されるアーカイブバー -->
     
 
@@ -851,17 +829,17 @@ const VISION_DATA = {
   vision: [
     '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。',
     '安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。',
+    '挑戦する人が成長できる社会をつくる。そのために、守りの総合支援がある。',
   ],
   principles: [
     { title: '成長', text: '未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。' },
     { title: '愛', text: '周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。' },
     { title: '誠実', text: '自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。' },
     { title: '寛容', text: '個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。' },
-    { title: '共創', text: '自分の確信を持ちながら、相手の確信も尊重する。違いを消さずに理解し、接点を探す。互いの成長につながる未来を共に創る。' },
   ],
   directions: [
     { title: '確信', text: '頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。油断せず備える。' },
-    { title: '仲間', text: '弱みも未来も共有し、自立し、責任を持って、前向きに、違いを尊重しながら共通の未来を創れる人を大切にする。' },
+    { title: '仲間', text: '弱みも未来も共有し、自立し、責任を持って、前向きに、同じゴールに向かい仮説検証ができる人を大切にする。' },
     { title: '健康', text: '心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。' },
   ],
 };
@@ -930,6 +908,63 @@ function filteredLogs() {
 }
 
 // RENDER
+
+// ── AIX DRAFT / MORNING BRIEF ──
+function getAixDraft() {
+  return localStorage.getItem('oneday_aix_draft') || null;
+}
+function setAixDraft(text) {
+  if (text) localStorage.setItem('oneday_aix_draft', text);
+  else localStorage.removeItem('oneday_aix_draft');
+}
+
+function markdownToHtml(md) {
+  if (!md) return '';
+  return md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/^---+$/gm, '<hr>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>
+?)+/g, s => `<ul>${s}</ul>`)
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    .replace(/
+
+/g, '</p><p>')
+    .replace(/^(?!<[hul]|<li|<hr|<p|<\/)(.*)/gm, '$1')
+    .replace(/(<p>|^)(<h[1-3]>|<hr>|<ul>)/g, '$2')
+    .split('
+').map(l => l.match(/^<[hul]|<hr|^$/) ? l : (l ? `<p>${l}</p>` : '')).join('');
+}
+
+function openBriefPage() {
+  const draft = getAixDraft();
+  if (!draft) { toast('Morning Briefがありません'); return; }
+  const existing = document.getElementById('briefPage');
+  if (existing) existing.remove();
+
+  const page = document.createElement('div');
+  page.id = 'briefPage';
+  page.className = 'brief-page';
+  page.innerHTML = `
+    <div class="brief-header">
+      <button class="brief-back" onclick="closeBriefPage()">← 戻る</button>
+      <div class="brief-title">📋 Morning Brief</div>
+    </div>
+    <div class="brief-body">${markdownToHtml(draft)}</div>
+  `;
+  document.body.appendChild(page);
+}
+
+function closeBriefPage() {
+  const page = document.getElementById('briefPage');
+  if (page) page.remove();
+}
+
 function render() {
   document.getElementById('weekDisplay').textContent = `W ${currentWeekRange()}`;
   renderLogList();
@@ -1130,6 +1165,7 @@ function buildCard(log) {
       <div class="log-card-meta">
         <div class="log-sat ${sc}">${sl}</div>
         <div class="log-card-actions">
+          ${log.date === today() && getAixDraft() ? '<button class="card-action-btn brief-btn">📋 Briefを見る</button>' : ''}
           <button class="card-action-btn edit-btn">編集</button>
           ${unarchiveBtn}
           <button class="card-action-btn delete delete-btn">削除</button>
@@ -1147,6 +1183,7 @@ function buildCard(log) {
   }
   card.querySelector('.log-events').addEventListener('click', function() { this.classList.toggle('truncated'); });
   card.querySelector('.edit-btn').addEventListener('click', e => { e.stopPropagation(); openEntryModal(log.id); });
+  card.querySelector('.brief-btn')?.addEventListener('click', e => { e.stopPropagation(); openBriefPage(); });
   card.querySelector('.delete-btn').addEventListener('click', e => {
     e.stopPropagation();
     if (confirm('このログを削除しますか？')) {
@@ -1534,289 +1571,10 @@ function setFilter(f) {
   renderLogList();
 }
 
-// ── AIX 承認待ちドラフト（複数日対応）──
-const AIX_KEY = 'aix_drafts';
-const AIX_KEY_LEGACY = 'aix_draft';
-let _aixIdx = 0;
-
-function _aixLoad() {
-  try {
-    const leg = localStorage.getItem(AIX_KEY_LEGACY);
-    if (leg) {
-      const obj = JSON.parse(leg);
-      const arr = Array.isArray(obj) ? obj : [obj];
-      localStorage.setItem(AIX_KEY, JSON.stringify(arr));
-      localStorage.removeItem(AIX_KEY_LEGACY);
-      return arr;
-    }
-    const raw = localStorage.getItem(AIX_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch(e) { return []; }
-}
-
-function _aixSave(drafts) {
-  localStorage.setItem(AIX_KEY, JSON.stringify(drafts));
-}
-
-function aixCheckDraft() {
-  const drafts = _aixLoad();
-  const banner = document.getElementById('aixBanner');
-  if (!drafts.length) { banner.classList.remove('visible'); return; }
-  _aixIdx = Math.min(_aixIdx, drafts.length - 1);
-  const d = drafts[_aixIdx];
-  const count = drafts.length > 1 ? ` (${_aixIdx + 1}/${drafts.length})` : '';
-  document.getElementById('aixBannerDate').textContent = `対象日: ${d.targetDate || ''}${count}`;
-  const preview = document.getElementById('aixBannerPreview');
-  preview.innerHTML = '';
-  const ta = document.createElement('textarea');
-  ta.id = 'aixEditArea';
-  ta.value = d.events || '';
-  ta.rows = 4;
-  ta.style.cssText = 'width:100%;background:transparent;border:1px solid rgba(128,128,128,0.3);border-radius:4px;resize:vertical;font:inherit;color:inherit;padding:8px;box-sizing:border-box;margin-top:6px;';
-  preview.appendChild(ta);
-  const nav = document.getElementById('aixNav');
-  if (nav) nav.style.display = drafts.length > 1 ? 'flex' : 'none';
-  banner.classList.add('visible');
-}
-
-function _aixCurrentEvents() {
-  const ta = document.getElementById('aixEditArea');
-  return ta ? ta.value : (_aixLoad()[_aixIdx]?.events || '');
-}
-
-function aixApprove() {
-  const drafts = _aixLoad();
-  if (!drafts.length) return;
-  const d = drafts[_aixIdx];
-  const events = _aixCurrentEvents();
-  try {
-    if (!d.targetDate) return;
-    let log = state.logs.find(l => l.date === d.targetDate);
-    if (log) { log.events = log.events ? log.events + '\n' + events : events; }
-    else { state.logs.push({ date: d.targetDate, events, satisfaction: '', tags: [], flags: [], memo: '' }); }
-    saveData();
-    drafts.splice(_aixIdx, 1);
-    _aixSave(drafts);
-    _aixIdx = Math.min(_aixIdx, Math.max(0, drafts.length - 1));
-    render();
-    aixCheckDraft();
-    if (typeof toast === 'function') toast(`✅ ${d.targetDate} の記録を反映しました`);
-  } catch(e) { console.error('AIX approve error:', e); }
-}
-
-function aixEditAndApprove() {
-  aixApprove();
-}
-
-function aixDismiss() {
-  const drafts = _aixLoad();
-  if (!drafts.length) return;
-  drafts.splice(_aixIdx, 1);
-  _aixSave(drafts);
-  _aixIdx = Math.min(_aixIdx, Math.max(0, drafts.length - 1));
-  aixCheckDraft();
-  renderAixDraftList();
-  updateAixBadge();
-}
-
-function aixPrev() {
-  const drafts = _aixLoad();
-  if (drafts.length) { _aixIdx = (_aixIdx - 1 + drafts.length) % drafts.length; aixCheckDraft(); }
-}
-
-function aixNext() {
-  const drafts = _aixLoad();
-  if (drafts.length) { _aixIdx = (_aixIdx + 1) % drafts.length; aixCheckDraft(); }
-}
-
-// ── AIX ビュー切り替え ──
-function showView(v) {
-  document.getElementById('aix-view').style.display = v === 'aix' ? 'block' : 'none';
-  const logEls = ['logList', 'filter-bar-wrap', 'weekDisplay'];
-  logEls.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = v === 'log' ? '' : 'none'; });
-  // ダッシュボードも非表示
-  const dash = document.getElementById('dashSection');
-  if (dash) dash.style.display = v === 'log' ? '' : 'none';
-  // サイドバーナビ
-  ['log','aix'].forEach(name => {
-    const btn = document.getElementById('nav-' + name);
-    if (btn) btn.classList.toggle('active', name === v);
-    const mbtn = document.getElementById('mnav-' + name);
-    if (mbtn) mbtn.classList.toggle('active', name === v);
-  });
-  if (v === 'aix') renderAixDraftList();
-}
-
-function updateAixBadge() {
-  const count = _aixLoad().length;
-  ['aixNavBadge','aixNavBadgeMob'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (count > 0) { el.style.display = 'inline'; el.textContent = count; }
-    else { el.style.display = 'none'; }
-  });
-}
-
-function renderAixDraftList() {
-  const drafts = _aixLoad();
-  const list = document.getElementById('aixDraftList');
-  const empty = document.getElementById('aixEmptyState');
-  if (!list) return;
-  if (drafts.length === 0) {
-    list.innerHTML = '';
-    if (empty) empty.style.display = 'block';
-    return;
-  }
-  if (empty) empty.style.display = 'none';
-
-  const satLabels = { great:'◎', good:'〇', meh:'△', bad:'×' };
-  const satVals = ['great','good','meh','bad'];
-  const tags = ['経営','組織','人間関係','家族','健康','感情','学び','お金','未来'];
-  const flags = { unease:'△ 違和感', energy:'◉ エネルギー高', blog:'≡ ブログ候補', deep:'◎ 深掘り', vision:'◈ VISION関連' };
-
-  list.innerHTML = drafts.map((d, i) => `
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:16px;">
-      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:12px;display:flex;justify-content:space-between;">
-        <span style="font-size:13px;font-weight:600;color:var(--text);">${d.targetDate || ''}</span>
-        <span style="font-size:10px;">${d.generatedAt ? new Date(d.generatedAt).toLocaleString('ja') : ''}</span>
-      </div>
-
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">できごと</div>
-        <textarea id="aix-events-${i}" style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || ''}</textarea>
-      </div>
-
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">今週は？</div>
-        <div style="display:flex;gap:8px;">
-          ${satVals.map(v => `<button onclick="aixToggleSat(${i},'${v}')" id="aix-sat-${i}-${v}" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:16px;cursor:pointer;">${satLabels[v]}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">△ 違和感 <span style="color:var(--text3);font-size:10px;">任意</span></div>
-        <input type="text" id="aix-unease-${i}" placeholder="なんかモヤっとしたこと、一言で" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);font-family:var(--font-body);font-size:13px;">
-      </div>
-
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">タグ <span style="font-size:10px;">任意</span></div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
-          ${tags.map(t => `<button onclick="aixToggleTag(${i},'${t}')" id="aix-tag-${i}-${t}" style="padding:7px 4px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;">${t}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:18px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">フラグ <span style="font-size:10px;">任意</span></div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          ${Object.entries(flags).map(([k,v]) => `<button onclick="aixToggleFlag(${i},'${k}')" id="aix-flag-${i}-${k}" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;">${v}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);">
-        <button onclick="aixApproveByIdx(${i})" style="background:var(--accent);color:#1a2a00;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">保存</button>
-        <button onclick="aixDismissByIdx(${i})" style="background:transparent;color:var(--text3);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;">スキップ</button>
-      </div>
-    </div>
-  `).join('');
-
-  // 選択状態を初期化
-  drafts.forEach((d, i) => {
-    window['_aixSat_'+i] = d._sat || '';
-    window['_aixTags_'+i] = d._tags ? [...d._tags] : [];
-    window['_aixFlags_'+i] = d._flags ? [...d._flags] : [];
-  });
-}
-
-function aixToggleSat(i, val) {
-  window['_aixSat_'+i] = window['_aixSat_'+i] === val ? '' : val;
-  ['great','good','meh','bad'].forEach(v => {
-    const btn = document.getElementById(`aix-sat-${i}-${v}`);
-    if (btn) btn.style.background = window['_aixSat_'+i] === v ? 'var(--accent)' : 'var(--bg3)';
-    if (btn) btn.style.color = window['_aixSat_'+i] === v ? '#1a2a00' : 'var(--text2)';
-  });
-}
-
-function aixToggleTag(i, tag) {
-  const arr = window['_aixTags_'+i] || [];
-  const idx = arr.indexOf(tag);
-  if (idx >= 0) arr.splice(idx,1); else arr.push(tag);
-  window['_aixTags_'+i] = arr;
-  const btn = document.getElementById(`aix-tag-${i}-${tag}`);
-  if (btn) {
-    btn.style.background = arr.includes(tag) ? 'rgba(124,111,255,0.15)' : 'var(--bg3)';
-    btn.style.borderColor = arr.includes(tag) ? 'var(--accent)' : 'var(--border)';
-    btn.style.color = arr.includes(tag) ? 'var(--accent)' : 'var(--text2)';
-  }
-}
-
-function aixToggleFlag(i, flag) {
-  const arr = window['_aixFlags_'+i] || [];
-  const idx = arr.indexOf(flag);
-  if (idx >= 0) arr.splice(idx,1); else arr.push(flag);
-  window['_aixFlags_'+i] = arr;
-  const btn = document.getElementById(`aix-flag-${i}-${flag}`);
-  if (btn) {
-    btn.style.background = arr.includes(flag) ? 'var(--bg4)' : 'var(--bg3)';
-    btn.style.borderColor = arr.includes(flag) ? 'var(--border2)' : 'var(--border)';
-    btn.style.color = arr.includes(flag) ? 'var(--text)' : 'var(--text2)';
-  }
-}
-
-function aixApproveByIdx(i) {
-  const drafts = _aixLoad();
-  const d = drafts[i];
-  if (!d) return;
-  const ta = document.getElementById('aix-events-' + i);
-  const events = ta ? ta.value.trim() : (d.events || '');
-  if (!events) { if (typeof toast === 'function') toast('「できごと」を入力してください'); return; }
-  const targetDate = d.targetDate;
-  if (!targetDate) return;
-  const unease = (document.getElementById('aix-unease-' + i) || {}).value || '';
-  const satisfaction = window['_aixSat_' + i] || '';
-  const tags = window['_aixTags_' + i] || [];
-  const flags = window['_aixFlags_' + i] || [];
-
-  let log = state.logs.find(l => l.date === targetDate);
-  if (log) {
-    log.events = log.events ? log.events + '\n' + events : events;
-    if (unease) log.unease = unease;
-    if (satisfaction) log.satisfaction = satisfaction;
-    if (tags.length) log.tags = [...new Set([...(log.tags||[]), ...tags])];
-    if (flags.length) log.flags = [...new Set([...(log.flags||[]), ...flags])];
-    log.updatedAt = new Date().toISOString();
-  } else {
-    state.logs.push({ id: Date.now().toString(), date: targetDate, satisfaction, events, unease, tags, flags, archived: false, createdAt: new Date().toISOString() });
-  }
-  saveData();
-  drafts.splice(i, 1);
-  _aixSave(drafts);
-  renderAixDraftList();
-  updateAixBadge();
-  aixCheckDraft();
-  render();
-  if (typeof toast === 'function') toast(`✅ ${targetDate} の記録を保存しました`);
-}
-
-function aixDismissByIdx(i) {
-  const drafts = _aixLoad();
-  drafts.splice(i, 1);
-  _aixSave(drafts);
-  renderAixDraftList();
-  updateAixBadge();
-  aixCheckDraft();
-}
-
 // 初期化
 loadData();
 render();
 bindEvents();
-window.addEventListener('storage', e => {
-  if (e.key === 'aix_drafts' || e.key === 'aix_draft') {
-    _aixIdx = 0; aixCheckDraft(); updateAixBadge();
-  }
-});
-aixCheckDraft();
-updateAixBadge();
 </script>
   <script>
     if ('serviceWorker' in navigator) {
