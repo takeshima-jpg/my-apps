@@ -516,8 +516,22 @@ async function gdriveAutoLoad() {
 async function aixGdriveCheck() {
   if (!gdriveToken) return;
   try {
+    // まず aix-drafts フォルダを探す
+    const folderRes = await gdriveFetch(
+      `https://www.googleapis.com/drive/v3/files?q=name%3D%22aix-drafts%22+and+mimeType%3D%22application%2Fvnd.google-apps.folder%22+and+trashed%3Dfalse&fields=files(id,name)`
+    );
+    const folderData = await folderRes.json();
+    const folderId = folderData.files && folderData.files.length > 0 ? folderData.files[0].id : null;
+
+    let query;
+    if (folderId) {
+      query = `name+contains+%22aix-draft-%22+and+%22${folderId}%22+in+parents+and+trashed%3Dfalse`;
+    } else {
+      query = `name+contains+%22aix-draft-%22+and+trashed%3Dfalse`;
+    }
+
     const res = await gdriveFetch(
-      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name+contains+%22aix-draft-%22&fields=files(id,name)&orderBy=name+desc`
+      `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name)&orderBy=name+desc`
     );
     const data = await res.json();
     if (!data.files || data.files.length === 0) return;
