@@ -1,3 +1,1322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <link rel="icon" type="image/png" href="./icons/favicon.ico">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ヒトメモ</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Serif+Display&display=swap');
+
+    :root {
+      --bg: #F7F6F3;
+      --surface: #FFFFFF;
+      --surface2: #F0EEE9;
+      --border: #E5E2DB;
+      --text1: #1A1814;
+      --text2: #5C5852;
+      --text3: #9C988F;
+      --accent: #2D5A3D;
+      --accent-light: #EAF2EC;
+      --accent2: #8B6914;
+      --accent2-light: #FBF4E3;
+      --star: #E8A020;
+      --danger: #C0392B;
+      --danger-light: #FDECEA;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text1);
+      font-size: 16px;
+      line-height: 1.6;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── LAYOUT ── */
+    .layout { display: flex; height: 100vh; }
+    .sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      background: #1e2230;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      overflow: visible;
+      position: relative;
+      z-index: 200;
+    }
+    .sb-hd {
+      padding: 16px 14px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .sb-hd-top { display: flex; align-items: center; gap: 8px; }
+    .sb-hd span { font-size: 15px; font-weight: 700; color: #fff; }
+    .vision-pill {
+      font-size: 9px; color: rgba(255,255,255,0.5);
+      line-height: 1.5; padding: 4px 0;
+      letter-spacing: 0.02em;
+    }
+    .sb-body { flex: 1; overflow-y: auto; padding: 10px 0; }
+    .sb-ft {
+      padding: 10px 12px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      z-index: 200;
+    }
+    .sb-btn {
+      width: 100%; padding: 5px 8px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      color: #fff; font-size: 11px;
+      cursor: pointer; text-align: left;
+    }
+    .sb-btn:hover { background: rgba(255,255,255,0.15); }
+    .sb-status {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10px; color: rgba(255,255,255,0.5);
+      margin-bottom: 5px;
+    }
+    .main-area { flex: 1; overflow-y: auto; }
+    .app { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
+
+    /* ── TOPBAR（削除・サイドバーに移行） ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+    }
+    .topbar-actions { display: flex; gap: 8px; align-items: center; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #234830; }
+    .btn-ghost { background: none; border: 1px solid var(--border); color: var(--text2); }
+    .btn-ghost:hover { background: var(--surface2); }
+    .btn-danger { background: var(--danger-light); color: var(--danger); border: 1px solid #f5c6c0; }
+    .btn-danger:hover { background: #fbd5d0; }
+    .btn-sm { padding: 5px 12px; font-size: 14px; }
+
+    /* ── SEARCH ── */
+    .search-wrap { position: relative; margin: 20px 0 16px; }
+    .search-input {
+      width: 100%;
+      padding: 10px 16px 10px 38px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+      background: var(--surface);
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { outline: none; border-color: var(--accent); }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 17px; }
+
+    /* ── FILTER ROW ── */
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filter-label { font-size: 14px; color: var(--text3); }
+    .filter-chip {
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-size: 14px;
+      color: var(--text2);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .sort-select {
+      padding: 4px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--surface);
+      color: var(--text2);
+      margin-left: auto;
+    }
+    .sort-select:focus { outline: none; }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin: 24px 0 12px;
+    }
+
+    /* ── STAR GRID ── */
+    .star-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .star-card {
+      background: var(--accent2-light);
+      border: 1.5px solid #e8d9a0;
+      border-radius: 10px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .star-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .star-badge { position: absolute; top: 12px; right: 12px; font-size: 16px; }
+
+    /* ── PERSON GRID ── */
+    .person-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+    }
+    .person-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .person-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(45,90,61,0.08); }
+    .person-card.is-star { border-color: #d4b86a; }
+    .person-card.dragging { opacity: 0.4; cursor: grabbing; }
+    .person-card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); transform: scale(1.02); }
+    .person-card[draggable="true"] { cursor: grab; }
+    .star-card.dragging { opacity: 0.4; cursor: grabbing; }
+    .star-card.drag-over { border-color: var(--accent2); box-shadow: 0 0 0 2px var(--accent2); transform: scale(1.02); }
+    .star-card[draggable="true"] { cursor: grab; }
+
+    .card-name { font-weight: 700; font-size: 18px; margin-bottom: 3px; }
+    .card-position { font-size: 14px; color: var(--text3); margin-bottom: 8px; }
+    .card-core {
+      font-size: 15px;
+      color: var(--text2);
+      font-style: italic;
+      border-left: 2px solid var(--accent);
+      padding-left: 8px;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text3);
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      margin-top: 4px;
+    }
+    .card-delete {
+      position: absolute;
+      top: 8px; right: 8px;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      color: var(--text3);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      transition: all 0.15s;
+    }
+    .person-card:hover .card-delete,
+    .star-card:hover .card-delete { opacity: 1; background: var(--danger-light); color: var(--danger); }
+
+    /* ── SUMMARY ── */
+    .summary-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-top: 28px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .summary-item { text-align: center; }
+    .summary-num { font-size: 24px; font-weight: 700; color: var(--accent); line-height: 1; }
+    .summary-lbl { font-size: 13px; color: var(--text3); margin-top: 2px; }
+    .summary-divider { width: 1px; height: 36px; background: var(--border); }
+
+    /* ── EMPTY ── */
+    .empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-title { font-size: 18px; color: var(--text2); margin-bottom: 6px; }
+
+    /* ── BACKUP LINKS ── */
+    .backup-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      padding-top: 8px;
+    }
+    .backup-link {
+      background: none; border: none;
+      color: var(--text3); font-size: 13px;
+      cursor: pointer; font-family: inherit;
+      text-decoration: underline;
+      padding: 0;
+    }
+    .backup-link:hover { color: var(--text2); }
+
+    /* ── PAGE CONTAINER ── */
+    .page { max-width: 720px; margin: 0 auto; padding: 24px 20px 60px; }
+
+    /* ── INTERVIEW ── */
+    .interview-box {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+    }
+    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 24px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+    .q-count { font-size: 14px; color: var(--text3); margin-bottom: 12px; }
+    .q-text { font-size: 20px; font-weight: 700; margin-bottom: 20px; color: var(--text1); }
+    .q-textarea {
+      width: 100%; min-height: 120px;
+      padding: 12px; font-size: 16px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: inherit; resize: vertical;
+      transition: border-color 0.2s;
+    }
+    .q-textarea:focus { outline: none; border-color: var(--accent); }
+    .nav-row { display: flex; gap: 10px; justify-content: space-between; margin-top: 20px; }
+
+    /* ── IMPORT ── */
+    .import-box {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+    }
+    .import-textarea {
+      width: 100%; min-height: 360px;
+      padding: 14px; font-size: 15px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      resize: vertical; margin-bottom: 16px;
+    }
+    .import-textarea:focus { outline: none; border-color: var(--accent); }
+
+    /* ── DETAIL ── */
+    .detail-hero {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin-bottom: 20px;
+    }
+    .hero-name { font-family: 'DM Serif Display', serif; font-size: 28px; margin-bottom: 4px; }
+    .hero-position { font-size: 15px; color: var(--text3); margin-bottom: 12px; }
+    .hero-core {
+      font-size: 17px; color: var(--text2);
+      font-style: italic;
+      border-left: 3px solid var(--accent);
+      padding-left: 12px;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .hero-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .star-toggle {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-size: 15px; font-family: inherit;
+      cursor: pointer; transition: all 0.15s;
+      font-weight: 500;
+    }
+    .star-toggle.active { background: var(--accent2-light); border-color: #d4b86a; color: var(--accent2); }
+
+    .detail-section {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 14px;
+    }
+    .detail-section-title {
+      font-size: 14px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text3); margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .field-group { margin-bottom: 14px; }
+    .field-label { display: block; font-size: 14px; color: var(--text3); font-weight: 500; margin-bottom: 5px; }
+    .field-input, .field-textarea {
+      width: 100%; padding: 9px 12px;
+      font-size: 16px; font-family: inherit;
+      border: 1.5px solid var(--border); border-radius: 7px;
+      transition: border-color 0.2s;
+      background: var(--surface);
+    }
+    .field-textarea { min-height: 80px; resize: vertical; }
+    .field-input:focus, .field-textarea:focus { outline: none; border-color: var(--accent); }
+
+    /* ── MEETINGS ── */
+    .meeting-item {
+      background: var(--surface2);
+      border-left: 3px solid #27ae60;
+      border-radius: 0 7px 7px 0;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .meeting-date { font-weight: 600; font-size: 15px; margin-bottom: 5px; }
+    .meeting-content { font-size: 15px; color: var(--text2); line-height: 1.6; }
+    .meeting-delete {
+      position: absolute; top: 8px; right: 8px;
+      background: none; border: none;
+      font-size: 13px; color: var(--text3);
+      cursor: pointer; padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .meeting-delete:hover { background: var(--danger-light); color: var(--danger); }
+
+    /* ── AI SUMMARY ── */
+    .ai-summary-box {
+      background: var(--accent-light);
+      border: 1.5px solid #b8d9c2;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .ai-summary-label { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
+    .ai-summary-field { margin-bottom: 8px; font-size: 15px; }
+    .ai-field-key { color: var(--text3); font-weight: 500; }
+    .ai-field-val { color: var(--text1); margin-left: 4px; }
+    .ai-summary-textarea {
+      width: 100%; min-height: 110px;
+      padding: 10px 12px; font-size: 15px;
+      border: 1.5px solid #b8d9c2; border-radius: 7px;
+      font-family: inherit; resize: vertical;
+      background: rgba(255,255,255,0.7);
+    }
+    .ai-summary-textarea:focus { outline: none; border-color: var(--accent); }
+
+    /* ── ACTION ROW ── */
+    .action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+    /* ── PAGE HEADER ── */
+    .page-header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+    .page-back {
+      background: none; border: 1px solid var(--border);
+      color: var(--text2); padding: 6px 14px;
+      border-radius: 6px; font-family: inherit;
+      font-size: 15px; cursor: pointer;
+    }
+    .page-back:hover { background: var(--surface2); }
+    .page-title { font-size: 22px; font-weight: 700; }
+  
+    /* ── 経営パートナー形成OS ── */
+    .tier-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; margin-left:6px; }
+    .tier-partner { background:#fef3c7; color:#92400e; }
+    .tier-candidate { background:#ede9fe; color:#5b21b6; }
+    .tier-record { background:#f1f5f9; color:#64748b; }
+
+    .stage-pill { display:inline-block; padding:1px 8px; border-radius:8px; font-size:11px; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
+
+    .change-log { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
+    .change-entry { display:flex; gap:8px; align-items:flex-start; padding:8px; background:#f8fafc; border-radius:8px; border-left:3px solid #e2e8f0; }
+    .change-entry.type-発言変化 { border-left-color:#8b5cf6; }
+    .change-entry.type-行動変化 { border-left-color:#10b981; }
+    .change-entry.type-気づき { border-left-color:#f59e0b; }
+    .change-entry.type-ステージ変化 { border-left-color:#3b82f6; }
+    .change-type { font-size:10px; font-weight:700; color:#94a3b8; white-space:nowrap; min-width:60px; }
+    .change-text { font-size:13px; color:#374151; flex:1; }
+    .change-date { font-size:10px; color:#94a3b8; white-space:nowrap; }
+
+    .alert-card { background:#fff7ed; border:1px solid #fed7aa; border-radius:12px; padding:12px 16px; margin-bottom:8px; }
+    .alert-label { font-size:11px; font-weight:700; color:#c2410c; margin-bottom:4px; }
+    .next-exp-card { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:12px 16px; margin-bottom:8px; }
+    .next-exp-label { font-size:11px; font-weight:700; color:#166534; margin-bottom:4px; }
+
+    .section-header { display:flex; align-items:center; justify-content:space-between; margin:20px 0 8px; }
+    .section-title-new { font-size:13px; font-weight:700; color:#374151; }
+    .section-count { font-size:11px; color:#94a3b8; background:#f1f5f9; padding:1px 8px; border-radius:8px; }
+
+    .add-change-btn { font-size:12px; padding:4px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; color:#64748b; }
+    .add-change-btn:hover { background:#f1f5f9; }
+
+    .partner-goal { background:linear-gradient(135deg,#1e2230 0%,#2d3748 100%); color:#fff; border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+    .partner-goal-count { font-size:28px; font-weight:700; color:#fbbf24; }
+    .partner-goal-label { font-size:12px; color:rgba(255,255,255,0.7); }
+    .partner-goal-bar { margin-top:8px; background:rgba(255,255,255,0.2); border-radius:4px; height:4px; }
+    .partner-goal-fill { background:#fbbf24; border-radius:4px; height:4px; transition:width 0.3s; }
+
+    </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+// ── GOOGLE DRIVE SYNC (HITOMEMO) ──
+const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
+const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const GDRIVE_FILE_NAME = 'hitomemo-backup.json';
+const GDRIVE_REDIRECT_URI = (location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html'));
+
+let gdriveToken = null;
+let gdriveFolderId = null;
+let gdriveFileId = null;
+
+const _STORAGE_KEY = 'hitomemo_profiles_v1';
+
+// サイドバーから直接呼べるJSON保存関数
+function sidebarBackupJSON() {
+  const list = window.__hitomemoBackup
+    ? (window.__hitomemoBackup(), null) // Reactから呼ぶ
+    : null;
+  if (list === null && !window.__hitomemoBackup) {
+    // フォールバック：localStorageから直接
+    const data = JSON.parse(localStorage.getItem(_STORAGE_KEY) || '[]');
+    const blob = new Blob([JSON.stringify({ profiles: data, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'hitomemo-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+  }
+}
+// リダイレクト方式（スマホ対応）
+function gdriveConnect() {  // OAuthコード取得後のリダイレクト処理
+  const params = new URLSearchParams({
+    client_id: GDRIVE_CLIENT_ID,
+    redirect_uri: GDRIVE_REDIRECT_URI,
+    response_type: 'token',
+    scope: GDRIVE_SCOPE,
+    prompt: 'select_account',
+  });
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+}
+
+// リダイレクト後にURLフラグメントからトークンを取得
+function gdriveHandleRedirect() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const token = hash.get('access_token');
+  if (token) {
+    gdriveToken = token;
+    localStorage.setItem('gdrive_token', token);
+    // トークンをURLから消す
+    history.replaceState(null, '', location.pathname);
+    gdriveUpdateUI(true);
+    // gdriveAutoLoad(); // ログイン直後の自動確認を無効化（トークン誤削除防止）
+  } else {
+    // 保存済みトークンを確認
+    const saved = localStorage.getItem('gdrive_token');
+    if (saved) {
+      gdriveToken = saved;
+      gdriveUpdateUI(true);
+    }
+  }
+}
+
+// 他のタブでログインした場合にUIを自動更新
+window.addEventListener('storage', function(e) {
+  if (e.key === 'gdrive_token') {
+    if (e.newValue) {
+      gdriveToken = e.newValue;
+      gdriveUpdateUI(true);
+      toast('Googleドライブに接続しました');
+    } else {
+      gdriveToken = null;
+      gdriveUpdateUI(false);
+    }
+  }
+});
+
+function gdriveUpdateUI(connected) {
+  // デスクトップサイドバー
+  const dot = document.getElementById('gdriveDot');
+  const status = document.getElementById('gdriveStatusText');
+  const connectBtn = document.getElementById('gdriveConnectBtn');
+  const saveBtn = document.getElementById('gdriveSaveBtn');
+  const loadBtn = document.getElementById('gdriveLoadBtn');
+  // モバイルドロワー
+  const dotMob = document.getElementById('gdriveDotMob');
+  const statusMob = document.getElementById('gdriveStatusMob');
+  const connectMob = document.getElementById('gdriveConnectMob');
+  const saveMob = document.getElementById('gdriveSaveMob');
+  const loadMob = document.getElementById('gdriveLoadMob');
+
+  if (connected) {
+    if (dot) dot.style.background = '#34a853';
+    if (status) status.textContent = 'Googleドライブ接続済み';
+    if (connectBtn) connectBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = '';
+    if (loadBtn) loadBtn.style.display = '';
+    if (dotMob) dotMob.style.background = '#34a853';
+    if (statusMob) statusMob.textContent = '接続済み';
+    if (connectMob) connectMob.style.display = 'none';
+    if (saveMob) saveMob.style.display = '';
+    if (loadMob) loadMob.style.display = '';
+  } else {
+    if (dot) dot.style.background = 'var(--border2)';
+    if (status) status.textContent = 'Googleドライブ未接続';
+    if (connectBtn) connectBtn.style.display = '';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (loadBtn) loadBtn.style.display = 'none';
+    if (dotMob) dotMob.style.background = 'var(--border2)';
+    if (statusMob) statusMob.textContent = '未接続';
+    if (connectMob) connectMob.style.display = '';
+    if (saveMob) saveMob.style.display = 'none';
+    if (loadMob) loadMob.style.display = 'none';
+  }
+}
+
+async function gdriveFetch(url, options={}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { 'Authorization': 'Bearer ' + gdriveToken, ...(options.headers||{}) }
+  });
+  if (res.status === 401) {
+    gdriveToken = null;
+    localStorage.removeItem('gdrive_token');
+    gdriveUpdateUI(false);
+    throw new Error('認証期限切れ。再ログインしてください。');
+  }
+  return res;
+}
+
+async function gdriveFindFile() {
+  const res = await gdriveFetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22${GDRIVE_FILE_NAME}%22&fields=files(id,name)`
+  );
+  const data = await res.json();
+  return data.files && data.files.length > 0 ? data.files[0].id : null;
+}
+
+function toast(msg) {
+  let el = document.querySelector('.toast-msg');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'toast-msg';
+    el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
+}
+async function gdriveSave() {
+  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
+  const dot = document.getElementById('gdriveDot');
+  const status = document.getElementById('gdriveStatusText');
+  const btn = document.getElementById('gdriveSaveBtn');
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '保存中...'; btn.disabled = true; }
+  dot.className = 'gdrive-dot saving';
+  status.textContent = '保存中...';
+  try {
+    const list = JSON.parse(localStorage.getItem('hitomemo_profiles_v1') || '[]');
+    const payload = JSON.stringify({ profiles: list, savedAt: new Date().toISOString() }, null, 2);
+    const fileId = await gdriveFindFile();
+    const metadata = { name: GDRIVE_FILE_NAME, parents: fileId ? undefined : ['appDataFolder'] };
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], {type:'application/json'}));
+    form.append('file', new Blob([payload], {type:'application/json'}));
+    const url = fileId
+      ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    await gdriveFetch(url, { method: fileId ? 'PATCH' : 'POST', body: form });
+    dot.className = 'gdrive-dot connected';
+    status.textContent = 'Googleドライブに保存済み (' + new Date().toLocaleTimeString('ja-JP') + ')';
+    toast('Googleドライブに保存しました');
+  } catch(e) {
+    dot.className = 'gdrive-dot connected';
+    status.textContent = '保存エラー: ' + e.message;
+  } finally {
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+  }
+}
+
+async function gdriveLoad() {
+  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
+  const btn = document.getElementById('gdriveLoadBtn');
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '読込中...'; btn.disabled = true; }
+  try {
+    const fileId = await gdriveFindFile();
+    if (!fileId) { alert('Googleドライブにバックアップが見つかりません'); return; }
+    const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    const data = await res.json();
+    if (data.profiles) {
+      if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
+      list = data.profiles || [];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      toast('Googleドライブから読み込みました');
+      setTimeout(() => location.reload(), 1000);
+    }
+  } catch(e) {
+    alert('読込エラー: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+  }
+}
+
+async function gdriveAutoLoad() {
+  // 接続直後に自動でファイルの存在確認
+  try {
+    const fileId = await gdriveFindFile();
+    if (fileId) {
+      document.getElementById('gdriveStatusText').textContent = 'Googleドライブ接続済み（バックアップあり）';
+    }
+  } catch(e) {}
+}
+
+// 起動時に自動保存（ログインしている場合）
+function gdriveAutoSave() {
+  if (gdriveToken) gdriveSave();
+}
+
+// ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
+document.addEventListener('DOMContentLoaded', function() {
+  // GDriveボタンはonclick属性で直接呼ぶため不要
+  // window経由でsidebar onclickから呼べるようにする
+  window.__gdriveConnect = gdriveConnect;
+  window.__gdriveSave = gdriveSave;
+  window.__gdriveLoad = gdriveLoad;
+  // JSON保存・読込ボタンのイベント設定
+  document.getElementById('jsonBackupBtn')?.addEventListener('click', () => {
+    if (window.__hitomemoBackup) window.__hitomemoBackup();
+    else {
+      const list = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } })();
+      backupJSON(list);
+    }
+  });
+  document.getElementById('jsonImportInput')?.addEventListener('change', (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        const list = d.profiles || (Array.isArray(d) ? d : []);
+        if (!list.length) { alert('有効なデータが見つかりませんでした'); return; }
+        if (!confirm(list.length + '件のデータで復元します。現在のデータは上書きされます。よろしいですか？')) return;
+        if (window.__hitomemoRestore) {
+          window.__hitomemoRestore(list);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+          toast('復元しました（' + list.length + '件）');
+        } else {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+          location.reload();
+        }
+      } catch(err) { alert('エラー: ' + err.message); }
+    };
+    reader.readAsText(file);
+  });
+  // VISION表示（均等10日ローテーション）
+  (function(){
+    const pill = document.getElementById('visionPill');
+    if (!pill) return;
+    try {
+      const _vTexts = [
+    'VISION｜守りの総合支援を通して、挑戦する人が成長できる社会をつくる。',
+    'VISION｜安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。',
+    '原則・成長｜未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。',
+    '原則・愛｜周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。',
+    '原則・誠実｜自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。',
+    '原則・寛容｜個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。',
+    '原則・共創｜自分の確信を持ちながら、相手の確信も尊重する。違いを消さずに理解し、接点を探す。互いの成長につながる未来を共に創る。',
+    '指針・確信｜頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。油断せず備える。',
+    '指針・仲間｜弱みも未来も共有し、自立し、責任を持って、前向きに、違いを尊重しながら共通の未来を創れる人を大切にする。',
+    '指針・健康｜心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。'
+  ];
+  const _vD2 = new Date(), _vDay2 = Math.floor((_vD2 - new Date(_vD2.getFullYear(),0,0))/86400000);
+  const _vText = _vTexts[_vDay2 % _vTexts.length];
+      pill.textContent = _vText;
+    } catch(e) { pill.textContent = 'VISION｜守りの総合支援を通して、挑戦する人が成長できる社会をつくる。'; }
+  })();
+
+  // UI生成後にリダイレクト処理
+  gdriveHandleRedirect();
+  // window経由でsidebar onclickから呼べるようにする
+  window.__gdriveConnect = gdriveConnect;
+  window.__gdriveSave = gdriveSave;
+  window.__gdriveLoad = gdriveLoad;
+
+  if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js');
+    });
+</script>
+</head>
+<body>
+<div class="layout">
+<div class="sidebar">
+  <div class="sb-hd">
+    <div class="sb-hd-top">
+      <img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;flex-shrink:0;">
+      <span>ヒトメモ</span>
+    </div>
+    <div class="vision-pill" id="visionPill">VISION</div>
+  </div>
+  <div class="sb-body">
+    <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+      <button id="sbNewPersonBtn" class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;" onclick="window.__hitomemoNewPerson?.()">＋ 新しい人物を記録</button>
+      <button id="sbImportMemoBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoImportMemo?.()">メモからインポート</button>
+    </div>
+  </div>
+  <div class="sb-ft">
+    <div class="sb-status">
+      <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;"></span>
+      <span id="gdriveStatusText">未接続</span>
+    </div>
+    <button id="gdriveConnectBtn" class="sb-btn" onclick="gdriveConnect()">🔗 Googleでログイン</button>
+    <button id="gdriveSaveBtn" class="sb-btn" style="display:none" onclick="gdriveSave()">⬆ GDrive保存</button>
+    <button id="gdriveLoadBtn" class="sb-btn" style="display:none" onclick="gdriveLoad()">⬇ GDrive読込</button>
+    <div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>
+    <button class="sb-btn" onclick="sidebarBackupJSON()">⬇ JSON保存</button>
+    <label class="sb-btn" style="cursor:pointer;">⬆ JSON読込<input type="file" id="jsonImportInput" accept=".json" style="display:none"></label>
+  </div>
+</div>
+<div class="main-area">
+<div id="root"></div>
+</div><!-- /.main-area -->
+</div><!-- /.layout -->
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const STORAGE_KEY = 'hitomemo_profiles_v1';
+
+const loadProfiles = () => {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+};
+const saveProfiles = (list) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+};
+
+// JSON バックアップ
+const backupJSON = (list) => {
+  const blob = new Blob([JSON.stringify({ profiles: list, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'hitomemo-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+const restoreJSON = (onDone) => {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        const list = data.profiles || data;
+        if (!Array.isArray(list)) throw new Error('無効なフォーマット');
+        if (!confirm(list.length + '件を復元します。現在のデータは上書きされます。続けますか？')) return;
+        saveProfiles(list); onDone(list);
+        alert('復元しました（' + list.length + '件）');
+      } catch(err) { alert('復元に失敗しました: ' + err.message); }
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+  input.click();
+};
+
+// 人脈サマリー分類
+const classifyProfile = (p) => {
+  const pos = ((p.position && p.position.value) || '').toLowerCase();
+  const biz = ((p.business && p.business.value) || '').toLowerCase();
+  const text = pos + ' ' + biz;
+  if (/代表|社長|ceo|coo|cto|創業|オーナー|経営/.test(text)) return '経営者';
+  if (/投資|vc|ファンド|エンジェル/.test(text)) return '投資家';
+  if (/弁護士|税理士|会計士|社労士|司法書士|士業/.test(text)) return '士業';
+  if (/m&a|merger|acquisition|買収|合併/.test(text)) return 'M&A';
+  if (/採用|recruit|hr|人事/.test(text)) return '採用候補';
+  return 'その他';
+};
+
+const formatDate = (s) => {
+  if (!s) return '';
+  const d = new Date(s);
+  return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+};
+
+// メモ形式インポート
+const importFromMemo = (text) => {
+  const extract = (label) => {
+    const r = new RegExp(label + '[：:](.*?)(?=\\n[■氏誕所事経家出目価信行苦よ特印話欲そ核補作]|$)', 's');
+    const m = text.match(r);
+    return m ? m[1].trim() : '';
+  };
+  return {
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    relationFlag: 'normal',
+    meetings: [],
+    meetingSummary: '',
+    tier: '記録のみ',
+    stage: '知人',
+    changeLog: [],
+    nextExperience: '',
+    lastContactDate: null,
+    myRole: '見守る',
+    name:       { value: extract('氏名\\(ふりがな\\)') },
+    birthday:   { value: extract('誕生日') },
+    position:   { value: extract('所属・役職') },
+    business:   { value: extract('事業') },
+    history:    { value: extract('経歴') },
+    family:     { value: extract('家族構成') },
+    location:   { value: extract('出身・現所在地') },
+    goals:      { value: extract('目標・夢') },
+    values:     { value: extract('価値観') },
+    beliefs:    { value: extract('信条') },
+    behavior:   { value: extract('行動傾向') },
+    dislikes:   { value: extract('苦手なこと') },
+    topics:     { value: extract('よく話すテーマ') },
+    skills:     { value: extract('特技・スキル') },
+    memorable:  { value: extract('印象的な言葉') },
+    impression: { value: extract('話してみての印象') },
+    drive:      { value: extract('欲求\\(ドライブ\\)') },
+    other:      { value: extract('その他') },
+    coreMessage:{ value: extract('核となる一言') },
+    insights:   { value: extract('補足・洞察') },
+  };
+};
+
+// メモエクスポート
+const exportAsMemo = (p) => {
+  const v = (f) => (p[f] && p[f].value) ? p[f].value : '';
+  const text = `【人物プロファイル】${v('name')}\n\n■基本情報\n氏名(ふりがな)：${v('name')}\n誕生日：${v('birthday')}\n所属・役職：${v('position')}\n事業：${v('business')}\n経歴：${v('history')}\n家族構成：${v('family')}\n出身・現所在地：${v('location')}\n\n■価値観・信条\n目標・夢：${v('goals')}\n価値観：${v('values')}\n信条：${v('beliefs')}\n\n■個性・傾向\n行動傾向：${v('behavior')}\n苦手なこと：${v('dislikes')}\nよく話すテーマ：${v('topics')}\n特技・スキル：${v('skills')}\n\n■洞察\n印象的な言葉：${v('memorable')}\n話してみての印象：${v('impression')}\n欲求(ドライブ)：${v('drive')}\nその他：${v('other')}\n核となる一言：${v('coreMessage')}\n\n■補足・洞察\n${v('insights')}\n\n作成日時：${new Date(p.createdAt).toLocaleString('ja-JP')}`;
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (v('name') || '人物プロファイル') + '_' + new Date().toISOString().slice(0,10) + '.txt';
+  a.click(); URL.revokeObjectURL(url);
+};
+
+// ── INTERVIEW QUESTIONS ──
+const QUESTIONS = [
+  "お名前（ふりがな）",
+  "誕生日",
+  "所属・役職",
+  "事業内容",
+  "これまでの経歴",
+  "ご家族構成",
+  "出身地・現在の所在地",
+  "今、最も実現したい目標や夢",
+  "人生で大切にしている価値観",
+  "信条・信念",
+  "行動傾向・パターン",
+  "苦手なこと・避けたいこと",
+  "よく話すテーマ・関心事",
+  "特技・スキル",
+  "最近印象に残った言葉や出来事",
+  "話してみての第一印象",
+  "行動の原動力（欲求・ドライブ）",
+  "その他、記録しておきたいこと",
+  "この方を一言で表すと"
+];
+const FIELDS = ['name','birthday','position','business','history','family','location','goals','values','beliefs','behavior','dislikes','topics','skills','memorable','impression','drive','other','coreMessage'];
+
+// ── APP ──
+const App = () => {
+  const [view, setView] = useState('list');
+  const [profiles, setProfiles] = useState([]);
+  const [query, setQuery] = useState('');
+  const [filterStar, setFilterStar] = useState(false);
+  const [current, setCurrent] = useState(null);
+  const currentRef = useRef(null); // onBlur用：最新のcurrentを常に保持
+  const profilesRef = useRef([]); // onBlur用：最新のprofilesを常に保持
+  const [answers, setAnswers] = useState(Array(19).fill(''));
+  const [qIdx, setQIdx] = useState(0);
+  const [importText, setImportText] = useState('');
+  const [showMeetingForm, setShowMeetingForm] = useState(false);
+  const [meetDate, setMeetDate] = useState('');
+  const [meetContent, setMeetContent] = useState('');
+  const [dragSrcId, setDragSrcId] = useState(null);
+  const [dragSection, setDragSection] = useState(null); // 'star' | 'all'
+  const [manualOrder, setManualOrder] = useState(null);   // 全員の手動順
+  const [starOrder, setStarOrder] = useState(null);       // ★の手動順
+
+  useEffect(() => { setProfiles(loadProfiles()); }, []);
+  // refを常に最新stateに同期
+  currentRef.current = current;
+  profilesRef.current = profiles;
+
+  // ── Cowork API ──
+  useEffect(() => {
+    window.__hitomemoBackup = () => backupJSON(profiles);
+    window.__hitomemoRestore = (list) => updateList(list);
+    window.__hitomemoNewPerson = () => { setAnswers(Array(19).fill('')); setQIdx(0); setView('interview'); };
+    window.__hitomemoImportMemo = () => { setImportText(''); setView('import'); };
+
+    // Cowork用CRUD API
+    window.__hitomemoGetAll = () => {
+      return profilesRef.current.map(p => ({
+        id: p.id,
+        name: (p.name&&p.name.value) || p.name || '',
+        position: (p.position&&p.position.value) || p.position || '',
+        tier: p.tier || '記録のみ',
+        stage: p.stage || '知人',
+        myRole: p.myRole || '見守る',
+        nextExperience: p.nextExperience || '',
+        lastContactDate: p.lastContactDate || null,
+        changeLog: p.changeLog || [],
+        updatedAt: p.updatedAt,
+      }));
+    };
+
+    window.__hitomemoUpdateProfile = (id, changes) => {
+      const list = profilesRef.current;
+      const idx = list.findIndex(p => p.id === id);
+      if (idx < 0) return { ok: false, error: 'Profile not found' };
+      const updated = { ...list[idx], ...changes, updatedAt: new Date().toISOString() };
+      const newList = list.map(p => p.id === id ? updated : p);
+      updateList(newList);
+      return { ok: true, profile: updated };
+    };
+
+    window.__hitomemoAddChangeLog = (id, type, text, source) => {
+      const list = profilesRef.current;
+      const p = list.find(p => p.id === id);
+      if (!p) return { ok: false, error: 'Profile not found' };
+      const entry = {
+        date: new Date().toISOString().slice(0,10),
+        type: type || '気づき',
+        text,
+        source: source || 'AI参謀',
+      };
+      const updated = {
+        ...p,
+        changeLog: [...(p.changeLog||[]), entry],
+        updatedAt: new Date().toISOString(),
+      };
+      updateList(list.map(q => q.id === id ? updated : q));
+      return { ok: true, entry };
+    };
+
+    window.__hitomemoUpdateStage = (id, stage, tier) => {
+      const list = profilesRef.current;
+      const p = list.find(q => q.id === id);
+      if (!p) return { ok: false, error: 'Profile not found' };
+      const changes = {};
+      if (stage) changes.stage = stage;
+      if (tier) changes.tier = tier;
+      // ステージ変化をchangeLogに自動記録
+      const logText = [
+        stage && p.stage !== stage ? `ステージ: ${p.stage} → ${stage}` : null,
+        tier && p.tier !== tier ? `階層: ${p.tier} → ${tier}` : null,
+      ].filter(Boolean).join(' / ');
+      if (logText) {
+        changes.changeLog = [...(p.changeLog||[]), {
+          date: new Date().toISOString().slice(0,10),
+          type: 'ステージ変化',
+          text: logText,
+          source: 'AI参謀',
+        }];
+      }
+      const updated = { ...p, ...changes, updatedAt: new Date().toISOString() };
+      updateList(list.map(q => q.id === id ? updated : q));
+      return { ok: true, profile: updated };
+    };
+
+    window.__hitomemoSetNextExperience = (id, text) => {
+      return window.__hitomemoUpdateProfile(id, { nextExperience: text });
+    };
+
+    window.__hitomemoSetLastContact = (id, date) => {
+      return window.__hitomemoUpdateProfile(id, {
+        lastContactDate: date || new Date().toISOString().slice(0,10)
+      });
+    };
+  }, [profiles]);
+
+  const updateList = (list) => { setProfiles(list); saveProfiles(list); };
+
+  // 手動順でソート（初回はcreatedAt降順）
+  const applyOrder = (list, order) => {
+    if (!order) return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const orderMap = {};
+    order.forEach((id, i) => { orderMap[id] = i; });
+    return [...list].sort((a, b) => {
+      const ai = orderMap[a.id] !== undefined ? orderMap[a.id] : 9999;
+      const bi = orderMap[b.id] !== undefined ? orderMap[b.id] : 9999;
+      return ai - bi;
+    });
+  };
+
+  const sorted = applyOrder(profiles, manualOrder);
+
+  const filtered = sorted.filter(p => {
+    if (filterStar && p.relationFlag !== 'star') return false;
+    if (!query) return true;
+    const q = query.toLowerCase();
+    const fields = ['name','position','values','coreMessage','insights'];
+    if (fields.some(f => (p[f] && p[f].value || '').toLowerCase().includes(q))) return true;
+    if ((p.meetingSummary || '').toLowerCase().includes(q)) return true;
+    if ((p.meetings || []).some(m => m.content.toLowerCase().includes(q))) return true;
+    return false;
+  });
+
+  const starProfilesAll = profiles.filter(p => p.relationFlag === 'star');
+  const starProfiles = applyOrder(starProfilesAll, starOrder);
+
+  // サマリー集計
+  const summary = (() => {
+    const cats = {};
+    profiles.forEach(p => {
+      const c = classifyProfile(p);
+      cats[c] = (cats[c] || 0) + 1;
+    });
+    return cats;
+  })();
+
+  // ── LIST VIEW ──
+    if (view === 'list') {
+    const today = new Date().toISOString().slice(0,10);
+    const daysDiff = (dateStr) => {
+      if (!dateStr) return 999;
+      return Math.floor((new Date(today) - new Date(dateStr)) / 86400000);
+    };
+
+    // 階層別分類
+    const partners = profiles.filter(p => (p.tier||'記録のみ') === '経営パートナー候補');
+    const candidates = profiles.filter(p => (p.tier||'記録のみ') === '仲間候補');
+
+    // 停滞アラート（経営パートナー候補で90日以上接触なし）
+    const staleThr = 90;
+    const staleProfiles = partners.filter(p => daysDiff(p.lastContactDate || p.updatedAt) >= staleThr);
+
+    // 変化ありの人（直近30日以内にchangeLog追加）
+    const recentChanged = [...partners, ...candidates].filter(p =>
+      (p.changeLog||[]).some(l => daysDiff(l.date) <= 30)
+    );
+
+    // 次の経験あり
+    const hasNextExp = [...partners, ...candidates].filter(p => p.nextExperience && p.nextExperience.trim());
+
+    const tierBadge = (tier) => {
+      if (tier === '経営パートナー候補') return <span className="tier-badge tier-partner">🌟 パートナー候補</span>;
+      if (tier === '仲間候補') return <span className="tier-badge tier-candidate">👥 仲間候補</span>;
+      return null;
+    };
+
+    const ProfileCard = ({p, compact}) => (
+      <div className="profile-card" onClick={() => { setCurrent(p); setView('detail'); }}
+        style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:12,padding:'12px 14px',marginBottom:8,cursor:'pointer'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+          <span style={{fontWeight:700,fontSize:15}}>{(p.name&&p.name.value)||p.name||'名前未設定'}</span>
+          {tierBadge(p.tier||'記録のみ')}
+          {p.stage && <span className="stage-pill">{p.stage}</span>}
+        </div>
+        {!compact && <div style={{fontSize:12,color:'#64748b'}}>{(p.position&&p.position.value)||''}</div>}
+        {!compact && (p.changeLog||[]).length > 0 && (
+          <div style={{fontSize:11,color:'#8b5cf6',marginTop:4}}>
+            ✦ {(p.changeLog[p.changeLog.length-1].type)} : {(p.changeLog[p.changeLog.length-1].text).slice(0,30)}…
+          </div>
+        )}
+        {!compact && p.nextExperience && (
+          <div style={{fontSize:11,color:'#10b981',marginTop:2}}>▶ 次: {p.nextExperience.slice(0,30)}</div>
+        )}
+      </div>
+    );
+
+    return (
+      <div className="app">
+        {/* パートナー形成ゴール */}
+        <div className="partner-goal">
+          <div style={{display:'flex',alignItems:'flex-end',gap:8,marginBottom:6}}>
+            <span className="partner-goal-count">{partners.length}</span>
+            <span style={{fontSize:14,color:'rgba(255,255,255,0.8)',marginBottom:4}}>/ 10人</span>
+            <span className="partner-goal-label" style={{marginBottom:4}}>経営パートナー候補</span>
+          </div>
+          <div className="partner-goal-bar">
+            <div className="partner-goal-fill" style={{width:`${Math.min(100,partners.length*10)}%`}}></div>
+          </div>
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:6}}>2030年までに10人形成</div>
+        </div>
+
+        {/* 検索 */}
+        <div className="search-wrap">
+          <span className="search-icon">🔍</span>
+          <input className="search-input" placeholder="氏名・所属・価値観で検索..."
+            value={query} onChange={e => setQuery(e.target.value)} />
+        </div>
+
+        {/* 停滞アラート */}
+        {staleProfiles.length > 0 && (
+          <div className="alert-card">
+            <div className="alert-label">⚠ 要接触（{staleThr}日以上）</div>
+            {staleProfiles.map(p => (
+              <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #fed7aa',cursor:'pointer'}}
+                onClick={() => { setCurrent(p); setView('detail'); }}>
+                <span style={{fontSize:14,fontWeight:600}}>{(p.name&&p.name.value)||p.name}</span>
+                <span style={{fontSize:11,color:'#c2410c'}}>{daysDiff(p.lastContactDate||p.updatedAt)}日前</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 次に経験を渡す人 */}
+        {hasNextExp.length > 0 && (
+          <div className="next-exp-card">
+            <div className="next-exp-label">▶ 次の経験を渡す</div>
+            {hasNextExp.slice(0,3).map(p => (
+              <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #bbf7d0',cursor:'pointer'}}
+                onClick={() => { setCurrent(p); setView('detail'); }}>
+                <span style={{fontSize:14,fontWeight:600}}>{(p.name&&p.name.value)||p.name}</span>
+                <span style={{fontSize:11,color:'#166534'}}>{p.nextExperience.slice(0,20)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 経営パートナー候補 */}
+        {partners.length > 0 && (
+          <>
+            <div className="section-header">
+              <span className="section-title-new">🌟 経営パートナー候補</span>
+              <span className="section-count">{partners.length}人</span>
+            </div>
+            {(query ? partners.filter(p => {
+              const n = ((p.name&&p.name.value)||p.name||'').toLowerCase();
+              return n.includes(query.toLowerCase());
+            }) : partners).map(p => <ProfileCard key={p.id} p={p} />)}
+          </>
+        )}
+
+        {/* 変化が起きている人 */}
+        {recentChanged.filter(p => (p.tier||'記録のみ') !== '経営パートナー候補').length > 0 && (
+          <>
+            <div className="section-header">
+              <span className="section-title-new">✦ 最近変化あり</span>
+              <span className="section-count">直近30日</span>
+            </div>
+            {recentChanged.filter(p => (p.tier||'記録のみ') !== '経営パートナー候補').map(p => <ProfileCard key={p.id} p={p} />)}
+          </>
+        )}
+
+        {/* 仲間候補 */}
+        {candidates.filter(p => !recentChanged.includes(p)).length > 0 && (
+          <>
+            <div className="section-header">
+              <span className="section-title-new">👥 仲間候補</span>
+              <span className="section-count">{candidates.length}人</span>
+            </div>
+            {(query ? candidates : candidates).filter(p => !recentChanged.includes(p))
+              .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
+              .map(p => <ProfileCard key={p.id} p={p} compact />)}
+          </>
+        )}
+
+        {partners.length === 0 && candidates.length === 0 && profiles.length === 0 && (
+          <div style={{textAlign:'center',padding:40,color:'#94a3b8'}}>
+            <div style={{fontSize:48,marginBottom:12}}>👤</div>
+            <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>まだ人物が登録されていません</div>
+            <div style={{fontSize:13}}>「＋ 新しい人物を記録」から始めましょう</div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (view === 'interview') {
+    const pct = ((qIdx + 1) / QUESTIONS.length) * 100;
+    const isLast = qIdx === QUESTIONS.length - 1;
+    const finish = () => {
+      const p = {
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        relationFlag: 'normal',
+        meetings: [],
+        meetingSummary: '',
+      };
+      FIELDS.forEach((f, i) => { p[f] = { value: answers[i] || '' }; });
+      const next = [...profiles, p];
+      updateList(next);
+      setCurrent(p); setView('detail');
+    };
+    return (
+      <div className="page">
+        <div className="page-header">
+          <button className="page-back" onClick={() => setView('list')}>← 一覧</button>
+          <div className="page-title">新しい人物を記録</div>
+        </div>
+        <div className="interview-box">
+          <div className="progress-bar"><div className="progress-fill" style={{ width: pct + '%' }} /></div>
+          <div className="q-count">{qIdx + 1} / {QUESTIONS.length}</div>
+          <div className="q-text">{QUESTIONS[qIdx]}</div>
+          <textarea className="q-textarea" value={answers[qIdx]}
+            onChange={e => { const a = [...answers]; a[qIdx] = e.target.value; setAnswers(a); }}
+            placeholder="（スキップ可）" />
+          <div className="nav-row">
+            <button className="btn btn-ghost" onClick={() => qIdx > 0 && setQIdx(qIdx - 1)} disabled={qIdx === 0}>前へ</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => isLast ? finish() : setQIdx(qIdx + 1)}>スキップ</button>
+            <button className="btn btn-primary" onClick={() => isLast ? finish() : setQIdx(qIdx + 1)}>
+              {isLast ? '完了' : '次へ'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── IMPORT ──
   if (view === 'ai-update') {
     const ARROW = '→';
     const PIPE = '｜';
@@ -155,4 +1474,300 @@
       </div>
     );
   }
+  if (view === 'import') {
+    const doImport = () => {
+      try {
+        const p = importFromMemo(importText);
+        const next = [...profiles, p];
+        updateList(next);
+        setCurrent(p); setView('detail');
+      } catch { alert('インポートに失敗しました。形式を確認してください。'); }
+    };
+    return (
+      <div className="page">
+        <div className="page-header">
+          <button className="page-back" onClick={() => setView('list')}>← 一覧</button>
+          <div className="page-title">メモからインポート</div>
+        </div>
+        <div className="import-box">
+          <p style={{ color: 'var(--text2)', marginBottom: 16, fontSize: 13 }}>エクスポートしたメモを貼り付けてください。</p>
+          <textarea className="import-textarea" value={importText}
+            onChange={e => setImportText(e.target.value)}
+            placeholder="エクスポートしたメモをここに貼り付け..." />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <label style={{ cursor: 'pointer' }}>
+              <input type="file" accept=".txt" style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ev => setImportText(ev.target.result); r.readAsText(f); }} />
+              <span className="btn btn-ghost">ファイルから読み込み</span>
+            </label>
+            <button className="btn btn-primary" onClick={doImport} disabled={!importText}>インポート</button>
+            <button className="btn btn-ghost" onClick={() => setView('list')}>キャンセル</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
+  // ── DETAIL ──
+  if (view === 'detail' && current) {
+    const upd = (field, val) => {
+      const updated = { ...current, [field]: { value: val }, updatedAt: new Date().toISOString() };
+      setCurrent(updated);
+    };
+    const updDirect = (field, val) => {
+      const updated = { ...current, [field]: val, updatedAt: new Date().toISOString() };
+      setCurrent(updated);
+    };
+    // フォーカスを外したときだけ保存（1文字ごとの再レンダリング防止）
+    const saveCurrentBlur = () => {
+      const latest = currentRef.current;
+      if (!latest) return;
+      updateList(profilesRef.current.map(p => p.id === latest.id ? latest : p));
+    };
+    const toggleStar = () => {
+      const flag = current.relationFlag === 'star' ? 'normal' : 'star';
+      updDirect('relationFlag', flag);
+    };
+    const addMeeting = () => {
+      if (!meetDate || !meetContent) { alert('日付と内容を入力してください'); return; }
+      const m = { id: Date.now().toString(), date: meetDate, content: meetContent, createdAt: new Date().toISOString() };
+      const updated = { ...current, meetings: [...(current.meetings || []), m], updatedAt: new Date().toISOString() };
+      setCurrent(updated);
+      updateList(profiles.map(p => p.id === updated.id ? updated : p));
+      setMeetDate(''); setMeetContent(''); setShowMeetingForm(false);
+    };
+    const delMeeting = (id) => {
+      if (!confirm('この記録を削除しますか？')) return;
+      const updated = { ...current, meetings: (current.meetings || []).filter(m => m.id !== id), updatedAt: new Date().toISOString() };
+      setCurrent(updated); updateList(profiles.map(p => p.id === updated.id ? updated : p));
+    };
+    const delProfile = () => {
+      if (!confirm('このプロフィールを削除しますか？')) return;
+      updateList(profiles.filter(p => p.id !== current.id));
+      setCurrent(null); setView('list');
+    };
+    const fv = (f) => (current[f] && current[f].value) || '';
+
+    // AI要約テキストをパース
+    const parseSummary = (text) => {
+      if (!text) return null;
+      const lines = text.split('\n').filter(Boolean);
+      return lines.map((line, i) => {
+        const m = line.match(/^(.+?)：(.+)$/);
+        if (m) return <div key={i} className="ai-summary-field"><span className="ai-field-key">{m[1]}：</span><span className="ai-field-val">{m[2]}</span></div>;
+        return <div key={i} className="ai-summary-field"><span className="ai-field-val">{line}</span></div>;
+      });
+    };
+
+    const Field = ({ label, field, multi }) => (
+      <div className="field-group">
+        <label className="field-label">{label}</label>
+        {multi
+          ? <textarea className="field-textarea" value={fv(field)} onChange={e => upd(field, e.target.value)} onBlur={saveCurrentBlur} />
+          : <input type="text" className="field-input" value={fv(field)} onChange={e => upd(field, e.target.value)} onBlur={saveCurrentBlur} />
+        }
+      </div>
+    );
+
+    return (
+      <div className="page">
+        <div className="page-header">
+          <button className="page-back" onClick={() => { setCurrent(null); setView('list'); }}>← 一覧</button>
+        </div>
+
+        {/* HERO */}
+        <div className="detail-hero">
+          <div className="hero-name">{fv('name') || '名前未設定'}</div>
+          <div className="hero-position">{fv('position')}</div>
+          {fv('coreMessage') && <div className="hero-core">{fv('coreMessage')}</div>}
+          <div className="hero-meta">
+            <button className={`star-toggle ${current.relationFlag === 'star' ? 'active' : ''}`} onClick={toggleStar}>
+              {current.relationFlag === 'star' ? '★ 深めたい' : '☆ 通常'}
+            </button>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>更新 {formatDate(current.updatedAt || current.createdAt)}</span>
+          </div>
+        </div>
+
+        {/* 会食からの学び（優先表示） */}
+        <div className="detail-section">
+          <div className="detail-section-title">会食からの学び</div>
+          {current.meetingSummary ? parseSummary(current.meetingSummary) : (
+            <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>
+              会食履歴をもとにAIで要約した内容を保存できます。<br/>
+              形式例：この人が大切にしていること： 〇〇
+            </p>
+          )}
+          <textarea className="ai-summary-textarea"
+            value={current.meetingSummary || ''}
+            onChange={e => updDirect('meetingSummary', e.target.value)}
+            onBlur={saveCurrentBlur}
+            placeholder={'この人が大切にしていること： \nこの人が嫌うこと： \n最近の関心： \n接し方： '} />
+        </div>
+
+        {/* 会食履歴 */}
+        <div className="detail-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div className="detail-section-title" style={{ margin: 0 }}>会食・打合せ履歴</div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowMeetingForm(!showMeetingForm)}>
+              {showMeetingForm ? '閉じる' : '＋ 追加'}
+            </button>
+          </div>
+          {showMeetingForm && (
+            <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: 14, marginBottom: 14 }}>
+              <input type="date" style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--border)', borderRadius: 6, fontFamily: 'inherit', fontSize: 14, marginBottom: 8 }}
+                value={meetDate} onChange={e => setMeetDate(e.target.value)} />
+              <textarea style={{ width: '100%', minHeight: 80, padding: '8px 10px', border: '1.5px solid var(--border)', borderRadius: 6, fontFamily: 'inherit', fontSize: 13, resize: 'vertical', marginBottom: 8 }}
+                value={meetContent} onChange={e => setMeetContent(e.target.value)} placeholder="内容・気づき" />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary btn-sm" onClick={addMeeting}>追加</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setShowMeetingForm(false); setMeetDate(''); setMeetContent(''); }}>キャンセル</button>
+              </div>
+            </div>
+          )}
+          {(current.meetings || []).length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center', padding: '20px 0' }}>まだ記録がありません</p>
+          ) : (
+            [...(current.meetings || [])].reverse().map(m => (
+              <div key={m.id} className="meeting-item">
+                <button className="meeting-delete" onClick={() => delMeeting(m.id)}>削除</button>
+                <div className="meeting-date">{m.date}</div>
+                <div className="meeting-content">{m.content}</div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* 基本情報 */}
+        <div className="detail-section">
+          <div className="detail-section-title">基本情報</div>
+          <Field label="氏名（ふりがな）" field="name" />
+          <Field label="誕生日" field="birthday" />
+          <Field label="所属・役職" field="position" />
+          <Field label="事業" field="business" multi />
+          <Field label="経歴" field="history" multi />
+          <Field label="家族構成" field="family" multi />
+          <Field label="出身・現所在地" field="location" />
+        </div>
+
+        {/* 価値観 */}
+        <div className="detail-section">
+          <div className="detail-section-title">価値観・信条</div>
+          <Field label="目標・夢" field="goals" multi />
+          <Field label="価値観" field="values" multi />
+          <Field label="信条" field="beliefs" multi />
+        </div>
+
+        {/* 個性 */}
+        <div className="detail-section">
+          <div className="detail-section-title">個性・傾向</div>
+          <Field label="行動傾向" field="behavior" multi />
+          <Field label="苦手なこと" field="dislikes" multi />
+          <Field label="よく話すテーマ" field="topics" multi />
+          <Field label="特技・スキル" field="skills" multi />
+        </div>
+
+        {/* 洞察 */}
+        <div className="detail-section">
+          <div className="detail-section-title">洞察</div>
+          <Field label="印象的な言葉" field="memorable" multi />
+          <Field label="話してみての印象" field="impression" multi />
+          <Field label="欲求（ドライブ）" field="drive" multi />
+          <Field label="その他" field="other" multi />
+          <Field label="核となる一言" field="coreMessage" multi />
+          <Field label="補足・洞察" field="insights" multi />
+        </div>
+
+        {/* 経営パートナー形成 */}
+        <div className="detail-section">
+          <div className="detail-section-title">🌟 経営パートナー形成</div>
+
+          {/* 階層・ステージ */}
+          <div className="fg" style={{marginBottom:12}}>
+            <label className="fl">階層</label>
+            <select className="fi" value={current.tier||'記録のみ'} onChange={e => { updDirect('tier', e.target.value); saveCurrentBlur(); }}>
+              <option>経営パートナー候補</option>
+              <option>仲間候補</option>
+              <option>記録のみ</option>
+            </select>
+          </div>
+          <div className="fg" style={{marginBottom:12}}>
+            <label className="fl">現在地ステージ</label>
+            <select className="fi" value={current.stage||'知人'} onChange={e => { updDirect('stage', e.target.value); saveCurrentBlur(); }}>
+              <option>知人</option>
+              <option>協力者</option>
+              <option>管理職</option>
+              <option>事業責任者</option>
+              <option>経営人材</option>
+              <option>経営パートナー</option>
+            </select>
+          </div>
+          <div className="fg" style={{marginBottom:12}}>
+            <label className="fl">自分の関わり方</label>
+            <select className="fi" value={current.myRole||'見守る'} onChange={e => { updDirect('myRole', e.target.value); saveCurrentBlur(); }}>
+              <option>見守る</option>
+              <option>任せる</option>
+              <option>教える</option>
+            </select>
+          </div>
+          <div className="fg" style={{marginBottom:12}}>
+            <label className="fl">最終接触日</label>
+            <input type="date" className="fi" value={current.lastContactDate||''} onChange={e => { updDirect('lastContactDate', e.target.value); saveCurrentBlur(); }} />
+          </div>
+          <div className="fg" style={{marginBottom:16}}>
+            <label className="fl">次に渡す経験</label>
+            <textarea className="ft" rows="2" defaultValue={current.nextExperience||''} onBlur={e => { updDirect('nextExperience', e.target.value); saveCurrentBlur(); }} />
+          </div>
+
+          {/* 変化ログ */}
+          <div style={{marginBottom:8}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+              <label className="fl" style={{margin:0}}>変化タイムライン</label>
+              <button className="add-change-btn" onClick={() => {
+                const type = window.prompt('変化の種類（発言変化 / 行動変化 / 気づき / ステージ変化）');
+                if (!type) return;
+                const text = window.prompt('内容を入力してください');
+                if (!text) return;
+                const newLog = { date: new Date().toISOString().slice(0,10), type, text, source: '手動' };
+                const updated = { ...currentRef.current, changeLog: [...(currentRef.current.changeLog||[]), newLog], updatedAt: new Date().toISOString() };
+                setCurrent(updated);
+                updateList(profilesRef.current.map(p => p.id === updated.id ? updated : p));
+                toast('変化を記録しました');
+              }}>＋ 記録</button>
+            </div>
+            {(current.changeLog||[]).length === 0 && (
+              <div style={{fontSize:12,color:'#94a3b8',padding:'8px 0'}}>まだ変化の記録がありません</div>
+            )}
+            <div className="change-log">
+              {[...(current.changeLog||[])].reverse().map((log, i) => (
+                <div key={i} className={`change-entry type-${log.type}`}>
+                  <span className="change-type">{log.type}</span>
+                  <span className="change-text">{log.text}</span>
+                  <span className="change-date">{log.date}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* アクション */}
+        <div className="action-row">
+          <button className="btn btn-ghost" onClick={() => exportAsMemo(current)}>メモとしてエクスポート</button>
+          <button className="btn btn-primary" onClick={() => {
+            const latest = currentRef.current;
+            if (latest) updateList(profilesRef.current.map(p => p.id === latest.id ? latest : p));
+            toast('保存しました');
+          }}>保存</button>
+          <button className="btn btn-ghost" onClick={() => { setCurrent(null); setView('list'); }}>一覧に戻る</button>
+          <button className="btn btn-danger" onClick={delProfile}>削除</button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+</body>
+</html>
