@@ -1351,7 +1351,7 @@ const App = () => {
           } else if (line.startsWith('stage:')) {
             // "協力者 → 事業責任者" の形式に対応
             const v = line.replace('stage:', '').trim();
-            const arrowMatch = v.match(/(.+?)\s*[→->]+\s*(.+)/);
+            const arrowMatch = v.match(/(.+?)\s*(?:→|->|>)\s*(.+)/);
             if (arrowMatch) {
               changes.stage = arrowMatch[2].trim();
               newChangeLogs.push({ type: 'ステージ変化', text: `${arrowMatch[1].trim()} → ${arrowMatch[2].trim()}` });
