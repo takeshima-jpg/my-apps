@@ -997,12 +997,92 @@ const App = () => {
   currentRef.current = current;
   profilesRef.current = profiles;
 
-  // サイドバーのJSON保存ボタン用にwindowに公開
+  // ── Cowork API ──
   useEffect(() => {
     window.__hitomemoBackup = () => backupJSON(profiles);
     window.__hitomemoRestore = (list) => updateList(list);
     window.__hitomemoNewPerson = () => { setAnswers(Array(19).fill('')); setQIdx(0); setView('interview'); };
     window.__hitomemoImportMemo = () => { setImportText(''); setView('import'); };
+
+    // Cowork用CRUD API
+    window.__hitomemoGetAll = () => {
+      return profilesRef.current.map(p => ({
+        id: p.id,
+        name: (p.name&&p.name.value) || p.name || '',
+        position: (p.position&&p.position.value) || p.position || '',
+        tier: p.tier || '記録のみ',
+        stage: p.stage || '知人',
+        myRole: p.myRole || '見守る',
+        nextExperience: p.nextExperience || '',
+        lastContactDate: p.lastContactDate || null,
+        changeLog: p.changeLog || [],
+        updatedAt: p.updatedAt,
+      }));
+    };
+
+    window.__hitomemoUpdateProfile = (id, changes) => {
+      const list = profilesRef.current;
+      const idx = list.findIndex(p => p.id === id);
+      if (idx < 0) return { ok: false, error: 'Profile not found' };
+      const updated = { ...list[idx], ...changes, updatedAt: new Date().toISOString() };
+      const newList = list.map(p => p.id === id ? updated : p);
+      updateList(newList);
+      return { ok: true, profile: updated };
+    };
+
+    window.__hitomemoAddChangeLog = (id, type, text, source) => {
+      const list = profilesRef.current;
+      const p = list.find(p => p.id === id);
+      if (!p) return { ok: false, error: 'Profile not found' };
+      const entry = {
+        date: new Date().toISOString().slice(0,10),
+        type: type || '気づき',
+        text,
+        source: source || 'AI参謀',
+      };
+      const updated = {
+        ...p,
+        changeLog: [...(p.changeLog||[]), entry],
+        updatedAt: new Date().toISOString(),
+      };
+      updateList(list.map(q => q.id === id ? updated : q));
+      return { ok: true, entry };
+    };
+
+    window.__hitomemoUpdateStage = (id, stage, tier) => {
+      const list = profilesRef.current;
+      const p = list.find(q => q.id === id);
+      if (!p) return { ok: false, error: 'Profile not found' };
+      const changes = {};
+      if (stage) changes.stage = stage;
+      if (tier) changes.tier = tier;
+      // ステージ変化をchangeLogに自動記録
+      const logText = [
+        stage && p.stage !== stage ? `ステージ: ${p.stage} → ${stage}` : null,
+        tier && p.tier !== tier ? `階層: ${p.tier} → ${tier}` : null,
+      ].filter(Boolean).join(' / ');
+      if (logText) {
+        changes.changeLog = [...(p.changeLog||[]), {
+          date: new Date().toISOString().slice(0,10),
+          type: 'ステージ変化',
+          text: logText,
+          source: 'AI参謀',
+        }];
+      }
+      const updated = { ...p, ...changes, updatedAt: new Date().toISOString() };
+      updateList(list.map(q => q.id === id ? updated : q));
+      return { ok: true, profile: updated };
+    };
+
+    window.__hitomemoSetNextExperience = (id, text) => {
+      return window.__hitomemoUpdateProfile(id, { nextExperience: text });
+    };
+
+    window.__hitomemoSetLastContact = (id, date) => {
+      return window.__hitomemoUpdateProfile(id, {
+        lastContactDate: date || new Date().toISOString().slice(0,10)
+      });
+    };
   }, [profiles]);
 
   const updateList = (list) => { setProfiles(list); saveProfiles(list); };
