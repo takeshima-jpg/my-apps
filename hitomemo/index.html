@@ -465,7 +465,44 @@
     }
     .page-back:hover { background: var(--surface2); }
     .page-title { font-size: 22px; font-weight: 700; }
-  </style>
+  
+    /* ── 経営パートナー形成OS ── */
+    .tier-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; margin-left:6px; }
+    .tier-partner { background:#fef3c7; color:#92400e; }
+    .tier-candidate { background:#ede9fe; color:#5b21b6; }
+    .tier-record { background:#f1f5f9; color:#64748b; }
+
+    .stage-pill { display:inline-block; padding:1px 8px; border-radius:8px; font-size:11px; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
+
+    .change-log { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
+    .change-entry { display:flex; gap:8px; align-items:flex-start; padding:8px; background:#f8fafc; border-radius:8px; border-left:3px solid #e2e8f0; }
+    .change-entry.type-発言変化 { border-left-color:#8b5cf6; }
+    .change-entry.type-行動変化 { border-left-color:#10b981; }
+    .change-entry.type-気づき { border-left-color:#f59e0b; }
+    .change-entry.type-ステージ変化 { border-left-color:#3b82f6; }
+    .change-type { font-size:10px; font-weight:700; color:#94a3b8; white-space:nowrap; min-width:60px; }
+    .change-text { font-size:13px; color:#374151; flex:1; }
+    .change-date { font-size:10px; color:#94a3b8; white-space:nowrap; }
+
+    .alert-card { background:#fff7ed; border:1px solid #fed7aa; border-radius:12px; padding:12px 16px; margin-bottom:8px; }
+    .alert-label { font-size:11px; font-weight:700; color:#c2410c; margin-bottom:4px; }
+    .next-exp-card { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:12px 16px; margin-bottom:8px; }
+    .next-exp-label { font-size:11px; font-weight:700; color:#166534; margin-bottom:4px; }
+
+    .section-header { display:flex; align-items:center; justify-content:space-between; margin:20px 0 8px; }
+    .section-title-new { font-size:13px; font-weight:700; color:#374151; }
+    .section-count { font-size:11px; color:#94a3b8; background:#f1f5f9; padding:1px 8px; border-radius:8px; }
+
+    .add-change-btn { font-size:12px; padding:4px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; color:#64748b; }
+    .add-change-btn:hover { background:#f1f5f9; }
+
+    .partner-goal { background:linear-gradient(135deg,#1e2230 0%,#2d3748 100%); color:#fff; border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+    .partner-goal-count { font-size:28px; font-weight:700; color:#fbbf24; }
+    .partner-goal-label { font-size:12px; color:rgba(255,255,255,0.7); }
+    .partner-goal-bar { margin-top:8px; background:rgba(255,255,255,0.2); border-radius:4px; height:4px; }
+    .partner-goal-fill { background:#fbbf24; border-radius:4px; height:4px; transition:width 0.3s; }
+
+    </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 // ── GOOGLE DRIVE SYNC (HITOMEMO) ──
@@ -870,6 +907,12 @@ const importFromMemo = (text) => {
     relationFlag: 'normal',
     meetings: [],
     meetingSummary: '',
+    tier: '記録のみ',
+    stage: '知人',
+    changeLog: [],
+    nextExperience: '',
+    lastContactDate: null,
+    myRole: '見守る',
     name:       { value: extract('氏名\\(ふりがな\\)') },
     birthday:   { value: extract('誕生日') },
     position:   { value: extract('所属・役職') },
@@ -1003,144 +1046,154 @@ const App = () => {
   })();
 
   // ── LIST VIEW ──
-  if (view === 'list') {
+    if (view === 'list') {
+    const today = new Date().toISOString().slice(0,10);
+    const daysDiff = (dateStr) => {
+      if (!dateStr) return 999;
+      return Math.floor((new Date(today) - new Date(dateStr)) / 86400000);
+    };
+
+    // 階層別分類
+    const partners = profiles.filter(p => (p.tier||'記録のみ') === '経営パートナー候補');
+    const candidates = profiles.filter(p => (p.tier||'記録のみ') === '仲間候補');
+
+    // 停滞アラート（経営パートナー候補で90日以上接触なし）
+    const staleThr = 90;
+    const staleProfiles = partners.filter(p => daysDiff(p.lastContactDate || p.updatedAt) >= staleThr);
+
+    // 変化ありの人（直近30日以内にchangeLog追加）
+    const recentChanged = [...partners, ...candidates].filter(p =>
+      (p.changeLog||[]).some(l => daysDiff(l.date) <= 30)
+    );
+
+    // 次の経験あり
+    const hasNextExp = [...partners, ...candidates].filter(p => p.nextExperience && p.nextExperience.trim());
+
+    const tierBadge = (tier) => {
+      if (tier === '経営パートナー候補') return <span className="tier-badge tier-partner">🌟 パートナー候補</span>;
+      if (tier === '仲間候補') return <span className="tier-badge tier-candidate">👥 仲間候補</span>;
+      return null;
+    };
+
+    const ProfileCard = ({p, compact}) => (
+      <div className="profile-card" onClick={() => { setCurrent(p); setView('detail'); }}
+        style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:12,padding:'12px 14px',marginBottom:8,cursor:'pointer'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+          <span style={{fontWeight:700,fontSize:15}}>{(p.name&&p.name.value)||p.name||'名前未設定'}</span>
+          {tierBadge(p.tier||'記録のみ')}
+          {p.stage && <span className="stage-pill">{p.stage}</span>}
+        </div>
+        {!compact && <div style={{fontSize:12,color:'#64748b'}}>{(p.position&&p.position.value)||''}</div>}
+        {!compact && (p.changeLog||[]).length > 0 && (
+          <div style={{fontSize:11,color:'#8b5cf6',marginTop:4}}>
+            ✦ {(p.changeLog[p.changeLog.length-1].type)} : {(p.changeLog[p.changeLog.length-1].text).slice(0,30)}…
+          </div>
+        )}
+        {!compact && p.nextExperience && (
+          <div style={{fontSize:11,color:'#10b981',marginTop:2}}>▶ 次: {p.nextExperience.slice(0,30)}</div>
+        )}
+      </div>
+    );
+
     return (
       <div className="app">
+        {/* パートナー形成ゴール */}
+        <div className="partner-goal">
+          <div style={{display:'flex',alignItems:'flex-end',gap:8,marginBottom:6}}>
+            <span className="partner-goal-count">{partners.length}</span>
+            <span style={{fontSize:14,color:'rgba(255,255,255,0.8)',marginBottom:4}}>/ 10人</span>
+            <span className="partner-goal-label" style={{marginBottom:4}}>経営パートナー候補</span>
+          </div>
+          <div className="partner-goal-bar">
+            <div className="partner-goal-fill" style={{width:`${Math.min(100,partners.length*10)}%`}}></div>
+          </div>
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:6}}>2030年までに10人形成</div>
+        </div>
+
         {/* 検索 */}
         <div className="search-wrap">
           <span className="search-icon">🔍</span>
-          <input className="search-input" placeholder="氏名・所属・価値観・会食の学びで検索..."
+          <input className="search-input" placeholder="氏名・所属・価値観で検索..."
             value={query} onChange={e => setQuery(e.target.value)} />
         </div>
 
-        {/* フィルタ行 */}
-        <div className="filter-row">
-          <span className="filter-label">表示:</span>
-          <button className={`filter-chip ${!filterStar ? 'active' : ''}`} onClick={() => setFilterStar(false)}>すべて</button>
-          <button className={`filter-chip ${filterStar ? 'active' : ''}`} onClick={() => setFilterStar(true)}>★ 深めたい</button>
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>✥ ドラッグで並び替え</span>
-        </div>
+        {/* 停滞アラート */}
+        {staleProfiles.length > 0 && (
+          <div className="alert-card">
+            <div className="alert-label">⚠ 要接触（{staleThr}日以上）</div>
+            {staleProfiles.map(p => (
+              <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #fed7aa',cursor:'pointer'}}
+                onClick={() => { setCurrent(p); setView('detail'); }}>
+                <span style={{fontSize:14,fontWeight:600}}>{(p.name&&p.name.value)||p.name}</span>
+                <span style={{fontSize:11,color:'#c2410c'}}>{daysDiff(p.lastContactDate||p.updatedAt)}日前</span>
+              </div>
+            ))}
+          </div>
+        )}
 
-        {/* ★ 深めたい人 */}
-        {!filterStar && starProfiles.length > 0 && (
+        {/* 次に経験を渡す人 */}
+        {hasNextExp.length > 0 && (
+          <div className="next-exp-card">
+            <div className="next-exp-label">▶ 次の経験を渡す</div>
+            {hasNextExp.slice(0,3).map(p => (
+              <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #bbf7d0',cursor:'pointer'}}
+                onClick={() => { setCurrent(p); setView('detail'); }}>
+                <span style={{fontSize:14,fontWeight:600}}>{(p.name&&p.name.value)||p.name}</span>
+                <span style={{fontSize:11,color:'#166534'}}>{p.nextExperience.slice(0,20)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 経営パートナー候補 */}
+        {partners.length > 0 && (
           <>
-            <div className="section-title">★ 深めたい人</div>
-            <div className="star-grid">
-              {starProfiles.map(p => (
-                <div key={p.id}
-                  className={`star-card ${dragSrcId === p.id && dragSection === 'star' ? 'dragging' : ''}`}
-                  draggable={true}
-                  onClick={() => { if (dragSrcId) return; setCurrent(p); setView('detail'); }}
-                  onDragStart={e => { setDragSrcId(p.id); setDragSection('star'); e.dataTransfer.effectAllowed = 'move'; }}
-                  onDragEnd={() => { setDragSrcId(null); setDragSection(null); }}
-                  onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }}
-                  onDragLeave={e => e.currentTarget.classList.remove('drag-over')}
-                  onDrop={e => {
-                    e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-                    if (!dragSrcId || dragSrcId === p.id || dragSection !== 'star') return;
-                    const base = starOrder || starProfiles.map(x => x.id);
-                    const srcIdx = base.indexOf(dragSrcId);
-                    const dstIdx = base.indexOf(p.id);
-                    if (srcIdx === -1 || dstIdx === -1) return;
-                    const next = [...base];
-                    next.splice(srcIdx, 1); next.splice(dstIdx, 0, dragSrcId);
-                    setStarOrder(next); setDragSrcId(null); setDragSection(null);
-                  }}
-                >
-                  <span className="star-badge">★</span>
-                  <button className="card-delete" onClick={e => { e.stopPropagation(); if(confirm('削除しますか？')) updateList(profiles.filter(x => x.id !== p.id)); }}>×</button>
-                  <div className="card-name">{p.name.value || '名前未設定'}</div>
-                  <div className="card-position">{p.position.value}</div>
-                  {p.coreMessage.value && <div className="card-core">{p.coreMessage.value}</div>}
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>更新 {formatDate(p.updatedAt || p.createdAt)}</div>
-                </div>
-              ))}
+            <div className="section-header">
+              <span className="section-title-new">🌟 経営パートナー候補</span>
+              <span className="section-count">{partners.length}人</span>
             </div>
+            {(query ? partners.filter(p => {
+              const n = ((p.name&&p.name.value)||p.name||'').toLowerCase();
+              return n.includes(query.toLowerCase());
+            }) : partners).map(p => <ProfileCard key={p.id} p={p} />)}
           </>
         )}
 
-        {/* 人物一覧 */}
-        <div className="section-title">
-          {filterStar ? '★ 深めたい人' : '人物一覧'} — {filtered.length}人
-        </div>
-
-        {filtered.length === 0 ? (
-          <div className="empty">
-            <div className="empty-icon">👤</div>
-            <div className="empty-title">{query ? '検索結果がありません' : 'まだ人物が登録されていません'}</div>
-            <div style={{ fontSize: 13 }}>「＋ 新しい人物を記録」から始めましょう</div>
-          </div>
-        ) : (
-          <div className="person-grid">
-            {filtered.map(p => (
-              <div key={p.id}
-                className={`person-card ${p.relationFlag === 'star' ? 'is-star' : ''} ${dragSrcId === p.id && dragSection === 'all' ? 'dragging' : ''}`}
-                draggable={!query}
-                onClick={() => { if (dragSrcId) return; setCurrent(p); setView('detail'); }}
-                onDragStart={e => { setDragSrcId(p.id); setDragSection('all'); e.dataTransfer.effectAllowed = 'move'; }}
-                onDragEnd={() => { setDragSrcId(null); setDragSection(null); }}
-                onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }}
-                onDragLeave={e => e.currentTarget.classList.remove('drag-over')}
-                onDrop={e => {
-                  e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-                  if (!dragSrcId || dragSrcId === p.id || dragSection !== 'all') return;
-                  const base = manualOrder || sorted.map(x => x.id);
-                  const srcIdx = base.indexOf(dragSrcId);
-                  const dstIdx = base.indexOf(p.id);
-                  if (srcIdx === -1 || dstIdx === -1) return;
-                  const next = [...base];
-                  next.splice(srcIdx, 1); next.splice(dstIdx, 0, dragSrcId);
-                  setManualOrder(next); setDragSrcId(null); setDragSection(null);
-                }}
-              >
-                  <button className="card-delete" onClick={e => { e.stopPropagation(); if(confirm('削除しますか？')) updateList(profiles.filter(x => x.id !== p.id)); }}>×</button>
-                  <div className="card-name">
-                    {p.relationFlag === 'star' && <span style={{ color: 'var(--star)', marginRight: 4 }}>★</span>}
-                    {p.name.value || '名前未設定'}
-                  </div>
-                  <div className="card-position">{p.position.value}</div>
-                  {p.coreMessage.value && <div className="card-core">{p.coreMessage.value}</div>}
-                  <div className="card-meta">
-                    <span>更新 {formatDate(p.updatedAt || p.createdAt)}</span>
-                    {(p.meetings || []).length > 0 && <span>会食 {p.meetings.length}回</span>}
-                  </div>
-                </div>
-              ))}
+        {/* 変化が起きている人 */}
+        {recentChanged.filter(p => (p.tier||'記録のみ') !== '経営パートナー候補').length > 0 && (
+          <>
+            <div className="section-header">
+              <span className="section-title-new">✦ 最近変化あり</span>
+              <span className="section-count">直近30日</span>
             </div>
+            {recentChanged.filter(p => (p.tier||'記録のみ') !== '経営パートナー候補').map(p => <ProfileCard key={p.id} p={p} />)}
+          </>
         )}
 
-        {/* 人脈サマリー */}
-        {profiles.length > 0 && (
-          <div className="summary-box">
-            <div className="summary-item">
-              <div className="summary-num">{profiles.length}</div>
-              <div className="summary-lbl">登録人数</div>
+        {/* 仲間候補 */}
+        {candidates.filter(p => !recentChanged.includes(p)).length > 0 && (
+          <>
+            <div className="section-header">
+              <span className="section-title-new">👥 仲間候補</span>
+              <span className="section-count">{candidates.length}人</span>
             </div>
-            {Object.entries(summary).filter(([k]) => k !== 'その他').map(([k, v], i) => (
-              <React.Fragment key={k}>
-                <div className="summary-divider" />
-                <div className="summary-item">
-                  <div className="summary-num">{v}</div>
-                  <div className="summary-lbl">{k}</div>
-                </div>
-              </React.Fragment>
-            ))}
-            {summary['その他'] > 0 && (
-              <>
-                <div className="summary-divider" />
-                <div className="summary-item">
-                  <div className="summary-num">{summary['その他']}</div>
-                  <div className="summary-lbl">その他</div>
-                </div>
-              </>
-            )}
+            {(query ? candidates : candidates).filter(p => !recentChanged.includes(p))
+              .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
+              .map(p => <ProfileCard key={p.id} p={p} compact />)}
+          </>
+        )}
+
+        {partners.length === 0 && candidates.length === 0 && profiles.length === 0 && (
+          <div style={{textAlign:'center',padding:40,color:'#94a3b8'}}>
+            <div style={{fontSize:48,marginBottom:12}}>👤</div>
+            <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>まだ人物が登録されていません</div>
+            <div style={{fontSize:13}}>「＋ 新しい人物を記録」から始めましょう</div>
           </div>
         )}
       </div>
     );
   }
 
-  // ── INTERVIEW ──
   if (view === 'interview') {
     const pct = ((qIdx + 1) / QUESTIONS.length) * 100;
     const isLast = qIdx === QUESTIONS.length - 1;
@@ -1385,6 +1438,78 @@ const App = () => {
           <Field label="その他" field="other" multi />
           <Field label="核となる一言" field="coreMessage" multi />
           <Field label="補足・洞察" field="insights" multi />
+        </div>
+
+        {/* 経営パートナー形成 */}
+        <div className="detail-section">
+          <div className="detail-section-title">🌟 経営パートナー形成</div>
+
+          {/* 階層・ステージ */}
+          <div className="fg" style={{marginBottom:12}}>
+            <label className="fl">階層</label>
+            <select className="fi" value={current.tier||'記録のみ'} onChange={e => { updDirect('tier', e.target.value); saveCurrentBlur(); }}>
+              <option>経営パートナー候補</option>
+              <option>仲間候補</option>
+              <option>記録のみ</option>
+            </select>
+          </div>
+          <div className="fg" style={{marginBottom:12}}>
+            <label className="fl">現在地ステージ</label>
+            <select className="fi" value={current.stage||'知人'} onChange={e => { updDirect('stage', e.target.value); saveCurrentBlur(); }}>
+              <option>知人</option>
+              <option>協力者</option>
+              <option>管理職</option>
+              <option>事業責任者</option>
+              <option>経営人材</option>
+              <option>経営パートナー</option>
+            </select>
+          </div>
+          <div className="fg" style={{marginBottom:12}}>
+            <label className="fl">自分の関わり方</label>
+            <select className="fi" value={current.myRole||'見守る'} onChange={e => { updDirect('myRole', e.target.value); saveCurrentBlur(); }}>
+              <option>見守る</option>
+              <option>任せる</option>
+              <option>教える</option>
+            </select>
+          </div>
+          <div className="fg" style={{marginBottom:12}}>
+            <label className="fl">最終接触日</label>
+            <input type="date" className="fi" value={current.lastContactDate||''} onChange={e => { updDirect('lastContactDate', e.target.value); saveCurrentBlur(); }} />
+          </div>
+          <div className="fg" style={{marginBottom:16}}>
+            <label className="fl">次に渡す経験</label>
+            <textarea className="ft" rows="2" defaultValue={current.nextExperience||''} onBlur={e => { updDirect('nextExperience', e.target.value); saveCurrentBlur(); }} />
+          </div>
+
+          {/* 変化ログ */}
+          <div style={{marginBottom:8}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+              <label className="fl" style={{margin:0}}>変化タイムライン</label>
+              <button className="add-change-btn" onClick={() => {
+                const type = window.prompt('変化の種類（発言変化 / 行動変化 / 気づき / ステージ変化）');
+                if (!type) return;
+                const text = window.prompt('内容を入力してください');
+                if (!text) return;
+                const newLog = { date: new Date().toISOString().slice(0,10), type, text, source: '手動' };
+                const updated = { ...currentRef.current, changeLog: [...(currentRef.current.changeLog||[]), newLog], updatedAt: new Date().toISOString() };
+                setCurrent(updated);
+                updateList(profilesRef.current.map(p => p.id === updated.id ? updated : p));
+                toast('変化を記録しました');
+              }}>＋ 記録</button>
+            </div>
+            {(current.changeLog||[]).length === 0 && (
+              <div style={{fontSize:12,color:'#94a3b8',padding:'8px 0'}}>まだ変化の記録がありません</div>
+            )}
+            <div className="change-log">
+              {[...(current.changeLog||[])].reverse().map((log, i) => (
+                <div key={i} className={`change-entry type-${log.type}`}>
+                  <span className="change-type">{log.type}</span>
+                  <span className="change-text">{log.text}</span>
+                  <span className="change-date">{log.date}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* アクション */}
