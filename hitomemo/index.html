@@ -1158,20 +1158,20 @@ const App = () => {
 
     const ProfileCard = ({p, compact}) => (
       <div className="profile-card" onClick={() => { setCurrent(p); setView('detail'); }}
-        style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:12,padding:'12px 14px',marginBottom:8,cursor:'pointer'}}>
-        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-          <span style={{fontWeight:700,fontSize:15}}>{(p.name&&p.name.value)||p.name||'名前未設定'}</span>
+        style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:12,padding:'14px 16px',cursor:'pointer',boxShadow:'0 1px 3px rgba(0,0,0,0.06)',transition:'box-shadow 0.15s'}}>
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:6}}>
+          <span style={{fontWeight:700,fontSize:15,color:'#1a1a2e'}}>{(p.name&&p.name.value)||p.name||'名前未設定'}</span>
           {tierBadge(p.tier||'記録のみ')}
-          {p.stage && <span className="stage-pill">{p.stage}</span>}
         </div>
-        {!compact && <div style={{fontSize:12,color:'#64748b'}}>{(p.position&&p.position.value)||''}</div>}
+        {p.stage && <div style={{marginBottom:4}}><span className="stage-pill">{p.stage}</span></div>}
+        {(p.position&&p.position.value) && <div style={{fontSize:12,color:'#64748b',marginBottom:4}}>{p.position.value}</div>}
         {!compact && (p.changeLog||[]).length > 0 && (
-          <div style={{fontSize:11,color:'#8b5cf6',marginTop:4}}>
-            ✦ {(p.changeLog[p.changeLog.length-1].type)} : {(p.changeLog[p.changeLog.length-1].text).slice(0,30)}…
+          <div style={{fontSize:11,color:'#8b5cf6',marginTop:6,padding:'4px 8px',background:'#f5f3ff',borderRadius:6}}>
+            ✦ {(p.changeLog[p.changeLog.length-1].type)}：{(p.changeLog[p.changeLog.length-1].text).slice(0,35)}{(p.changeLog[p.changeLog.length-1].text).length>35?'…':''}
           </div>
         )}
         {!compact && p.nextExperience && (
-          <div style={{fontSize:11,color:'#10b981',marginTop:2}}>▶ 次: {p.nextExperience.slice(0,30)}</div>
+          <div style={{fontSize:11,color:'#10b981',marginTop:4,padding:'4px 8px',background:'#f0fdf4',borderRadius:6}}>▶ {p.nextExperience.slice(0,35)}</div>
         )}
       </div>
     );
@@ -1233,10 +1233,12 @@ const App = () => {
               <span className="section-title-new">🌟 経営パートナー候補</span>
               <span className="section-count">{partners.length}人</span>
             </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
             {(query ? partners.filter(p => {
               const n = ((p.name&&p.name.value)||p.name||'').toLowerCase();
               return n.includes(query.toLowerCase());
             }) : partners).map(p => <ProfileCard key={p.id} p={p} />)}
+            </div>
           </>
         )}
 
@@ -1247,7 +1249,9 @@ const App = () => {
               <span className="section-title-new">✦ 最近変化あり</span>
               <span className="section-count">直近30日</span>
             </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
             {recentChanged.filter(p => (p.tier||'記録のみ') !== '経営パートナー候補').map(p => <ProfileCard key={p.id} p={p} />)}
+            </div>
           </>
         )}
 
@@ -1258,9 +1262,11 @@ const App = () => {
               <span className="section-title-new">👥 仲間候補</span>
               <span className="section-count">{candidates.length}人</span>
             </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
             {(query ? candidates : candidates).filter(p => !recentChanged.includes(p))
               .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
               .map(p => <ProfileCard key={p.id} p={p} compact />)}
+            </div>
           </>
         )}
 
