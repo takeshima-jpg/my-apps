@@ -339,6 +339,8 @@ select.fi{cursor:pointer;}
     <button class="sb-backup-btn" onclick="exportAllJSON()">⬇ JSON保存</button>
     <button class="sb-backup-btn" onclick="importAllJSON()">⬆ JSON読込</button>
     <input type="file" id="jsonImportInput" accept=".json" style="display:none" onchange="handleJSONImport(event)">
+    <div style="border-top:1px solid rgba(255,255,255,0.08);margin:4px 0;"></div>
+    <label class="sb-backup-btn" style="cursor:pointer;">🤖 AIタスク読込<input type="file" id="aixTaskInput" accept=".json" style="display:none" onchange="handleAixTaskImport(event)"></label>
   </div>
   <div class="sb-ft" id="sbDate"></div>
 </div>
@@ -757,6 +759,45 @@ async function exportAllJSON() {
 
 function importAllJSON() {
   document.getElementById('jsonImportInput').click();
+}
+
+function handleAixTaskImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const newTasks = JSON.parse(ev.target.result);
+      if (!Array.isArray(newTasks)) { alert('形式エラー: 配列のJSONファイルを選択してください'); return; }
+
+      // 既存のShotTaskOSデータを取得
+      const existing = JSON.parse(localStorage.getItem('shot-task-os-v1') || '[]');
+      const existingIds = new Set(existing.map(t => t.id));
+
+      // 重複チェックしてマージ
+      let added = 0;
+      for (const task of newTasks) {
+        if (!task.id || existingIds.has(task.id)) continue;
+        existing.push(task);
+        existingIds.add(task.id);
+        added++;
+      }
+
+      if (added === 0) {
+        toast('追加できるAIタスクはありませんでした（全て重複）');
+        e.target.value = '';
+        return;
+      }
+
+      localStorage.setItem('shot-task-os-v1', JSON.stringify(existing));
+      renderHome();
+      toast(`✅ ${added}件のAIタスクを追加しました`);
+    } catch(err) {
+      alert('読込エラー: JSONファイルが正しくありません\n' + err.message);
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 function handleJSONImport(e) {
