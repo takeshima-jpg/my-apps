@@ -809,8 +809,19 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
   <div class="sb-body">
     <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:4px 2px 2px;letter-spacing:0.5px;">新規登録</div>
       <button id="sbNewPersonBtn" class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;" onclick="window.__hitomemoNewPerson?.()">＋ 新しい人物を記録</button>
-      <button id="sbImportMemoBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoImportMemo?.()">メモからインポート</button>
+      <button id="sbImportMemoBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoImportMemo?.()">📋 メモからインポート</button>
+
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:6px 2px 2px;letter-spacing:0.5px;">プロンプト</div>
+      <button class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoShowPrompt?.('survey')">🔍 ① WEB調査</button>
+      <button class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoShowPrompt?.('format')">📝 ② インポート整形</button>
+      <button class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoShowPrompt?.('change')">✦ ③ 変化観察</button>
+
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:6px 2px 2px;letter-spacing:0.5px;">AI更新</div>
+      <button id="sbAiUpdateBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;background:rgba(139,92,246,0.25);border:1px solid rgba(139,92,246,0.4);" onclick="window.__hitomemoAiUpdate?.()">🤖 AI更新読込</button>
+
     </div>
   </div>
   <div class="sb-ft">
@@ -974,6 +985,111 @@ const QUESTIONS = [
 const FIELDS = ['name','birthday','position','business','history','family','location','goals','values','beliefs','behavior','dislikes','topics','skills','memorable','impression','drive','other','coreMessage'];
 
 // ── APP ──
+
+  const PROMPT_SURVEY = `あなたは経営パートナー形成を支援する人物調査AIです。
+以下の人物について公開情報を調査し、指定フォーマットで出力してください。
+
+【調査対象】
+人物名：{氏名}
+参考URL：{公式サイト・IR・インタビュー等 / 複数可 / 任意}
+
+【調査方針】
+・同姓同名誤認防止のため、経歴・所属の整合性を確認すること
+・役職は「最終意思決定者」か「実務中核者」かを区別すること
+・不確実な情報は「※推測」と明記すること
+・「能力・実績」より「器・変化・価値観」を重視して調査すること
+・空欄は「未確認」と記載すること（空白禁止）
+
+【出力フォーマット】（このフォーマット以外は一切出力しない）
+
+氏名(ふりがな)：{氏名（ふりがな）}
+誕生日：{YYYY年MM月DD日 / 未確認}
+所属・役職：{会社名／役職}
+事業：{事業内容}
+経歴：{経歴を「／」区切りで}
+家族構成：{未確認}
+出身・現所在地：{出身地／現在地}
+目標・夢：{今後3〜5年の目標}
+価値観：{何を大切にしているか}
+信条：{行動の信条・哲学}
+行動傾向：{意思決定スタイル・行動パターン}
+苦手なこと：{避けること・NG行動}
+よく話すテーマ：{関心事・話題}
+特技・スキル：{強みとなるスキル}
+印象的な言葉：{発言・名言 / 未確認}
+話してみての印象：{未確認}
+欲求(ドライブ)：{行動の原動力}
+その他：{上記に当てはまらない重要情報}
+核となる一言：{この人を一言で表すと}
+補足・洞察：{この人の「器」「変化の兆し」「次のステージ」への洞察}`;
+
+  const PROMPT_FORMAT = `以下のテキストを、ヒトメモのインポート形式に整形してください。
+
+【ルール】
+・出力はフォーマットのみ（説明文・補足は一切不要）
+・ラベル名は1文字も変えない
+・各項目は1行のみ・複数情報は「／」で区切る
+・空欄禁止（不明は「未確認」）
+・推測情報には「※」を付ける
+
+【インポートフォーマット】（このまま出力すること）
+
+氏名(ふりがな)：
+誕生日：
+所属・役職：
+事業：
+経歴：
+家族構成：
+出身・現所在地：
+目標・夢：
+価値観：
+信条：
+行動傾向：
+苦手なこと：
+よく話すテーマ：
+特技・スキル：
+印象的な言葉：
+話してみての印象：
+欲求(ドライブ)：
+その他：
+核となる一言：
+補足・洞察：
+
+【整形対象テキスト】
+{ここにテキストを貼り付け}`;
+
+  const PROMPT_CHANGE = `あなたは経営パートナー形成を支援する変化観察AIです。
+以下の情報をもとに、ヒトメモの「変化タイムライン」に記録する内容を整理してください。
+
+【観察対象】
+人物名：{氏名}
+接触日：{YYYY-MM-DD}
+接触状況：{会食・面談・電話 等}
+
+【Hirotoのメモ】
+{会話内容・気づきを自由に書く}
+
+【出力ルール】
+・出力はフォーマットのみ（説明文は不要）
+・変化がない項目は「なし」と記載
+・Hirotoの言葉をそのまま使う（解釈・捏造しない）
+・「急いで結論を出さない」「変化が見えるまで待つ」姿勢で整理する
+
+【出力フォーマット】
+
+## ヒトメモ更新サマリー｜{YYYY-MM-DD}
+
+---
+
+### {氏名}さん
+tier: {経営パートナー候補 / 仲間候補 / 家族 / 記録のみ}
+stage: {現在のステージ} → {変更後のステージ（変化なければ現在値のみ）}
+lastContactDate: {YYYY-MM-DD}
+nextExperience: {次に渡す経験（変化なければ現在値）}
+changeLog:
+- {発言変化 / 行動変化 / 気づき / ステージ変化}｜{内容}`;
+
+
 const App = () => {
   const [view, setView] = useState('list');
   const [profiles, setProfiles] = useState([]);
@@ -1340,6 +1456,36 @@ const App = () => {
   }
 
   // ── IMPORT ──
+  if (view === 'prompt') {
+    const titles = { survey: '🔍 ① WEB調査プロンプト', format: '📝 ② インポート整形プロンプト', change: '✦ ③ 変化観察プロンプト' };
+    const texts = { survey: PROMPT_SURVEY, format: PROMPT_FORMAT, change: PROMPT_CHANGE };
+    const text = texts[promptType] || '';
+    const title = titles[promptType] || 'プロンプト';
+    return (
+      <div className="page">
+        <div className="page-header">
+          <button className="page-back" onClick={() => setView('list')}>← 一覧</button>
+          <div className="page-title">{title}</div>
+        </div>
+        <div style={{padding:'16px'}}>
+          <p style={{fontSize:12,color:'var(--text2)',marginBottom:10,lineHeight:1.6}}>
+            以下をコピーしてClaudeに貼り付けて使ってください。
+          </p>
+          <textarea
+            readOnly
+            value={text}
+            style={{width:'100%',height:'calc(100vh - 200px)',padding:12,borderRadius:8,border:'1px solid var(--border)',fontSize:12,fontFamily:'monospace',lineHeight:1.7,resize:'none',boxSizing:'border-box',background:'var(--bg2)',color:'var(--text)'}}
+            onClick={e => e.target.select()}
+          />
+          <button
+            style={{marginTop:10,width:'100%',padding:'10px',background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:700,cursor:'pointer'}}
+            onClick={() => { navigator.clipboard.writeText(text).then(() => toast('コピーしました')); }}
+          >📋 コピーする</button>
+        </div>
+      </div>
+    );
+  }
+
   if (view === 'ai-update') {
     const ARROW = '→';
     const PIPE = '｜';
