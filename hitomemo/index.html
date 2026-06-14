@@ -1153,6 +1153,7 @@ const App = () => {
     const tierBadge = (tier) => {
       if (tier === '経営パートナー候補') return <span className="tier-badge tier-partner">🌟 パートナー候補</span>;
       if (tier === '仲間候補') return <span className="tier-badge tier-candidate">👥 仲間候補</span>;
+      if (tier === '家族') return <span className="tier-badge" style={{background:'#fce7f3',color:'#9d174d'}}>❤️ 家族</span>;
       return null;
     };
 
@@ -1164,7 +1165,7 @@ const App = () => {
           {tierBadge(p.tier||'記録のみ')}
         </div>
         {p.stage && <div style={{marginBottom:4}}><span className="stage-pill">{p.stage}</span></div>}
-        {(p.position&&p.position.value) && <div style={{fontSize:12,color:'#64748b',marginBottom:4}}>{p.position.value}</div>}
+        {(p.position&&p.position.value) && <div style={{fontSize:12,color:'#64748b',marginBottom:4,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{p.position.value}</div>}
         {!compact && (p.changeLog||[]).length > 0 && (
           <div style={{fontSize:11,color:'#8b5cf6',marginTop:6,padding:'4px 8px',background:'#f5f3ff',borderRadius:6}}>
             ✦ {(p.changeLog[p.changeLog.length-1].type)}：{(p.changeLog[p.changeLog.length-1].text).slice(0,35)}{(p.changeLog[p.changeLog.length-1].text).length>35?'…':''}
@@ -1264,6 +1265,21 @@ const App = () => {
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
             {(query ? candidates : candidates).filter(p => !recentChanged.includes(p))
+              .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
+              .map(p => <ProfileCard key={p.id} p={p} compact />)}
+            </div>
+          </>
+        )}
+
+        {/* 家族 */}
+        {profiles.filter(p => (p.tier||'') === '家族').length > 0 && (
+          <>
+            <div className="section-header">
+              <span className="section-title-new">❤️ 家族</span>
+              <span className="section-count">{profiles.filter(p => (p.tier||'') === '家族').length}人</span>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
+            {profiles.filter(p => (p.tier||'') === '家族')
               .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
               .map(p => <ProfileCard key={p.id} p={p} compact />)}
             </div>
@@ -1694,6 +1710,7 @@ const App = () => {
             <select className="fi" value={current.tier||'記録のみ'} onChange={e => { updDirect('tier', e.target.value); saveCurrentBlur(); }}>
               <option>経営パートナー候補</option>
               <option>仲間候補</option>
+              <option>家族</option>
               <option>記録のみ</option>
             </select>
           </div>
