@@ -863,27 +863,16 @@ function gdriveAutoSave() {
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
-  // VISION表示（均等10日ローテーション）
+  // VISION表示
   (function(){
+    const VISION_DEFAULT = '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。';
     const pill = document.getElementById('visionPillSu');
     if (!pill) return;
     try {
-      const _vTexts = [
-    'VISION｜守りの総合支援を通して、挑戦する人が成長できる社会をつくる。',
-    'VISION｜安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。',
-    '原則・成長｜未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。',
-    '原則・愛｜周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。',
-    '原則・誠実｜自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。',
-    '原則・寛容｜個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。',
-    '原則・共創｜自分の確信を持ちながら、相手の確信も尊重する。違いを消さずに理解し、接点を探す。互いの成長につながる未来を共に創る。',
-    '指針・確信｜頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。油断せず備える。',
-    '指針・仲間｜弱みも未来も共有し、自立し、責任を持って、前向きに、違いを尊重しながら共通の未来を創れる人を大切にする。',
-    '指針・健康｜心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。'
-  ];
-  const _vD2 = new Date(), _vDay2 = Math.floor((_vD2 - new Date(_vD2.getFullYear(),0,0))/86400000);
-  const _vText = _vTexts[_vDay2 % _vTexts.length];
-      pill.textContent = _vText;
-    } catch(e) { pill.textContent = 'VISION｜守りの総合支援を通して、挑戦する人が成長できる社会をつくる。'; }
+      const raw = localStorage.getItem('myapps_vision');
+      const data = raw ? JSON.parse(raw) : null;
+      pill.textContent = (data && data.vision && data.vision[0]) ? data.vision[0] : VISION_DEFAULT;
+    } catch(e) { pill.textContent = VISION_DEFAULT; }
   })();
   gdriveHandleRedirect();
 });
@@ -1385,6 +1374,9 @@ function renderQAP(){
         <button class="qbtn qbtn-t10"  onclick="toggleT10('${p.id}')">${p.isTop10?'⭐ Top10から外す':'☆ Top10に追加'}</button>
       </div>
       <div class="qap-ftr-row">
+        <button class="qbtn" style="flex:1;background:#ede9fe;color:#5b21b6;border-color:#ddd6fe;" onclick="syncToHitomemo('${p.id}')">🤝 ヒトメモで管理</button>
+      </div>
+      <div class="qap-ftr-row">
         <button class="qbtn qbtn-dorm" onclick="toggleDormant('${p.id}')">${p.isDormant?'📌 マップへ戻す':'🌿 余白へ移動'}</button>
         <button class="qbtn qbtn-del"  onclick="qapDelete('${p.id}')">🗑 削除</button>
       </div>
@@ -1427,6 +1419,74 @@ function toggleDormant(id){
   sv(SK,persons);
   if(newDorm) selectedId=null;
   renderMap();
+}
+
+
+function syncToHitomemo(id) {
+  const p = persons.find(x => x.id === id);
+  if (!p) return;
+
+  // ヒトメモのデータを取得
+  const profiles = JSON.parse(localStorage.getItem('hitomemo_profiles_v1') || '[]');
+
+  // 名前で検索（「さん」を除いて比較）
+  const normalize = n => n.replace(/さん$/, '').trim();
+  const pName = normalize(p.name);
+  const existing = profiles.find(h => {
+    const hName = normalize((h.name && h.name.value) || h.name || '');
+    return hName.includes(pName) || pName.includes(hName);
+  });
+
+  // tier判定
+  const tier = p.isTop10 ? '経営パートナー候補' : '仲間候補';
+
+  if (existing) {
+    // 既存 → tierとlastContactDateを更新
+    existing.tier = tier;
+    existing.updatedAt = new Date().toISOString();
+    localStorage.setItem('hitomemo_profiles_v1', JSON.stringify(profiles));
+    toast('✅ ヒトメモの「' + p.name + '」を ' + tier + ' に更新しました');
+  } else {
+    // 新規 → 基本情報を引き継いで作成
+    const now = new Date().toISOString();
+    const newProfile = {
+      id: Date.now().toString(),
+      createdAt: now,
+      updatedAt: now,
+      relationFlag: 'normal',
+      meetings: [],
+      meetingSummary: '',
+      tier: tier,
+      stage: '知人',
+      changeLog: [],
+      nextExperience: '',
+      lastContactDate: null,
+      myRole: '見守る',
+      name:       { value: p.name },
+      birthday:   { value: '' },
+      position:   { value: '' },
+      business:   { value: '' },
+      history:    { value: '' },
+      family:     { value: '' },
+      location:   { value: '' },
+      goals:      { value: '' },
+      values:     { value: '' },
+      beliefs:    { value: '' },
+      behavior:   { value: '' },
+      dislikes:   { value: '' },
+      topics:     { value: '' },
+      skills:     { value: '' },
+      memorable:  { value: '' },
+      impression: { value: '' },
+      drive:      { value: '' },
+      other:      { value: 'ソーシャルU: ' + p.relationshipPurpose + ' / ' + p.relationshipType },
+      coreMessage:{ value: '' },
+      insights:   { value: '' },
+    };
+    profiles.push(newProfile);
+    localStorage.setItem('hitomemo_profiles_v1', JSON.stringify(profiles));
+    toast('✅ 「' + p.name + '」をヒトメモに新規追加しました（' + tier + '）');
+  }
 }
 
 function qapDelete(id){
