@@ -810,6 +810,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
       <button id="sbNewPersonBtn" class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;" onclick="window.__hitomemoNewPerson?.()">＋ 新しい人物を記録</button>
       <button id="sbImportMemoBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoImportMemo?.()">メモからインポート</button>
+      <button id="sbAiUpdateBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;background:rgba(139,92,246,0.25);border:1px solid rgba(139,92,246,0.4);" onclick="window.__hitomemoAiUpdate?.()">🤖 AI更新読込</button>
     </div>
   </div>
   <div class="sb-ft">
@@ -1003,6 +1004,7 @@ const App = () => {
     window.__hitomemoRestore = (list) => updateList(list);
     window.__hitomemoNewPerson = () => { setAnswers(Array(19).fill('')); setQIdx(0); setView('interview'); };
     window.__hitomemoImportMemo = () => { setImportText(''); setView('import'); };
+    window.__hitomemoAiUpdate = () => { setAiUpdateText(''); setAiUpdateResult(null); setView('ai-update'); };
 
     // Cowork用CRUD API
     window.__hitomemoGetAll = () => {
@@ -1317,6 +1319,182 @@ const App = () => {
   }
 
   // ── IMPORT ──
+  if (view === 'ai-update') {
+    // サマリーテキストをパースして既存人物を更新する
+    const parseAndPreview = () => {
+      const text = aiUpdateText.trim();
+      if (!text) return;
+
+      const blocks = text.split(/\n---+\n/).filter(b => b.trim());
+      const results = [];
+
+      for (const block of blocks) {
+        const lines = block.trim().split('\n');
+        // 名前行を探す（### から始まる）
+        const nameLine = lines.find(l => l.startsWith('###'));
+        if (!nameLine) continue;
+        const nameStr = nameLine.replace(/^###\s*/, '').replace(/さん$/, '').trim();
+
+        // 既存プロファイルから名前で検索
+        const matched = profiles.find(p => {
+          const pName = ((p.name && p.name.value) || p.name || '');
+          return pName.includes(nameStr) || nameStr.includes(pName.replace(/さん$/, ''));
+        });
+
+        const changes = {};
+        const newChangeLogs = [];
+
+        for (const line of lines) {
+          if (line.startsWith('tier:')) {
+            const v = line.replace('tier:', '').trim();
+            if (v) changes.tier = v;
+          } else if (line.startsWith('stage:')) {
+            // "協力者 → 事業責任者" の形式に対応
+            const v = line.replace('stage:', '').trim();
+            const arrowMatch = v.match(/(.+?)\s*[→->]+\s*(.+)/);
+            if (arrowMatch) {
+              changes.stage = arrowMatch[2].trim();
+              newChangeLogs.push({ type: 'ステージ変化', text: `${arrowMatch[1].trim()} → ${arrowMatch[2].trim()}` });
+            } else if (v) {
+              changes.stage = v;
+            }
+          } else if (line.startsWith('lastContactDate:')) {
+            const v = line.replace('lastContactDate:', '').trim();
+            if (v) changes.lastContactDate = v;
+          } else if (line.startsWith('nextExperience:')) {
+            const v = line.replace('nextExperience:', '').trim();
+            changes.nextExperience = v;
+          } else if (line.startsWith('- ') && block.includes('changeLog:')) {
+            // "- 行動変化｜内容" の形式
+            const logLine = line.replace(/^-\s*/, '');
+            const sep = logLine.indexOf('｜');
+            if (sep >= 0) {
+              newChangeLogs.push({
+                type: logLine.slice(0, sep).trim(),
+                text: logLine.slice(sep + 1).trim(),
+              });
+            } else {
+              newChangeLogs.push({ type: '気づき', text: logLine.trim() });
+            }
+          }
+        }
+
+        results.push({
+          nameStr,
+          matched: matched || null,
+          changes,
+          newChangeLogs,
+        });
+      }
+
+      setAiUpdateResult(results);
+    };
+
+    const applyUpdates = () => {
+      if (!aiUpdateResult) return;
+      const today = new Date().toISOString().slice(0, 10);
+      let updated = [...profiles];
+      let count = 0;
+
+      for (const r of aiUpdateResult) {
+        if (!r.matched || !r.matched.id) continue;
+        const idx = updated.findIndex(p => p.id === r.matched.id);
+        if (idx < 0) continue;
+
+        const base = { ...updated[idx], ...r.changes, updatedAt: new Date().toISOString() };
+        if (r.newChangeLogs.length > 0) {
+          base.changeLog = [
+            ...(base.changeLog || []),
+            ...r.newChangeLogs.map(l => ({
+              date: today,
+              type: l.type,
+              text: l.text,
+              source: 'AI参謀',
+            })),
+          ];
+        }
+        updated[idx] = base;
+        count++;
+      }
+
+      updateList(updated);
+      toast(`✅ ${count}人のデータを更新しました`);
+      setView('list');
+    };
+
+    return (
+      <div className="page">
+        <div className="page-header">
+          <button className="page-back" onClick={() => setView('list')}>← 一覧</button>
+          <div className="page-title">🤖 AI更新読込</div>
+        </div>
+
+        <div style={{padding:'16px'}}>
+          <p style={{fontSize:13,color:'var(--text2)',marginBottom:12,lineHeight:1.7}}>
+            AI参謀が出力した「ヒトメモ更新サマリー」をそのままペーストしてください。<br/>
+            既存の人物データを更新します。新規登録はしません。
+          </p>
+
+          {!aiUpdateResult ? (
+            <>
+              <textarea
+                style={{width:'100%',height:260,padding:12,borderRadius:8,border:'1px solid var(--border)',fontSize:13,fontFamily:'inherit',lineHeight:1.7,resize:'vertical',boxSizing:'border-box'}}
+                placeholder={"## ヒトメモ更新サマリー｜2026-06-14\n\n---\n\n### 田中大輔さん\ntier: 経営パートナー候補\nstage: 協力者 → 事業責任者\nlastContactDate: 2026-06-14\nnextExperience: 顧客訪問を単独で任せる\nchangeLog:\n- 行動変化｜採用面接を単独対応、落ち着いた判断をしていた\n\n---"}
+                value={aiUpdateText}
+                onChange={e => setAiUpdateText(e.target.value)}
+              />
+              <button
+                style={{marginTop:10,width:'100%',padding:'10px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:700,cursor:'pointer'}}
+                onClick={parseAndPreview}
+              >内容を確認する</button>
+            </>
+          ) : (
+            <>
+              <div style={{marginBottom:12}}>
+                {aiUpdateResult.map((r, i) => (
+                  <div key={i} style={{background: r.matched ? '#f0fdf4' : '#fff7ed', border:`1px solid ${r.matched ? '#bbf7d0' : '#fed7aa'}`, borderRadius:10, padding:'12px 14px', marginBottom:8}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                      <span style={{fontWeight:700,fontSize:15}}>{r.nameStr}さん</span>
+                      {r.matched
+                        ? <span style={{fontSize:11,background:'#dcfce7',color:'#166534',padding:'1px 8px',borderRadius:8}}>✅ マッチ</span>
+                        : <span style={{fontSize:11,background:'#fef3c7',color:'#92400e',padding:'1px 8px',borderRadius:8}}>⚠ 未マッチ（スキップ）</span>
+                      }
+                    </div>
+                    {Object.entries(r.changes).map(([k, v]) => (
+                      <div key={k} style={{fontSize:12,color:'#374151',marginBottom:2}}>
+                        <span style={{color:'#6b7280',minWidth:120,display:'inline-block'}}>{k}：</span>{v}
+                      </div>
+                    ))}
+                    {r.newChangeLogs.map((l, j) => (
+                      <div key={j} style={{fontSize:12,color:'#374151',marginBottom:2}}>
+                        <span style={{color:'#8b5cf6',minWidth:120,display:'inline-block'}}>変化ログ：</span>
+                        [{l.type}] {l.text}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              <div style={{display:'flex',gap:8}}>
+                <button
+                  style={{flex:1,padding:'10px',background:'#f1f5f9',color:'#374151',border:'1px solid #e2e8f0',borderRadius:8,fontSize:14,cursor:'pointer'}}
+                  onClick={() => setAiUpdateResult(null)}
+                >← 修正する</button>
+                <button
+                  style={{flex:2,padding:'10px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:700,cursor:'pointer'}}
+                  onClick={applyUpdates}
+                  disabled={!aiUpdateResult.some(r => r.matched)}
+                >
+                  {aiUpdateResult.filter(r => r.matched).length}人を更新する
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (view === 'import') {
     const doImport = () => {
       try {
