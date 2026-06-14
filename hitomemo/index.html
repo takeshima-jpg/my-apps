@@ -817,7 +817,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:6px 2px 2px;letter-spacing:0.5px;">プロンプト</div>
       <button class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoShowPrompt?.('survey')">🔍 ① WEB調査</button>
       <button class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoShowPrompt?.('format')">📝 ② インポート整形</button>
-      <button class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoShowPrompt?.('change')">✦ ③ 変化観察</button>
+      <button class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoShowPrompt?.('change')">✦ ③ 変化メモ→サマリー生成</button>
 
       <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:6px 2px 2px;letter-spacing:0.5px;">AI更新</div>
       <button id="sbAiUpdateBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;background:rgba(139,92,246,0.25);border:1px solid rgba(139,92,246,0.4);" onclick="window.__hitomemoAiUpdate?.()">🤖 AI更新読込</button>
@@ -1457,7 +1457,7 @@ const App = () => {
 
   // ── IMPORT ──
   if (view === 'prompt') {
-    const titles = { survey: '🔍 ① WEB調査プロンプト', format: '📝 ② インポート整形プロンプト', change: '✦ ③ 変化観察プロンプト' };
+    const titles = { survey: '🔍 ① WEB調査プロンプト', format: '📝 ② インポート整形プロンプト', change: '✦ ③ 変化メモ → 更新サマリー生成' };
     const texts = { survey: PROMPT_SURVEY, format: PROMPT_FORMAT, change: PROMPT_CHANGE };
     const text = texts[promptType] || '';
     const title = titles[promptType] || 'プロンプト';
