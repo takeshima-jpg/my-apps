@@ -512,53 +512,6 @@ async function gdriveAutoLoad() {
   } catch(e) {}
 }
 
-// AIX GDrive ドラフト自動取り込み
-async function aixGdriveCheck() {
-  if (!gdriveToken) return;
-  try {
-    // まず aix-drafts フォルダを探す
-    const folderRes = await gdriveFetch(
-      `https://www.googleapis.com/drive/v3/files?q=name%3D%22aix-drafts%22+and+mimeType%3D%22application%2Fvnd.google-apps.folder%22+and+trashed%3Dfalse&fields=files(id,name)`
-    );
-    const folderData = await folderRes.json();
-    const folderId = folderData.files && folderData.files.length > 0 ? folderData.files[0].id : null;
-
-    let query;
-    if (folderId) {
-      query = `name+contains+%22aix-draft-%22+and+%22${folderId}%22+in+parents+and+trashed%3Dfalse`;
-    } else {
-      query = `name+contains+%22aix-draft-%22+and+trashed%3Dfalse`;
-    }
-
-    const res = await gdriveFetch(
-      `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name)&orderBy=name+desc`
-    );
-    const data = await res.json();
-    if (!data.files || data.files.length === 0) return;
-    const existing = _aixLoadDrafts();
-    const existingDates = existing.map(d => d.targetDate);
-    let added = 0;
-    for (const file of data.files) {
-      const match = file.name.match(/aix-draft-(\d{4}-\d{2}-\d{2})\.json/);
-      if (!match) continue;
-      const targetDate = match[1];
-      if (existingDates.includes(targetDate)) continue;
-      if (state.logs.find(l => l.date === targetDate)) continue;
-      try {
-        const fr = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
-        const draft = await fr.json();
-        existing.push({ targetDate, events: draft.events || '', generatedAt: draft.generatedAt || new Date().toISOString() });
-        added++;
-      } catch(e) { console.warn('AIX draft fetch error:', file.name, e); }
-    }
-    if (added > 0) {
-      existing.sort((a,b) => a.targetDate.localeCompare(b.targetDate));
-      _aixSaveDrafts(existing);
-      updateAixBadge();
-      if (typeof toast === 'function') toast(`📋 AIXドラフト ${added}件を取り込みました`);
-    }
-  } catch(e) { console.warn('AIX GDrive check error:', e); }
-}
 
 // 起動時に自動保存（ログインしている場合）
 function gdriveAutoSave() {
@@ -1857,11 +1810,6 @@ loadData();
 render();
 bindEvents();
 updateAixBadge();
-// GDriveトークンがあればAIXドラフトを自動チェック
-if (localStorage.getItem('gdrive_token')) {
-  gdriveToken = localStorage.getItem('gdrive_token');
-  setTimeout(aixGdriveCheck, 1500);
-}
 window.addEventListener('storage', function(e) {
   if (e.key === 'aix_drafts' || e.key === 'oneday_aix_draft') { updateAixBadge(); }
 });
