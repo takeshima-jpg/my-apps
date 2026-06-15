@@ -969,6 +969,18 @@ function filteredLogs() {
 
 // ── AIX DRAFT / MORNING BRIEF ──
 function getAixDraft() {
+  // aix_draft_latest（新キー）と oneday_aix_draft（旧キー）の両方に対応
+  const latest = localStorage.getItem('aix_draft_latest');
+  if (latest) {
+    try {
+      const parsed = JSON.parse(latest);
+      // 構造化JSONの場合はテキストに変換
+      if (typeof parsed === 'object' && parsed !== null) {
+        return parsed.summary || parsed.text || parsed.content || JSON.stringify(parsed, null, 2);
+      }
+    } catch(e) {}
+    return latest;
+  }
   return localStorage.getItem('oneday_aix_draft') || null;
 }
 function setAixDraft(text) {
@@ -1630,7 +1642,7 @@ document.addEventListener('DOMContentLoaded', function() {
   updateBriefBtn();
   // storageイベントでBriefボタン状態を更新
   window.addEventListener('storage', function(e) {
-    if (e.key === 'oneday_aix_draft') updateBriefBtn();
+    if (e.key === 'oneday_aix_draft' || e.key === 'aix_draft_latest') updateBriefBtn();
   });
   var mobImp = document.getElementById('importFileInputMob');
   if(mobImp) {
