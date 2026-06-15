@@ -181,6 +181,14 @@ async function driveFetch(url) {
   return res;
 }
 
+async function getAccountEmail() {
+  try {
+    const r = await driveFetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress,displayName)');
+    const d = await r.json();
+    return d.user ? d.user.emailAddress : null;
+  } catch (e) { return null; }
+}
+
 async function loadBrief() {
   if (!token) { showLogin(); return; }
   const btn = document.getElementById('refreshBtn');
@@ -188,37 +196,40 @@ async function loadBrief() {
   btn.disabled = true;
   setStatus('loading', '読み込み中…');
   try {
-    // 1) aix-drafts フォルダを探す
-    let folderId = null;
-    try {
-      const fr = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=name%3D%22${FOLDER_NAME}%22+and+mimeType%3D%22application%2Fvnd.google-apps.folder%22+and+trashed%3Dfalse&fields=files(id,name)`);
-      const fd = await fr.json();
-      if (fd.files && fd.files.length) folderId = fd.files[0].id;
-    } catch (e) { if (e.code === 401 || e.code === 403) throw e; }
-
-    // 2) aix_draft_latest.json を探す
-    const q = folderId
-      ? `name%3D%22${FILE_NAME}%22+and+%22${folderId}%22+in+parents+and+trashed%3Dfalse`
-      : `name%3D%22${FILE_NAME}%22+and+trashed%3Dfalse`;
-    const lr = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc`);
+    // フォルダ非依存：ドライブ全体から完全一致で探す
+    const lr = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=name%3D%22${FILE_NAME}%22+and+trashed%3Dfalse&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=10`);
     const ld = await lr.json();
-    if (!ld.files || !ld.files.length) {
-      setStatus('error', 'ファイルなし');
-      showMessage('🔍', 'Briefが見つかりません', `GDriveに <code>${FILE_NAME}</code> が見つかりませんでした。Coworkの「1day AIX」を実行して、Briefを ${FOLDER_NAME}/ に書き出してください。`, [{ label: '再読み込み', onclick: loadBrief }]);
+
+    if (ld.files && ld.files.length) {
+      const file = ld.files[0];
+      const cr = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
+      const raw = await cr.text();
+      let data;
+      try { data = JSON.parse(raw); } catch (e) { data = raw; }
+      render(toMarkdown(data), file.modifiedTime);
+      setStatus('connected', '接続済み');
       return;
     }
-    const file = ld.files[0];
 
-    // 3) 中身を取得
-    const cr = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
-    const raw = await cr.text();
-    let data;
-    try { data = JSON.parse(raw); } catch (e) { data = raw; }
-
-    // 4) Markdown化 → 表示
-    const md = toMarkdown(data);
-    render(md, file.modifiedTime);
-    setStatus('connected', '接続済み');
+    // 見つからない → 診断情報を集める
+    setStatus('error', 'ファイルなし');
+    const email = await getAccountEmail();
+    let names = [];
+    try {
+      const dr = await driveFetch('https://www.googleapis.com/drive/v3/files?q=name+contains+%22aix%22+and+trashed%3Dfalse&fields=files(name,mimeType)&pageSize=20');
+      const dd = await dr.json();
+      names = (dd.files || []).map(f => f.name);
+    } catch (e) {}
+    const list = names.length
+      ? names.map(n => `・<code>${n}</code>`).join('<br>')
+      : '（このアカウントのドライブに「aix」を含むファイルは見つかりませんでした）';
+    showMessage('🔍', 'Briefが見つかりません',
+      `ログイン中のアカウント：<code>${email || '不明'}</code><br><br>` +
+      `<code>${FILE_NAME}</code> が見つかりませんでした。<br>このアカウントのドライブで「aix」を含むファイル：<br>${list}`,
+      [
+        { label: '再読み込み', onclick: loadBrief },
+        { label: '別アカウントで再ログイン', ghost: true, onclick: () => { clearToken(); connect(); } },
+      ]);
   } catch (e) {
     if (e.code === 401) {
       clearToken();
