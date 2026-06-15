@@ -1101,6 +1101,9 @@ const App = () => {
   const [answers, setAnswers] = useState(Array(19).fill(''));
   const [qIdx, setQIdx] = useState(0);
   const [importText, setImportText] = useState('');
+  const [aiUpdateText, setAiUpdateText] = useState('');
+  const [aiUpdateResult, setAiUpdateResult] = useState(null);
+  const [promptType, setPromptType] = useState(null);
   const [showMeetingForm, setShowMeetingForm] = useState(false);
   const [meetDate, setMeetDate] = useState('');
   const [meetContent, setMeetContent] = useState('');
