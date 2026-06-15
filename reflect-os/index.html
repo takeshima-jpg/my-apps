@@ -316,6 +316,9 @@ nav{display:flex;flex-direction:column;gap:0;}
     <nav id="nav">
       <button class="nb on" data-tab="home"><span class="nav-icon">◉</span> ホーム</button>
       <button class="nb" data-tab="log"><span class="nav-icon">≡</span> ログ</button>
+      <button class="nb" id="unthemed-btn" style="padding-left:32px;font-size:13px;color:#b09040;" onclick="S.tab='log';S.unthemedOnly=!S.unthemedOnly;this.classList.toggle('on',S.unthemedOnly);updateNav();renderLog();">
+        <span class="nav-icon" style="font-size:11px;">△</span> テーマ未紐づけ <span id="unthemed-badge" class="sb-badge" style="background:#fdf8e8;color:#b09040;border:1px solid #e8d880;"></span>
+      </button>
 
       <button class="nb" data-tab="search"><span class="nav-icon">⌕</span> 検索</button>
       <button class="nb" data-tab="ai-import"><span class="nav-icon">⬇</span> 取り込む</button>
@@ -1117,7 +1120,7 @@ function renderLog(){
     // updをthFilt対応に上書き
     f.appendChild(hd);
     const lw=D({});f.appendChild(lw);
-    function upd(){lw.innerHTML='';let rs=ft==='all'?S.logs:S.logs.filter(r=>r.type===ft);if(thFilt!=='all')rs=rs.filter(r=>(r.themes||[]).includes(thFilt));if(!rs.length){lw.appendChild(D({cls:'empty'},'記録がありません'));return;}rs.forEach(r=>lw.appendChild(logCard(r)));}
+    function upd(){lw.innerHTML='';let rs=ft==='all'?S.logs:S.logs.filter(r=>r.type===ft);if(thFilt!=='all')rs=rs.filter(r=>(r.themes||[]).includes(thFilt));if(S.unthemedOnly)rs=rs.filter(r=>!r.themes||r.themes.length===0);if(!rs.length){lw.appendChild(D({cls:'empty'},'記録がありません'));return;}rs.forEach(r=>lw.appendChild(logCard(r)));}
     upd();return f;
   }
   hd.appendChild(fc);f.appendChild(hd);
@@ -1532,6 +1535,8 @@ function updateNav(){
   const eCount=pub.filter(r=>r.nextExp?.trim()).reduce((n,r)=>n+r.nextExp.split(/\n/).filter((l,i)=>{const st=S.checks['e_'+r.id+'_'+i]||'todo';return l.trim()&&st!=='done'&&st!=='skip';}).length,0);
   const qb=document.getElementById('q-badge');if(qb)qb.textContent=qCount||'';
   const eb=document.getElementById('e-badge');if(eb)eb.textContent=eCount||'';
+  const unthemed=pub.filter(r=>!r.themes||r.themes.length===0).length;
+  const ub=document.getElementById('unthemed-badge');if(ub)ub.textContent=unthemed||'';
 }
 document.getElementById('nav').addEventListener('click',e=>{const t=e.target.dataset.tab;if(!t)return;S.tab=t;S.forming=null;S.editing=null;updateNav();ra();});
 
