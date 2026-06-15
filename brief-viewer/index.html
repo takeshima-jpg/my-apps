@@ -195,14 +195,19 @@ async function loadBrief() {
   btn.style.display = 'inline-block';
   btn.disabled = true;
   setStatus('loading', '読み込み中…');
+  const COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';
   try {
-    // フォルダ非依存：ドライブ全体から完全一致で探す
-    const lr = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=name%3D%22${FILE_NAME}%22+and+trashed%3Dfalse&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=10`);
-    const ld = await lr.json();
+    // 完全一致で探す：① マイドライブ／所有 → ② 共有アイテム(sharedWithMe)
+    let file = null;
+    for (const cond of [`name%3D%22${FILE_NAME}%22+and+trashed%3Dfalse`,
+                        `name%3D%22${FILE_NAME}%22+and+sharedWithMe%3Dtrue+and+trashed%3Dfalse`]) {
+      const lr = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${cond}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=10${COMMON}`);
+      const ld = await lr.json();
+      if (ld.files && ld.files.length) { file = ld.files[0]; break; }
+    }
 
-    if (ld.files && ld.files.length) {
-      const file = ld.files[0];
-      const cr = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
+    if (file) {
+      const cr = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media${COMMON}`);
       const raw = await cr.text();
       let data;
       try { data = JSON.parse(raw); } catch (e) { data = raw; }
@@ -211,21 +216,24 @@ async function loadBrief() {
       return;
     }
 
-    // 見つからない → 診断情報を集める
+    // 見つからない → 診断情報を集める（所有＋共有の両方をリスト）
     setStatus('error', 'ファイルなし');
     const email = await getAccountEmail();
-    let names = [];
-    try {
-      const dr = await driveFetch('https://www.googleapis.com/drive/v3/files?q=name+contains+%22aix%22+and+trashed%3Dfalse&fields=files(name,mimeType)&pageSize=20');
-      const dd = await dr.json();
-      names = (dd.files || []).map(f => f.name);
-    } catch (e) {}
-    const list = names.length
-      ? names.map(n => `・<code>${n}</code>`).join('<br>')
-      : '（このアカウントのドライブに「aix」を含むファイルは見つかりませんでした）';
+    async function listAix(cond) {
+      try {
+        const dr = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${cond}&fields=files(name)&pageSize=20${COMMON}`);
+        const dd = await dr.json();
+        return (dd.files || []).map(f => f.name);
+      } catch (e) { return []; }
+    }
+    const owned = await listAix('name+contains+%22aix%22+and+trashed%3Dfalse');
+    const shared = await listAix('name+contains+%22aix%22+and+sharedWithMe%3Dtrue+and+trashed%3Dfalse');
+    const fmt = arr => arr.length ? arr.map(n => `・<code>${n}</code>`).join('<br>') : '（なし）';
     showMessage('🔍', 'Briefが見つかりません',
       `ログイン中のアカウント：<code>${email || '不明'}</code><br><br>` +
-      `<code>${FILE_NAME}</code> が見つかりませんでした。<br>このアカウントのドライブで「aix」を含むファイル：<br>${list}`,
+      `<code>${FILE_NAME}</code> が見つかりませんでした。<br><br>` +
+      `<b>所有/マイドライブの「aix」ファイル：</b><br>${fmt(owned)}<br><br>` +
+      `<b>共有された「aix」ファイル：</b><br>${fmt(shared)}`,
       [
         { label: '再読み込み', onclick: loadBrief },
         { label: '別アカウントで再ログイン', ghost: true, onclick: () => { clearToken(); connect(); } },
