@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Brief Viewer — my-apps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f5f7; --bg2: #ffffff; --bg3: #ebebee; --bg4: #e0e0e5;
+  --border: #d8d8e0; --border2: #c8c8d4;
+  --text: #1a1a22; --text2: #5a5a6e; --text3: #9898a8;
+  --accent: #7c6fff; --accent2: #5b51d8;
+  --radius: 6px; --radius2: 10px;
+  --font-body: 'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif; --font-mono: 'JetBrains Mono', monospace;
+  --transition: 0.18s ease;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 17px; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+.wrap { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* HEADER */
+.bv-header { display: flex; align-items: center; gap: 10px; padding: 14px 18px; padding-top: max(14px, env(safe-area-inset-top)); border-bottom: 1px solid var(--border); background: var(--bg2); position: sticky; top: 0; z-index: 10; }
+.bv-logo { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.bv-logo .mark { font-size: 18px; }
+.bv-logo .name { font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.bv-status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3); }
+.bv-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+.bv-dot.connected { background: #3ecf8e; }
+.bv-dot.loading { background: var(--accent); animation: pulse 1s infinite; }
+.bv-dot.error { background: #ff5c5c; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+.bv-refresh { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; font-size: 13px; color: var(--text2); cursor: pointer; font-family: var(--font-body); transition: all var(--transition); white-space: nowrap; }
+.bv-refresh:hover { border-color: var(--accent); color: var(--accent); }
+.bv-refresh:disabled { opacity: .4; cursor: default; }
+
+/* BODY */
+.bv-main { flex: 1; overflow-y: auto; }
+
+/* LOGIN STATE */
+.bv-login { max-width: 480px; margin: 0 auto; padding: 64px 24px; text-align: center; }
+.bv-login .big-mark { font-size: 44px; margin-bottom: 16px; }
+.bv-login h1 { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+.bv-login p { font-size: 14px; color: var(--text2); line-height: 1.7; margin-bottom: 28px; }
+.bv-login-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 320px; padding: 13px 20px; font-size: 15px; font-weight: 600; background: var(--accent); color: #fff; border: none; border-radius: var(--radius2); cursor: pointer; font-family: var(--font-body); transition: all var(--transition); }
+.bv-login-btn:hover { background: var(--accent2); }
+.bv-login .note { font-size: 12px; color: var(--text3); margin-top: 20px; line-height: 1.6; }
+
+/* BRIEF BODY */
+.bv-meta { max-width: 760px; margin: 0 auto; padding: 18px 24px 0; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text3); }
+.bv-meta .date-pill { font-family: var(--font-mono); background: var(--bg3); border-radius: 20px; padding: 3px 12px; color: var(--text2); }
+.brief-body { max-width: 760px; margin: 0 auto; padding: 14px 24px 60px; line-height: 1.8; width: 100%; }
+.brief-body h1 { font-size: 1.4rem; font-weight: 700; margin: 24px 0 12px; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 6px; }
+.brief-body h2 { font-size: 1.15rem; font-weight: 700; margin: 22px 0 8px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.brief-body h2::before { content: ''; width: 4px; height: 1em; background: var(--accent); border-radius: 2px; flex-shrink: 0; }
+.brief-body h3 { font-size: 1rem; font-weight: 700; margin: 16px 0 6px; color: var(--text2); }
+.brief-body p { margin: 8px 0; color: var(--text); }
+.brief-body ul, .brief-body ol { margin: 8px 0 8px 20px; color: var(--text); }
+.brief-body li { margin: 5px 0; }
+.brief-body strong { font-weight: 700; color: var(--text); }
+.brief-body hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.brief-body code { background: var(--bg3); border-radius: 4px; padding: 2px 6px; font-family: var(--font-mono); font-size: 0.9em; }
+
+/* MESSAGE STATE */
+.bv-msg { max-width: 480px; margin: 0 auto; padding: 56px 24px; text-align: center; color: var(--text2); }
+.bv-msg .icon { font-size: 36px; margin-bottom: 14px; }
+.bv-msg h2 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.bv-msg p { font-size: 13px; line-height: 1.7; margin-bottom: 18px; }
+.bv-msg button { padding: 9px 18px; font-size: 14px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); cursor: pointer; font-family: var(--font-body); }
+.bv-msg button.ghost { background: none; border: 1px solid var(--border); color: var(--text2); }
+
+@media (max-width: 600px) {
+  html { font-size: 16px; }
+  .bv-logo .name { font-size: 14px; }
+  .brief-body { padding: 14px 18px 56px; }
+  .bv-meta { padding: 16px 18px 0; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="bv-header">
+    <div class="bv-logo">
+      <span class="mark">📋</span>
+      <span class="name">Brief Viewer</span>
+    </div>
+    <div class="bv-status">
+      <span class="bv-dot" id="dot"></span>
+      <span id="statusText">未接続</span>
+    </div>
+    <button class="bv-refresh" id="refreshBtn" onclick="loadBrief()" style="display:none">↻ 更新</button>
+  </header>
+  <main class="bv-main" id="main"></main>
+</div>
+
+<script>
+// ===== 設定 =====
+const CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
+const SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+const REDIRECT_URI = location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html');
+const FOLDER_NAME = 'aix-drafts';
+const FILE_NAME = 'aix_draft_latest.json';
+const TOKEN_KEY = 'brief_viewer_token';
+
+let token = null;
+
+// ===== OAuth =====
+function connect() {
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'token',
+    scope: SCOPE,
+    prompt: 'select_account',
+    include_granted_scopes: 'true',
+  });
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+}
+
+function handleRedirect() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const t = hash.get('access_token');
+  if (t) {
+    token = t;
+    localStorage.setItem(TOKEN_KEY, t);
+    history.replaceState(null, '', location.pathname);
+  } else {
+    const saved = localStorage.getItem(TOKEN_KEY);
+    if (saved) token = saved;
+  }
+}
+
+function clearToken() {
+  token = null;
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+// ===== UI状態 =====
+function setStatus(state, text) {
+  const dot = document.getElementById('dot');
+  dot.className = 'bv-dot' + (state ? ' ' + state : '');
+  document.getElementById('statusText').textContent = text;
+}
+
+function showLogin() {
+  document.getElementById('refreshBtn').style.display = 'none';
+  setStatus('', '未接続');
+  document.getElementById('main').innerHTML = `
+    <div class="bv-login">
+      <div class="big-mark">📋</div>
+      <h1>Morning Brief を表示</h1>
+      <p>Coworkが毎朝GDriveに書き出す Morning Brief を、このデバイスで読み取り専用で表示します。Googleアカウントでログインしてください。</p>
+      <button class="bv-login-btn" onclick="connect()">Googleでログイン</button>
+      <div class="note">drive.readonly（読み取り専用）でアクセスします。初回は「確認されていないアプリ」の警告が出ますが、ご自身のアプリなので「詳細」→「移動」で進めてください。</div>
+    </div>`;
+}
+
+function showMessage(icon, title, text, actions) {
+  const main = document.getElementById('main');
+  main.innerHTML = `<div class="bv-msg"><div class="icon">${icon}</div><h2>${title}</h2><p>${text}</p><div id="msgActions"></div></div>`;
+  const box = document.getElementById('msgActions');
+  (actions || []).forEach(a => {
+    const b = document.createElement('button');
+    b.textContent = a.label;
+    if (a.ghost) b.className = 'ghost';
+    b.onclick = a.onclick;
+    b.style.margin = '0 4px';
+    box.appendChild(b);
+  });
+}
+
+// ===== Drive取得 =====
+async function driveFetch(url) {
+  const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+  if (res.status === 401) { const e = new Error('unauthorized'); e.code = 401; throw e; }
+  if (res.status === 403) { const e = new Error('forbidden'); e.code = 403; throw e; }
+  if (!res.ok) { const e = new Error('http ' + res.status); e.code = res.status; throw e; }
+  return res;
+}
+
+async function loadBrief() {
+  if (!token) { showLogin(); return; }
+  const btn = document.getElementById('refreshBtn');
+  btn.style.display = 'inline-block';
+  btn.disabled = true;
+  setStatus('loading', '読み込み中…');
+  try {
+    // 1) aix-drafts フォルダを探す
+    let folderId = null;
+    try {
+      const fr = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=name%3D%22${FOLDER_NAME}%22+and+mimeType%3D%22application%2Fvnd.google-apps.folder%22+and+trashed%3Dfalse&fields=files(id,name)`);
+      const fd = await fr.json();
+      if (fd.files && fd.files.length) folderId = fd.files[0].id;
+    } catch (e) { if (e.code === 401 || e.code === 403) throw e; }
+
+    // 2) aix_draft_latest.json を探す
+    const q = folderId
+      ? `name%3D%22${FILE_NAME}%22+and+%22${folderId}%22+in+parents+and+trashed%3Dfalse`
+      : `name%3D%22${FILE_NAME}%22+and+trashed%3Dfalse`;
+    const lr = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc`);
+    const ld = await lr.json();
+    if (!ld.files || !ld.files.length) {
+      setStatus('error', 'ファイルなし');
+      showMessage('🔍', 'Briefが見つかりません', `GDriveに <code>${FILE_NAME}</code> が見つかりませんでした。Coworkの「1day AIX」を実行して、Briefを ${FOLDER_NAME}/ に書き出してください。`, [{ label: '再読み込み', onclick: loadBrief }]);
+      return;
+    }
+    const file = ld.files[0];
+
+    // 3) 中身を取得
+    const cr = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
+    const raw = await cr.text();
+    let data;
+    try { data = JSON.parse(raw); } catch (e) { data = raw; }
+
+    // 4) Markdown化 → 表示
+    const md = toMarkdown(data);
+    render(md, file.modifiedTime);
+    setStatus('connected', '接続済み');
+  } catch (e) {
+    if (e.code === 401) {
+      clearToken();
+      setStatus('error', '再ログインが必要');
+      showMessage('🔑', 'セッションが切れました', 'Googleのアクセストークンが期限切れです。もう一度ログインしてください。', [{ label: 'Googleでログイン', onclick: connect }]);
+      return;
+    }
+    if (e.code === 403) {
+      setStatus('error', '権限エラー');
+      showMessage('⚠️', 'アクセス権限がありません', 'マイドライブの読み取り権限（drive.readonly）が付与されていない可能性があります。一度ログアウトして、権限を許可して再ログインしてください。', [
+        { label: '再ログイン', onclick: () => { clearToken(); connect(); } },
+        { label: 'もう一度試す', ghost: true, onclick: loadBrief },
+      ]);
+      return;
+    }
+    setStatus('error', 'エラー');
+    showMessage('⚠️', '読み込みに失敗しました', '通信エラーが発生しました。電波状況を確認して再読み込みしてください。', [{ label: '再読み込み', onclick: loadBrief }]);
+    console.warn('brief load error:', e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ===== 構造化JSON → Markdown（1day OS getAixDraft と同一ロジック） =====
+function toMarkdown(d) {
+  if (typeof d === 'string') return d;
+  if (typeof d !== 'object' || d === null) return String(d);
+  let md = '';
+  if (d.top_theme) md += `## 今日の最重要テーマ\n${d.top_theme}\n\n`;
+  if (d.changes?.length) md += `## 昨日からの重要変化\n${d.changes.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.decisions?.length) md += `## 今日判断すべきこと\n${d.decisions.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d['育成']?.length) md += `## 今日育成すべき人\n${d['育成'].map(p => `・${p.name}：${p.reason}`).join('\n')}\n\n`;
+  if (d['会う価値']?.length) md += `## 今日接触する価値のある人\n${d['会う価値'].map(p => `・${p.name}：${p.purpose}`).join('\n')}\n\n`;
+  if (d.risks?.length) md += `## 放置リスク\n${d.risks.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.winning_moves?.length) md += `## 今週の勝ち筋\n${d.winning_moves.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.proposals?.length) md += `## AI参謀からの提言\n${d.proposals.map(p => `・${p.content}${p.partner_relation ? ' — ' + p.partner_relation : ''}`).join('\n')}\n\n`;
+  if (d.os_gaps?.length) md += `## OS齟齬レポート\n${d.os_gaps.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.previous_proposal_tracking?.length) md += `## 前回提言の進捗\n${d.previous_proposal_tracking.map(c => `・${c}`).join('\n')}\n\n`;
+  return md.trim() || JSON.stringify(d, null, 2);
+}
+
+// ===== Markdown → HTML（1day OS markdownToHtml と同一） =====
+function markdownToHtml(md) {
+  if (!md) return '';
+  const lines = md.split('\n');
+  let html = '';
+  let inList = false;
+  for (let line of lines) {
+    line = line
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`(.+?)`/g, '<code>$1</code>');
+    if (/^### (.+)/.test(line)) { if (inList) { html += '</ul>'; inList = false; } html += '<h3>' + line.replace(/^### /, '') + '</h3>'; }
+    else if (/^## (.+)/.test(line)) { if (inList) { html += '</ul>'; inList = false; } html += '<h2>' + line.replace(/^## /, '') + '</h2>'; }
+    else if (/^# (.+)/.test(line)) { if (inList) { html += '</ul>'; inList = false; } html += '<h1>' + line.replace(/^# /, '') + '</h1>'; }
+    else if (/^---+$/.test(line)) { if (inList) { html += '</ul>'; inList = false; } html += '<hr>'; }
+    else if (/^[-・*] (.+)/.test(line)) { if (!inList) { html += '<ul>'; inList = true; } html += '<li>' + line.replace(/^[-・*] /, '') + '</li>'; }
+    else if (/^\d+\. (.+)/.test(line)) { if (!inList) { html += '<ul>'; inList = true; } html += '<li>' + line.replace(/^\d+\. /, '') + '</li>'; }
+    else if (line.trim() === '') { if (inList) { html += '</ul>'; inList = false; } html += '<br>'; }
+    else { if (inList) { html += '</ul>'; inList = false; } html += '<p>' + line + '</p>'; }
+  }
+  if (inList) html += '</ul>';
+  return html;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  } catch (e) { return iso; }
+}
+
+function render(md, modifiedTime) {
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="bv-meta">
+      <span>📋 Morning Brief</span>
+      <span class="date-pill">最終更新 ${fmtDate(modifiedTime)}</span>
+    </div>
+    <div class="brief-body">${markdownToHtml(md)}</div>`;
+}
+
+// ===== 起動 =====
+handleRedirect();
+if (token) {
+  loadBrief();
+} else {
+  showLogin();
+}
+</script>
+</body>
+</html>
