@@ -1120,6 +1120,7 @@ const App = () => {
     window.__hitomemoRestore = (list) => updateList(list);
     window.__hitomemoNewPerson = () => { setAnswers(Array(19).fill('')); setQIdx(0); setView('interview'); };
     window.__hitomemoImportMemo = () => { setImportText(''); setView('import'); };
+    window.__hitomemoShowPrompt = (type) => { setPromptType(type); setView('prompt'); };
 
     // Cowork用CRUD API
     window.__hitomemoGetAll = () => {
