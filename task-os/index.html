@@ -768,31 +768,62 @@ function handleAixTaskImport(e) {
   const reader = new FileReader();
   reader.onload = ev => {
     try {
-      const newTasks = JSON.parse(ev.target.result);
-      if (!Array.isArray(newTasks)) { alert('形式エラー: 配列のJSONファイルを選択してください'); return; }
+      const parsed = JSON.parse(ev.target.result);
 
-      // 既存のShotTaskOSデータを取得
+      // 形式判定：配列なら旧形式、オブジェクトなら新形式
+      const isNewFormat = !Array.isArray(parsed) && typeof parsed === 'object' && parsed !== null;
+      const tasks = isNewFormat ? (parsed.tasks || []) : parsed;
+
+      if (!Array.isArray(tasks)) { alert('形式エラー: 正しいJSONファイルを選択してください'); return; }
+
+      // ① tasks → shot-task-os-v1 にマージ
       const existing = JSON.parse(localStorage.getItem('shot-task-os-v1') || '[]');
       const existingIds = new Set(existing.map(t => t.id));
-
-      // 重複チェックしてマージ
       let added = 0;
-      for (const task of newTasks) {
+      for (const task of tasks) {
         if (!task.id || existingIds.has(task.id)) continue;
         existing.push(task);
         existingIds.add(task.id);
         added++;
       }
+      localStorage.setItem('shot-task-os-v1', JSON.stringify(existing));
 
-      if (added === 0) {
-        toast('追加できるAIタスクはありませんでした（全て重複）');
+      let draftCount = 0;
+      let briefLoaded = false;
+
+      if (isNewFormat) {
+        // ② aix_drafts → localStorage['aix_drafts'] にマージ（同日付は上書き）
+        if (Array.isArray(parsed.aix_drafts) && parsed.aix_drafts.length > 0) {
+          const existingDrafts = JSON.parse(localStorage.getItem('aix_drafts') || '[]');
+          const draftMap = {};
+          for (const d of existingDrafts) { if (d && d.date) draftMap[d.date] = d; }
+          for (const d of parsed.aix_drafts) {
+            if (d && d.date) { draftMap[d.date] = d; draftCount++; }
+          }
+          const mergedDrafts = Object.values(draftMap).sort((a, b) => (a.date < b.date ? 1 : -1));
+          localStorage.setItem('aix_drafts', JSON.stringify(mergedDrafts));
+        }
+
+        // ③ brief → localStorage['aix_draft_latest'] に保存
+        if (parsed.brief && typeof parsed.brief === 'object') {
+          localStorage.setItem('aix_draft_latest', JSON.stringify(parsed.brief));
+          briefLoaded = true;
+        }
+      }
+
+      if (added === 0 && draftCount === 0 && !briefLoaded) {
+        toast('追加できる新規データはありませんでした');
         e.target.value = '';
         return;
       }
 
-      localStorage.setItem('shot-task-os-v1', JSON.stringify(existing));
       renderHome();
-      toast(`✅ ${added}件のAIタスクを追加しました`);
+
+      if (isNewFormat) {
+        toast(`✅ AIタスク${added}件・1dayドラフト${draftCount}件・Briefを取り込みました`);
+      } else {
+        toast(`✅ ${added}件のAIタスクを追加しました`);
+      }
     } catch(err) {
       alert('読込エラー: JSONファイルが正しくありません\n' + err.message);
     }
