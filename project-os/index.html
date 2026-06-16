@@ -1362,25 +1362,7 @@ function renderSb() {
    ② 危険シグナル
    ③ PJ別直近実行ポイント
 ══════════════════════════════════ */
-function renderDash() {
-  const d = new Date();
-  const WD = ['日','月','火','水','木','金','土'];
-  $$('dash-date').textContent =
-    `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）`;
-
-  const ps    = S.projects.filter(p => p.status !== '完了');
-  const now   = new Date();
-  const todayStr = today();
-  const twoWeeksAgo = new Date(now); twoWeeksAgo.setDate(now.getDate() - 14);
-  const twoWeeksFwd = new Date(now); twoWeeksFwd.setDate(now.getDate() + 14);
-
-  /* ─────────────────────────────────────
-     共通: PJ横断の全実行候補を収集
-     種別: 制約 / 分岐 / 通常(≠完了・≠記録)
-  ───────────────────────────────────── */
-  const KIND_BD = { '分岐':'bd-yellow','制約':'bd-blue','記録':'bd-purple','通常':'bd-gray' };
-  const KIND_PRI = { '制約':1,'分岐':2,'通常':3 };
-  const ST_CL   = { '進行中':'bd-green','保留':'bd-yellow' };
+function collectExecItems(ps, twoWeeksAgo, twoWeeksFwd) {
 
   // スコアリング: 日付が近いほど高、制約>分岐>通常
   
@@ -1407,8 +1389,11 @@ function renderDash() {
     });
   });
   allExecItems.sort((a,b) => (a.date||'9999').localeCompare(b.date||'9999'));
+  return allExecItems;
+}
 
-  /* ─────────────────────────────────────
+function renderDashTop3(allExecItems, KIND_BD, ST_CL) {
+/* ─────────────────────────────────────
      ZONE A: 今押すべきTOP3（PJ横断）
   ───────────────────────────────────── */
   const top3 = allExecItems.slice(0, 3);
@@ -1430,8 +1415,10 @@ function renderDash() {
           </div>
         </div>`).join('')}
     </div>` : '';
+}
 
-  /* ─────────────────────────────────────
+function renderDashSignals(ps, now, todayStr) {
+/* ─────────────────────────────────────
      ZONE B: 危険シグナル
   ───────────────────────────────────── */
   const sigs = [];
@@ -1463,8 +1450,10 @@ function renderDash() {
         </div>`;
       }).join('')
     : '<div class="sig-none">✓ 危険信号なし</div>');
+}
 
-  /* ─────────────────────────────────────
+function renderDashExec(ps, twoWeeksAgo, twoWeeksFwd, KIND_PRI, KIND_BD, ST_CL) {
+/* ─────────────────────────────────────
      ZONE C: PJ別 直近実行ポイント
      制約→分岐→通常の優先順、1PJあたり5件まで
   ───────────────────────────────────── */
@@ -1526,8 +1515,10 @@ function renderDash() {
       <div class="top3-label">各PJの直近実行ポイント <span style="font-weight:400;">（今日±14日 / 制約・分岐・未完了）</span></div>
       ${execHtml}
     </div>` : '';
+}
 
-  /* ─────────────────────────────────────
+function renderDashPjs(todayStr) {
+/* ─────────────────────────────────────
      ZONE D: 進行中プロジェクト一覧
   ───────────────────────────────────── */
   const activePjs = S.projects.filter(p => p.status !== '完了' && p.status !== '保留');
@@ -1576,6 +1567,33 @@ function renderDash() {
         ${pjCards}
       </div>
     </div>` : '';
+}
+
+function renderDash() {
+  const d = new Date();
+  const WD = ['日','月','火','水','木','金','土'];
+  $$('dash-date').textContent =
+    `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）`;
+
+  const ps    = S.projects.filter(p => p.status !== '完了');
+  const now   = new Date();
+  const todayStr = today();
+  const twoWeeksAgo = new Date(now); twoWeeksAgo.setDate(now.getDate() - 14);
+  const twoWeeksFwd = new Date(now); twoWeeksFwd.setDate(now.getDate() + 14);
+
+  /* ─────────────────────────────────────
+     共通: PJ横断の全実行候補を収集
+     種別: 制約 / 分岐 / 通常(≠完了・≠記録)
+  ───────────────────────────────────── */
+  const KIND_BD = { '分岐':'bd-yellow','制約':'bd-blue','記録':'bd-purple','通常':'bd-gray' };
+  const KIND_PRI = { '制約':1,'分岐':2,'通常':3 };
+  const ST_CL   = { '進行中':'bd-green','保留':'bd-yellow' };
+
+  const allExecItems = collectExecItems(ps, twoWeeksAgo, twoWeeksFwd);
+  renderDashTop3(allExecItems, KIND_BD, ST_CL);
+  renderDashSignals(ps, now, todayStr);
+  renderDashExec(ps, twoWeeksAgo, twoWeeksFwd, KIND_PRI, KIND_BD, ST_CL);
+  renderDashPjs(todayStr);
 }
 
 /* ══════════════════════════════════
