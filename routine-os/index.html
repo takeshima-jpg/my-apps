@@ -599,9 +599,6 @@ async function gdriveAutoLoad() {
 }
 
 // 起動時に自動保存（ログインしている場合）
-function gdriveAutoSave() {
-  if (gdriveToken) gdriveSave();
-}
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
@@ -626,7 +623,6 @@ function toDateKey(value){
   var d=new Date(value);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-function getTodayKey(){return tds;}
 function getDateState(nextDate){
   var key=toDateKey(nextDate);
   if(!key)return 'none';
@@ -714,11 +710,6 @@ function showToast(){
   t.classList.add('show');
   setTimeout(function(){t.classList.remove('show');},1500);
 }
-function clearAll(){
-  if(!confirm('全タスクデータを削除しますか？この操作は元に戻せません。'))return;
-  tasks=[];taskLogs=[];nid=1;
-  saveData();rAll();
-}
 
 // ========== CYCLE NORMALIZATION ==========
 function normalizeCycle(value){
@@ -798,7 +789,6 @@ function calcNext(t,from){
 // ========== STATUS HELPERS ==========
 function isOv(t){if(!t.nextDate||t.status==='完了'||t.status==='停止')return false;return getDateState(t.nextDate)==='overdue';}
 function isTod(t){if(!t.nextDate||t.status==='完了'||t.status==='停止')return false;return getDateState(t.nextDate)==='today';}
-function isWk(t){if(!t.nextDate)return false;var e=new Date(today);e.setDate(e.getDate()+7);return t.nextDate>=tds&&t.nextDate<=ds(e)&&t.status!=='完了'&&t.status!=='停止';}
 
 // ========== LOGGING ==========
 var logNid=1;
@@ -1114,11 +1104,7 @@ function getRoutineInterval(t){
   var map={'週次':{type:'days',value:7},'隔週':{type:'days',value:14},'月次':{type:'months',value:1},'隔月':{type:'months',value:2},'四半期':{type:'months',value:3},'半期':{type:'months',value:6},'年次':{type:'years',value:1}};
   return map[cycle]||null;
 }
-function getCycleInterval(t){return getRoutineInterval(t);}
-function canInferIntervalFromCycle(t){return getRoutineInterval(t)!==null;}
 // 既存コードとの後方互換（旧文字列ベース加算は残置）
-function addMonthsSafe(dateStr,months){var d=new Date(dateStr+'T00:00:00');var orig=d.getDate();d.setMonth(d.getMonth()+months);if(d.getDate()!==orig)d.setDate(0);return ds(d);}
-function addYearsSafe(dateStr,years){var d=new Date(dateStr+'T00:00:00');d.setFullYear(d.getFullYear()+years);return ds(d);}
 
 // 完了・スキップ専用：ローカル日付計算で確実に未来日を返す（最大240回）
 function calcNextRoutineDate(t,previousScheduledDate){
@@ -1145,12 +1131,7 @@ function calcNextRoutineDate(t,previousScheduledDate){
   }
   return formatLocalDate(next);
 }
-function calcNextBySchedule(t,prev){return calcNextRoutineDate(t,prev);}
 // 延期専用（周期計算なし）
-function ensureFutureDate(dateValue){
-  if(!dateValue||!isValidDate(dateValue)||dateValue<=tds)return getTomorrowDate();
-  return dateValue;
-}
 function doComplete(id,memo){
   var t=tasks.find(function(x){return String(x.id)===String(id);});if(!t)return;
   t.cycle=normalizeCycle(t.cycle);
@@ -1212,13 +1193,6 @@ function stopT(id){
   var t=tasks.find(function(x){return x.id===id;});if(!t)return;
   addLog(id,'停止',{prev:t.nextDate});
   t.status='停止';t.updatedAt=new Date().toISOString();
-  saveData();rAll();
-}
-function delT(id){
-  if(!confirm('削除しますか？'))return;
-  var t=tasks.find(function(x){return x.id===id;});
-  if(t)addLog(id,'削除',{prev:t.nextDate,title:t.title,layer:t.layer,cycle:t.cycle});
-  tasks=tasks.filter(function(x){return x.id!==id;});
   saveData();rAll();
 }
 function recalc(id){
@@ -1643,26 +1617,6 @@ function deleteT(){
 }
 
 // ========== CSV IMPORT ==========
-function doImport(){
-  var raw=document.getElementById('csv-inp').value.trim();if(!raw)return;
-  var lines=raw.split('\n'),hdrs=lines[0].split(',').map(function(h){return h.trim();}),cnt=0,errs=[];
-  for(var i=1;i<lines.length;i++){
-    if(!lines[i].trim())continue;
-    var vals=lines[i].split(',').map(function(v){return v.trim();}),row={};
-    hdrs.forEach(function(h,idx){row[h]=vals[idx]||'';});
-    if(!row['タイトル'])continue;
-    var cyv=normalizeCycle(row['サイクル']||'')||'不定期';
-    var nxv=row['次回予定']||'';
-    var nxNorm=normalizeDate(nxv);
-    if(nxv&&!isValidDate(nxNorm))errs.push('No.'+(i)+' 「'+row['タイトル']+'」の日付が不正：'+nxv);
-    tasks.push({id:nid++,title:row['タイトル'],cycle:cyv,dept:row['部署']||'',nextDate:isValidDate(nxNorm)?nxNorm:nxv,url:row['URL']||'',note:row['備考']||'',layer:4,status:'未完了',addType:'calendar',addBase:'from_next',lastScheduledDate:''});
-    cnt++;
-  }
-  var html='<div class="al al-g">'+cnt+'件を取込みました。レイヤー分類・成果物・通知文を手動設定してください。</div>';
-  if(errs.length)html+=errs.map(function(e){return'<div class="al al-w">'+e+'</div>';}).join('');
-  document.getElementById('ir').innerHTML=html;
-  saveData();rAll();
-}
 // ========== SEED DATA ==========
 function normalizeSeedDate(v){
   if(!v||typeof v!=='string')return '';
