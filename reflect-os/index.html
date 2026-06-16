@@ -396,6 +396,7 @@ function gdriveHandleRedirect() {
 
 // 他のタブでログインした場合にUIを自動更新
 window.addEventListener('storage', function(e) {
+  if (e.key === 'reflectOS_v1') { location.reload(); return; }
   if (e.key === 'gdrive_token') {
     if (e.newValue) {
       gdriveToken = e.newValue;
@@ -564,36 +565,44 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /* ── DB ── */
-const DBN='ReflectOS7',DBV=1;
-let _db=null;
-function odb(){
-  if(_db)return Promise.resolve(_db);
-  return new Promise((res,rej)=>{
-    const r=indexedDB.open(DBN,DBV);
-    r.onupgradeneeded=e=>{
-      const db=e.target.result;
-      ['logs','themes','settings','checks'].forEach(s=>{
-        if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'});
-      });
-    };
-    r.onsuccess=e=>{_db=e.target.result;res(_db);};
-    r.onerror=e=>{
-      // バージョン競合時はDBを削除して再試行
-      console.warn('DB open error, retrying...',e.target.error);
-      indexedDB.deleteDatabase(DBN);
-      const r2=indexedDB.open(DBN,DBV);
-      r2.onupgradeneeded=e2=>{const db=e2.target.result;['logs','themes','settings','checks'].forEach(s=>{if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'});});};
-      r2.onsuccess=e2=>{_db=e2.target.result;res(_db);};
-      r2.onerror=e2=>rej(e2);
-    };
-    r.onblocked=()=>{console.warn('DB blocked');};
+/* ── 永続化：localStorage（旧IndexedDB ReflectOS7 から自動移行）── */
+const LS_KEY='reflectOS_v1';
+const _RS=['logs','themes','settings','checks'];
+let _migrated=false,_migP=null;
+function _lsRead(){
+  try{const o=JSON.parse(localStorage.getItem(LS_KEY)||'null');
+    if(o&&typeof o==='object'){_RS.forEach(s=>{if(!Array.isArray(o[s]))o[s]=[];});return o;}}catch(e){}
+  return {logs:[],themes:[],settings:[],checks:[]};
+}
+function _lsWrite(o){ try{localStorage.setItem(LS_KEY,JSON.stringify(o));}catch(e){console.warn('reflectOS save失敗',e);} }
+/* 旧IndexedDB(ReflectOS7)が残っていれば一回だけlocalStorageへ移行。失敗時は書かず次回再試行 */
+function _migrateFromIDB(){
+  return new Promise(res=>{
+    if(localStorage.getItem(LS_KEY)!==null){res();return;}
+    if(!('indexedDB' in window)){_lsWrite({logs:[],themes:[],settings:[],checks:[]});res();return;}
+    let done=false;const ok=o=>{if(done)return;done=true;_lsWrite(o);res();};
+    try{
+      const req=indexedDB.open('ReflectOS7',1);
+      req.onupgradeneeded=e=>{const db=e.target.result;_RS.forEach(s=>{if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'});});};
+      req.onerror=()=>{ if(!done){done=true;res();} };  /* 開けない時はLS未設定のまま→次回再試行 */
+      req.onsuccess=e=>{
+        const db=e.target.result;const out={logs:[],themes:[],settings:[],checks:[]};
+        const have=_RS.filter(s=>db.objectStoreNames.contains(s));
+        if(!have.length){try{db.close();}catch(_){}ok(out);return;}
+        let left=have.length;const tx=db.transaction(have,'readonly');
+        have.forEach(s=>{const g=tx.objectStore(s).getAll();
+          g.onsuccess=()=>{out[s]=g.result||[];if(--left===0){try{db.close();}catch(_){}ok(out);}};
+          g.onerror=()=>{if(--left===0){try{db.close();}catch(_){}ok(out);}};});
+      };
+    }catch(e){ if(!done){done=true;res();} }
   });
 }
-async function dbput(s,v){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).put(v);tx.oncomplete=res;tx.onerror=rej;});}
-async function dbget(s,k){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readonly');const r=tx.objectStore(s).get(k);r.onsuccess=()=>res(r.result);r.onerror=rej;});}
-async function dball(s){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readonly');const r=tx.objectStore(s).getAll();r.onsuccess=()=>res(r.result);r.onerror=rej;});}
-async function dbclear(s){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).clear();tx.oncomplete=res;tx.onerror=rej;});}
-async function dbdel(s,k){const db=await odb();return new Promise((res,rej)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).delete(k);tx.oncomplete=res;tx.onerror=rej;});}
+async function _ensure(){ if(!_migrated){ if(!_migP)_migP=_migrateFromIDB(); await _migP; _migrated=true; } return _lsRead(); }
+async function dbput(s,v){ const o=await _ensure(); const a=o[s]||(o[s]=[]); const i=a.findIndex(x=>x&&x.id===v.id); if(i>=0)a[i]=v; else a.push(v); _lsWrite(o); }
+async function dbget(s,k){ const o=await _ensure(); return (o[s]||[]).find(x=>x&&x.id===k); }
+async function dball(s){ const o=await _ensure(); return (o[s]||[]).slice(); }
+async function dbclear(s){ const o=await _ensure(); o[s]=[]; _lsWrite(o); }
+async function dbdel(s,k){ const o=await _ensure(); o[s]=(o[s]||[]).filter(x=>x&&x.id!==k); _lsWrite(o); }
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
 const tod=()=>new Date().toISOString().split('T')[0];
 const dAgo=d=>Math.floor((Date.now()-new Date(d))/(864e5));
