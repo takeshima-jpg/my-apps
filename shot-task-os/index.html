@@ -1130,9 +1130,6 @@ async function gdriveAutoLoad() {
 }
 
 // 起動時に自動保存（ログインしている場合）
-function gdriveAutoSave() {
-  if (gdriveToken) gdriveSave();
-}
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
@@ -1185,11 +1182,6 @@ function getDateState(due) {
 function fmtDate(v) {
   const k = toDateKey(v);
   return k ? k.replace(/-/g, '/') : '';
-}
-function fmtDateShort(v) {
-  const k = toDateKey(v);
-  if (!k) return '—';
-  return k.slice(5).replace('-', '/');
 }
 function addDays(base, n) {
   const d = base ? new Date(base + 'T00:00:00') : new Date();
@@ -1337,13 +1329,6 @@ function setToday(id) {
 }
 
 // ── POSTPONE ──
-function postpone(id, days) {
-  const t = tasks.find(x => x.id === id); if (!t) return;
-  const base = t.dueDate || getTodayKey();
-  t.dueDate = addDays(base, days);
-  t.updatedAt = new Date().toISOString();
-  save(); render();
-}
 
 // ── DELETE ──
 function deleteTask(id, title) {
@@ -1734,35 +1719,11 @@ function importJSON() {
 }
 
 // タイトル正規化（全角/半角・前後スペース・の削除）
-function normalizeTitle(t) {
-  return (t||'').replace(/[\u3000\s]/g,'').replace(/の/g,'').toLowerCase();
-}
 
 // ステータス優先度（小さいほど優先）
 function statusPri(s){ return s==='done'?0:s==='todo'?1:s==='pending'?2:9; }
 
 // タスクマージ
-function mergeTasks(existing, incoming) {
-  const es = existing.status, is_ = incoming.status;
-  const status = statusPri(es) <= statusPri(is_) ? es : is_;
-  const memoA = (existing.memo||'').split('\n').map(s=>s.trim()).filter(Boolean);
-  const memoB = (incoming.memo||'').split('\n').map(s=>s.trim()).filter(Boolean);
-  const memoSet = new Set([...memoA, ...memoB]);
-  const memo = [...memoSet].join('\n');
-  const dueDate = existing.dueDate || incoming.dueDate || null;
-  const createdAt = (existing.createdAt && incoming.createdAt)
-    ? (existing.createdAt < incoming.createdAt ? existing.createdAt : incoming.createdAt)
-    : (existing.createdAt || incoming.createdAt || null);
-  const updatedAt = (existing.updatedAt && incoming.updatedAt)
-    ? (existing.updatedAt > incoming.updatedAt ? existing.updatedAt : incoming.updatedAt)
-    : (existing.updatedAt || incoming.updatedAt || null);
-  const completedAt = status==='done'
-    ? ((existing.completedAt && incoming.completedAt)
-        ? (existing.completedAt > incoming.completedAt ? existing.completedAt : incoming.completedAt)
-        : (existing.completedAt || incoming.completedAt || null))
-    : null;
-  return {...existing, status, memo, dueDate, createdAt, updatedAt, completedAt};
-}
 
 function handleImportFile(event) {
   const file = event.target.files[0];
