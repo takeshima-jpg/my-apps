@@ -947,10 +947,6 @@ function getAixDraft() {
   }
   return localStorage.getItem('oneday_aix_draft') || null;
 }
-function setAixDraft(text) {
-  if (text) localStorage.setItem('oneday_aix_draft', text);
-  else localStorage.removeItem('oneday_aix_draft');
-}
 
 function markdownToHtml(md) {
   if (!md) return '';
@@ -1143,22 +1139,7 @@ function drawLineGraph(containerId, data, key, color, minVal, maxVal, isCount) {
     </svg>`;
 }
 
-function renderStateGraphs() {
-  const weekStarts = getWeekStarts(graphWeeks);
-  const data = buildGraphData(weekStarts);
 
-  // 違和感の最大値を動的に計算（最低4）
-  const maxUnease = Math.max(4, ...data.map(d => d.uneaseCount));
-
-  drawLineGraph('graph_conviction',   data, 'conviction',   '#7c6fff', 1, 4, false);
-  drawLineGraph('graph_satisfaction', data, 'satisfaction', '#4fa3ff', 1, 4, false);
-  drawLineGraph('graph_unease',       data, 'uneaseCount',  '#f5c842', 0, maxUnease, true);
-}
-
-function tagsHtmlSmall(tags) {
-  if (!tags || !tags.length) return null;
-  return tags.map(t => '<span class="tag-pill">' + t + '</span>').join('');
-}
 
 
 function renderLogList() {
@@ -1491,9 +1472,6 @@ function exportData() {
 }
 
 // IMPORT
-function importData() {
-  document.getElementById('importFileInput').click();
-}
 function handleImport(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -1532,16 +1510,6 @@ function toast(msg) {
 }
 
 // SAMPLE DATA（週ごとのサンプル）
-function seedSampleData() {
-  if (state.logs.length > 0) return;
-  const w = n => { const d = new Date(); d.setDate(d.getDate() - n*7); return d.toISOString().slice(0,10); };
-  state.logs = [
-    { id:'1001', date:w(0), satisfaction:'great', events:'新しいプロジェクトが動き出した。チームの雰囲気が良く、自分も乗れている感覚。\n来週に向けて準備が整った。', unease:'', tags:['経営','組織'], flags:['energy'], archived:false, createdAt:new Date().toISOString() },
-    { id:'1002', date:w(1), satisfaction:'meh', events:'Aさんとのやりとりで違和感があった。言葉は通じているのに、何かがずれている。\n来週もう少し観察してみる。', unease:'Aさんとの関係が少しずつずれている気がする', tags:['人間関係','感情'], flags:['unease'], archived:false, createdAt:new Date(Date.now()-604800000).toISOString() },
-    { id:'1003', date:w(2), satisfaction:'good', events:'「システム思考」の本を読んだ。自分のビジネスに応用できそうな概念が多かった。\nブログに書けるかも。', unease:'', tags:['学び','経営'], flags:['learning','blog'], archived:false, createdAt:new Date(Date.now()-1209600000).toISOString() },
-  ];
-  saveData();
-}
 
 // EVENTS
 function bindEvents() {
