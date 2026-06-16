@@ -1302,27 +1302,9 @@ const now = () => new Date().toISOString();
 const refresh = () => { if(curView==='home') renderHome(); else if(curView==='today') renderToday(); };
 
 // ── HOME ──
-function renderHome(){
-  renderVision();
-  const tasks = allTasks();
-  const ov    = tasks.filter(t=>isOv(t.due));
-  const td    = tasks.filter(t=>isTd(t.due));
-  const noDue = tasks.filter(t=>!t.due && t.src==='shot');
-  // 今週（明日〜7日以内の期日あり、日付順）
-  const thisWeek = tasks.filter(t=>{
-    if(!t.due||isOv(t.due)||isTd(t.due)) return false;
-    const diff=(new Date(t.due+'T00:00:00')-new Date(TODAY+'T00:00:00'))/86400000;
-    return diff>=1&&diff<=7;
-  }).sort((a,b)=>a.due.localeCompare(b.due));
-  const pd    = getPj();
-  const activePj = (pd.projects||[]).filter(p=>p.status!=='完了'&&p.status!=='保留');
-
-  // 今日の一手（スコア最上位）
-  const top = [...tasks].sort((a,b)=>score(b)-score(a))[0];
-
+function homeTopCard(top) {
   let h = '';
-
-  // ─ 今日の一手
+// ─ 今日の一手
   if(top){
     const links=renderLinks(top);
     h += `<div class="top-card">
@@ -1336,23 +1318,35 @@ function renderHome(){
       <div class="top-card-actions">${topActions(top)}</div>
     </div>`;
   }
+  return h;
+}
 
-  // ─ 数字サマリ（3つだけ）
+function homeStatusRow(ov, td, noDue) {
+  let h = '';
+// ─ 数字サマリ（3つだけ）
   h += `<div class="status-row">
     <div class="snum ov"><div class="snum-v">${ov.length}</div><div class="snum-l">期限超過</div></div>
     <div class="snum td"><div class="snum-v">${td.length}</div><div class="snum-l">今日期限</div></div>
     <div class="snum wk"><div class="snum-v">${noDue.length}</div><div class="snum-l">Shot未設定</div></div>
   </div>`;
+  return h;
+}
 
-  // ─ 今やる（期限超過 + 今日）
+function homeUrgent(ov, td) {
+  let h = '';
+// ─ 今やる（期限超過 + 今日）
   const urgentAll = [...new Map([...ov,...td].map(t=>[t.id,t])).values()];
   if(urgentAll.length){
     h += secLabel('🔥 今やる', urgentAll.length);
     urgentAll.slice(0,8).forEach(t => h += trowHtml(t));
     h += '</div>';
   }
+  return h;
+}
 
-  // ─ 今週（折りたたみ、今やるの直下）
+function homeThisWeek(thisWeek) {
+  let h = '';
+// ─ 今週（折りたたみ、今やるの直下）
   if(thisWeek.length){
     const wOpen = !!homeWeekOpen;
     h += `<div class="week-wrap">
@@ -1364,8 +1358,12 @@ function renderHome(){
       ${wOpen ? `<div class="week-body">${thisWeek.map(t=>trowHtml(t)).join('')}</div>` : ''}
     </div>`;
   }
+  return h;
+}
 
-  // ─ Shot 実務タスク（期限未設定・折りたたみ）
+function homeShot(noDue) {
+  let h = '';
+// ─ Shot 実務タスク（期限未設定・折りたたみ）
   if(noDue.length){
     const sOpen = !!homeShotOpen;
     h += `<div class="week-wrap">
@@ -1380,8 +1378,12 @@ function renderHome(){
       </div>` : ''}
     </div>`;
   }
+  return h;
+}
 
-  // 100リスト（期限切れ・当月、折りたたみ）
+function home100List() {
+  let h = '';
+// 100リスト（期限切れ・当月、折りたたみ）
   const allList = get100ListItems().filter(function(i){ return !i.completed; });
   const yrL = new Date().getFullYear();
   const moL = new Date().getMonth() + 1;
@@ -1416,8 +1418,12 @@ function renderHome(){
     h += '<span class="' + arrowCls + '" id="list100-arrow">▶</span>';
     h += '</div>' + body + '</div>';
   }
+  return h;
+}
 
-  // ─ Project 進行（直近30日イベント、折りたたみ）
+function homeProjects(activePj) {
+  let h = '';
+// ─ Project 進行（直近30日イベント、折りたたみ）
   if(activePj.length){
     const d30 = new Date(); d30.setDate(d30.getDate()-30);
     const from30 = d30.toLocaleDateString('sv');
@@ -1464,8 +1470,38 @@ function renderHome(){
     }
     h += '</div>';
   }
+  return h;
+}
 
-  /* TIMELINE-DISABLED (将来復活可)
+function renderHome(){
+  renderVision();
+  const tasks = allTasks();
+  const ov    = tasks.filter(t=>isOv(t.due));
+  const td    = tasks.filter(t=>isTd(t.due));
+  const noDue = tasks.filter(t=>!t.due && t.src==='shot');
+  // 今週（明日〜7日以内の期日あり、日付順）
+  const thisWeek = tasks.filter(t=>{
+    if(!t.due||isOv(t.due)||isTd(t.due)) return false;
+    const diff=(new Date(t.due+'T00:00:00')-new Date(TODAY+'T00:00:00'))/86400000;
+    return diff>=1&&diff<=7;
+  }).sort((a,b)=>a.due.localeCompare(b.due));
+  const pd    = getPj();
+  const activePj = (pd.projects||[]).filter(p=>p.status!=='完了'&&p.status!=='保留');
+
+  // 今日の一手（スコア最上位）
+  const top = [...tasks].sort((a,b)=>score(b)-score(a))[0];
+
+  let h = '';
+
+  
+  h += homeTopCard(top);
+  h += homeStatusRow(ov, td, noDue);
+  h += homeUrgent(ov, td);
+  h += homeThisWeek(thisWeek);
+  h += homeShot(noDue);
+  h += home100List();
+  h += homeProjects(activePj);
+/* TIMELINE-DISABLED (将来復活可)
   h += secLabel('📅 直近2週間', '');
   h += `<div class="tl-scroll"><div class="tl-grid" id="tlGrid"></div></div>`;
   */
