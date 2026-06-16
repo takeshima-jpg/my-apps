@@ -866,9 +866,6 @@ async function gdriveAutoLoad() {
 }
 
 // 起動時に自動保存（ログインしている場合）
-function gdriveAutoSave() {
-  if (gdriveToken) gdriveSave();
-}
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
@@ -1353,11 +1350,6 @@ function registerAiInput() {
 }
 
 // ─── CRUD ─────────────────────────────────────────────────
-function updateField(id, field, val) {
-  const item = items.find(i=>i.id===id);
-  if (!item) return;
-  item[field] = val; save(); renderCurrentView();
-}
 
 function deleteItem(id) {
   const item = items.find(i=>i.id===id);
@@ -1368,21 +1360,6 @@ function deleteItem(id) {
 }
 
 // ─── STATUS CHANGE + DISCARD FLOW ─────────────────────────
-function changeStatus(id, newStatus) {
-  const item = items.find(i=>i.id===id);
-  if (!item) return;
-  if (newStatus==='廃棄') {
-    discardPendingId = id;
-    discardPrevStatus = item.status;
-    item.status = '廃棄';
-    save();
-    openDiscardModal(item);
-  } else {
-    item.status = newStatus;
-    save();
-    renderCurrentView();
-  }
-}
 
 function openDiscardModal(item) {
   document.getElementById('discard-item-title').textContent = item.title;
