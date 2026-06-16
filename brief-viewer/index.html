@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Brief Viewer — my-apps</title>
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="./icons/icon-16.png">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#7c6fff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Brief">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -26,6 +33,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .bv-header { display: flex; align-items: center; gap: 10px; padding: 14px 18px; padding-top: max(14px, env(safe-area-inset-top)); border-bottom: 1px solid var(--border); background: var(--bg2); position: sticky; top: 0; z-index: 10; }
 .bv-logo { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
 .bv-logo .mark { font-size: 18px; }
+.bv-logo .mark-img { width: 24px; height: 24px; border-radius: 6px; display: block; flex-shrink: 0; }
 .bv-logo .name { font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; }
 .bv-status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3); }
 .bv-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
@@ -43,6 +51,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 /* LOGIN STATE */
 .bv-login { max-width: 480px; margin: 0 auto; padding: 64px 24px; text-align: center; }
 .bv-login .big-mark { font-size: 44px; margin-bottom: 16px; }
+.bv-login .big-mark-img { width: 80px; height: 80px; border-radius: 20px; margin: 0 auto 18px; display: block; }
 .bv-login h1 { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
 .bv-login p { font-size: 14px; color: var(--text2); line-height: 1.7; margin-bottom: 28px; }
 .bv-login-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 320px; padding: 13px 20px; font-size: 15px; font-weight: 600; background: var(--accent); color: #fff; border: none; border-radius: var(--radius2); cursor: pointer; font-family: var(--font-body); transition: all var(--transition); }
@@ -84,7 +93,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 <div class="wrap">
   <header class="bv-header">
     <div class="bv-logo">
-      <span class="mark">📋</span>
+      <img class="mark-img" src="./icons/icon-32.png" alt="">
       <span class="name">Brief Viewer</span>
     </div>
     <div class="bv-status">
@@ -151,7 +160,7 @@ function showLogin() {
   setStatus('', '未接続');
   document.getElementById('main').innerHTML = `
     <div class="bv-login">
-      <div class="big-mark">📋</div>
+      <img class="big-mark-img" src="./icons/icon-192.png" alt="">
       <h1>Morning Brief を表示</h1>
       <p>Coworkが毎朝GDriveに書き出す Morning Brief を、このデバイスで読み取り専用で表示します。Googleアカウントでログインしてください。</p>
       <button class="bv-login-btn" onclick="connect()">Googleでログイン</button>
@@ -332,6 +341,11 @@ if (token) {
   loadBrief();
 } else {
   showLogin();
+}
+
+// PWA: Service Worker登録（インストール可能化・常に最新）
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./service-worker.js').catch(() => {});
 }
 </script>
 </body>
