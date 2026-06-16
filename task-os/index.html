@@ -838,11 +838,13 @@ function applyAixTasks(parsed){
     if (Array.isArray(parsed.aix_drafts) && parsed.aix_drafts.length > 0) {
       const existingDrafts = JSON.parse(localStorage.getItem('aix_drafts') || '[]');
       const draftMap = {};
-      for (const d of existingDrafts) { if (d && d.date) draftMap[d.date] = d; }
+      const keyOf = d => d && (d.targetDate || d.date);
+      for (const d of existingDrafts) { const k = keyOf(d); if (k) draftMap[k] = d; }
       for (const d of parsed.aix_drafts) {
-        if (d && d.date) { draftMap[d.date] = d; draftCount++; }
+        const k = keyOf(d);
+        if (k) { if (!d.targetDate) d.targetDate = d.date; draftMap[k] = d; draftCount++; }
       }
-      const mergedDrafts = Object.values(draftMap).sort((a, b) => (a.date < b.date ? 1 : -1));
+      const mergedDrafts = Object.values(draftMap).sort((a, b) => (((a.targetDate||a.date||'') < (b.targetDate||b.date||'')) ? 1 : -1));
       localStorage.setItem('aix_drafts', JSON.stringify(mergedDrafts));
     }
     // ③ brief → localStorage['aix_draft_latest'] に保存
