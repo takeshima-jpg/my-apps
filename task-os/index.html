@@ -673,37 +673,44 @@ function renderVision() {
 // ReflectOS IndexedDB から問い・実験を取得
 function readReflectOSFromIDB() {
   return new Promise((resolve) => {
+    const EMPTY = { themes: [], importantQuestions: [], activeExperiments: [] };
     try {
       const req = indexedDB.open('ReflectOS7', 1);
-      req.onerror = () => resolve({ questions: [], experiments: [] });
+      req.onupgradeneeded = e => { const db = e.target.result; ['logs','themes','settings','checks'].forEach(s => { if(!db.objectStoreNames.contains(s)) db.createObjectStore(s,{keyPath:'id'}); }); };
+      req.onerror = () => resolve(EMPTY);
       req.onsuccess = (e) => {
         const db = e.target.result;
-        const storeNames = Array.from(db.objectStoreNames);
-        // S（メインストア）からデータ取得
-        if (!storeNames.includes('S')) { db.close(); resolve({ questions: [], experiments: [] }); return; }
-        const tx = db.transaction('S', 'readonly');
-        const store = tx.objectStore('S');
-        const getReq = store.get('main');
-        getReq.onsuccess = (e2) => {
+        const names = Array.from(db.objectStoreNames);
+        const want = ['logs','themes','checks'].filter(n => names.includes(n));
+        if (!want.length) { db.close(); resolve(EMPTY); return; }
+        const tx = db.transaction(want, 'readonly');
+        const data = {}; let pending = want.length;
+        want.forEach(n => {
+          const r = tx.objectStore(n).getAll();
+          r.onsuccess = () => { data[n] = r.result || []; if(--pending===0) finish(); };
+          r.onerror  = () => { data[n] = [];        if(--pending===0) finish(); };
+        });
+        function finish() {
           db.close();
-          const S = e2.target.result;
-          if (!S) { resolve({ questions: [], experiments: [] }); return; }
-          // 問い: logs の中から questions フィールドを集約
-          const questions = [];
-          const experiments = [];
-          if (S.logs) {
-            for (const log of S.logs) {
-              if (log.questions) questions.push(...log.questions.map(q => ({...q, fromLogId: log.id, fromLogDate: log.date})));
-              if (log.nextExp) experiments.push({text: log.nextExp, fromLogId: log.id, fromLogDate: log.date});
-            }
-          }
-          // checks から状態取得
-          const checks = S.checks || {};
-          resolve({ questions, experiments, checks });
-        };
-        getReq.onerror = () => { db.close(); resolve({ questions: [], experiments: [] }); };
+          const logs = data.logs || [];
+          const checkMap = {};
+          (data.checks || []).forEach(c => { if (c && c.id) checkMap[c.id] = c.state || (c.done ? 'done' : 'todo'); });
+          const importantQuestions = [];
+          const activeExperiments = [];
+          logs.filter(r => r && r.status !== 'draft').forEach(r => {
+            if (r.question) r.question.split('\n').filter(l => l.trim()).forEach((line, i) => {
+              if ((checkMap['q_'+r.id+'_'+i] || 'todo') === 'important') importantQuestions.push({ text: line.trim(), date: r.date || '' });
+            });
+            if (r.nextExp) r.nextExp.split('\n').filter(l => l.trim()).forEach((line, i) => {
+              if ((checkMap['e_'+r.id+'_'+i] || 'todo') === 'doing') activeExperiments.push({ text: line.trim(), date: r.date || '' });
+            });
+          });
+          const themes = (data.themes || []).filter(t => t && t.status !== '完了')
+            .map(t => ({ title: t.title || '', status: t.status || '', priority: t.priority || '', question: t.question || '', hypothesis: t.hypothesis || '' }));
+          resolve({ themes, importantQuestions, activeExperiments });
+        }
       };
-    } catch(e) { resolve({ questions: [], experiments: [] }); }
+    } catch(e) { resolve(EMPTY); }
   });
 }
 
