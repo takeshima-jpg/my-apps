@@ -714,9 +714,6 @@ async function gdriveAutoLoad() {
 }
 
 // 起動時に自動保存（ログインしている場合）
-function gdriveAutoSave() {
-  if (gdriveToken) gdriveSave();
-}
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
@@ -1237,21 +1234,6 @@ function loadItems(){
   }
 }
 
-function reinitSeed(){
-  if(items.length>0){
-    if(!confirm(`現在のデータ（${items.length}件）をバックアップしてから初期データを再投入します。\n\nよろしいですか？`)) return;
-    downloadFile(JSON.stringify(items,null,2),'application/json','yaritai-backup-before-reinit-'+today()+'.json');
-  } else {
-    if(!confirm('初期データ（385件）を投入します。よろしいですか？')) return;
-  }
-  setTimeout(()=>{
-    items = JSON.parse(JSON.stringify(SEED));
-    saveItems(items);
-    toast('初期データを投入しました（'+items.length+'件）','success');
-    updateUncatBadge();
-    renderPage(currentPage);
-  }, 500);
-}
 function saveItems(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
 
 let items = loadItems();
@@ -1447,7 +1429,6 @@ function duplicateForYear(id, year){
 
 // ===== ROUTER =====
 let currentPage = 'dashboard';
-function toggleSidebar(){ /* noop */ }
 function closeSidebar(){ /* noop */ }
 function navigate(page){closeSidebar();
   // タブナビ（スマホ）とサイドバーナビ（PC）両方のactiveを更新
@@ -1947,11 +1928,6 @@ function toggleCompleteAndSwitch(id){
   renderList();
 }
 
-function setListSort(key){
-  if(listF.sortKey===key) listF.sortAsc=!listF.sortAsc;
-  else{ listF.sortKey=key; listF.sortAsc=true; }
-  renderList();
-}
 
 
 // ===== WEEK/MONTH PAGE =====
@@ -2720,21 +2696,6 @@ function importCSV(e){
 }
 
 // ===== RESET =====
-function resetData(){
-  if(!confirm('⚠️ 全データを削除して空の状態に初期化します。\n\n事前にJSONバックアップを作成してください。\n\n本当に続けますか？')) return;
-  if(!confirm('【最終確認】全データが失われます。本当によろしいですか？')) return;
-  // 自動バックアップ
-  if(items.length>0){
-    downloadFile(JSON.stringify(items,null,2),'application/json','yaritai-auto-backup-before-reset-'+today()+'.json');
-  }
-  setTimeout(()=>{
-    items=[];
-    saveItems(items);
-    toast('データを初期化しました','info');
-    updateUncatBadge();
-    renderPage(currentPage);
-  },500);
-}
 
 // ===== UTILS =====
 function downloadFile(content,type,filename){
