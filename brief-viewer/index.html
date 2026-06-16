@@ -289,6 +289,35 @@ function toMarkdown(d) {
   if (d.proposals?.length) md += `## AI参謀からの提言\n${d.proposals.map(p => `・${p.content}${p.partner_relation ? ' — ' + p.partner_relation : ''}`).join('\n')}\n\n`;
   if (d.os_gaps?.length) md += `## OS齟齬レポート\n${d.os_gaps.map(c => `・${c}`).join('\n')}\n\n`;
   if (d.previous_proposal_tracking?.length) md += `## 前回提言の進捗\n${d.previous_proposal_tracking.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.external_env?.length) md += `## 外部環境モニタリング\n${d.external_env.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.structural_alerts?.length) {
+    md += `## 構造アラート\n` + d.structural_alerts.map(a => {
+      const parts = [];
+      const lv = a.level ? `[${a.level}] ` : '';
+      const dt = a.date ? `（${a.date}）` : '';
+      parts.push(`${lv}${a.title || ''}${dt}`.trim());
+      if (Array.isArray(a.summary) && a.summary.length) parts.push(a.summary.join(' / '));
+      else if (a.summary) parts.push(a.summary);
+      if (a.impact) parts.push(`影響：${a.impact}`);
+      if (a.action) parts.push(`アクション：${a.action}`);
+      if (a.url) parts.push(a.url);
+      return `・${parts.filter(Boolean).join('｜')}`;
+    }).join('\n') + `\n\n`;
+  }
+  if (d.vision_brief) md += `## 今日のVISION\n${d.vision_brief}\n\n`;
+  if (d.vision_proposals?.length) md += `## VISIONへの提言\n${d.vision_proposals.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.explore_themes?.length) md += `## 探索テーマ\n${d.explore_themes.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.partner_progress && d.partner_progress.current != null) {
+    const pp = d.partner_progress;
+    md += `## 経営パートナー進捗（${pp.current ?? 0}/${pp.target ?? 10}）\n`;
+    const lines = [].concat(pp.alerts || [], pp.recent_changes || []);
+    if (lines.length) md += lines.map(c => `・${c}`).join('\n') + '\n';
+    md += `\n`;
+  }
+  if (d.delete_candidate && d.delete_candidate.target) {
+    const dc = d.delete_candidate;
+    md += `## 削除候補\n・${dc.target}${dc.type ? `（${dc.type}）` : ''}${dc.reason ? '：' + dc.reason : ''}${dc.effect ? '／効果：' + dc.effect : ''}\n\n`;
+  }
   return md.trim() || JSON.stringify(d, null, 2);
 }
 
