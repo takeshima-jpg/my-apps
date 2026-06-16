@@ -342,6 +342,8 @@ select.fi{cursor:pointer;}
     <input type="file" id="jsonImportInput" accept=".json" style="display:none" onchange="handleJSONImport(event)">
     <div style="border-top:1px solid rgba(255,255,255,0.08);margin:4px 0;"></div>
     <label class="sb-backup-btn" style="cursor:pointer;">🤖 AIタスク読込<input type="file" id="aixTaskInput" accept=".json" style="display:none" onchange="handleAixTaskImport(event)"></label>
+    <div style="border-top:1px solid rgba(255,255,255,0.08);margin:4px 0;"></div>
+    <button class="sb-backup-btn" id="gdriveBtn" onclick="gdToggle()">☁️ GDrive接続</button>
   </div>
   <div class="sb-ft" id="sbDate"></div>
 </div>
@@ -762,6 +764,48 @@ function importAllJSON() {
   document.getElementById('jsonImportInput').click();
 }
 
+// パース済みオブジェクト/配列を取り込む共通ロジック（ファイル取込・GDrive自動取込で共用）
+// 冪等：ID重複スキップ／ドラフトは日付キー上書き／briefは上書き。全消しはしない。
+function applyAixTasks(parsed){
+  const isNewFormat = !Array.isArray(parsed) && typeof parsed === 'object' && parsed !== null;
+  const tasks = isNewFormat ? (parsed.tasks || []) : parsed;
+  if (!Array.isArray(tasks)) throw new Error('形式エラー: tasksが配列ではありません');
+
+  // ① tasks → shot-task-os-v1 にマージ
+  const existing = JSON.parse(localStorage.getItem('shot-task-os-v1') || '[]');
+  const existingIds = new Set(existing.map(t => t.id));
+  let added = 0;
+  for (const task of tasks) {
+    if (!task.id || existingIds.has(task.id)) continue;
+    existing.push(task);
+    existingIds.add(task.id);
+    added++;
+  }
+  localStorage.setItem('shot-task-os-v1', JSON.stringify(existing));
+
+  let draftCount = 0;
+  let briefLoaded = false;
+  if (isNewFormat) {
+    // ② aix_drafts → localStorage['aix_drafts'] にマージ（同日付は上書き）
+    if (Array.isArray(parsed.aix_drafts) && parsed.aix_drafts.length > 0) {
+      const existingDrafts = JSON.parse(localStorage.getItem('aix_drafts') || '[]');
+      const draftMap = {};
+      for (const d of existingDrafts) { if (d && d.date) draftMap[d.date] = d; }
+      for (const d of parsed.aix_drafts) {
+        if (d && d.date) { draftMap[d.date] = d; draftCount++; }
+      }
+      const mergedDrafts = Object.values(draftMap).sort((a, b) => (a.date < b.date ? 1 : -1));
+      localStorage.setItem('aix_drafts', JSON.stringify(mergedDrafts));
+    }
+    // ③ brief → localStorage['aix_draft_latest'] に保存
+    if (parsed.brief && typeof parsed.brief === 'object') {
+      localStorage.setItem('aix_draft_latest', JSON.stringify(parsed.brief));
+      briefLoaded = true;
+    }
+  }
+  return { added, draftCount, briefLoaded, isNewFormat };
+}
+
 function handleAixTaskImport(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -769,49 +813,9 @@ function handleAixTaskImport(e) {
   reader.onload = ev => {
     try {
       const parsed = JSON.parse(ev.target.result);
+      const res = applyAixTasks(parsed);
 
-      // 形式判定：配列なら旧形式、オブジェクトなら新形式
-      const isNewFormat = !Array.isArray(parsed) && typeof parsed === 'object' && parsed !== null;
-      const tasks = isNewFormat ? (parsed.tasks || []) : parsed;
-
-      if (!Array.isArray(tasks)) { alert('形式エラー: 正しいJSONファイルを選択してください'); return; }
-
-      // ① tasks → shot-task-os-v1 にマージ
-      const existing = JSON.parse(localStorage.getItem('shot-task-os-v1') || '[]');
-      const existingIds = new Set(existing.map(t => t.id));
-      let added = 0;
-      for (const task of tasks) {
-        if (!task.id || existingIds.has(task.id)) continue;
-        existing.push(task);
-        existingIds.add(task.id);
-        added++;
-      }
-      localStorage.setItem('shot-task-os-v1', JSON.stringify(existing));
-
-      let draftCount = 0;
-      let briefLoaded = false;
-
-      if (isNewFormat) {
-        // ② aix_drafts → localStorage['aix_drafts'] にマージ（同日付は上書き）
-        if (Array.isArray(parsed.aix_drafts) && parsed.aix_drafts.length > 0) {
-          const existingDrafts = JSON.parse(localStorage.getItem('aix_drafts') || '[]');
-          const draftMap = {};
-          for (const d of existingDrafts) { if (d && d.date) draftMap[d.date] = d; }
-          for (const d of parsed.aix_drafts) {
-            if (d && d.date) { draftMap[d.date] = d; draftCount++; }
-          }
-          const mergedDrafts = Object.values(draftMap).sort((a, b) => (a.date < b.date ? 1 : -1));
-          localStorage.setItem('aix_drafts', JSON.stringify(mergedDrafts));
-        }
-
-        // ③ brief → localStorage['aix_draft_latest'] に保存
-        if (parsed.brief && typeof parsed.brief === 'object') {
-          localStorage.setItem('aix_draft_latest', JSON.stringify(parsed.brief));
-          briefLoaded = true;
-        }
-      }
-
-      if (added === 0 && draftCount === 0 && !briefLoaded) {
+      if (res.added === 0 && res.draftCount === 0 && !res.briefLoaded) {
         toast('追加できる新規データはありませんでした');
         e.target.value = '';
         return;
@@ -819,13 +823,13 @@ function handleAixTaskImport(e) {
 
       renderHome();
 
-      if (isNewFormat) {
-        toast(`✅ AIタスク${added}件・1dayドラフト${draftCount}件・Briefを取り込みました`);
+      if (res.isNewFormat) {
+        toast(`✅ AIタスク${res.added}件・1dayドラフト${res.draftCount}件・Briefを取り込みました`);
       } else {
-        toast(`✅ ${added}件のAIタスクを追加しました`);
+        toast(`✅ ${res.added}件のAIタスクを追加しました`);
       }
     } catch(err) {
-      alert('読込エラー: JSONファイルが正しくありません\n' + err.message);
+      alert('読込エラー: JSONファイルが正しくありません\n' + (err.message || ''));
     }
     e.target.value = '';
   };
@@ -1851,6 +1855,119 @@ document.addEventListener('DOMContentLoaded', ()=>{
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./service-worker.js');
 }
+</script>
+<script>
+// ===== GDrive連携（A: スナップショット送出 / C: aix-tasks自動取り込み）=====
+// 方針：一方向。スナップショットは「書き出すだけ」、GDriveからlocalStorageへ全消し復元はしない（先祖返り防止）。
+const GD_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
+const GD_SCOPE = 'https://www.googleapis.com/auth/drive';
+const GD_REDIRECT = location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html');
+const GD_TOKEN_KEY = 'gdrive_token_taskos';
+const GD_FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U'; // aix-drafts（3Aアカウント）
+const GD_AIX_FILE = 'aix-tasks.json';
+const GD_SNAPSHOT_FILE = 'myapps-all-backup.json';
+let gdToken = null;
+
+function gdHandleRedirect(){
+  const h = new URLSearchParams(location.hash.slice(1));
+  const t = h.get('access_token');
+  if(t){ gdToken = t; localStorage.setItem(GD_TOKEN_KEY, t); history.replaceState(null, '', location.pathname); }
+  else { const s = localStorage.getItem(GD_TOKEN_KEY); if(s) gdToken = s; }
+}
+function gdConnect(){
+  const p = new URLSearchParams({
+    client_id: GD_CLIENT_ID, redirect_uri: GD_REDIRECT, response_type:'token',
+    scope: GD_SCOPE, prompt:'select_account', include_granted_scopes:'true'
+  });
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + p.toString();
+}
+function gdClear(){ gdToken = null; localStorage.removeItem(GD_TOKEN_KEY); gdUpdateBtn(); }
+function gdToggle(){ if(gdToken) gdAutoSync(true); else gdConnect(); }
+function gdUpdateBtn(){ const b=document.getElementById('gdriveBtn'); if(b) b.textContent = gdToken ? '☁️ GDrive同期' : '☁️ GDrive接続'; }
+function gdSetStatus(s){
+  const b=document.getElementById('gdriveBtn'); if(!b) return;
+  const m={ syncing:'☁️ 同期中…', ok:'☁️ GDrive同期', err:'☁️ 同期エラー(再試行)' };
+  b.textContent = m[s] || (gdToken ? '☁️ GDrive同期' : '☁️ GDrive接続');
+}
+
+async function gdFetch(url, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({ 'Authorization':'Bearer '+gdToken }, opts.headers||{});
+  const r = await fetch(url, opts);
+  if(r.status===401){ const e=new Error('unauth'); e.code=401; throw e; }
+  if(!r.ok){ const e=new Error('http '+r.status); e.code=r.status; throw e; }
+  return r;
+}
+async function gdFindInFolder(name){
+  const q = encodeURIComponent(`'${GD_FOLDER_ID}' in parents and name='${name}' and trashed=false`);
+  const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=5`);
+  const d = await r.json();
+  return (d.files && d.files[0]) || null;
+}
+async function gdDownload(id){
+  const r = await gdFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`);
+  return await r.text();
+}
+async function gdUpload(name, contentStr){
+  // 既存があればその上に上書き、無ければaix-draftsフォルダ内に新規作成（2ステップ：作成→media PATCH）
+  let existing = await gdFindInFolder(name);
+  let id;
+  if(existing){ id = existing.id; }
+  else {
+    const r = await gdFetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name: name, parents:[GD_FOLDER_ID] })
+    });
+    id = (await r.json()).id;
+  }
+  await gdFetch(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'}, body: contentStr
+  });
+}
+
+async function gdAutoSync(manual){
+  if(!gdToken){ if(manual) gdConnect(); return; }
+  gdSetStatus('syncing');
+  try {
+    // C: aix-tasks.json を自動取り込み（冪等）
+    let importMsg = '';
+    try {
+      const f = await gdFindInFolder(GD_AIX_FILE);
+      if(f){
+        const parsed = JSON.parse(await gdDownload(f.id));
+        const res = applyAixTasks(parsed);
+        if(res && (res.added || res.draftCount || res.briefLoaded)){
+          if(typeof renderHome==='function') renderHome();
+          importMsg = `AIタスク${res.added}件・ドラフト${res.draftCount}件取込`;
+        }
+      }
+    } catch(e){ if(e.code===401) throw e; console.warn('aix自動取込スキップ', e); }
+
+    // A: スナップショットを一方向で書き出し（読み戻しはしない）
+    const snap = await collectAllOSDataWithReflect();
+    await gdUpload(GD_SNAPSHOT_FILE, JSON.stringify(snap, null, 2));
+
+    gdSetStatus('ok');
+    if(importMsg && typeof toast==='function') toast('☁️ '+importMsg);
+    else if(manual && typeof toast==='function') toast('☁️ GDrive同期完了');
+  } catch(e){
+    if(e.code===401){
+      gdClear(); gdSetStatus('ok');
+      if(manual){ alert('GDriveの認証が切れました。再接続してください。'); gdConnect(); }
+      return;
+    }
+    gdSetStatus('err');
+    if(manual && typeof toast==='function') toast('⚠️ GDrive同期に失敗しました');
+    console.warn('gdAutoSync error', e);
+  }
+}
+
+// 起動：トークン復元 → ボタン更新 → 自動同期（描画後・防御的）
+gdHandleRedirect();
+document.addEventListener('DOMContentLoaded', ()=>{
+  gdUpdateBtn();
+  if(gdToken){ setTimeout(()=>{ try{ gdAutoSync(false); }catch(e){ console.warn(e); } }, 1200); }
+});
 </script>
 </body>
 </html>
