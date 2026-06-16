@@ -750,8 +750,54 @@ function restoreAllOSData(data) {
 // ── JSON 保存 / 読込 ──
 
 
+// ── Reflect OS 完全バックアップ（IndexedDB: ReflectOS7 / stores: logs,themes,settings,checks）──
+const REFLECT_STORES = ['logs','themes','settings','checks'];
+function dumpReflectIDB() {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open('ReflectOS7', 1);
+      req.onupgradeneeded = e => { const db = e.target.result; REFLECT_STORES.forEach(s => { if(!db.objectStoreNames.contains(s)) db.createObjectStore(s,{keyPath:'id'}); }); };
+      req.onerror = () => resolve(null);
+      req.onsuccess = e => {
+        const db = e.target.result;
+        const stores = Array.from(db.objectStoreNames);
+        if (!stores.length) { db.close(); resolve({ version: db.version, stores: {} }); return; }
+        const out = {}; let pending = stores.length;
+        const tx = db.transaction(stores, 'readonly');
+        stores.forEach(s => {
+          const r = tx.objectStore(s).getAll();
+          r.onsuccess = () => { out[s] = r.result || []; if(--pending===0){ db.close(); resolve({ version: db.version, stores: out }); } };
+          r.onerror  = () => { out[s] = [];        if(--pending===0){ db.close(); resolve({ version: db.version, stores: out }); } };
+        });
+      };
+    } catch(e) { resolve(null); }
+  });
+}
+function restoreReflectIDB(dump) {
+  return new Promise((resolve) => {
+    if (!dump || !dump.stores) { resolve(false); return; }
+    const names = Object.keys(dump.stores);
+    if (!names.length) { resolve(false); return; }
+    try {
+      const req = indexedDB.open('ReflectOS7', 1);
+      req.onupgradeneeded = e => { const db = e.target.result; REFLECT_STORES.concat(names).forEach(s => { if(!db.objectStoreNames.contains(s)) db.createObjectStore(s,{keyPath:'id'}); }); };
+      req.onerror = () => resolve(false);
+      req.onsuccess = e => {
+        const db = e.target.result;
+        const existing = names.filter(n => db.objectStoreNames.contains(n));
+        if (!existing.length) { db.close(); resolve(false); return; }
+        const tx = db.transaction(existing, 'readwrite');
+        existing.forEach(s => { const os = tx.objectStore(s); os.clear(); (dump.stores[s]||[]).forEach(rec => { try { os.put(rec); } catch(_){} }); });
+        tx.oncomplete = () => { db.close(); resolve(true); };
+        tx.onerror    = () => { db.close(); resolve(false); };
+      };
+    } catch(e) { resolve(false); }
+  });
+}
+
 async function exportAllJSON() {
   const data = await collectAllOSDataWithReflect();
+  data.reflectOS_idb = await dumpReflectIDB();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
@@ -842,13 +888,14 @@ function handleJSONImport(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = ev => {
+  reader.onload = async ev => {
     try {
       const data = JSON.parse(ev.target.result);
       if (!confirm(`JSONから読み込みます。現在のデータは上書きされます。よろしいですか？\n（保存日時: ${data.savedAt || '不明'}）`)) return;
       restoreAllOSData(data);
+      if (data.reflectOS_idb) await restoreReflectIDB(data.reflectOS_idb);
       renderHome();
-      toast('✅ JSONから読み込みました');
+      toast('✅ JSONから読み込みました（Reflect含む）');
     } catch(err) {
       alert('読込エラー: JSONファイルが正しくありません');
     }
