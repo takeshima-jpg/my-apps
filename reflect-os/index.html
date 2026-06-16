@@ -557,9 +557,6 @@ async function gdriveAutoLoad() {
 }
 
 // 起動時に自動保存（ログインしている場合）
-function gdriveAutoSave() {
-  if (gdriveToken) gdriveSave();
-}
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
@@ -620,18 +617,12 @@ const THEME_CATS=['戦略','プロジェクト','VISION','新規事業','人間�
 const THEME_STATUS=['構想中','実行中','保留','完了','撤退'];
 const THEME_PRI=['S','A','B','C'];
 const MS_ST=['未着手','実行中','完了'];
-function stClass(st){return{実行中:'st-active',保留:'st-hold',完了:'st-done',撤退:'st-exit',構想中:'st-plan'}[st]||'st-plan';}
 
 /* ── Form primitives ── */
 function fld(lb,child,opt=false,note=''){const w=D({cls:'field'});if(lb){const l=h('label',{cls:'lbl'},lb);if(opt)l.appendChild(Sp({cls:'lbl-opt'},'任意'));w.appendChild(l);}w.appendChild(child);if(note)w.appendChild(D({css:'font-size:13px;color:var(--di);margin-top:3px'},note));return w;}
 function tI(lb,key,ph='',tp='text',opt=false,fd2){const fd=fd2||S.fd;const e=In({type:tp,placeholder:ph});e.value=fd[key]||(tp==='date'?'':'');e.addEventListener('input',()=>fd[key]=e.value);return fld(lb,e,opt);}
-function urlF(key){const w=D({cls:'url-wrap'});const e=In({type:'url',placeholder:'https://docs.google.com/...'});e.style.flex='1';e.value=S.fd[key]||'';e.addEventListener('input',()=>S.fd[key]=e.value);const ob=Bt({cls:'btn-g',onclick:()=>{if(S.fd[key])window.open(S.fd[key],'_blank');}},'開く');w.appendChild(e);w.appendChild(ob);return fld('Google Docs URL',w,true,'深く書いた後にURLを貼る');}
 function taF(lb,key,ph='',mh=70,opt=false,fd2){const fd=fd2||S.fd;const e=Ta({placeholder:ph,css:`min-height:${mh}px;width:100%`});e.value=fd[key]||'';e.addEventListener('input',()=>fd[key]=e.value);return fld(lb,e,opt);}
-function selF(lb,key,opts,fd2){const fd=fd2||S.fd;const sel=Sel({},opts.map(o=>Opt(o,o,fd[key]===o)));sel.addEventListener('change',()=>fd[key]=sel.value);if(!fd[key]&&opts.length)fd[key]=opts[0];return fld(lb,sel);}
-function sldrF(lb,key){const v=S.fd[key]||5;const vs=Sp({cls:'sldr-v'},String(v));const e=In({type:'range',min:'1',max:'10'});e.value=v;const lbEl=h('label',{cls:'lbl'},`${lb} — ${v}`);e.addEventListener('input',()=>{S.fd[key]=+e.value;vs.textContent=e.value;lbEl.textContent=`${lb} — ${e.value}`;});return D({cls:'field'},lbEl,D({cls:'sldr-row'},e,vs));}
-function chipsF(lb,key,opts,single=false,opt=false){const sel=S.fd[key]||(single?'':[]);const w=D({cls:'chips'});opts.forEach(o=>{const a=single?sel===o:(Array.isArray(sel)&&sel.includes(o));const c=Bt({cls:'chip'+(a?' on':'')},o);c.addEventListener('click',()=>{if(single)S.fd[key]=S.fd[key]===o?'':o;else{const cur=S.fd[key]||[];S.fd[key]=cur.includes(o)?cur.filter(x=>x!==o):[...cur,o];}ra();});w.appendChild(c);});return fld(lb,w,opt);}
 function thChipsF(key){const selIds=S.fd[key]||[];const w=D({cls:'chips'});const active=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');if(!active.length){w.appendChild(Sp({css:'font-size:14px;color:var(--di)'},'（テーマ未登録）'));return fld('探求テーマ',w,true);}active.forEach(t=>{const a=selIds.includes(t.id);const c=Bt({cls:'chip'+(a?' on':'')},t.title);c.addEventListener('click',()=>{const cur=S.fd[key]||[];S.fd[key]=cur.includes(t.id)?cur.filter(x=>x!==t.id):[...cur,t.id];ra();});w.appendChild(c);});return fld('探求テーマ',w,true);}
-function expandSec(label,items){const tog=Bt({cls:'expand-tog'},Sp({cls:'expand-arr'},'▶'),' '+label);const body=D({cls:'expand-body'});items.forEach(x=>x&&body.appendChild(x));tog.addEventListener('click',()=>{tog.classList.toggle('open');body.classList.toggle('open');});return D({},tog,body);}
 
 /* ── Theme form ── */
 function buildThemeForm(tfd){
@@ -1085,18 +1076,6 @@ function renderHome(){
 }
 
 /* ── Vision edit ── */
-function renderVisionEdit(){
-  const main=document.getElementById('body');main.innerHTML='';
-  const wrap=D({cls:'form-wrap fu'});
-  const bk=Bt({cls:'btn-s',css:'margin-bottom:20px',onclick:()=>ra()},'← 戻る');wrap.appendChild(bk);
-  const card=D({css:'background:var(--sf);border:1px solid var(--bd);border-radius:5px;padding:24px 28px'});
-  const els={};
-  [['vision','VISION'],['yearGoal','年末ゴール']].forEach(([k,l])=>{const e=Ta({css:'min-height:60px;width:100%'});e.value=S.vision[k]||'';els[k]=e;card.appendChild(fld(l,e,true));});
-  const acts=D({css:'display:flex;gap:8px;margin-top:6px'});
-  const sv=Bt({cls:'btn-p',onclick:async()=>{['vision','yearGoal'].forEach(k=>S.vision[k]=els[k].value);await dbput('settings',{id:'vision',value:S.vision});ra();}},'保存');
-  const cn=Bt({cls:'btn-s',onclick:()=>ra()},'キャンセル');
-  acts.appendChild(sv);acts.appendChild(cn);card.appendChild(acts);wrap.appendChild(card);main.appendChild(wrap);
-}
 
 /* ── LOG tab ── */
 function renderLog(){
