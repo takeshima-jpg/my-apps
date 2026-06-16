@@ -1834,6 +1834,7 @@ function paneRecords(p) {
             ${badge(r._cat, r._color)}
             ${sentBadge}
             ${statBadge}
+            <button class="btn btn-danger btn-xs" onclick="delItem('${p.id}','${r._field}','${r.id}')">削除</button>
           </div>
         </div>
         ${r.body ? `<div class="rec-body">${esc(r.body)}</div>` : ''}
