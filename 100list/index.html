@@ -1729,6 +1729,86 @@ ${buildMonthChart(activeItems, yr, mo)}
 let listF = {search:'',year:'all',month:'all',cat:'all',status:'incomplete',focus:false,recurring:false,count:false,sortKey:'date',sortAsc:true};
 let listTab = 'incomplete'; // 'incomplete' | 'complete'
 
+function rowHtml(i){
+  return `
+      <tr class="${i.completed?'done':''}">
+        <td>
+          <button class="complete-btn ${i.completed?'done':''}"
+            onclick="toggleCompleteAndSwitch('${i.id}')"
+            title="${i.completed?'未完了に戻す':'完了にする'}">
+            ${i.completed?'✓':''}
+          </button>
+        </td>
+        <td class="text-light text-xs">${i.no}</td>
+        <td>
+          <div class="item-title" style="font-weight:600;font-size:15px">${esc(i.title)}</div>
+          ${i.isCountGoal&&i.countTarget?`<div class="text-xs text-light">${i.countCurrent||0}/${i.countTarget}</div>`:''}
+          ${i.memo?`<div class="text-xs text-light truncate">${esc(i.memo)}</div>`:''}
+        </td>
+        ${i.completed ? `
+          <td class="text-sm text-sub">${i.category||'未分類'}</td>
+          <td>${prioTag(i.priority)}</td>
+          <td class="text-sm text-sub">
+            <div><span style="color:#276749">✓ ${fmtDate(i.completedAt)}</span></div>
+            <div class="text-xs text-light">${i.year?i.year+'年':''} ${i.month?i.month+'月':''}</div>
+          </td>
+          <td>
+            ${i.isFocus?'<span class="tag tag-focus">⭐</span>':''}
+            ${i.isRecurringYearly?'<span class="tag tag-recurring">🔄</span>':''}
+          </td>
+        ` : `
+          <td style="padding:6px 8px">
+            <select onchange="updateItemInline('${i.id}',{category:this.value})"
+              style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 6px;font-size:14px;width:100%;color:${!i.category||i.category==='未分類'?'#c53030':'#718096'}">
+              <option value="">未分類</option>
+              ${CATS.map(c=>`<option value="${c}" ${i.category===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </td>
+          <td style="padding:6px 8px">
+            <div style="display:flex;gap:3px">
+              <button onclick="updateItemInline('${i.id}',{priority:'High'})"
+                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='High'?'#c53030':'#e2e8f0'};background:${i.priority==='High'?'#fed7d7':'#fff'};color:${i.priority==='High'?'#c53030':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">高</button>
+              <button onclick="updateItemInline('${i.id}',{priority:'Medium'})"
+                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='Medium'?'#c05621':'#e2e8f0'};background:${i.priority==='Medium'?'#feebc8':'#fff'};color:${i.priority==='Medium'?'#c05621':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">中</button>
+              <button onclick="updateItemInline('${i.id}',{priority:'Low'})"
+                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='Low'?'#718096':'#e2e8f0'};background:${i.priority==='Low'?'#edf2f7':'#fff'};color:${i.priority==='Low'?'#718096':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">低</button>
+            </div>
+          </td>
+          <td style="padding:6px 8px">
+            <div style="display:flex;gap:4px;align-items:center">
+              <select onchange="updateItemInline('${i.id}',{year:this.value?parseInt(this.value):null})"
+                style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 4px;font-size:13px;width:60px">
+                <option value="">年</option>
+                ${[2025,2026,2027,2028,2029].map(y=>`<option value="${y}" ${i.year===y?'selected':''}>${y}</option>`).join('')}
+              </select>
+              <select onchange="updateItemInline('${i.id}',{month:this.value?parseInt(this.value):null})"
+                style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 4px;font-size:13px;width:48px">
+                <option value="">月</option>
+                ${Array.from({length:12},(_,k)=>`<option value="${k+1}" ${i.month===k+1?'selected':''}>${k+1}</option>`).join('')}
+              </select>
+            </div>
+          </td>
+          <td style="padding:6px 8px">
+            <div style="display:flex;gap:4px;align-items:center">
+              <button onclick="updateItemInline('${i.id}',{isFocus:!${i.isFocus}})"
+                title="${i.isFocus?'重点リストから外す':'重点リストに追加'}"
+                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isFocus?'#f6ad55':'#e2e8f0'};background:${i.isFocus?'#fffaf0':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isFocus?'1':'0.35'}">⭐</button>
+              <button onclick="updateItemInline('${i.id}',{isCountGoal:!${i.isCountGoal}})"
+                title="${i.isCountGoal?'カウント系を外す':'カウント系にする'}"
+                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isCountGoal?'#9f7aea':'#e2e8f0'};background:${i.isCountGoal?'#faf5ff':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isCountGoal?'1':'0.35'}">🎯</button>
+              <button onclick="updateItemInline('${i.id}',{isRecurringYearly:!${i.isRecurringYearly}})"
+                title="${i.isRecurringYearly?'毎年繰り返しを外す':'毎年繰り返しにする'}"
+                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isRecurringYearly?'#48bb78':'#e2e8f0'};background:${i.isRecurringYearly?'#f0fff4':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isRecurringYearly?'1':'0.35'}">🔄</button>
+            </div>
+          </td>
+        `}
+        <td><div class="flex gap-8">
+          <button class="btn btn-sm btn-outline" onclick="openForm('${i.id}')">編集</button>
+          <button class="btn btn-sm" style="background:#edf2f7;color:#718096" onclick="discardItem('${i.id}')">捨てる</button>
+        </div></td>
+      </tr>`;
+}
+
 function renderList(){
   const el = document.getElementById('page-list');
   const focusName = settings.focusListName||'重点リスト';
@@ -1837,83 +1917,7 @@ function renderList(){
     <tbody>
     ${rows.length===0
       ?`<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">${listTab==='complete'?'✅':'📭'}</div><p>${listTab==='complete'?'完了済みのタスクはありません':'条件に一致するタスクがありません'}</p></div></td></tr>`
-      :rows.map(i=>`
-      <tr class="${i.completed?'done':''}">
-        <td>
-          <button class="complete-btn ${i.completed?'done':''}"
-            onclick="toggleCompleteAndSwitch('${i.id}')"
-            title="${i.completed?'未完了に戻す':'完了にする'}">
-            ${i.completed?'✓':''}
-          </button>
-        </td>
-        <td class="text-light text-xs">${i.no}</td>
-        <td>
-          <div class="item-title" style="font-weight:600;font-size:15px">${esc(i.title)}</div>
-          ${i.isCountGoal&&i.countTarget?`<div class="text-xs text-light">${i.countCurrent||0}/${i.countTarget}</div>`:''}
-          ${i.memo?`<div class="text-xs text-light truncate">${esc(i.memo)}</div>`:''}
-        </td>
-        ${i.completed ? `
-          <td class="text-sm text-sub">${i.category||'未分類'}</td>
-          <td>${prioTag(i.priority)}</td>
-          <td class="text-sm text-sub">
-            <div><span style="color:#276749">✓ ${fmtDate(i.completedAt)}</span></div>
-            <div class="text-xs text-light">${i.year?i.year+'年':''} ${i.month?i.month+'月':''}</div>
-          </td>
-          <td>
-            ${i.isFocus?'<span class="tag tag-focus">⭐</span>':''}
-            ${i.isRecurringYearly?'<span class="tag tag-recurring">🔄</span>':''}
-          </td>
-        ` : `
-          <td style="padding:6px 8px">
-            <select onchange="updateItemInline('${i.id}',{category:this.value})"
-              style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 6px;font-size:14px;width:100%;color:${!i.category||i.category==='未分類'?'#c53030':'#718096'}">
-              <option value="">未分類</option>
-              ${CATS.map(c=>`<option value="${c}" ${i.category===c?'selected':''}>${c}</option>`).join('')}
-            </select>
-          </td>
-          <td style="padding:6px 8px">
-            <div style="display:flex;gap:3px">
-              <button onclick="updateItemInline('${i.id}',{priority:'High'})"
-                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='High'?'#c53030':'#e2e8f0'};background:${i.priority==='High'?'#fed7d7':'#fff'};color:${i.priority==='High'?'#c53030':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">高</button>
-              <button onclick="updateItemInline('${i.id}',{priority:'Medium'})"
-                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='Medium'?'#c05621':'#e2e8f0'};background:${i.priority==='Medium'?'#feebc8':'#fff'};color:${i.priority==='Medium'?'#c05621':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">中</button>
-              <button onclick="updateItemInline('${i.id}',{priority:'Low'})"
-                style="padding:3px 7px;border-radius:5px;border:2px solid ${i.priority==='Low'?'#718096':'#e2e8f0'};background:${i.priority==='Low'?'#edf2f7':'#fff'};color:${i.priority==='Low'?'#718096':'#a0aec0'};font-size:13px;font-weight:700;cursor:pointer">低</button>
-            </div>
-          </td>
-          <td style="padding:6px 8px">
-            <div style="display:flex;gap:4px;align-items:center">
-              <select onchange="updateItemInline('${i.id}',{year:this.value?parseInt(this.value):null})"
-                style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 4px;font-size:13px;width:60px">
-                <option value="">年</option>
-                ${[2025,2026,2027,2028,2029].map(y=>`<option value="${y}" ${i.year===y?'selected':''}>${y}</option>`).join('')}
-              </select>
-              <select onchange="updateItemInline('${i.id}',{month:this.value?parseInt(this.value):null})"
-                style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 4px;font-size:13px;width:48px">
-                <option value="">月</option>
-                ${Array.from({length:12},(_,k)=>`<option value="${k+1}" ${i.month===k+1?'selected':''}>${k+1}</option>`).join('')}
-              </select>
-            </div>
-          </td>
-          <td style="padding:6px 8px">
-            <div style="display:flex;gap:4px;align-items:center">
-              <button onclick="updateItemInline('${i.id}',{isFocus:!${i.isFocus}})"
-                title="${i.isFocus?'重点リストから外す':'重点リストに追加'}"
-                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isFocus?'#f6ad55':'#e2e8f0'};background:${i.isFocus?'#fffaf0':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isFocus?'1':'0.35'}">⭐</button>
-              <button onclick="updateItemInline('${i.id}',{isCountGoal:!${i.isCountGoal}})"
-                title="${i.isCountGoal?'カウント系を外す':'カウント系にする'}"
-                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isCountGoal?'#9f7aea':'#e2e8f0'};background:${i.isCountGoal?'#faf5ff':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isCountGoal?'1':'0.35'}">🎯</button>
-              <button onclick="updateItemInline('${i.id}',{isRecurringYearly:!${i.isRecurringYearly}})"
-                title="${i.isRecurringYearly?'毎年繰り返しを外す':'毎年繰り返しにする'}"
-                style="width:26px;height:26px;border-radius:6px;border:2px solid ${i.isRecurringYearly?'#48bb78':'#e2e8f0'};background:${i.isRecurringYearly?'#f0fff4':'#fff'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${i.isRecurringYearly?'1':'0.35'}">🔄</button>
-            </div>
-          </td>
-        `}
-        <td><div class="flex gap-8">
-          <button class="btn btn-sm btn-outline" onclick="openForm('${i.id}')">編集</button>
-          <button class="btn btn-sm" style="background:#edf2f7;color:#718096" onclick="discardItem('${i.id}')">捨てる</button>
-        </div></td>
-      </tr>`).join('')
+      :rows.map(rowHtml).join('')
     }
     </tbody>
   </table>
