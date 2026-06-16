@@ -857,9 +857,6 @@ async function gdriveAutoLoad() {
 }
 
 // 起動時に自動保存（ログインしている場合）
-function gdriveAutoSave() {
-  if (gdriveToken) gdriveSave();
-}
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
@@ -986,30 +983,6 @@ function colCls(pur) { return{事業・成果:'mch-biz',視野・学び:'mch-lea
 function canvasDragCls(pur){ return{事業・成果:'drag-target-biz',視野・学び:'drag-target-learn',安心・人生:'drag-target-life'}[pur]||''; }
 
 // ── AUTO-LAYOUT ──
-function autoLayout(list){
-  // Sort within list: top10 → impact large → drain → rest
-  const sorted=[...list].sort((a,b)=>{
-    if(a.isTop10&&!b.isTop10) return -1;
-    if(!a.isTop10&&b.isTop10) return 1;
-    const io={'大':0,'中':1,'小':2};
-    if(io[a.impact]!==io[b.impact]) return io[a.impact]-io[b.impact];
-    if((a.energyState==='消耗')!==( b.energyState==='消耗')) return a.energyState==='消耗'?-1:1;
-    return 0;
-  });
-  // Staggered grid positions
-  const patterns=[
-    [20,20],[55,18],[35,42],[70,38],[20,60],[60,58],[40,75],[75,68],[18,80],[55,80],[30,90],[70,85],
-    [45,22],[80,20],[25,50],[65,48],[48,65],[82,55],[15,35],[50,35],[75,22],[22,70],[62,70],[38,55],
-    [80,40],[10,25],[50,55],[85,65],[30,30],[68,30],[15,50],[55,65],[80,75],[25,85],[65,85],[45,90],
-  ];
-  sorted.forEach((p,i)=>{
-    if(p.x===undefined||p.y===undefined){
-      const [px,py]=patterns[i%patterns.length];
-      p.x=px; p.y=py;
-    }
-  });
-  return sorted;
-}
 
 // ── GET FILTERS ──
 function getFilters(){
@@ -1250,42 +1223,6 @@ function onCanvasDrop(e, newPurpose){
 }
 
 // ── Sort / auto-layout ──
-function sortBy(mode){
-  // Update active button
-  ['sImpact','sTop10','sUpdate'].forEach(id=>{
-    const b=document.getElementById(id); if(b) b.classList.remove('active');
-  });
-  const btn=document.getElementById(mode==='impact'?'sImpact':mode==='top10'?'sTop10':'sUpdate');
-  if(btn) btn.classList.add('active');
-  currentSort=mode;
-
-  // Group by purpose and assign auto positions
-  PURPOSES.forEach(pur=>{
-    let group=persons.filter(p=>p.relationshipPurpose===pur&&!p.isDormant);
-    if(mode==='impact'){
-      const o={'大':0,'中':1,'小':2};
-      group.sort((a,b)=>(o[a.impact]||2)-(o[b.impact]||2));
-    } else if(mode==='top10'){
-      group.sort((a,b)=>(b.isTop10?1:0)-(a.isTop10?1:0));
-    } else {
-      group.sort((a,b)=>new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
-    }
-    const patterns=[
-      [20,18],[55,15],[80,18],[18,38],[50,38],[80,38],[25,58],[55,58],[80,55],
-      [15,75],[45,75],[75,72],[35,25],[65,22],[30,48],[68,45],[40,68],[72,65],[20,85],[55,82],
-    ];
-    group.forEach((p,idx)=>{
-      const pi=persons.findIndex(x=>x.id===p.id);
-      if(pi>=0){
-        const [px,py]=patterns[idx%patterns.length];
-        persons[pi]={...persons[pi],x:px,y:py};
-      }
-    });
-  });
-  sv(SK,persons);
-  renderMap();
-  showToast('配置を整列しました');
-}
 
 function selectPerson(id){ selectedId=id; renderMap(); }
 
@@ -1397,12 +1334,6 @@ function qapUpAndRedraw(id,field,value){
   renderMap();
 }
 
-function applyRec(id){
-  const p=persons.find(x=>x.id===id); if(!p) return;
-  const txt=getRec(p);
-  qapUp(id,'nextAction',txt);
-  const ta=document.getElementById('qap-na'); if(ta) ta.value=txt;
-}
 
 function toggleT10(id){
   const i=persons.findIndex(p=>p.id===id); if(i<0) return;
