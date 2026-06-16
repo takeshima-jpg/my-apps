@@ -672,46 +672,27 @@ function renderVision() {
 // 全OSのデータを収集
 // ReflectOS IndexedDB から問い・実験を取得
 function readReflectOSFromIDB() {
-  return new Promise((resolve) => {
-    const EMPTY = { themes: [], importantQuestions: [], activeExperiments: [] };
-    try {
-      const req = indexedDB.open('ReflectOS7', 1);
-      req.onupgradeneeded = e => { const db = e.target.result; ['logs','themes','settings','checks'].forEach(s => { if(!db.objectStoreNames.contains(s)) db.createObjectStore(s,{keyPath:'id'}); }); };
-      req.onerror = () => resolve(EMPTY);
-      req.onsuccess = (e) => {
-        const db = e.target.result;
-        const names = Array.from(db.objectStoreNames);
-        const want = ['logs','themes','checks'].filter(n => names.includes(n));
-        if (!want.length) { db.close(); resolve(EMPTY); return; }
-        const tx = db.transaction(want, 'readonly');
-        const data = {}; let pending = want.length;
-        want.forEach(n => {
-          const r = tx.objectStore(n).getAll();
-          r.onsuccess = () => { data[n] = r.result || []; if(--pending===0) finish(); };
-          r.onerror  = () => { data[n] = [];        if(--pending===0) finish(); };
-        });
-        function finish() {
-          db.close();
-          const logs = data.logs || [];
-          const checkMap = {};
-          (data.checks || []).forEach(c => { if (c && c.id) checkMap[c.id] = c.state || (c.done ? 'done' : 'todo'); });
-          const importantQuestions = [];
-          const activeExperiments = [];
-          logs.filter(r => r && r.status !== 'draft').forEach(r => {
-            if (r.question) r.question.split('\n').filter(l => l.trim()).forEach((line, i) => {
-              if ((checkMap['q_'+r.id+'_'+i] || 'todo') === 'important') importantQuestions.push({ text: line.trim(), date: r.date || '' });
-            });
-            if (r.nextExp) r.nextExp.split('\n').filter(l => l.trim()).forEach((line, i) => {
-              if ((checkMap['e_'+r.id+'_'+i] || 'todo') === 'doing') activeExperiments.push({ text: line.trim(), date: r.date || '' });
-            });
-          });
-          const themes = (data.themes || []).filter(t => t && t.status !== '完了')
-            .map(t => ({ title: t.title || '', status: t.status || '', priority: t.priority || '', question: t.question || '', hypothesis: t.hypothesis || '' }));
-          resolve({ themes, importantQuestions, activeExperiments });
-        }
-      };
-    } catch(e) { resolve(EMPTY); }
-  });
+  const EMPTY = { themes: [], importantQuestions: [], activeExperiments: [] };
+  try {
+    const o = JSON.parse(localStorage.getItem('reflectOS_v1') || 'null');
+    if (!o) return Promise.resolve(EMPTY);
+    const logs = o.logs || [];
+    const checkMap = {};
+    (o.checks || []).forEach(c => { if (c && c.id) checkMap[c.id] = c.state || (c.done ? 'done' : 'todo'); });
+    const importantQuestions = [];
+    const activeExperiments = [];
+    logs.filter(r => r && r.status !== 'draft').forEach(r => {
+      if (r.question) r.question.split('\n').filter(l => l.trim()).forEach((line, i) => {
+        if ((checkMap['q_'+r.id+'_'+i] || 'todo') === 'important') importantQuestions.push({ text: line.trim(), date: r.date || '' });
+      });
+      if (r.nextExp) r.nextExp.split('\n').filter(l => l.trim()).forEach((line, i) => {
+        if ((checkMap['e_'+r.id+'_'+i] || 'todo') === 'doing') activeExperiments.push({ text: line.trim(), date: r.date || '' });
+      });
+    });
+    const themes = (o.themes || []).filter(t => t && t.status !== '完了')
+      .map(t => ({ title: t.title || '', status: t.status || '', priority: t.priority || '', question: t.question || '', hypothesis: t.hypothesis || '' }));
+    return Promise.resolve({ themes, importantQuestions, activeExperiments });
+  } catch(e) { return Promise.resolve(EMPTY); }
 }
 
 async function collectAllOSDataWithReflect() {
@@ -757,49 +738,25 @@ function restoreAllOSData(data) {
 // ── JSON 保存 / 読込 ──
 
 
-// ── Reflect OS 完全バックアップ（IndexedDB: ReflectOS7 / stores: logs,themes,settings,checks）──
+// ── Reflect OS 完全バックアップ（localStorage: reflectOS_v1 / stores: logs,themes,settings,checks）──
 const REFLECT_STORES = ['logs','themes','settings','checks'];
 function dumpReflectIDB() {
-  return new Promise((resolve) => {
-    try {
-      const req = indexedDB.open('ReflectOS7', 1);
-      req.onupgradeneeded = e => { const db = e.target.result; REFLECT_STORES.forEach(s => { if(!db.objectStoreNames.contains(s)) db.createObjectStore(s,{keyPath:'id'}); }); };
-      req.onerror = () => resolve(null);
-      req.onsuccess = e => {
-        const db = e.target.result;
-        const stores = Array.from(db.objectStoreNames);
-        if (!stores.length) { db.close(); resolve({ version: db.version, stores: {} }); return; }
-        const out = {}; let pending = stores.length;
-        const tx = db.transaction(stores, 'readonly');
-        stores.forEach(s => {
-          const r = tx.objectStore(s).getAll();
-          r.onsuccess = () => { out[s] = r.result || []; if(--pending===0){ db.close(); resolve({ version: db.version, stores: out }); } };
-          r.onerror  = () => { out[s] = [];        if(--pending===0){ db.close(); resolve({ version: db.version, stores: out }); } };
-        });
-      };
-    } catch(e) { resolve(null); }
-  });
+  // Reflect OSはlocalStorage(reflectOS_v1)へ移行済み。互換のため{version,stores}形式で返す
+  try {
+    const o = JSON.parse(localStorage.getItem('reflectOS_v1') || 'null') || {};
+    const stores = {}; REFLECT_STORES.forEach(s => { stores[s] = Array.isArray(o[s]) ? o[s] : []; });
+    return Promise.resolve({ version: 1, stores });
+  } catch(e) { return Promise.resolve({ version: 1, stores: {} }); }
 }
 function restoreReflectIDB(dump) {
-  return new Promise((resolve) => {
-    if (!dump || !dump.stores) { resolve(false); return; }
-    const names = Object.keys(dump.stores);
-    if (!names.length) { resolve(false); return; }
-    try {
-      const req = indexedDB.open('ReflectOS7', 1);
-      req.onupgradeneeded = e => { const db = e.target.result; REFLECT_STORES.concat(names).forEach(s => { if(!db.objectStoreNames.contains(s)) db.createObjectStore(s,{keyPath:'id'}); }); };
-      req.onerror = () => resolve(false);
-      req.onsuccess = e => {
-        const db = e.target.result;
-        const existing = names.filter(n => db.objectStoreNames.contains(n));
-        if (!existing.length) { db.close(); resolve(false); return; }
-        const tx = db.transaction(existing, 'readwrite');
-        existing.forEach(s => { const os = tx.objectStore(s); os.clear(); (dump.stores[s]||[]).forEach(rec => { try { os.put(rec); } catch(_){} }); });
-        tx.oncomplete = () => { db.close(); resolve(true); };
-        tx.onerror    = () => { db.close(); resolve(false); };
-      };
-    } catch(e) { resolve(false); }
-  });
+  try {
+    if (!dump || !dump.stores) return Promise.resolve(false);
+    const cur = JSON.parse(localStorage.getItem('reflectOS_v1') || 'null') || {logs:[],themes:[],settings:[],checks:[]};
+    Object.keys(dump.stores).forEach(s => { cur[s] = Array.isArray(dump.stores[s]) ? dump.stores[s] : []; });
+    ['logs','themes','settings','checks'].forEach(s => { if(!Array.isArray(cur[s])) cur[s] = []; });
+    localStorage.setItem('reflectOS_v1', JSON.stringify(cur));
+    return Promise.resolve(true);
+  } catch(e) { return Promise.resolve(false); }
 }
 
 async function exportAllJSON() {
