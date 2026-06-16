@@ -1240,22 +1240,24 @@ function render() {
 }
 
 function renderSb() {
-  let urgent = 0;
+  const urgentItems = [];
   S.projects.forEach(p=>{
     // 危険温度感イベント
-    (p.events||[]).forEach(e=>{ if(e.sentiment==='危険') urgent++; });
+    (p.events||[]).forEach(e=>{ if(e.sentiment==='危険') urgentItems.push(`⚠ ${p.name}：${e.title||'危険イベント'}`); });
     // 直近分岐点（14日以内）
     const now2=new Date();
     (p.forks||[]).filter(f=>f.status==='future'&&f.date).forEach(f=>{
       const diff=(new Date(f.date)-now2)/86400000;
-      if(diff>=0&&diff<=14) urgent++;
+      if(diff>=0&&diff<=14) urgentItems.push(`⑂ ${p.name}：${f.title||'予定分岐'}（${f.date}）`);
     });
   });
+  const urgent = urgentItems.length;
+  const urgentTip = urgentItems.join('\n');
   const cur = page==='detail'?'projs':page;
   $$('sb-nav').innerHTML = PAGES.map(p=>
     `<div class="sb-link${p.id===cur?' on':''}" onclick="nav('${p.id}')">
        <span class="sb-link-ic">${p.ic}</span>${p.label}
-       ${p.id==='dash'&&urgent?`<span class="sb-badge">${urgent}</span>`:''}
+       ${p.id==='dash'&&urgent?`<span class="sb-badge" title="${esc(urgentTip)}">${urgent}</span>`:''}
      </div>`
   ).join('');
 }
