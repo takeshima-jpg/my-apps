@@ -372,21 +372,26 @@ input, select, textarea { font-family: var(--f0); }
 }
 
 /* 重点テーマ（旧:フェーズマップ） */
-.ov-phase-map { display: flex; gap: 0; overflow-x: auto; padding-bottom: 4px; }
-.ov-phase-item {
-  flex: 1; min-width: 90px; text-align: center;
-  padding: 16px 10px;
-  border-right: 1px solid var(--gray1);
+.ov-phase-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
 }
-.ov-phase-item:last-child { border-right: none; }
+.ov-phase-item {
+  text-align: left;
+  padding: 13px 15px;
+  background: var(--off);
+  border: 1px solid var(--gray1);
+  border-radius: var(--r);
+}
 .ov-phase-num {
-  font-size: 1.8rem; font-weight: 800; color: var(--navy);
-  opacity: .15; line-height: 1; margin-bottom: 6px;
+  font-size: 1.05rem; font-weight: 800; color: var(--navy);
+  opacity: .3; line-height: 1; margin-bottom: 5px;
 }
 .ov-phase-theme {
   font-size: .88rem; font-weight: 700; color: var(--navy); margin-bottom: 5px;
 }
-.ov-phase-goal { font-size: .75rem; color: var(--gray4); line-height: 1.5; }
+.ov-phase-goal { font-size: .76rem; color: var(--gray4); line-height: 1.55; }
 
 /* センターピン強調 */
 .ov-centerpin {
