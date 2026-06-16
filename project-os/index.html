@@ -1166,9 +1166,6 @@ async function gdriveAutoLoad() {
 }
 
 // 起動時に自動保存（ログインしている場合）
-function gdriveAutoSave() {
-  if (gdriveToken) gdriveSave();
-}
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
@@ -1386,13 +1383,7 @@ function renderDash() {
   const ST_CL   = { '進行中':'bd-green','保留':'bd-yellow' };
 
   // スコアリング: 日付が近いほど高、制約>分岐>通常
-  function itemScore(item) {
-    const diff = item.date ? (new Date(item.date) - now) / 86400000 : 999;
-    const kindPri = KIND_PRI[item.kind] || 9;
-    const urgency = diff < 0 ? 0 : diff < 7 ? 1 : diff < 14 ? 2 : 3;
-    return kindPri * 10 + urgency;
-  }
-
+  
   // 今日±14日以内の実行候補（制約・分岐・未完了通常）
   const allExecItems = [];
   ps.forEach(p => {
@@ -1993,54 +1984,10 @@ function delProj(pid){
 /* ══════════════════════════════════
    STAKEHOLDER MODAL
 ══════════════════════════════════ */
-function openStkModal(pid,sid){
-  const p=proj(pid), s=sid?p.stakeholders.find(x=>x.id===sid):null;
-  showModal(s?'関係者を編集':'関係者を追加', `
-    <div class="fr2">
-      <div class="fg"><label class="fl">名前 *</label>${inp('fsn',s?.name,'氏名')}</div>
-      <div class="fg"><label class="fl">役割</label>${inp('fsr',s?.role,'役職・関係')}</div>
-    </div>
-    <div class="fr2">
-      <div class="fg"><label class="fl">影響度</label>${sel('fsi',['高','中','低'],s?.influence)}</div>
-      <div class="fg"><label class="fl">温度感</label>${sel('fss',['良好','普通','注意','危険'],s?.sentiment)}</div>
-    </div>
-    <div class="fg"><label class="fl">メモ</label>${ta('fsm',s?.memo)}</div>`,
-  ()=>{
-    const name=g('fsn'); if(!name){alert('名前を入力してください');return;}
-    const data={name,role:g('fsr'),influence:g('fsi'),sentiment:g('fss'),memo:g('fsm')};
-    const px=S.projects.findIndex(p=>p.id===pid);
-    if(s){const si=S.projects[px].stakeholders.findIndex(x=>x.id===sid);S.projects[px].stakeholders[si]={...s,...data};}
-    else S.projects[px].stakeholders.push({id:uid(),...data});
-    touchProj(pid); save(); closeModal(); renderDetail();
-  });
-}
 
 /* ══════════════════════════════════
    ISSUE MODAL
 ══════════════════════════════════ */
-function openIssueModal(pid,iid){
-  const p=proj(pid), i=iid?p.issues.find(x=>x.id===iid):null;
-  showModal(i?'論点を編集':'論点を追加', `
-    <div class="fg"><label class="fl">論点名 *</label>${inp('fit',i?.title,'論点タイトル')}</div>
-    <div class="fg"><label class="fl">内容</label>${ta('fic',i?.content)}</div>
-    <div class="fr2">
-      <div class="fg"><label class="fl">重要度</label>${sel('fip',['高','中','低'],i?.priority)}</div>
-      <div class="fg"><label class="fl">状態</label>${sel('fis',['未整理','検討中','意思決定待ち','決定済み'],i?.status)}</div>
-    </div>
-    <div class="fg"><label class="fl">次の一手</label>${inp('fin',i?.nextStep,'具体的な次のアクション')}</div>
-    <div class="fr2">
-      <div class="fg"><label class="fl">期限</label>${fmtDate('fid',i?.deadline)}</div>
-      <div class="fg"><label class="fl">関係者</label>${inp('fistk',i?.stakeholders,'関係者名')}</div>
-    </div>`,
-  ()=>{
-    const title=g('fit'); if(!title){alert('論点名を入力してください');return;}
-    const data={title,content:g('fic'),priority:g('fip'),status:g('fis'),nextStep:g('fin'),deadline:g('fid'),stakeholders:g('fistk'),updatedAt:new Date().toISOString()};
-    const px=S.projects.findIndex(p=>p.id===pid);
-    if(i){const ii=S.projects[px].issues.findIndex(x=>x.id===iid);S.projects[px].issues[ii]={...i,...data};}
-    else S.projects[px].issues.push({id:uid(),...data});
-    touchProj(pid); save(); closeModal(); renderDetail();
-  });
-}
 
 /* ══════════════════════════════════
    FORK MODAL
@@ -2070,47 +2017,10 @@ function openForkModal(pid,fid){
 /* ══════════════════════════════════
    DECISION MODAL
 ══════════════════════════════════ */
-function openDecModal(pid,did){
-  const p=proj(pid), d=did?p.decisions.find(x=>x.id===did):null;
-  showModal(d?'意思決定を編集':'意思決定を記録', `
-    <div class="fg"><label class="fl">日付</label>${fmtDate('fdd',d?.date||today())}</div>
-    <div class="fg"><label class="fl">決定内容 *</label>${ta('fdc',d?.content)}</div>
-    <div class="fg"><label class="fl">決定理由</label>${ta('fdr',d?.reason)}</div>
-    <div class="fg"><label class="fl">当時の前提</label>${ta('fdp',d?.premises)}</div>
-    <div class="fg"><label class="fl">検討した他案</label>${ta('fda',d?.alternatives)}</div>
-    <div class="fg"><label class="fl">リスク</label>${inp('fdrsk',d?.risk,'判断に伴うリスク')}</div>
-    <div class="fg"><label class="fl">振り返り</label>${ta('fdret',d?.retrospective)}</div>`,
-  ()=>{
-    const content=g('fdc'); if(!content){alert('決定内容を入力してください');return;}
-    const data={date:g('fdd'),content,reason:g('fdr'),premises:g('fdp'),alternatives:g('fda'),risk:g('fdrsk'),retrospective:g('fdret')};
-    const px=S.projects.findIndex(p=>p.id===pid);
-    if(d){const di=S.projects[px].decisions.findIndex(x=>x.id===did);S.projects[px].decisions[di]={...d,...data};}
-    else S.projects[px].decisions.push({id:uid(),...data});
-    touchProj(pid); save(); closeModal(); renderDetail();
-  });
-}
 
 /* ══════════════════════════════════
    LEARNING MODAL
 ══════════════════════════════════ */
-function openLearnModal(pid,lid){
-  const p=proj(pid), l=lid?p.learnings.find(x=>x.id===lid):null;
-  showModal(l?'学習ログを編集':'学習ログを記録', `
-    <div class="fg"><label class="fl">日付</label>${fmtDate('fld',l?.date||today())}</div>
-    <div class="fg"><label class="fl">起きたこと *</label>${ta('fle',l?.event)}</div>
-    <div class="fg"><label class="fl">想定とのズレ</label>${ta('flg',l?.gap)}</div>
-    <div class="fg"><label class="fl">違和感・気づき</label>${ta('flu',l?.unease)}</div>
-    <div class="fg"><label class="fl">学び</label>${ta('fll',l?.learning)}</div>
-    <div class="fg"><label class="fl">次回改善</label>${inp('fli',l?.improvement,'次回どう変えるか')}</div>`,
-  ()=>{
-    const event=g('fle'); if(!event){alert('起きたことを入力してください');return;}
-    const data={date:g('fld'),event,gap:g('flg'),unease:g('flu'),learning:g('fll'),improvement:g('fli')};
-    const px=S.projects.findIndex(p=>p.id===pid);
-    if(l){const li=S.projects[px].learnings.findIndex(x=>x.id===lid);S.projects[px].learnings[li]={...l,...data};}
-    else S.projects[px].learnings.push({id:uid(),...data});
-    touchProj(pid); save(); closeModal(); renderDetail();
-  });
-}
 
 /* ══════════════════════════════════
    HELPERS
@@ -2524,24 +2434,6 @@ function rowToObj(row, colMap, projName, year) {
 }
 
 /* ── 差分マージ ── */
-function mergeItems(existing, incoming) {
-  const keyMap = {};
-  existing.forEach((item, i) => { if (item._key) keyMap[item._key] = i; });
-  const result = [...existing];
-  let added = 0, updated = 0;
-  incoming.forEach(item => {
-    if (item._key && keyMap[item._key] !== undefined) {
-      const origId = result[keyMap[item._key]].id;
-      result[keyMap[item._key]] = { ...item, id: origId };
-      updated++;
-    } else {
-      result.push(item);
-      if (item._key) keyMap[item._key] = result.length - 1;
-      added++;
-    }
-  });
-  return { result, added, updated };
-}
 
 /* ── UI ── */
 /* ── プロジェクト選択カード ── */
