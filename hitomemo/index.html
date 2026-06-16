@@ -721,9 +721,6 @@ async function gdriveAutoLoad() {
 }
 
 // 起動時に自動保存（ログインしている場合）
-function gdriveAutoSave() {
-  if (gdriveToken) gdriveSave();
-}
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
