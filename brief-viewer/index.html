@@ -307,6 +307,17 @@ function toMarkdown(d) {
   if (d.vision_brief) md += `## 今日のVISION\n${d.vision_brief}\n\n`;
   if (d.vision_proposals?.length) md += `## VISIONへの提言\n${d.vision_proposals.map(c => `・${c}`).join('\n')}\n\n`;
   if (d.explore_themes?.length) md += `## 探索テーマ\n${d.explore_themes.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) {
+    const rf = d.reflect;
+    md += `## 内省（Reflect）\n`;
+    if (rf.open_questions?.length) md += `今向き合う問い：\n` + rf.open_questions.map(c => `・${c}`).join('\n') + '\n';
+    if (rf.active_experiments?.length) md += `実験中：\n` + rf.active_experiments.map(c => `・${c}`).join('\n') + '\n';
+    if (rf.proposals?.length) md += rf.proposals.map(p => {
+      const t = (typeof p === 'string') ? p : `${p.based_on ? p.based_on + ' → ' : ''}${p.suggestion || ''}${p.why ? '（' + p.why + '）' : ''}`;
+      return `・提案：${t}`;
+    }).join('\n') + '\n';
+    md += `\n`;
+  }
   if (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length)) {
     const ll = d.life_list;
     md += `## やりたいこと（100LIST）\n`;
