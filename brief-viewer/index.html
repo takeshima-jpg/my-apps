@@ -307,6 +307,13 @@ function toMarkdown(d) {
   if (d.vision_brief) md += `## 今日のVISION\n${d.vision_brief}\n\n`;
   if (d.vision_proposals?.length) md += `## VISIONへの提言\n${d.vision_proposals.map(c => `・${c}`).join('\n')}\n\n`;
   if (d.explore_themes?.length) md += `## 探索テーマ\n${d.explore_themes.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy)) {
+    const ll = d.life_list;
+    md += `## やりたいこと（100LIST）\n`;
+    if (ll.focus_today?.length) md += ll.focus_today.map(c => `・${c}`).join('\n') + '\n';
+    if (ll.one_joy) md += `・今日の彩り：${ll.one_joy}\n`;
+    md += `\n`;
+  }
   if (d.partner_progress && d.partner_progress.current != null) {
     const pp = d.partner_progress;
     md += `## 経営パートナー進捗（${pp.current ?? 0}/${pp.target ?? 10}）\n`;
