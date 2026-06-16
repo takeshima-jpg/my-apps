@@ -1027,13 +1027,6 @@ function completePj(pId,kind,rawId){
   if(item){ item.status='完了'; item.updatedAt=now(); p.updatedAt=now(); savePjData(pd); toast('✓ 完了 (Project)'); refresh(); }
 }
 let _pjT=null;
-function openPjEdit(pId,kind,rawId,title,status,date){
-  _pjT={pId,kind,rawId};
-  document.getElementById('pjModalTitle').textContent=title;
-  document.getElementById('pjModalStatus').value=status||'';
-  document.getElementById('pjModalDate').value=date||'';
-  document.getElementById('pjModal').classList.remove('hid');
-}
 function savePj(){
   if(!_pjT) return;
   const pd=getPj(), p=(pd.projects||[]).find(x=>x.id===_pjT.pId); if(!p){closeModal('pjModal');return;}
@@ -1239,13 +1232,6 @@ function renderLauncherList(q){
 }
 
 // ランチャーからOS起動（オーバーレイ経由）
-function openFrameOS(viewId, frameId, frameSrc){
-  // LAUNCHER_OVERLAY_MAP から title を探す
-  const key = viewId.replace('view-','');
-  const conf = LAUNCHER_OVERLAY_MAP[key];
-  const title = conf ? conf.title : key;
-  openOsOverlay(frameSrc, title);
-}
 
 // ── 今週 折りたたみ状態（デフォルト: 閉じ）
 let homeWeekOpen = false;
