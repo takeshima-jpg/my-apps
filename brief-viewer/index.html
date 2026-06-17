@@ -47,6 +47,10 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 
 /* BODY */
 .bv-main { flex: 1; overflow-y: auto; }
+.bv-tabs { display: flex; gap: 4px; padding: 8px 18px 0; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 9; }
+.bv-tab { flex: 1; max-width: 140px; background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 6px 10px; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; font-family: var(--font-body); transition: all var(--transition); }
+.bv-tab:hover { color: var(--text2); }
+.bv-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
 /* LOGIN STATE */
 .bv-login { max-width: 480px; margin: 0 auto; padding: 64px 24px; text-align: center; }
@@ -105,6 +109,11 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
     </div>
     <button class="bv-refresh" id="refreshBtn" onclick="loadBrief()" style="display:none">↻ 更新</button>
   </header>
+  <nav class="bv-tabs" id="tabs" style="display:none">
+    <button class="bv-tab active" data-tab="daily" onclick="switchTab('daily')">毎朝</button>
+    <button class="bv-tab" data-tab="weekly" onclick="switchTab('weekly')">週次</button>
+    <button class="bv-tab" data-tab="monthly" onclick="switchTab('monthly')">月次</button>
+  </nav>
   <main class="bv-main" id="main"></main>
 </div>
 
@@ -115,7 +124,13 @@ const SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 const REDIRECT_URI = location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html');
 const FOLDER_NAME = 'aix-drafts';
 const FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U';
-const FILE_NAME = 'aix_draft_latest.json';
+// 毎朝／週次／月次の3レビューをタブで切り替え（各GDriveファイル）
+const TABS = {
+  daily:   { file: 'aix_draft_latest.json',  label: '毎朝', title: '📋 Morning Brief' },
+  weekly:  { file: 'aix_review_weekly.json',  label: '週次', title: '📋 Strategic Review（週次）' },
+  monthly: { file: 'aix_review_monthly.json', label: '月次', title: '📋 Executive Review（月次）' },
+};
+let currentTab = 'daily';
 const TOKEN_KEY = 'brief_viewer_token';
 
 let token = null;
@@ -204,6 +219,8 @@ async function getAccountEmail() {
 
 async function loadBrief() {
   if (!token) { showLogin(); return; }
+  const FILE_NAME = TABS[currentTab].file;
+  document.getElementById('tabs').style.display = 'flex';
   const btn = document.getElementById('refreshBtn');
   btn.style.display = 'inline-block';
   btn.disabled = true;
@@ -232,7 +249,16 @@ async function loadBrief() {
       return;
     }
 
-    // 見つからない → 診断情報を集める（所有＋共有の両方をリスト）
+    // 見つからない
+    setStatus('connected', '接続済み');
+    // 週次・月次は未生成のことが多いので穏やかな空状態を出す
+    if (currentTab !== 'daily') {
+      showMessage('🗓️', `${TABS[currentTab].label}レビューはまだありません`,
+        `<code>${FILE_NAME}</code> がまだ生成されていません。<br>Coworkで${TABS[currentTab].label}レビューを実行すると、ここに表示されます。`,
+        [{ label: '再読み込み', onclick: loadBrief }]);
+      return;
+    }
+    // 毎朝のみ詳細な診断情報を出す（所有＋共有の両方をリスト）
     setStatus('error', 'ファイルなし');
     const email = await getAccountEmail();
     async function listAix(cond) {
@@ -283,9 +309,12 @@ function toMarkdown(d) {
   if (typeof d !== 'object' || d === null) return String(d);
   let md = '';
   if (d.top_theme) md += `## 今日の最重要テーマ\n${d.top_theme}\n\n`;
+  if (d.center_pin) md += `## 今週のセンターピン\n${d.center_pin}\n\n`;
   if (d.changes?.length) md += `## 昨日からの重要変化\n${d.changes.map(c => `・${c}`).join('\n')}\n\n`;
   if (d.decisions?.length) md += `## 今日判断すべきこと\n${d.decisions.map(c => `・${c}`).join('\n')}\n\n`;
-  if (d['育成']?.length) md += `## 今日育成すべき人\n${d['育成'].map(p => `・${p.name}：${p.reason}`).join('\n')}\n\n`;
+  if (d.week_question?.length) md += `## 今週の問い\n${d.week_question.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.engagement?.length) md += `## 今日関わるべき人\n${d.engagement.map(p => `・${p.name}${p.type ? `（${p.type}）` : ''}：${p.reason || ''}`).join('\n')}\n\n`;
+  else if (d['育成']?.length) md += `## 今日関わるべき人\n${d['育成'].map(p => `・${p.name}：${p.reason}`).join('\n')}\n\n`;
   if (d['会う価値']?.length) md += `## 今日接触する価値のある人\n${d['会う価値'].map(p => `・${p.name}：${p.purpose}`).join('\n')}\n\n`;
   if (d.risks?.length) md += `## 放置リスク\n${d.risks.map(c => `・${c}`).join('\n')}\n\n`;
   if (d.winning_moves?.length) md += `## 今週の勝ち筋\n${d.winning_moves.map(c => `・${c}`).join('\n')}\n\n`;
@@ -343,6 +372,40 @@ function toMarkdown(d) {
     const dc = d.delete_candidate;
     md += `## 削除候補\n・${dc.target}${dc.type ? `（${dc.type}）` : ''}${dc.reason ? '：' + dc.reason : ''}${dc.effect ? '／効果：' + dc.effect : ''}\n\n`;
   }
+  // ===== 週次／月次レビュー専用セクション =====
+  const _sec = (t, arr) => { if (Array.isArray(arr) && arr.length) md += `## ${t}\n${arr.map(x => `・${x}`).join('\n')}\n\n`; };
+  const _grp = (t, groups) => {
+    const body = groups.filter(g => Array.isArray(g[1]) && g[1].length)
+      .map(g => `${g[0]}：\n${g[1].map(x => `・${x}`).join('\n')}`).join('\n');
+    if (body) md += `## ${t}\n${body}\n\n`;
+  };
+  // 週次
+  if (d.project_review) _grp('Projectレビュー', [['前進', d.project_review.advancing], ['停滞', d.project_review.stalled], ['完了', d.project_review.completed], ['削除候補', d.project_review.delete_candidates]]);
+  if (d.engagement_review) _grp('関わり方レビュー', [['育った人（若手）', d.engagement_review.develop], ['共同成長（同世代）', d.engagement_review.co_growth], ['相互学習（年上・専門家）', d.engagement_review.mutual_learning], ['次に経験を渡す人', d.engagement_review.next_experience]]);
+  if (d.question_review) _grp('問いレビュー', [['今育てる問い', d.question_review.nurturing], ['答えが出た問い', d.question_review.answered], ['捨てる問い', d.question_review.discard]]);
+  if (d.ai_understanding) _grp('AI理解度レビュー', [['AIが重要と認識', d.ai_understanding.recognized], ['実際とのズレ', d.ai_understanding.gaps]]);
+  if (d.life_list_review) _grp('100リストレビュー', [['進んだもの', d.life_list_review.advanced], ['止まっているもの', d.life_list_review.stalled], ['最近追加', d.life_list_review.recent], ['AI提案', d.life_list_review.proposals]]);
+  if (d.delete_review) _grp('削除候補レビュー', [['Project', d.delete_review.projects], ['人間関係', d.delete_review.people], ['問い', d.delete_review.questions], ['テーマ', d.delete_review.themes], ['構想', d.delete_review.ideas], ['役割', d.delete_review.roles]]);
+  // 月次
+  if (d.theme_review) _grp('重点テーマレビュー', [['今探求していること', d.theme_review.current], ['増えたテーマ', d.theme_review.added], ['減ったテーマ', d.theme_review.removed]]);
+  if (d.thought_shift) _grp('思想変化レビュー', [['新しく信じ始めたこと', d.thought_shift.new_beliefs], ['捨てた考え', d.thought_shift.dropped], ['深まった考え', d.thought_shift.deepened]]);
+  if (d.relationship_review) {
+    const r = d.relationship_review;
+    const g = [['本当に関係を深めたい人', r.deepen], ['優先順位の変化', r.priority_shift]];
+    _grp('大切にしたい人レビュー', g);
+    if (r.time_spent) md += `最近時間を使えているか：${r.time_spent}\n\n`;
+  }
+  if (d.partner_candidate_review) _grp('経営パートナー候補レビュー', [['新規追加', d.partner_candidate_review.added], ['昇格', d.partner_candidate_review.promoted], ['停滞', d.partner_candidate_review.stalled], ['除外', d.partner_candidate_review.removed]]);
+  if (d.ai_self_check) {
+    const a = d.ai_self_check, h = a.hypotheses || {};
+    md += `## AI自己点検\n`;
+    if (h.aiming) md += `・何を目指しているか：${h.aiming}\n`;
+    if (h.struggling) md += `・何に悩んでいるか：${h.struggling}\n`;
+    if (h.developing) md += `・誰を育てようとしているか：${h.developing}\n`;
+    if (h.discarding) md += `・何を捨てようとしているか：${h.discarding}\n`;
+    if (a.takeshima_eval) md += `・竹嶋評価：${a.takeshima_eval}\n`;
+    md += `\n`;
+  }
   return md.trim() || JSON.stringify(d, null, 2);
 }
 
@@ -391,10 +454,17 @@ function render(md, modifiedTime) {
   const main = document.getElementById('main');
   main.innerHTML = `
     <div class="bv-meta">
-      <span>📋 Morning Brief</span>
+      <span>${TABS[currentTab].title}</span>
       <span class="date-pill">最終更新 ${fmtDate(modifiedTime)}</span>
     </div>
     <div class="brief-body">${markdownToHtml(md)}</div>`;
+}
+
+function switchTab(tab) {
+  if (!TABS[tab]) return;
+  currentTab = tab;
+  document.querySelectorAll('.bv-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  loadBrief();
 }
 
 // ===== 起動 =====
