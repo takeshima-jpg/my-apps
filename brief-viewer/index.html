@@ -48,7 +48,8 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 /* BODY */
 .bv-main { flex: 1; overflow-y: auto; }
 .bv-tabs { display: flex; gap: 4px; padding: 8px 18px 0; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 9; }
-.bv-tab { flex: 1; max-width: 140px; background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 6px 10px; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; font-family: var(--font-body); transition: all var(--transition); }
+.bv-tab { flex: 1; max-width: 140px; position: relative; background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 6px 10px; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; font-family: var(--font-body); transition: all var(--transition); }
+.bv-tab.has-badge::after { content: ''; position: absolute; top: 5px; right: calc(50% - 30px); width: 7px; height: 7px; border-radius: 50%; background: #e0483d; }
 .bv-tab:hover { color: var(--text2); }
 .bv-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
@@ -246,6 +247,9 @@ async function loadBrief() {
       try { data = JSON.parse(raw); } catch (e) { data = raw; }
       render(toMarkdown(data), file.modifiedTime);
       setStatus('connected', '接続済み');
+      localStorage.setItem('bv_seen_' + currentTab, file.modifiedTime || '');
+      setBadge(currentTab, false);
+      refreshBadges();
       return;
     }
 
@@ -308,6 +312,7 @@ function toMarkdown(d) {
   if (typeof d === 'string') return d;
   if (typeof d !== 'object' || d === null) return String(d);
   let md = '';
+  if (d.cadence_notice) md += `**📣 ${d.cadence_notice}**\n\n`;
   if (d.top_theme) md += `## 今日の最重要テーマ\n${d.top_theme}\n\n`;
   if (d.center_pin) md += `## 今週のセンターピン\n${d.center_pin}\n\n`;
   if (d.changes?.length) md += `## 昨日からの重要変化\n${d.changes.map(c => `・${c}`).join('\n')}\n\n`;
@@ -467,10 +472,35 @@ function switchTab(tab) {
   loadBrief();
 }
 
+function setBadge(tab, on) {
+  const b = document.querySelector(`.bv-tab[data-tab="${tab}"]`);
+  if (b) b.classList.toggle('has-badge', on);
+}
+
+// 週次・月次の未読バッジ：GDriveの更新時刻が「前回開いたとき」より新しければ点ける
+async function refreshBadges() {
+  if (!token) return;
+  const COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';
+  const names = Object.values(TABS).map(t => `name%3D%22${t.file}%22`).join('+or+');
+  try {
+    const r = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=(${names})+and+trashed%3Dfalse&fields=files(name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=30${COMMON}`);
+    const d = await r.json();
+    const latest = {};
+    (d.files || []).forEach(f => { if (!latest[f.name] || f.modifiedTime > latest[f.name]) latest[f.name] = f.modifiedTime; });
+    ['weekly', 'monthly'].forEach(tab => {
+      const mt = latest[TABS[tab].file];
+      const seen = localStorage.getItem('bv_seen_' + tab);
+      setBadge(tab, !!mt && (!seen || mt > seen));
+    });
+  } catch (e) {}
+}
+
 // ===== 起動 =====
 handleRedirect();
 if (token) {
+  document.getElementById('tabs').style.display = 'flex';
   loadBrief();
+  refreshBadges();
 } else {
   showLogin();
 }
