@@ -358,6 +358,8 @@ select option { background: var(--surface); }
 .act-btn.ab-back:hover { border-color: var(--accent); color: var(--accent); }
 .act-btn.ab-edit:hover { border-color: var(--accent2); color: var(--accent2); }
 .act-btn.ab-del:hover { border-color: var(--red); color: var(--red); }
+.act-btn.ab-del.armed { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
+.act-btn.ab-del.armed:hover { background: var(--red); border-color: var(--red); color: #fff; }
 .act-btn.ab-tmr:hover { border-color: var(--purple); color: var(--purple); }
 .act-btn.ab-week:hover { border-color: var(--purple); color: var(--purple); }
 .act-btn.ab-reject { color: #dc2626; }
@@ -1330,8 +1332,18 @@ function setToday(id) {
 // ── POSTPONE ──
 
 // ── DELETE ──
+let confirmDelId = null, confirmDelTimer = null;
 function deleteTask(id, title) {
-  if (!confirm(`「${title}」を削除しますか？`)) return;
+  if (confirmDelId !== id) {            // 1回目：その場で「本当に削除」に変わる（往復なし）
+    confirmDelId = id;
+    clearTimeout(confirmDelTimer);
+    confirmDelTimer = setTimeout(() => { confirmDelId = null; render(); }, 3500);
+    render();
+    return;
+  }
+  // 2回目：確定して削除
+  clearTimeout(confirmDelTimer);
+  confirmDelId = null;
   tasks = tasks.filter(x => x.id !== id);
   save(); render();
 }
@@ -1555,7 +1567,7 @@ function buildCardHTML(t) {
     acts += `<button class="act-btn ab-back" onclick="changeStatus('${id}','todo')">戻す</button>`;
   }
   acts += `<button class="act-btn ab-edit" onclick="openEdit('${id}')">編集</button>`;
-  acts += `<button class="act-btn ab-del" onclick="deleteTask('${id}','${titleEsc}')">削除</button>`;
+  acts += `<button class="act-btn ab-del${confirmDelId===id?' armed':''}" onclick="deleteTask('${id}','${titleEsc}')">${confirmDelId===id?'本当に削除':'削除'}</button>`;
 
   return `<div class="${cardCls}">
     <div class="${symCls}">${sym}</div>
