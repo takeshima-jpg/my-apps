@@ -807,6 +807,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="sb-body">
     <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
 
+      <button class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;" onclick="window.__hitomemoShowList?.()">👥 一覧</button>
       <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:4px 2px 2px;letter-spacing:0.5px;">新規登録</div>
       <button id="sbNewPersonBtn" class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;" onclick="window.__hitomemoNewPerson?.()">＋ 新しい人物を記録</button>
       <button id="sbImportMemoBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoImportMemo?.()">📋 メモからインポート</button>
@@ -1136,6 +1137,7 @@ const App = () => {
     window.__hitomemoNewPerson = () => { setAnswers(Array(19).fill('')); setQIdx(0); setView('interview'); };
     window.__hitomemoImportMemo = () => { setImportText(''); setView('import'); };
     window.__hitomemoShowPrompt = (type) => { setPromptType(type); setView('prompt'); };
+    window.__hitomemoShowList = () => { setCurrent(null); setView('list'); };
 
     // Cowork用CRUD API
     window.__hitomemoGetAll = () => {
