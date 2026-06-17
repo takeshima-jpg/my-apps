@@ -1292,15 +1292,28 @@ const App = () => {
       return null;
     };
 
-    const ProfileCard = ({p, compact}) => (
+    const ProfileCard = ({p, compact}) => {
+      const quickSel = (field, value, opts, fallback) => (
+        <select value={value||fallback}
+          onClick={e=>e.stopPropagation()}
+          onChange={e=>{ e.stopPropagation(); const v=e.target.value; updateList(profiles.map(x=>x.id===p.id?{...x,[field]:v,updatedAt:new Date().toISOString()}:x)); }}
+          style={{fontSize:11,padding:'2px 4px',border:'1px solid #e2e8f0',borderRadius:5,background:'#fff',color:'#475569',maxWidth:'47%'}}>
+          {opts.map(o=><option key={o} value={o}>{o}</option>)}
+        </select>
+      );
+      return (
       <div className="profile-card" onClick={() => { setCurrent(p); setView('detail'); }}
         style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:12,padding:'14px 16px',cursor:'pointer',boxShadow:'0 1px 3px rgba(0,0,0,0.06)',transition:'box-shadow 0.15s'}}>
         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:6}}>
           <span style={{fontWeight:700,fontSize:15,color:'#1a1a2e'}}>{(p.name&&p.name.value)||p.name||'名前未設定'}</span>
           {tierBadge(p.tier||'記録のみ')}
         </div>
-        {p.stage && <div style={{marginBottom:4}}><span className="stage-pill">{p.stage}</span></div>}
         {(p.position&&p.position.value) && <div style={{fontSize:12,color:'#64748b',marginBottom:4,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{p.position.value}</div>}
+        <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}} onClick={e=>e.stopPropagation()}>
+          {quickSel('tier', p.tier, ['経営パートナー候補','仲間候補','家族','記録のみ'], '記録のみ')}
+          {quickSel('stage', p.stage, ['知人','協力者','管理職','事業責任者','経営人材','経営パートナー'], '知人')}
+          {quickSel('engagementType', p.engagementType, ['未設定','育成（若手）','共同成長（同世代）','相互学習（年上・専門家）','維持（確定パートナー・専門家）'], '未設定')}
+        </div>
         {!compact && (p.changeLog||[]).length > 0 && (
           <div style={{fontSize:11,color:'#8b5cf6',marginTop:6,padding:'4px 8px',background:'#f5f3ff',borderRadius:6}}>
             ✦ {(p.changeLog[p.changeLog.length-1].type)}：{(p.changeLog[p.changeLog.length-1].text).slice(0,35)}{(p.changeLog[p.changeLog.length-1].text).length>35?'…':''}
@@ -1310,7 +1323,8 @@ const App = () => {
           <div style={{fontSize:11,color:'#10b981',marginTop:4,padding:'4px 8px',background:'#f0fdf4',borderRadius:6}}>▶ {p.nextExperience.slice(0,35)}</div>
         )}
       </div>
-    );
+      );
+    };
 
     return (
       <div className="app">
