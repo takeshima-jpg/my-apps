@@ -430,18 +430,19 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
       <div class="leg-row">大 → 中 → 小 の3段階</div>
       <div class="lp-ttl" style="margin-top:6px">バッジ</div>
       <div class="leg-row"><span style="font-size:13px">★</span> Top10</div>
-      <div class="leg-row" style="font-size:13px;color:var(--s400)">[タグ] 関係タイプ</div>
+      <div class="leg-row" style="font-size:13px;color:var(--s400)">[タグ] 関わり方タイプ</div>
     </div>
     <hr class="leg-sep">
     <div class="lp-sec">
       <div class="lp-ttl">フィルター</div>
       <label class="filter-item"><input type="checkbox" id="fTop10"    onchange="renderMap()"> Top10のみ</label>
       <label class="filter-item"><input type="checkbox" id="fDormant"  onchange="renderMap()"> 余白も表示</label>
-      <div class="lp-ttl" style="margin-top:7px">関係タイプ別</div>
+      <div class="lp-ttl" style="margin-top:7px">関わり方タイプ別</div>
       <select class="filter-sel" id="fType" onchange="renderMap()">
         <option value="">すべて</option>
-        <option>チーム</option><option>メンター</option>
-        <option>スペシャリスト</option><option>親族</option>
+        <option>未設定</option>
+        <option>育成（若手）</option><option>共同成長（同世代）</option>
+        <option>相互学習（年上・専門家）</option><option>維持（確定パートナー・専門家）</option>
       </select>
     </div>
     <hr class="leg-sep">
@@ -506,8 +507,8 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
         <select class="fs" id="fEnergy"><option>増える</option><option>普通</option><option>消耗</option></select></div>
     </div>
     <div class="fg2">
-      <div class="fg"><label class="fl">関係タイプ</label>
-        <select class="fs" id="fType2"><option>チーム</option><option>メンター</option><option>スペシャリスト</option><option>親族</option></select></div>
+      <div class="fg"><label class="fl">関わり方タイプ</label>
+        <select class="fs" id="fType2"><option>未設定</option><option>育成（若手）</option><option>共同成長（同世代）</option><option>相互学習（年上・専門家）</option><option>維持（確定パートナー・専門家）</option></select></div>
       <div class="fg"><label class="fl">頻度</label>
         <select class="fs" id="fFreq"><option>毎週〜隔週</option><option>月1〜年数回</option><option>半年に1回以下</option></select></div>
     </div>
@@ -834,7 +835,7 @@ async function gdriveLoad() {
     const data = await res.json();
     if (data.persons) {
       if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
-      persons = data.persons || [];
+      persons = (data.persons || []).map(migRelType);
       sv();
       renderMap();
       toast('Googleドライブから読み込みました');
@@ -971,7 +972,18 @@ function mergeWithINI(stored){
   sv(SK,withXY);
   return withXY;
 }
+function migRelType(p){
+  if(!p) return p;
+  const valid=['未設定','育成（若手）','共同成長（同世代）','相互学習（年上・専門家）','維持（確定パートナー・専門家）'];
+  if(!valid.includes(p.relationshipType)){
+    const m={'メンター':'相互学習（年上・専門家）','スペシャリスト':'相互学習（年上・専門家）','チーム':'共同成長（同世代）','親族':'未設定'};
+    p.relationshipType = m[p.relationshipType] || '未設定';
+  }
+  return p;
+}
+function shortRT(v){ return String(v||'').replace(/（[^）]*）/,''); }
 let persons = ld(SK) ? mergeWithINI(ld(SK)) : (sv(SK,INI.map(ensureXY)), INI.map(ensureXY));
+persons = persons.map(migRelType);
 let selectedId = null;
 let currentSort = null;
 
@@ -1094,7 +1106,7 @@ function createCircleEl(p, showDormant){
   el.dataset.id=p.id;
   el.dataset.purpose=p.relationshipPurpose;
   el.draggable=true;
-  el.title=`${p.name}\n${p.relationshipPurpose} / ${p.energyState}\n${p.relationshipType} / ${p.frequency}${p.isTop10?'\n★ Top10':''}${p.isDraining?'\n⚠ isDraining':''}`;
+  el.title=`${p.name}\n${p.relationshipPurpose} / ${p.energyState}\n${shortRT(p.relationshipType)} / ${p.frequency}${p.isTop10?'\n★ Top10':''}${p.isDraining?'\n⚠ isDraining':''}`;
 
   // Name text
   el.appendChild(Object.assign(document.createElement('span'),{textContent:p.name}));
@@ -1110,7 +1122,7 @@ function createCircleEl(p, showDormant){
     const v=document.createElement('div'); v.className='pc-vf-badge'; v.style.color=vfc; v.textContent=vf; el.appendChild(v);
   }
   // Type tag
-  const tag=document.createElement('div'); tag.className='pc-type-tag'; tag.textContent=p.relationshipType; el.appendChild(tag);
+  const tag=document.createElement('div'); tag.className='pc-type-tag'; tag.textContent=shortRT(p.relationshipType); el.appendChild(tag);
 
   // Events
   el.addEventListener('click', e=>{ e.stopPropagation(); selectPerson(p.id); });
@@ -1265,7 +1277,7 @@ function renderQAP(){
   const fOpts=['毎週〜隔週','月1〜年数回','半年に1回以下'].map(v=>`<option${p.frequency===v?' selected':''}>${v}</option>`).join('');
   const vfOpts=[['◉','◉ もらい与える'],['〇','〇 もらっている'],['●','● 与えている'],['','— なし']].map(([v,l])=>`<option value="${v}"${p.valueFlow===v?' selected':''}>${l}</option>`).join('');
   const impOpts=['大','中','小'].map(v=>`<option${p.impact===v?' selected':''}>${v}</option>`).join('');
-  const typeOpts=['チーム','メンター','スペシャリスト','親族'].map(v=>`<option${p.relationshipType===v?' selected':''}>${v}</option>`).join('');
+  const typeOpts=['未設定','育成（若手）','共同成長（同世代）','相互学習（年上・専門家）','維持（確定パートナー・専門家）'].map(v=>`<option${p.relationshipType===v?' selected':''}>${v}</option>`).join('');
 
   panel.innerHTML=`<div class="qap-card e-${ecls}">
     <div class="qap-hdr">
@@ -1274,7 +1286,7 @@ function renderQAP(){
       <div class="qap-badges">
         <span class="bd bd-${ecls}">${p.energyState}</span>
         <span class="bd bd-${PUR_CLS[p.relationshipPurpose]||'biz'}">${p.relationshipPurpose}</span>
-        <span class="bd" style="background:var(--s100);color:var(--s600)">${p.relationshipType}</span>
+        <span class="bd" style="background:var(--s100);color:var(--s600)">${shortRT(p.relationshipType)}</span>
         ${p.isTop10?'<span class="bd bd-t10">⭐ Top10</span>':''}
         ${p.isDraining?'<span class="bd bd-draining">⚠ 消耗</span>':''}
         ${p.isDormant?'<span class="bd bd-dorm">🌿 余白</span>':''}
@@ -1292,7 +1304,7 @@ function renderQAP(){
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','frequency',this.value)">${fOpts}</select></div>
         <div><span class="qap-fl">インパクト</span>
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','impact',this.value)">${impOpts}</select></div>
-        <div><span class="qap-fl">関係タイプ</span>
+        <div><span class="qap-fl">関わり方タイプ</span>
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','relationshipType',this.value)">${typeOpts}</select></div>
         <div><span class="qap-fl">価値の流れ</span>
           <select class="qap-sel" onchange="qapUp('${p.id}','valueFlow',this.value)">${vfOpts}</select></div>
@@ -1311,7 +1323,6 @@ function renderQAP(){
         <button class="qbtn qbtn-t10"  onclick="toggleT10('${p.id}')">${p.isTop10?'⭐ Top10から外す':'☆ Top10に追加'}</button>
       </div>
       <div class="qap-ftr-row">
-        <button class="qbtn" style="flex:1;background:#ede9fe;color:#5b21b6;border-color:#ddd6fe;" onclick="syncToHitomemo('${p.id}')">🤝 ヒトメモで管理</button>
       </div>
       <div class="qap-ftr-row">
         <button class="qbtn qbtn-dorm" onclick="toggleDormant('${p.id}')">${p.isDormant?'📌 マップへ戻す':'🌿 余白へ移動'}</button>
@@ -1353,72 +1364,6 @@ function toggleDormant(id){
 }
 
 
-function syncToHitomemo(id) {
-  const p = persons.find(x => x.id === id);
-  if (!p) return;
-
-  // ヒトメモのデータを取得
-  const profiles = JSON.parse(localStorage.getItem('hitomemo_profiles_v1') || '[]');
-
-  // 名前で検索（「さん」を除いて比較）
-  const normalize = n => n.replace(/さん$/, '').trim();
-  const pName = normalize(p.name);
-  const existing = profiles.find(h => {
-    const hName = normalize((h.name && h.name.value) || h.name || '');
-    return hName.includes(pName) || pName.includes(hName);
-  });
-
-  // tier判定
-  const tier = p.isTop10 ? '経営パートナー候補' : '仲間候補';
-
-  if (existing) {
-    // 既存 → tierとlastContactDateを更新
-    existing.tier = tier;
-    existing.updatedAt = new Date().toISOString();
-    localStorage.setItem('hitomemo_profiles_v1', JSON.stringify(profiles));
-    toast('✅ ヒトメモの「' + p.name + '」を ' + tier + ' に更新しました');
-  } else {
-    // 新規 → 基本情報を引き継いで作成
-    const now = new Date().toISOString();
-    const newProfile = {
-      id: Date.now().toString(),
-      createdAt: now,
-      updatedAt: now,
-      relationFlag: 'normal',
-      meetings: [],
-      meetingSummary: '',
-      tier: tier,
-      stage: '知人',
-      changeLog: [],
-      nextExperience: '',
-      lastContactDate: null,
-      myRole: '見守る',
-      name:       { value: p.name },
-      birthday:   { value: '' },
-      position:   { value: '' },
-      business:   { value: '' },
-      history:    { value: '' },
-      family:     { value: '' },
-      location:   { value: '' },
-      goals:      { value: '' },
-      values:     { value: '' },
-      beliefs:    { value: '' },
-      behavior:   { value: '' },
-      dislikes:   { value: '' },
-      topics:     { value: '' },
-      skills:     { value: '' },
-      memorable:  { value: '' },
-      impression: { value: '' },
-      drive:      { value: '' },
-      other:      { value: 'ソーシャルU: ' + p.relationshipPurpose + ' / ' + p.relationshipType },
-      coreMessage:{ value: '' },
-      insights:   { value: '' },
-    };
-    profiles.push(newProfile);
-    localStorage.setItem('hitomemo_profiles_v1', JSON.stringify(profiles));
-    toast('✅ 「' + p.name + '」をヒトメモに新規追加しました（' + tier + '）');
-  }
-}
 
 function qapDelete(id){
   const p=persons.find(x=>x.id===id);
@@ -1444,7 +1389,7 @@ function renderDormant(){
       h+=`<div class="dorm-card">
         <div class="dorm-info">
           <div class="dorm-nm">${esc(p.name)}</div>
-          <div class="dorm-meta">${p.relationshipType} ／ ${p.relationshipPurpose} ／ ${p.frequency}<br>更新：${p.updatedAt?p.updatedAt.split('T')[0]:'—'}</div>
+          <div class="dorm-meta">${shortRT(p.relationshipType)} ／ ${p.relationshipPurpose} ／ ${p.frequency}<br>更新：${p.updatedAt?p.updatedAt.split('T')[0]:'—'}</div>
           ${p.memo?`<div class="dorm-memo">${esc(p.memo)}</div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
@@ -1474,7 +1419,7 @@ function openModal(id){
   document.getElementById('fName').value=p?.name??'';
   sel2('fPurpose',   p?.relationshipPurpose??'事業・成果');
   sel2('fEnergy',    p?.energyState??'普通');
-  sel2('fType2',     p?.relationshipType??'チーム');
+  sel2('fType2',     p?.relationshipType??'未設定');
   sel2('fFreq',      p?.frequency??'月1〜年数回');
   sel2('fImpact',    p?.impact??'中');
   sel2('fValueFlow', p?.valueFlow??'');
@@ -1599,7 +1544,7 @@ function buildPrint(){
         ${p.isTop10?`<div class="pp-star">★</div>`:''}
         ${p.isDraining?`<div class="pp-warn-p">!</div>`:''}
         ${vf?`<div class="pp-vf-badge" style="position:absolute;bottom:-0.8mm;right:-0.8mm;font-size:5pt;width:2.8mm;height:2.8mm;border-radius:50%;background:white;border:0.4pt solid rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:${vfc}">${vf}</div>`:''}
-        <div class="pp-type-tag">${esc(p.relationshipType)}</div>
+        <div class="pp-type-tag">${esc(shortRT(p.relationshipType))}</div>
       </div>`;
     });
     mapH+=`</div></div>`;
