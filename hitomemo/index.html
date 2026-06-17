@@ -837,6 +837,27 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 <div class="main-area">
 <div id="root"></div>
+
+<div id="hmLegend" style="position:fixed;top:16px;right:16px;width:212px;max-height:calc(100vh - 32px);overflow:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.10);font-size:12px;color:#475569;z-index:50;line-height:1.55;">
+  <div onclick="var b=document.getElementById('hmLegendBody');var c=document.getElementById('hmLegendCaret');var o=b.style.display!=='none';b.style.display=o?'none':'block';c.textContent=o?'▶':'▼';" style="cursor:pointer;padding:9px 12px;font-weight:700;color:#1a1a2e;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;user-select:none;">
+    <span>📖 凡例</span><span id="hmLegendCaret">▼</span>
+  </div>
+  <div id="hmLegendBody" style="padding:10px 12px;">
+    <div style="font-weight:700;color:#1a1a2e;margin-bottom:4px;">階層（tier）</div>
+    <div>🌟 経営パートナー候補 — 10人形成の対象</div>
+    <div>👥 仲間候補 — 価値観を共有する候補</div>
+    <div>❤️ 家族 — 家族・親族</div>
+    <div>🗂 記録のみ — 記録だけ残す人</div>
+    <div style="font-weight:700;color:#1a1a2e;margin:10px 0 4px;">現在地ステージ</div>
+    <div style="color:#64748b;">左→右で前進</div>
+    <div>知人 → 協力者 → 管理職 → 事業責任者 → 経営人材 → 経営パートナー</div>
+    <div style="font-weight:700;color:#1a1a2e;margin:10px 0 4px;">関わり方タイプ</div>
+    <div>育成（若手）— 次の経験を渡して育てる</div>
+    <div>共同成長（同世代）— 一緒に成長する</div>
+    <div>相互学習（年上・専門家）— 学び合う</div>
+    <div>維持（確定パートナー・専門家）— 関係を保つ</div>
+  </div>
+</div>
 </div><!-- /.main-area -->
 </div><!-- /.layout -->
 
