@@ -1323,6 +1323,15 @@ function renderWaitingList(){
 const now = () => new Date().toISOString();
 const refresh = () => { if(curView==='home') renderHome(); else if(curView==='today') renderToday(); };
 
+// 別タブ/別ウィンドウのOS変更（ショットOS等）を自動反映する。
+// storageイベントは「変更した側ではない」同一オリジンの開いている文書で発火するため、
+// 別窓のショットOSで追加・編集すると、こちらのHOME/今日ビューが自動で最新化される。
+let _refreshTimer = null;
+function _scheduleRefresh(){ clearTimeout(_refreshTimer); _refreshTimer = setTimeout(refresh, 120); }
+window.addEventListener('storage', function(e){ if(e && e.key) _scheduleRefresh(); });
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) _scheduleRefresh(); });
+window.addEventListener('focus', function(){ _scheduleRefresh(); });
+
 // ── HOME ──
 function homeTopCard(top) {
   let h = '';
