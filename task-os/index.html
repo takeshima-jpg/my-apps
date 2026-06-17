@@ -914,10 +914,10 @@ function allTasks(){
     });
   });
 
-  // ── Shot: status は 'todo'/'doing'/'pending'/'done'。'done' のみ除外
+  // ── Shot: status は 'todo'/'doing'/'pending'/'done'/'rejected'。'done'/'pending'/'rejected'(不採用) を除外
   //    dueDate なしのタスクも表示対象（期限未設定として扱う）
   getSh().forEach(t => {
-    if(t.status==='done'||t.status==='pending') return;
+    if(t.status==='done'||t.status==='pending'||t.status==='rejected') return;
     tasks.push({ id:'s_'+t.id, rawId:t.id, src:'shot',
       title:t.title||'', due:t.dueDate||null,
       status:t.status||'todo', updAt:t.updatedAt||null,
