@@ -114,9 +114,12 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .brief-back:hover { background: var(--bg3); }
 .brief-title { font-size: 16px; font-weight: 700; color: var(--text); }
 .brief-tabs { display: flex; gap: 4px; padding: 8px 24px 0; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.brief-tab { flex: 0 0 auto; min-width: 88px; background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 14px 10px; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; font-family: inherit; }
+.brief-tab { flex: 0 0 auto; min-width: 88px; position: relative; background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 14px 10px; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; font-family: inherit; }
 .brief-tab:hover { color: var(--text2); }
 .brief-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.brief-tab.has-badge::after { content: ''; position: absolute; top: 5px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: #e0483d; }
+.sb-brief-btn.has-new { position: relative; }
+.sb-brief-btn.has-new::after { content: ''; position: absolute; top: 8px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: #e0483d; }
 .brief-empty { padding: 48px 8px; text-align: center; color: var(--text2); line-height: 1.9; }
 .brief-body { flex: 1; overflow-y: auto; padding: 28px 32px; max-width: 760px; margin: 0 auto; width: 100%; box-sizing: border-box; line-height: 1.8; }
 .brief-body h1 { font-size: 1.4rem; font-weight: 700; margin: 24px 0 12px; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 6px; }
@@ -934,6 +937,7 @@ function briefJsonToMarkdown(d) {
   if (typeof d === 'string') return d;
   if (typeof d !== 'object' || d === null) return String(d);
   let md = '';
+  if (d.cadence_notice) md += `**📣 ${d.cadence_notice}**\n\n`;
   if (d.top_theme) md += `## 今日の最重要テーマ\n${d.top_theme}\n\n`;
   if (d.center_pin) md += `## 今週のセンターピン\n${d.center_pin}\n\n`;
   if (d.changes?.length) md += `## 昨日からの重要変化\n${d.changes.map(c=>`・${c}`).join('\n')}\n\n`;
@@ -1044,6 +1048,25 @@ function getAixDraft(tab) {
   return raw;
 }
 
+// ── 未読バッジ：localStorageの中身が「前回開いたとき」と変われば未読 ──
+const _AIX_KEY = { daily:'aix_draft_latest', weekly:'aix_review_weekly', monthly:'aix_review_monthly' };
+function _aixHash(s){ let h=5381; for(let i=0;i<s.length;i++){ h=((h<<5)+h)+s.charCodeAt(i); h|=0; } return String(h); }
+function briefUnread(tab){
+  const raw = localStorage.getItem(_AIX_KEY[tab]);
+  if (!raw) return false;
+  return _aixHash(raw) !== localStorage.getItem('1d_seen_'+tab);
+}
+function markBriefSeen(tab){
+  const raw = localStorage.getItem(_AIX_KEY[tab]);
+  if (raw) localStorage.setItem('1d_seen_'+tab, _aixHash(raw));
+}
+function updateBriefTabBadges(){
+  document.querySelectorAll('.brief-tab').forEach(b => {
+    const t = b.dataset.tab;
+    b.classList.toggle('has-badge', (t==='weekly'||t==='monthly') && briefUnread(t));
+  });
+}
+
 function markdownToHtml(md) {
   if (!md) return '';
   const lines = md.split('\n');
@@ -1135,6 +1158,9 @@ function renderBriefBody() {
   } else {
     body.innerHTML = `<div class="brief-empty">${BRIEF_TABS[currentBriefTab].label}レビューはまだ生成されていません。<br>Coworkで${BRIEF_TABS[currentBriefTab].label}レビューを実行すると、ここに表示されます。</div>`;
   }
+  markBriefSeen(currentBriefTab);
+  updateBriefTabBadges();
+  updateBriefBtn();
 }
 
 function switchBriefTab(tab) {
@@ -1156,6 +1182,7 @@ function updateBriefBtn() {
   const draft = ['daily','weekly','monthly'].some(t => getAixDraft(t));
   if (draft) btn.classList.remove('disabled');
   else btn.classList.add('disabled');
+  btn.classList.toggle('has-new', briefUnread('weekly') || briefUnread('monthly'));
 }
 
 function render() {
