@@ -1307,7 +1307,7 @@ function rejectTask(id) {
   t.status = 'rejected';
   t.updatedAt = new Date().toISOString();
   save();
-  renderView();
+  render();
 }
 
 function changeStatus(id, status) {
