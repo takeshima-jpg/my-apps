@@ -1304,7 +1304,6 @@ function addTask() {
 function rejectTask(id) {
   const t = tasks.find(t => t.id === id);
   if (!t) return;
-  if (!confirm(`「${t.title}」を不採用にしますか？\n（削除されず記録は残ります）`)) return;
   t.status = 'rejected';
   t.updatedAt = new Date().toISOString();
   save();
