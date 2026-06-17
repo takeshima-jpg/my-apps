@@ -602,6 +602,11 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
         <button class="btn-s" onclick="document.getElementById('importFile').click()">ファイルを選択</button>
       </div>
     </div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:14px;margin-bottom:14px;">
+      <div class="bk-ttl" style="color:#b91c1c;">🗑 全データを消去（重点者だけにする準備）</div>
+      <div class="bk-desc">SUの全員を削除して空にします。重点者だけをヒトメモから移行し直したいときに。実行前に自動でバックアップをダウンロードします。</div>
+      <button class="btn-s" style="border-color:#fca5a5;color:#b91c1c;" onclick="resetAllSU()">全消去（バックアップ後）</button>
+    </div>
     <div style="font-size:13px;font-weight:600;color:var(--s500);margin-bottom:5px">現在のデータプレビュー</div>
     <div class="jp"><pre id="jsonPreview"></pre></div>
   </div>
@@ -1487,6 +1492,21 @@ function openBackup(){
   document.getElementById('backupOverlay').style.display='flex';
 }
 function closeBackup(){ document.getElementById('backupOverlay').style.display='none'; }
+
+function resetAllSU(){
+  const payload = JSON.stringify({ version:6, persons, savedAt:new Date().toISOString() }, null, 2);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([payload],{type:'application/json'}));
+  a.download='su-backup-before-reset-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  if(!confirm('SUの全'+persons.length+'人を削除して空にします。\n直前のバックアップを自動ダウンロードしました。\n\n実行してよいですか？（重点者はヒトメモから移行し直せます）')) return;
+  persons=[];
+  sv(SK, persons);
+  selectedId=null;
+  renderMap();
+  closeBackup();
+  alert('SUを空にしました。ヒトメモから重点者を選んで「SUへ移行」してください。');
+}
 
 function doExport(){
   const blob=new Blob([JSON.stringify({version:6,exportedAt:new Date().toISOString(),persons},null,2)],{type:'application/json'});
