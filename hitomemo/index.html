@@ -844,8 +844,33 @@ const { useState, useEffect, useRef } = React;
 
 const STORAGE_KEY = 'hitomemo_profiles_v1';
 
+// 旧20項目 → 新9項目への統合（A案）。既存データは見出し付きで連結して保持する。
+const _fv = (p, k) => {
+  if (!p || p[k] == null) return '';
+  if (typeof p[k] === 'object') return p[k].value || '';
+  return typeof p[k] === 'string' ? p[k] : '';
+};
+const _joinLabeled = (parts) => parts
+  .filter(x => x[1] && String(x[1]).trim())
+  .map(x => x[0] ? `【${x[0]}】${String(x[1]).trim()}` : String(x[1]).trim())
+  .join('\n');
+function migrateFields(p) {
+  if (!p || p._fieldsV2) return p;
+  const g = k => _fv(p, k);
+  const set = (k, v) => { p[k] = { value: v }; };
+  set('position',   _joinLabeled([['', g('position')], ['事業', g('business')]]));
+  set('values',     _joinLabeled([['', g('values')], ['目標・夢', g('goals')], ['信条', g('beliefs')]]));
+  set('history',    _joinLabeled([['', g('history')], ['家族構成', g('family')], ['出身・現所在地', g('location')]]));
+  set('behavior',   _joinLabeled([['', g('behavior')], ['苦手', g('dislikes')], ['よく話すテーマ', g('topics')], ['強み', g('skills')]]));
+  set('impression', _joinLabeled([['', g('impression')], ['印象的な言葉', g('memorable')], ['ドライブ', g('drive')]]));
+  set('other',      _joinLabeled([['', g('other')], ['補足・洞察', g('insights')]]));
+  ['business','goals','beliefs','family','location','dislikes','topics','skills','memorable','drive','insights'].forEach(k => { delete p[k]; });
+  p._fieldsV2 = true;
+  return p;
+}
+
 const loadProfiles = () => {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+  try { return (JSON.parse(localStorage.getItem(STORAGE_KEY)) || []).map(migrateFields); } catch { return []; }
 };
 const saveProfiles = (list) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
@@ -871,8 +896,9 @@ const restoreJSON = (onDone) => {
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target.result);
-        const list = data.profiles || data;
+        let list = data.profiles || data;
         if (!Array.isArray(list)) throw new Error('無効なフォーマット');
+        list = list.map(migrateFields);
         if (!confirm(list.length + '件を復元します。現在のデータは上書きされます。続けますか？')) return;
         saveProfiles(list); onDone(list);
         alert('復元しました（' + list.length + '件）');
@@ -909,7 +935,7 @@ const importFromMemo = (text) => {
     const m = text.match(r);
     return m ? m[1].trim() : '';
   };
-  return {
+  return migrateFields({
     id: Date.now().toString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -943,13 +969,13 @@ const importFromMemo = (text) => {
     other:      { value: extract('その他') },
     coreMessage:{ value: extract('核となる一言') },
     insights:   { value: extract('補足・洞察') },
-  };
+  });
 };
 
 // メモエクスポート
 const exportAsMemo = (p) => {
   const v = (f) => (p[f] && p[f].value) ? p[f].value : '';
-  const text = `【人物プロファイル】${v('name')}\n\n■基本情報\n氏名(ふりがな)：${v('name')}\n誕生日：${v('birthday')}\n所属・役職：${v('position')}\n事業：${v('business')}\n経歴：${v('history')}\n家族構成：${v('family')}\n出身・現所在地：${v('location')}\n\n■価値観・信条\n目標・夢：${v('goals')}\n価値観：${v('values')}\n信条：${v('beliefs')}\n\n■個性・傾向\n行動傾向：${v('behavior')}\n苦手なこと：${v('dislikes')}\nよく話すテーマ：${v('topics')}\n特技・スキル：${v('skills')}\n\n■洞察\n印象的な言葉：${v('memorable')}\n話してみての印象：${v('impression')}\n欲求(ドライブ)：${v('drive')}\nその他：${v('other')}\n核となる一言：${v('coreMessage')}\n\n■補足・洞察\n${v('insights')}\n\n作成日時：${new Date(p.createdAt).toLocaleString('ja-JP')}`;
+  const text = `【人物プロファイル】${v('name')}\n\n■基本\n所属・役職・事業：${v('position')}\n価値観・大切にしていること：${v('values')}\n核となる一言：${v('coreMessage')}\n\n■詳細\n誕生日：${v('birthday')}\n経歴・背景：${v('history')}\n個性・傾向：${v('behavior')}\n印象・洞察：${v('impression')}\nメモ：${v('other')}\n\n作成日時：${new Date(p.createdAt).toLocaleString('ja-JP')}`;
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1129,6 +1155,8 @@ const App = () => {
         id: p.id,
         name: (p.name&&p.name.value) || p.name || '',
         position: (p.position&&p.position.value) || p.position || '',
+        values: (p.values&&p.values.value) || p.values || '',
+        coreMessage: (p.coreMessage&&p.coreMessage.value) || p.coreMessage || '',
         tier: p.tier || '記録のみ',
         stage: p.stage || '知人',
         myRole: p.myRole || '見守る',
@@ -1225,7 +1253,7 @@ const App = () => {
     if (filterStar && p.relationFlag !== 'star') return false;
     if (!query) return true;
     const q = query.toLowerCase();
-    const fields = ['name','position','values','coreMessage','insights'];
+    const fields = ['name','position','values','coreMessage','other'];
     if (fields.some(f => (p[f] && p[f].value || '').toLowerCase().includes(q))) return true;
     if ((p.meetingSummary || '').toLowerCase().includes(q)) return true;
     if ((p.meetings || []).some(m => m.content.toLowerCase().includes(q))) return true;
@@ -1429,6 +1457,7 @@ const App = () => {
         meetingSummary: '',
       };
       FIELDS.forEach((f, i) => { p[f] = { value: answers[i] || '' }; });
+      migrateFields(p);
       const next = [...profiles, p];
       updateList(next);
       setCurrent(p); setView('detail');
@@ -1809,45 +1838,26 @@ const App = () => {
           )}
         </div>
 
-        {/* 基本情報 */}
+        {/* コア（常時表示） */}
         <div className="detail-section">
-          <div className="detail-section-title">基本情報</div>
+          <div className="detail-section-title">基本</div>
           <Field label="氏名（ふりがな）" field="name" />
-          <Field label="誕生日" field="birthday" />
-          <Field label="所属・役職" field="position" />
-          <Field label="事業" field="business" multi />
-          <Field label="経歴" field="history" multi />
-          <Field label="家族構成" field="family" multi />
-          <Field label="出身・現所在地" field="location" />
-        </div>
-
-        {/* 価値観 */}
-        <div className="detail-section">
-          <div className="detail-section-title">価値観・信条</div>
-          <Field label="目標・夢" field="goals" multi />
-          <Field label="価値観" field="values" multi />
-          <Field label="信条" field="beliefs" multi />
-        </div>
-
-        {/* 個性 */}
-        <div className="detail-section">
-          <div className="detail-section-title">個性・傾向</div>
-          <Field label="行動傾向" field="behavior" multi />
-          <Field label="苦手なこと" field="dislikes" multi />
-          <Field label="よく話すテーマ" field="topics" multi />
-          <Field label="特技・スキル" field="skills" multi />
-        </div>
-
-        {/* 洞察 */}
-        <div className="detail-section">
-          <div className="detail-section-title">洞察</div>
-          <Field label="印象的な言葉" field="memorable" multi />
-          <Field label="話してみての印象" field="impression" multi />
-          <Field label="欲求（ドライブ）" field="drive" multi />
-          <Field label="その他" field="other" multi />
+          <Field label="所属・役職・事業" field="position" multi />
+          <Field label="価値観・大切にしていること" field="values" multi />
           <Field label="核となる一言" field="coreMessage" multi />
-          <Field label="補足・洞察" field="insights" multi />
         </div>
+
+        {/* 詳細（折りたたみ） */}
+        <details className="detail-section">
+          <summary className="detail-section-title" style={{ cursor: 'pointer', userSelect: 'none' }}>詳細（誕生日・経歴・個性・印象・メモ）</summary>
+          <div style={{ marginTop: 12 }}>
+            <Field label="誕生日" field="birthday" />
+            <Field label="経歴・背景" field="history" multi />
+            <Field label="個性・傾向" field="behavior" multi />
+            <Field label="印象・洞察" field="impression" multi />
+            <Field label="メモ" field="other" multi />
+          </div>
+        </details>
 
         {/* 経営パートナー形成 */}
         <div className="detail-section">
