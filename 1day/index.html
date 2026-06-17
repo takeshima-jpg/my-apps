@@ -1746,7 +1746,7 @@ function aixApproveByIdx(i) {
   const ta = document.getElementById('aix-events-' + i);
   const events = ta ? ta.value.trim() : (d.events || '');
   if (!events) { if (typeof toast === 'function') toast('「できごと」を入力してください'); return; }
-  const targetDate = d.targetDate; if (!targetDate) return;
+  const targetDate = d.targetDate || d.date || today();  // 描画と同じく date 両対応＋最終フォールバック（サイレント失敗防止）
   const unease = (document.getElementById('aix-unease-' + i) || {}).value || '';
   const satisfaction = window['_aixSat_' + i] || '';
   const tags = window['_aixTags_' + i] || [];
