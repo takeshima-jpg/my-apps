@@ -1158,6 +1158,7 @@ const App = () => {
   const [dragSection, setDragSection] = useState(null); // 'star' | 'all'
   const [manualOrder, setManualOrder] = useState(null);   // 全員の手動順
   const [starOrder, setStarOrder] = useState(null);       // ★の手動順
+  const [selectedIds, setSelectedIds] = useState([]);     // SU移行用の複数選択
 
   useEffect(() => { setProfiles(loadProfiles()); }, []);
   // refを常に最新stateに同期
@@ -1258,6 +1259,40 @@ const App = () => {
   }, [profiles]);
 
   const updateList = (list) => { setProfiles(list); saveProfiles(list); };
+  const toggleSelect = (id) => setSelectedIds(s => s.includes(id) ? s.filter(x=>x!==id) : [...s, id]);
+  const moveToSU = () => {
+    let su=[]; try{ su=JSON.parse(localStorage.getItem('su-v6-persons')||'[]'); }catch(e){ su=[]; }
+    const sel = profiles.filter(p=>selectedIds.includes(p.id));
+    let added=0, skipped=0;
+    sel.forEach(p=>{
+      const nm=(p.name&&p.name.value)||p.name||'';
+      if(su.some(x=> x.hitoId===p.id || (x.name||'')===nm)){ skipped++; return; }
+      const now=new Date().toISOString();
+      su.push({
+        id: 'hm_'+p.id+'_'+Math.random().toString(36).slice(2,7),
+        hitoId: p.id,
+        name: nm,
+        relationshipPurpose:'事業・成果',
+        energyState:'普通',
+        relationshipType: (p.engagementType && p.engagementType!=='未設定') ? p.engagementType : '未設定',
+        frequency:'月1〜年数回',
+        impact:'中',
+        valueFlow:'',
+        isTop10:false, isDraining:false, isDormant:false,
+        currentState:'', desiredState:'', gap:'',
+        nextAction: p.nextExperience||'',
+        actionType:'維持', actionDueDate:'',
+        memo:'',
+        tier: p.tier||'', stage: p.stage||'',
+        x: 30+Math.random()*40, y: 30+Math.random()*40,
+        createdAt:now, updatedAt:now,
+      });
+      added++;
+    });
+    localStorage.setItem('su-v6-persons', JSON.stringify(su));
+    setSelectedIds([]);
+    alert('SUへ移行しました\n\n追加: '+added+'人\nすでにSUにあってスキップ: '+skipped+'人\n\nソーシャルユニバースを開いて配置・マクロ属性を設定してください。');
+  };
 
   // 手動順でソート（初回はcreatedAt降順）
   const applyOrder = (list, order) => {
@@ -1341,7 +1376,10 @@ const App = () => {
       <div className="profile-card"
         style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:12,padding:'14px 16px',boxShadow:'0 1px 3px rgba(0,0,0,0.06)',transition:'box-shadow 0.15s'}}>
         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:6}}>
-          <span style={{fontWeight:700,fontSize:15,color:'#1a1a2e'}}>{(p.name&&p.name.value)||p.name||'名前未設定'}</span>
+          <span style={{display:'flex',alignItems:'center',gap:7}}>
+            <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={()=>toggleSelect(p.id)} style={{width:15,height:15,cursor:'pointer',flexShrink:0,marginTop:2}} title="SU移行用に選択" />
+            <span style={{fontWeight:700,fontSize:15,color:'#1a1a2e'}}>{(p.name&&p.name.value)||p.name||'名前未設定'}</span>
+          </span>
           {tierBadge(p.tier||'記録のみ')}
         </div>
         {(p.position&&p.position.value) && <div style={{fontSize:12,color:'#64748b',marginBottom:4,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{p.position.value}</div>}
@@ -1493,6 +1531,13 @@ const App = () => {
             <div style={{fontSize:48,marginBottom:12}}>👤</div>
             <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>まだ人物が登録されていません</div>
             <div style={{fontSize:13}}>「＋ 新しい人物を記録」から始めましょう</div>
+          </div>
+        )}
+        {selectedIds.length > 0 && (
+          <div style={{position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',background:'#1a1a2e',color:'#fff',borderRadius:12,padding:'10px 16px',display:'flex',alignItems:'center',gap:12,boxShadow:'0 8px 24px rgba(0,0,0,0.25)',zIndex:60}}>
+            <span style={{fontSize:13,fontWeight:600}}>{selectedIds.length}人を選択中</span>
+            <button onClick={moveToSU} style={{fontSize:13,padding:'6px 14px',background:'#f59e0b',border:'none',borderRadius:8,color:'#fff',fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>→ SUへ移行</button>
+            <button onClick={()=>setSelectedIds([])} style={{fontSize:13,padding:'6px 10px',background:'transparent',border:'1px solid rgba(255,255,255,0.3)',borderRadius:8,color:'#fff',cursor:'pointer',fontFamily:'inherit'}}>解除</button>
           </div>
         )}
       </div>
