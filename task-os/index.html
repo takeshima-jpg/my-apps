@@ -816,6 +816,15 @@ function applyAixTasks(parsed){
       localStorage.setItem('aix_draft_latest', JSON.stringify(parsed.brief));
       briefLoaded = true;
     }
+    // ④ brief_weekly / brief_monthly → 1day OSの週次/月次タブ用（該当日のみ含まれる）
+    if (parsed.brief_weekly && typeof parsed.brief_weekly === 'object') {
+      localStorage.setItem('aix_review_weekly', JSON.stringify(parsed.brief_weekly));
+      briefLoaded = true;
+    }
+    if (parsed.brief_monthly && typeof parsed.brief_monthly === 'object') {
+      localStorage.setItem('aix_review_monthly', JSON.stringify(parsed.brief_monthly));
+      briefLoaded = true;
+    }
   }
   return { added, draftCount, briefLoaded, isNewFormat };
 }
