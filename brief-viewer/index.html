@@ -63,12 +63,15 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .bv-meta .date-pill { font-family: var(--font-mono); background: var(--bg3); border-radius: 20px; padding: 3px 12px; color: var(--text2); }
 .brief-body { max-width: 760px; margin: 0 auto; padding: 14px 24px 60px; line-height: 1.8; width: 100%; }
 .brief-body h1 { font-size: 1.4rem; font-weight: 700; margin: 24px 0 12px; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 6px; }
-.brief-body h2 { font-size: 1.15rem; font-weight: 700; margin: 22px 0 8px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.brief-body h2 { font-size: 1.15rem; font-weight: 700; margin: 32px 0 10px; color: var(--text); display: flex; align-items: center; gap: 8px; }
 .brief-body h2::before { content: ''; width: 4px; height: 1em; background: var(--accent); border-radius: 2px; flex-shrink: 0; }
 .brief-body h3 { font-size: 1rem; font-weight: 700; margin: 16px 0 6px; color: var(--text2); }
-.brief-body p { margin: 8px 0; color: var(--text); }
-.brief-body ul, .brief-body ol { margin: 8px 0 8px 20px; color: var(--text); }
-.brief-body li { margin: 5px 0; }
+.brief-body p { margin: 0 0 15px; color: var(--text); line-height: 1.9; }
+.brief-body ul, .brief-body ol { margin: 8px 0 18px 20px; color: var(--text); }
+.brief-body li { margin: 0 0 11px; line-height: 1.85; }
+.brief-body a, .bv-link { color: #2563eb; text-decoration: none; font-weight: 600; word-break: break-word; }
+.brief-body a:active, .bv-link:active { opacity: .55; }
+.bv-fav { width: 15px; height: 15px; vertical-align: -3px; margin-right: 5px; border-radius: 3px; }
 .brief-body strong { font-weight: 700; color: var(--text); }
 .brief-body hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 .brief-body code { background: var(--bg3); border-radius: 4px; padding: 2px 6px; font-family: var(--font-mono); font-size: 0.9em; }
@@ -300,7 +303,7 @@ function toMarkdown(d) {
       else if (a.summary) parts.push(a.summary);
       if (a.impact) parts.push(`影響：${a.impact}`);
       if (a.action) parts.push(`アクション：${a.action}`);
-      if (a.url) parts.push(a.url);
+      if (a.url) parts.push('[🔗 ' + (a.source || '出典記事') + '](' + a.url + ')');
       return `・${parts.filter(Boolean).join('｜')}`;
     }).join('\n') + `\n\n`;
   }
@@ -354,6 +357,14 @@ function markdownToHtml(md) {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/`(.+?)`/g, '<code>$1</code>');
+    // markdownリンク [label](url) → ファビコン付き青リンク
+    line = line.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function(_m, label, url) {
+      let host = ''; try { host = new URL(url.replace(/&amp;/g, '&')).hostname; } catch(e) {}
+      const fav = host ? '<img class="bv-fav" src="https://www.google.com/s2/favicons?domain=' + host + '&sz=64" alt="" loading="lazy">' : '';
+      return '<a href="' + url + '" target="_blank" rel="noopener" class="bv-link">' + fav + label + '</a>';
+    });
+    // 生URLも青リンク化（属性内のURLは除外）
+    line = line.replace(/(^|[^"'>])(https?:\/\/[^\s｜、。<>"]+)/g, '$1<a href="$2" target="_blank" rel="noopener" class="bv-link">$2</a>');
     if (/^### (.+)/.test(line)) { if (inList) { html += '</ul>'; inList = false; } html += '<h3>' + line.replace(/^### /, '') + '</h3>'; }
     else if (/^## (.+)/.test(line)) { if (inList) { html += '</ul>'; inList = false; } html += '<h2>' + line.replace(/^## /, '') + '</h2>'; }
     else if (/^# (.+)/.test(line)) { if (inList) { html += '</ul>'; inList = false; } html += '<h1>' + line.replace(/^# /, '') + '</h1>'; }
