@@ -123,6 +123,9 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .brief-body strong { font-weight: 700; color: var(--text); }
 .brief-body hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 .brief-body code { background: var(--bg3); border-radius: 4px; padding: 2px 6px; font-family: monospace; font-size: 0.9em; }
+.brief-body .bv-link { color: #2563eb; text-decoration: none; word-break: break-all; }
+.brief-body .bv-link:hover { text-decoration: underline; }
+.brief-body .bv-fav { width: 15px; height: 15px; vertical-align: -3px; margin-right: 4px; border-radius: 3px; }
 .brief-btn { font-size: 12px; padding: 4px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--text2); white-space: nowrap; }
 .brief-btn:hover { background: var(--bg3); }
 
@@ -940,6 +943,57 @@ function getAixDraft() {
         if (d.proposals?.length) md += `## AI参謀からの提言\n${d.proposals.map(p=>`・${p.content}${p.partner_relation?' — '+p.partner_relation:''}`).join('\n')}\n\n`;
         if (d.os_gaps?.length) md += `## OS齟齬レポート\n${d.os_gaps.map(c=>`・${c}`).join('\n')}\n\n`;
         if (d.previous_proposal_tracking?.length) md += `## 前回提言の進捗\n${d.previous_proposal_tracking.map(c=>`・${c}`).join('\n')}\n\n`;
+        if (d.external_env?.length) md += `## 外部環境モニタリング\n${d.external_env.map(c=>`・${c}`).join('\n')}\n\n`;
+        if (d.structural_alerts?.length) {
+          md += `## 構造アラート\n` + d.structural_alerts.map(a => {
+            const parts = [];
+            const lv = a.level ? `[${a.level}] ` : '';
+            const dt = a.date ? `（${a.date}）` : '';
+            parts.push(`${lv}${a.title || ''}${dt}`.trim());
+            if (Array.isArray(a.summary) && a.summary.length) parts.push(a.summary.join(' / '));
+            else if (a.summary) parts.push(a.summary);
+            if (a.impact) parts.push(`影響：${a.impact}`);
+            if (a.action) parts.push(`アクション：${a.action}`);
+            if (a.url) parts.push('[🔗 ' + (a.source || '出典記事') + '](' + a.url + ')');
+            return `・${parts.filter(Boolean).join('｜')}`;
+          }).join('\n') + `\n\n`;
+        }
+        if (d.vision_brief) md += `## 今日のVISION\n${d.vision_brief}\n\n`;
+        if (d.vision_proposals?.length) md += `## VISIONへの提言\n${d.vision_proposals.map(c=>`・${c}`).join('\n')}\n\n`;
+        if (d.explore_themes?.length) md += `## 探索テーマ\n${d.explore_themes.map(c=>`・${c}`).join('\n')}\n\n`;
+        if (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) {
+          const rf = d.reflect;
+          md += `## 内省（Reflect）\n`;
+          if (rf.open_questions?.length) md += `今向き合う問い：\n` + rf.open_questions.map(c=>`・${c}`).join('\n') + '\n';
+          if (rf.active_experiments?.length) md += `実験中：\n` + rf.active_experiments.map(c=>`・${c}`).join('\n') + '\n';
+          if (rf.proposals?.length) md += rf.proposals.map(p => {
+            const t = (typeof p === 'string') ? p : `${p.based_on ? p.based_on + ' → ' : ''}${p.suggestion || ''}${p.why ? '（' + p.why + '）' : ''}`;
+            return `・提案：${t}`;
+          }).join('\n') + '\n';
+          md += `\n`;
+        }
+        if (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length)) {
+          const ll = d.life_list;
+          md += `## やりたいこと（100LIST）\n`;
+          if (ll.focus_today?.length) md += ll.focus_today.map(c=>`・${c}`).join('\n') + '\n';
+          if (ll.one_joy) md += `・今日の彩り：${ll.one_joy}\n`;
+          if (ll.proposals?.length) md += ll.proposals.map(p => {
+            const t = (typeof p === 'string') ? p : `${p.want || ''}${p.reason ? '（' + p.reason + '）' : ''}`;
+            return `・新しい願望の提案：${t}`;
+          }).join('\n') + '\n';
+          md += `\n`;
+        }
+        if (d.partner_progress && d.partner_progress.current != null) {
+          const pp = d.partner_progress;
+          md += `## 経営パートナー進捗（${pp.current ?? 0}/${pp.target ?? 10}）\n`;
+          const lines = [].concat(pp.alerts || [], pp.recent_changes || []);
+          if (lines.length) md += lines.map(c=>`・${c}`).join('\n') + '\n';
+          md += `\n`;
+        }
+        if (d.delete_candidate && d.delete_candidate.target) {
+          const dc = d.delete_candidate;
+          md += `## 削除候補\n・${dc.target}${dc.type ? `（${dc.type}）` : ''}${dc.reason ? '：' + dc.reason : ''}${dc.effect ? '／効果：' + dc.effect : ''}\n\n`;
+        }
         return md.trim() || JSON.stringify(d, null, 2);
       }
     } catch(e) {}
@@ -958,6 +1012,14 @@ function markdownToHtml(md) {
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
       .replace(/`(.+?)`/g,'<code>$1</code>');
+    // markdownリンク [label](url) → ファビコン付き青リンク
+    line = line.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function(_m, label, url) {
+      let host = ''; try { host = new URL(url.replace(/&amp;/g, '&')).hostname; } catch(e) {}
+      const fav = host ? '<img class="bv-fav" src="https://www.google.com/s2/favicons?domain=' + host + '&sz=64" alt="" loading="lazy">' : '';
+      return '<a href="' + url + '" target="_blank" rel="noopener" class="bv-link">' + fav + label + '</a>';
+    });
+    // 生URLも青リンク化（属性内のURLは除外）
+    line = line.replace(/(^|[^"'>])(https?:\/\/[^\s｜、。<>"]+)/g, '$1<a href="$2" target="_blank" rel="noopener" class="bv-link">$2</a>');
     if (/^### (.+)/.test(line)) {
       if (inList) { html += '</ul>'; inList = false; }
       html += '<h3>' + line.replace(/^### /,'') + '</h3>';
@@ -970,9 +1032,9 @@ function markdownToHtml(md) {
     } else if (/^---+$/.test(line)) {
       if (inList) { html += '</ul>'; inList = false; }
       html += '<hr>';
-    } else if (/^[-*] (.+)/.test(line)) {
+    } else if (/^[-・*] (.+)/.test(line)) {
       if (!inList) { html += '<ul>'; inList = true; }
-      html += '<li>' + line.replace(/^[-*] /,'') + '</li>';
+      html += '<li>' + line.replace(/^[-・*] /,'') + '</li>';
     } else if (/^\d+\. (.+)/.test(line)) {
       if (!inList) { html += '<ul>'; inList = true; }
       html += '<li>' + line.replace(/^\d+\. /,'') + '</li>';
