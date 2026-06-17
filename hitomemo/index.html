@@ -931,11 +931,19 @@ const formatDate = (s) => {
 // メモ形式インポート
 const importFromMemo = (text) => {
   const extract = (label) => {
-    const r = new RegExp(label + '[：:](.*?)(?=\\n[■氏誕所事経家出目価信行苦よ特印話欲そ核補作]|$)', 's');
+    const r = new RegExp(label + '[：:](.*?)(?=\\n\\s*[■氏所価核関次誕経個印メ]|$)', 's');
     const m = text.match(r);
     return m ? m[1].trim() : '';
   };
-  return migrateFields({
+  const normEng = (x) => {
+    if (!x) return '未設定';
+    if (x.includes('育成')) return '育成（若手）';
+    if (x.includes('共同成長')) return '共同成長（同世代）';
+    if (x.includes('相互学習')) return '相互学習（年上・専門家）';
+    if (x.includes('維持')) return '維持（確定パートナー・専門家）';
+    return '未設定';
+  };
+  return {
     id: Date.now().toString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -945,33 +953,22 @@ const importFromMemo = (text) => {
     tier: '仲間候補',
     stage: '知人',
     changeLog: [],
-    nextExperience: '',
-    engagementType: '未設定',
+    nextExperience: extract('次に渡す経験'),
+    engagementType: normEng(extract('関わり方タイプ')),
     lastContactDate: null,
     myRole: '見守る',
-    name:       { value: extract('氏名\\(ふりがな\\)') },
-    birthday:   { value: extract('誕生日') },
-    position:   { value: extract('所属・役職') },
-    business:   { value: extract('事業') },
-    history:    { value: extract('経歴') },
-    family:     { value: extract('家族構成') },
-    location:   { value: extract('出身・現所在地') },
-    goals:      { value: extract('目標・夢') },
-    values:     { value: extract('価値観') },
-    beliefs:    { value: extract('信条') },
-    behavior:   { value: extract('行動傾向') },
-    dislikes:   { value: extract('苦手なこと') },
-    topics:     { value: extract('よく話すテーマ') },
-    skills:     { value: extract('特技・スキル') },
-    memorable:  { value: extract('印象的な言葉') },
-    impression: { value: extract('話してみての印象') },
-    drive:      { value: extract('欲求\\(ドライブ\\)') },
-    other:      { value: extract('その他') },
-    coreMessage:{ value: extract('核となる一言') },
-    insights:   { value: extract('補足・洞察') },
-  });
+    _fieldsV2: true,
+    name:        { value: extract('氏名（ふりがな）') },
+    position:    { value: extract('所属・役職・事業') },
+    values:      { value: extract('価値観・大切にしていること') },
+    coreMessage: { value: extract('核となる一言') },
+    birthday:    { value: extract('誕生日') },
+    history:     { value: extract('経歴・背景') },
+    behavior:    { value: extract('個性・傾向') },
+    impression:  { value: extract('印象・洞察') },
+    other:       { value: extract('メモ') },
+  };
 };
-
 // メモエクスポート
 const exportAsMemo = (p) => {
   const v = (f) => (p[f] && p[f].value) ? p[f].value : '';
@@ -1010,80 +1007,65 @@ const FIELDS = ['name','birthday','position','business','history','family','loca
 
 // ── APP ──
 
-  const PROMPT_SURVEY = `あなたは経営パートナー形成を支援する人物調査AIです。
-以下の人物について公開情報を調査し、指定フォーマットで出力してください。
+  const PROMPT_SURVEY = `あなたは竹嶋寛人の経営パートナー形成を支援する「人物見立て」AIです。
+能力や経歴を並べるのではなく、この人の器・価値観・変化の兆し・共創余地を見立ててください。
 
 【調査対象】
 人物名：{氏名}
 参考URL：{公式サイト・IR・インタビュー等 / 複数可 / 任意}
 
-【調査方針】
-・同姓同名誤認防止のため、経歴・所属の整合性を確認すること
-・役職は「最終意思決定者」か「実務中核者」かを区別すること
-・不確実な情報は「※推測」と明記すること
-・「能力・実績」より「器・変化・価値観」を重視して調査すること
-・空欄は「未確認」と記載すること（空白禁止）
+【見立ての方針】
+・能力・実績ではなく、器・人柄・価値観・成長段階を中心に観る
+・逆境・利害・対立の場面での振る舞いから「器」を推し量る
+・同姓同名の誤認を避け、経歴の整合性を確認する
+・不確実は「※推測」。公開情報で読みきれない点は埋めず、メモ欄の「確かめたい問い」に回す
+・竹嶋（守りの総合支援／経営パートナー10人形成）との共創余地を必ず一度は見立てる
+・関わり方タイプは年齢・立場から仮説でよい（育成＝若手／共同成長＝同世代／相互学習＝年上・専門家）
 
-【出力フォーマット】（このフォーマット以外は一切出力しない）
+【出力フォーマット】（このフォーマット以外は出力しない。空欄は「未確認」）
 
-氏名(ふりがな)：{氏名（ふりがな）}
-誕生日：{YYYY年MM月DD日 / 未確認}
-所属・役職：{会社名／役職}
-事業：{事業内容}
-経歴：{経歴を「／」区切りで}
-家族構成：{未確認}
-出身・現所在地：{出身地／現在地}
-目標・夢：{今後3〜5年の目標}
-価値観：{何を大切にしているか}
-信条：{行動の信条・哲学}
-行動傾向：{意思決定スタイル・行動パターン}
-苦手なこと：{避けること・NG行動}
-よく話すテーマ：{関心事・話題}
-特技・スキル：{強みとなるスキル}
-印象的な言葉：{発言・名言 / 未確認}
-話してみての印象：{未確認}
-欲求(ドライブ)：{行動の原動力}
-その他：{上記に当てはまらない重要情報}
+氏名（ふりがな）：
+所属・役職・事業：{文脈として簡潔に}
+価値観・大切にしていること：{何を大切にし、何を信じて動くか}
 核となる一言：{この人を一言で表すと}
-補足・洞察：{この人の「器」「変化の兆し」「次のステージ」への洞察}`;
+関わり方タイプ：{育成 / 共同成長 / 相互学習 / 未確認}
+次に渡す経験：{竹嶋が渡せる経験、または受け取れる学び}
+誕生日：{YYYY年MM月DD日 / 未確認}
+経歴・背景：{転機を中心に「／」区切りで}
+個性・傾向：{意思決定スタイル・行動パターン・苦手・関心テーマ}
+印象・洞察：{器・変化の兆し・次のステージ・共創余地}
+メモ：{確かめたい問い・その他重要情報}`;
 
   const PROMPT_FORMAT = `以下のテキストを、ヒトメモのインポート形式に整形してください。
+ただの転記ではなく、器・価値観・共創余地の観点で signal を抽出して蒸留してください。
 
 【ルール】
-・出力はフォーマットのみ（説明文・補足は一切不要）
+・出力はフォーマットのみ（説明文・補足は不要）
 ・ラベル名は1文字も変えない
-・各項目は1行のみ・複数情報は「／」で区切る
-・空欄禁止（不明は「未確認」）
-・推測情報には「※」を付ける
+・各項目は簡潔に。複数情報は「／」で区切る
+・事実の羅列でなく「この人の核」を一言に煮詰める
+・不明は「未確認」、推測には「※」、足りない情報は無理に埋めずメモの「確かめたい問い」へ
+・関わり方タイプは育成／共同成長／相互学習から仮説で選ぶ（不明なら未確認）
 
-【インポートフォーマット】（このまま出力すること）
+【インポートフォーマット】（このまま出力）
 
-氏名(ふりがな)：
-誕生日：
-所属・役職：
-事業：
-経歴：
-家族構成：
-出身・現所在地：
-目標・夢：
-価値観：
-信条：
-行動傾向：
-苦手なこと：
-よく話すテーマ：
-特技・スキル：
-印象的な言葉：
-話してみての印象：
-欲求(ドライブ)：
-その他：
+氏名（ふりがな）：
+所属・役職・事業：
+価値観・大切にしていること：
 核となる一言：
-補足・洞察：
+関わり方タイプ：
+次に渡す経験：
+誕生日：
+経歴・背景：
+個性・傾向：
+印象・洞察：
+メモ：
 
 【整形対象テキスト】
 {ここにテキストを貼り付け}`;
 
-  const PROMPT_CHANGE = `あなたは経営パートナー形成を支援する変化観察AIです。
-以下の情報をもとに、ヒトメモの「変化タイムライン」に記録する内容を整理してください。
+  const PROMPT_CHANGE = `あなたは竹嶋寛人の経営パートナー形成を支援する変化観察AIです。
+出来事の記録ではなく、この人の器・価値観・成長速度がどう動いたかを観てください。
 
 【観察対象】
 人物名：{氏名}
@@ -1095,9 +1077,10 @@ const FIELDS = ['name','birthday','position','business','history','family','loca
 
 【出力ルール】
 ・出力はフォーマットのみ（説明文は不要）
-・変化がない項目は「なし」と記載
+・変化がない項目は「なし」
 ・Hirotoの言葉をそのまま使う（解釈・捏造しない）
-・「急いで結論を出さない」「変化が見えるまで待つ」姿勢で整理する
+・結論を急がず、変化が見えるまで待つ姿勢で整理する
+・changeLogには、出来事より「器・価値観・成長速度の変化」を書く
 
 【出力フォーマット】
 
@@ -1107,11 +1090,12 @@ const FIELDS = ['name','birthday','position','business','history','family','loca
 
 ### {氏名}さん
 tier: {経営パートナー候補 / 仲間候補 / 家族 / 記録のみ}
-stage: {現在のステージ} → {変更後のステージ（変化なければ現在値のみ）}
+stage: {現在のステージ} → {変更後（変化なければ現在値）}
+engagementType: {育成 / 共同成長 / 相互学習 / 維持 / 変化なし}
 lastContactDate: {YYYY-MM-DD}
 nextExperience: {次に渡す経験（変化なければ現在値）}
 changeLog:
-- {発言変化 / 行動変化 / 気づき / ステージ変化}｜{内容}`;
+- {器・価値観・成長速度の変化 / 気づき / ステージ変化}｜{内容}`;
 
 
 const App = () => {
@@ -1560,6 +1544,15 @@ const App = () => {
           } else if (line.startsWith('nextExperience:')) {
             const v = line.slice(15).trim();
             changes.nextExperience = v;
+          } else if (line.startsWith('engagementType:')) {
+            const v = line.slice(15).trim();
+            if (v && v !== '変化なし' && v !== 'なし') {
+              changes.engagementType = v.includes('育成') ? '育成（若手）'
+                : v.includes('共同成長') ? '共同成長（同世代）'
+                : v.includes('相互学習') ? '相互学習（年上・専門家）'
+                : v.includes('維持') ? '維持（確定パートナー・専門家）'
+                : v;
+            }
           } else if (line.startsWith('changeLog:')) {
             inChangeLog = true;
           } else if (inChangeLog && line.startsWith('- ')) {
