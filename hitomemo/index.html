@@ -920,6 +920,7 @@ const importFromMemo = (text) => {
     stage: '知人',
     changeLog: [],
     nextExperience: '',
+    engagementType: '未設定',
     lastContactDate: null,
     myRole: '見守る',
     name:       { value: extract('氏名\\(ふりがな\\)') },
@@ -1131,6 +1132,7 @@ const App = () => {
         tier: p.tier || '記録のみ',
         stage: p.stage || '知人',
         myRole: p.myRole || '見守る',
+        engagementType: p.engagementType || '未設定',
         nextExperience: p.nextExperience || '',
         lastContactDate: p.lastContactDate || null,
         changeLog: p.changeLog || [],
@@ -1870,6 +1872,16 @@ const App = () => {
               <option>事業責任者</option>
               <option>経営人材</option>
               <option>経営パートナー</option>
+            </select>
+          </div>
+          <div className="fg" style={{marginBottom:12}}>
+            <label className="fl">関わり方タイプ</label>
+            <select className="fi" value={current.engagementType||'未設定'} onChange={e => { updDirect('engagementType', e.target.value); saveCurrentBlur(); }}>
+              <option>未設定</option>
+              <option>育成（若手）</option>
+              <option>共同成長（同世代）</option>
+              <option>相互学習（年上・専門家）</option>
+              <option>維持（確定パートナー・専門家）</option>
             </select>
           </div>
           <div className="fg" style={{marginBottom:12}}>
