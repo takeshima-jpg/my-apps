@@ -1262,11 +1262,14 @@ const App = () => {
   const toggleSelect = (id) => setSelectedIds(s => s.includes(id) ? s.filter(x=>x!==id) : [...s, id]);
   const moveToSU = () => {
     let su=[]; try{ su=JSON.parse(localStorage.getItem('su-v6-persons')||'[]'); }catch(e){ su=[]; }
+    const norm = z => String(z||'').replace(/さん$/,'').replace(/\s+/g,'').trim();
     const sel = profiles.filter(p=>selectedIds.includes(p.id));
     let added=0, skipped=0;
     sel.forEach(p=>{
       const nm=(p.name&&p.name.value)||p.name||'';
-      if(su.some(x=> x.hitoId===p.id || (x.name||'')===nm)){ skipped++; return; }
+      const pn=norm(nm);
+      const dup = su.some(x=> x.hitoId===p.id || (pn && (norm(x.name)===pn || norm(x.name).includes(pn) || pn.includes(norm(x.name)))));
+      if(dup){ skipped++; return; }
       const now=new Date().toISOString();
       su.push({
         id: 'hm_'+p.id+'_'+Math.random().toString(36).slice(2,7),
