@@ -1466,11 +1466,74 @@ function openReconcile(){
     <details${r.ambiguous.length?' open':''} style="margin-top:8px;"><summary style="cursor:pointer;font-weight:600;font-size:13px;color:#b45309;margin:6px 0 4px;">⚠ 曖昧・要確認（${r.ambiguous.length}）</summary>${(r.ambiguous.map(m=>row(m.su.name,'≈ '+hn(m.hito)+'（別人なら移行時に分離）')).join(''))||'<div style="color:var(--s400);font-size:13px;">なし</div>'}</details>
     <details style="margin-top:8px;"><summary style="cursor:pointer;font-weight:600;font-size:13px;color:#1d4ed8;margin:6px 0 4px;">➕ SUのみ＝ヒトメモに新規作成（${r.suOnly.length}）</summary>${(r.suOnly.map(p=>row(p.name)).join(''))||'<div style="color:var(--s400);font-size:13px;">なし</div>'}</details>
     <details style="margin-top:8px;"><summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--s600);margin:6px 0 4px;">◻ ヒトメモのみ＝マップ未掲載（${r.hitoOnly.length}）</summary>${(r.hitoOnly.map(h=>row(hn(h))).join(''))||'<div style="color:var(--s400);font-size:13px;">なし</div>'}</details>
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--s200);"><button onclick="runHitomemoMerge()" style="width:100%;padding:10px;background:#047857;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">▶ ヒトメモへ統合を実行</button><div style="font-size:11px;color:var(--s400);margin-top:6px;text-align:center;">実行前に自動バックアップをDL。SUは変更せず、ヒトメモに移植／追加します。</div></div>
   `;
   document.getElementById('reconcileBody').innerHTML = html;
   document.getElementById('reconcileOverlay').style.display='flex';
 }
 function closeReconcile(){ document.getElementById('reconcileOverlay').style.display='none'; }
+
+// ─── ヒトメモへ統合（段階3・移行） ───
+// 別人＝フィードバックで別人と確定したSU名（正規化後）。フジー一致でも新規作成する。
+const _BETSUJIN = ['雅也','クロノ千葉'];
+function _suData(p){
+  return {
+    onMap:true, x:p.x, y:p.y,
+    relationshipPurpose:p.relationshipPurpose||'', energyState:p.energyState||'',
+    relationshipType:p.relationshipType||'', frequency:p.frequency||'', impact:p.impact||'',
+    valueFlow:p.valueFlow||'', isTop10:!!p.isTop10, isDraining:!!p.isDraining, isDormant:!!p.isDormant,
+    currentState:p.currentState||'', desiredState:p.desiredState||'', gap:p.gap||'',
+    nextAction:p.nextAction||'', actionType:p.actionType||'', actionDueDate:p.actionDueDate||'',
+    memo:p.memo||'', suId:p.id,
+  };
+}
+function _newHitoFromSU(p){
+  const now=new Date().toISOString();
+  const nm = String(p.name||'').replace(/さん$/,'').trim();
+  return {
+    id: 'su_'+(p.id||Date.now().toString())+'_'+Math.random().toString(36).slice(2,7),
+    createdAt: now, updatedAt: now,
+    relationFlag:'normal', meetings:[], meetingSummary:'',
+    tier: p.isTop10 ? '経営パートナー候補' : '仲間候補',
+    stage:'知人', changeLog:[], nextExperience:'', engagementType:'未設定',
+    lastContactDate:null, myRole:'見守る', _fieldsV2:true,
+    name:{value:nm}, position:{value:''}, values:{value:''}, coreMessage:{value:''},
+    birthday:{value:''}, history:{value:''}, behavior:{value:''}, impression:{value:''},
+    other:{value:'SU移行: '+(p.relationshipPurpose||'')+' / '+(p.relationshipType||'')},
+    su: _suData(p),
+  };
+}
+function runHitomemoMerge(){
+  let hitos=[]; try{ hitos=JSON.parse(localStorage.getItem('hitomemo_profiles_v1')||'[]'); }catch(e){ hitos=[]; }
+  // 自動バックアップ（両ストア）
+  const backup={exportedAt:new Date().toISOString(), su:persons, hitomemo:hitos};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
+  a.download='su-hitomemo-premigration-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+
+  if(!confirm('ヒトメモへ統合します。\n直前のバックアップを自動ダウンロードしました。\n\n・一致／同一：マクロ属性をヒトメモに移植\n・SUのみ／別人：ヒトメモに新規作成\n\nSUのデータは変更しません（ヒトメモに追加するだけ）。実行してよいですか？')) return;
+
+  let linked=0, created=0, updated=0;
+  persons.forEach(p=>{
+    const pn=_recNorm(p.name);
+    // 1. 既に移行済み（suId一致）→ 更新
+    let target = hitos.find(h=>h.su && h.su.suId===p.id);
+    if(target){ target.su=_suData(p); target.updatedAt=new Date().toISOString(); updated++; return; }
+    // 2. 別人指定 → 新規作成
+    if(_BETSUJIN.includes(pn)){ hitos.push(_newHitoFromSU(p)); created++; return; }
+    // 3. 完全一致（未連携の人のみ）
+    target = pn ? hitos.find(h=>!h.su && _hitoName(h)===pn) : null;
+    // 4. 曖昧一致（別人以外・未連携の人のみ）
+    if(!target) target = pn ? hitos.find(h=>!h.su && _hitoName(h) && (_hitoName(h).includes(pn)||pn.includes(_hitoName(h)))) : null;
+    if(target){ target.su=_suData(p); target.updatedAt=new Date().toISOString(); linked++; return; }
+    // 5. 新規作成
+    hitos.push(_newHitoFromSU(p)); created++;
+  });
+  localStorage.setItem('hitomemo_profiles_v1', JSON.stringify(hitos));
+  alert('統合完了\n\n移植（一致／同一）: '+linked+'件\n新規作成（SUのみ／別人）: '+created+'件\n更新（再実行分）: '+updated+'件\n\nヒトメモを開いて確認してください。');
+  closeReconcile();
+}
 
 function qapDelete(id){
   const p=persons.find(x=>x.id===id);
