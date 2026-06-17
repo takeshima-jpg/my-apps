@@ -113,6 +113,11 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .brief-back { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 14px; color: var(--text2); }
 .brief-back:hover { background: var(--bg3); }
 .brief-title { font-size: 16px; font-weight: 700; color: var(--text); }
+.brief-tabs { display: flex; gap: 4px; padding: 8px 24px 0; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.brief-tab { flex: 0 0 auto; min-width: 88px; background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 14px 10px; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; font-family: inherit; }
+.brief-tab:hover { color: var(--text2); }
+.brief-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.brief-empty { padding: 48px 8px; text-align: center; color: var(--text2); line-height: 1.9; }
 .brief-body { flex: 1; overflow-y: auto; padding: 28px 32px; max-width: 760px; margin: 0 auto; width: 100%; box-sizing: border-box; line-height: 1.8; }
 .brief-body h1 { font-size: 1.4rem; font-weight: 700; margin: 24px 0 12px; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 6px; }
 .brief-body h2 { font-size: 1.15rem; font-weight: 700; margin: 20px 0 8px; color: var(--text); }
@@ -924,82 +929,119 @@ function filteredLogs() {
 // RENDER
 
 // ── AIX DRAFT / MORNING BRIEF ──
-function getAixDraft() {
-  // aix_draft_latest（新キー）と oneday_aix_draft（旧キー）の両方に対応
-  const latest = localStorage.getItem('aix_draft_latest');
-  if (latest) {
-    try {
-      const d = JSON.parse(latest);
-      if (typeof d === 'object' && d !== null) {
-        // 構造化JSONをMarkdown形式に変換
-        let md = '';
-        if (d.top_theme) md += `## 今日の最重要テーマ\n${d.top_theme}\n\n`;
-        if (d.changes?.length) md += `## 昨日からの重要変化\n${d.changes.map(c=>`・${c}`).join('\n')}\n\n`;
-        if (d.decisions?.length) md += `## 今日判断すべきこと\n${d.decisions.map(c=>`・${c}`).join('\n')}\n\n`;
-        if (d['育成']?.length) md += `## 今日育成すべき人\n${d['育成'].map(p=>`・${p.name}：${p.reason}`).join('\n')}\n\n`;
-        if (d['会う価値']?.length) md += `## 今日接触する価値のある人\n${d['会う価値'].map(p=>`・${p.name}：${p.purpose}`).join('\n')}\n\n`;
-        if (d.risks?.length) md += `## 放置リスク\n${d.risks.map(c=>`・${c}`).join('\n')}\n\n`;
-        if (d.winning_moves?.length) md += `## 今週の勝ち筋\n${d.winning_moves.map(c=>`・${c}`).join('\n')}\n\n`;
-        if (d.proposals?.length) md += `## AI参謀からの提言\n${d.proposals.map(p=>`・${p.content}${p.partner_relation?' — '+p.partner_relation:''}`).join('\n')}\n\n`;
-        if (d.os_gaps?.length) md += `## OS齟齬レポート\n${d.os_gaps.map(c=>`・${c}`).join('\n')}\n\n`;
-        if (d.previous_proposal_tracking?.length) md += `## 前回提言の進捗\n${d.previous_proposal_tracking.map(c=>`・${c}`).join('\n')}\n\n`;
-        if (d.external_env?.length) md += `## 外部環境モニタリング\n${d.external_env.map(c=>`・${c}`).join('\n')}\n\n`;
-        if (d.structural_alerts?.length) {
-          md += `## 構造アラート\n` + d.structural_alerts.map(a => {
-            const parts = [];
-            const lv = a.level ? `[${a.level}] ` : '';
-            const dt = a.date ? `（${a.date}）` : '';
-            parts.push(`${lv}${a.title || ''}${dt}`.trim());
-            if (Array.isArray(a.summary) && a.summary.length) parts.push(a.summary.join(' / '));
-            else if (a.summary) parts.push(a.summary);
-            if (a.impact) parts.push(`影響：${a.impact}`);
-            if (a.action) parts.push(`アクション：${a.action}`);
-            if (a.url) parts.push('[🔗 ' + (a.source || '出典記事') + '](' + a.url + ')');
-            return `・${parts.filter(Boolean).join('｜')}`;
-          }).join('\n') + `\n\n`;
-        }
-        if (d.vision_brief) md += `## 今日のVISION\n${d.vision_brief}\n\n`;
-        if (d.vision_proposals?.length) md += `## VISIONへの提言\n${d.vision_proposals.map(c=>`・${c}`).join('\n')}\n\n`;
-        if (d.explore_themes?.length) md += `## 探索テーマ\n${d.explore_themes.map(c=>`・${c}`).join('\n')}\n\n`;
-        if (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) {
-          const rf = d.reflect;
-          md += `## 内省（Reflect）\n`;
-          if (rf.open_questions?.length) md += `今向き合う問い：\n` + rf.open_questions.map(c=>`・${c}`).join('\n') + '\n';
-          if (rf.active_experiments?.length) md += `実験中：\n` + rf.active_experiments.map(c=>`・${c}`).join('\n') + '\n';
-          if (rf.proposals?.length) md += rf.proposals.map(p => {
-            const t = (typeof p === 'string') ? p : `${p.based_on ? p.based_on + ' → ' : ''}${p.suggestion || ''}${p.why ? '（' + p.why + '）' : ''}`;
-            return `・提案：${t}`;
-          }).join('\n') + '\n';
-          md += `\n`;
-        }
-        if (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length)) {
-          const ll = d.life_list;
-          md += `## やりたいこと（100LIST）\n`;
-          if (ll.focus_today?.length) md += ll.focus_today.map(c=>`・${c}`).join('\n') + '\n';
-          if (ll.one_joy) md += `・今日の彩り：${ll.one_joy}\n`;
-          if (ll.proposals?.length) md += ll.proposals.map(p => {
-            const t = (typeof p === 'string') ? p : `${p.want || ''}${p.reason ? '（' + p.reason + '）' : ''}`;
-            return `・新しい願望の提案：${t}`;
-          }).join('\n') + '\n';
-          md += `\n`;
-        }
-        if (d.partner_progress && d.partner_progress.current != null) {
-          const pp = d.partner_progress;
-          md += `## 経営パートナー進捗（${pp.current ?? 0}/${pp.target ?? 10}）\n`;
-          const lines = [].concat(pp.alerts || [], pp.recent_changes || []);
-          if (lines.length) md += lines.map(c=>`・${c}`).join('\n') + '\n';
-          md += `\n`;
-        }
-        if (d.delete_candidate && d.delete_candidate.target) {
-          const dc = d.delete_candidate;
-          md += `## 削除候補\n・${dc.target}${dc.type ? `（${dc.type}）` : ''}${dc.reason ? '：' + dc.reason : ''}${dc.effect ? '／効果：' + dc.effect : ''}\n\n`;
-        }
-        return md.trim() || JSON.stringify(d, null, 2);
-      }
-    } catch(e) {}
-    return latest;
+// 構造化Brief JSON → Markdown（毎朝/週次/月次の全セクション対応）
+function briefJsonToMarkdown(d) {
+  if (typeof d === 'string') return d;
+  if (typeof d !== 'object' || d === null) return String(d);
+  let md = '';
+  if (d.top_theme) md += `## 今日の最重要テーマ\n${d.top_theme}\n\n`;
+  if (d.center_pin) md += `## 今週のセンターピン\n${d.center_pin}\n\n`;
+  if (d.changes?.length) md += `## 昨日からの重要変化\n${d.changes.map(c=>`・${c}`).join('\n')}\n\n`;
+  if (d.decisions?.length) md += `## 今日判断すべきこと\n${d.decisions.map(c=>`・${c}`).join('\n')}\n\n`;
+  if (d.week_question?.length) md += `## 今週の問い\n${d.week_question.map(c=>`・${c}`).join('\n')}\n\n`;
+  if (d.engagement?.length) md += `## 今日関わるべき人\n${d.engagement.map(p=>`・${p.name}${p.type?`（${p.type}）`:''}：${p.reason||''}`).join('\n')}\n\n`;
+  else if (d['育成']?.length) md += `## 今日関わるべき人\n${d['育成'].map(p=>`・${p.name}：${p.reason}`).join('\n')}\n\n`;
+  if (d['会う価値']?.length) md += `## 今日接触する価値のある人\n${d['会う価値'].map(p=>`・${p.name}：${p.purpose}`).join('\n')}\n\n`;
+  if (d.risks?.length) md += `## 放置リスク\n${d.risks.map(c=>`・${c}`).join('\n')}\n\n`;
+  if (d.winning_moves?.length) md += `## 今週の勝ち筋\n${d.winning_moves.map(c=>`・${c}`).join('\n')}\n\n`;
+  if (d.proposals?.length) md += `## AI参謀からの提言\n${d.proposals.map(p=>`・${p.content}${p.partner_relation?' — '+p.partner_relation:''}`).join('\n')}\n\n`;
+  if (d.os_gaps?.length) md += `## OS齟齬レポート\n${d.os_gaps.map(c=>`・${c}`).join('\n')}\n\n`;
+  if (d.previous_proposal_tracking?.length) md += `## 前回提言の進捗\n${d.previous_proposal_tracking.map(c=>`・${c}`).join('\n')}\n\n`;
+  if (d.external_env?.length) md += `## 外部環境モニタリング\n${d.external_env.map(c=>`・${c}`).join('\n')}\n\n`;
+  if (d.structural_alerts?.length) {
+    md += `## 構造アラート\n` + d.structural_alerts.map(a => {
+      const parts = [];
+      const lv = a.level ? `[${a.level}] ` : '';
+      const dt = a.date ? `（${a.date}）` : '';
+      parts.push(`${lv}${a.title || ''}${dt}`.trim());
+      if (Array.isArray(a.summary) && a.summary.length) parts.push(a.summary.join(' / '));
+      else if (a.summary) parts.push(a.summary);
+      if (a.impact) parts.push(`影響：${a.impact}`);
+      if (a.action) parts.push(`アクション：${a.action}`);
+      if (a.url) parts.push('[🔗 ' + (a.source || '出典記事') + '](' + a.url + ')');
+      return `・${parts.filter(Boolean).join('｜')}`;
+    }).join('\n') + `\n\n`;
   }
-  return localStorage.getItem('oneday_aix_draft') || null;
+  if (d.vision_brief) md += `## 今日のVISION\n${d.vision_brief}\n\n`;
+  if (d.vision_proposals?.length) md += `## VISIONへの提言\n${d.vision_proposals.map(c=>`・${c}`).join('\n')}\n\n`;
+  if (d.explore_themes?.length) md += `## 探索テーマ\n${d.explore_themes.map(c=>`・${c}`).join('\n')}\n\n`;
+  if (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) {
+    const rf = d.reflect;
+    md += `## 内省（Reflect）\n`;
+    if (rf.open_questions?.length) md += `今向き合う問い：\n` + rf.open_questions.map(c=>`・${c}`).join('\n') + '\n';
+    if (rf.active_experiments?.length) md += `実験中：\n` + rf.active_experiments.map(c=>`・${c}`).join('\n') + '\n';
+    if (rf.proposals?.length) md += rf.proposals.map(p => {
+      const t = (typeof p === 'string') ? p : `${p.based_on ? p.based_on + ' → ' : ''}${p.suggestion || ''}${p.why ? '（' + p.why + '）' : ''}`;
+      return `・提案：${t}`;
+    }).join('\n') + '\n';
+    md += `\n`;
+  }
+  if (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length)) {
+    const ll = d.life_list;
+    md += `## やりたいこと（100LIST）\n`;
+    if (ll.focus_today?.length) md += ll.focus_today.map(c=>`・${c}`).join('\n') + '\n';
+    if (ll.one_joy) md += `・今日の彩り：${ll.one_joy}\n`;
+    if (ll.proposals?.length) md += ll.proposals.map(p => {
+      const t = (typeof p === 'string') ? p : `${p.want || ''}${p.reason ? '（' + p.reason + '）' : ''}`;
+      return `・新しい願望の提案：${t}`;
+    }).join('\n') + '\n';
+    md += `\n`;
+  }
+  if (d.partner_progress && d.partner_progress.current != null) {
+    const pp = d.partner_progress;
+    md += `## 経営パートナー進捗（${pp.current ?? 0}/${pp.target ?? 10}）\n`;
+    const lines = [].concat(pp.alerts || [], pp.recent_changes || []);
+    if (lines.length) md += lines.map(c=>`・${c}`).join('\n') + '\n';
+    md += `\n`;
+  }
+  if (d.delete_candidate && d.delete_candidate.target) {
+    const dc = d.delete_candidate;
+    md += `## 削除候補\n・${dc.target}${dc.type ? `（${dc.type}）` : ''}${dc.reason ? '：' + dc.reason : ''}${dc.effect ? '／効果：' + dc.effect : ''}\n\n`;
+  }
+  // ===== 週次／月次レビュー専用セクション =====
+  const _grp = (t, groups) => {
+    const body = groups.filter(g => Array.isArray(g[1]) && g[1].length)
+      .map(g => `${g[0]}：\n${g[1].map(x=>`・${x}`).join('\n')}`).join('\n');
+    if (body) md += `## ${t}\n${body}\n\n`;
+  };
+  if (d.project_review) _grp('Projectレビュー', [['前進', d.project_review.advancing], ['停滞', d.project_review.stalled], ['完了', d.project_review.completed], ['削除候補', d.project_review.delete_candidates]]);
+  if (d.engagement_review) _grp('関わり方レビュー', [['育った人（若手）', d.engagement_review.develop], ['共同成長（同世代）', d.engagement_review.co_growth], ['相互学習（年上・専門家）', d.engagement_review.mutual_learning], ['次に経験を渡す人', d.engagement_review.next_experience]]);
+  if (d.question_review) _grp('問いレビュー', [['今育てる問い', d.question_review.nurturing], ['答えが出た問い', d.question_review.answered], ['捨てる問い', d.question_review.discard]]);
+  if (d.ai_understanding) _grp('AI理解度レビュー', [['AIが重要と認識', d.ai_understanding.recognized], ['実際とのズレ', d.ai_understanding.gaps]]);
+  if (d.life_list_review) _grp('100リストレビュー', [['進んだもの', d.life_list_review.advanced], ['止まっているもの', d.life_list_review.stalled], ['最近追加', d.life_list_review.recent], ['AI提案', d.life_list_review.proposals]]);
+  if (d.delete_review) _grp('削除候補レビュー', [['Project', d.delete_review.projects], ['人間関係', d.delete_review.people], ['問い', d.delete_review.questions], ['テーマ', d.delete_review.themes], ['構想', d.delete_review.ideas], ['役割', d.delete_review.roles]]);
+  if (d.theme_review) _grp('重点テーマレビュー', [['今探求していること', d.theme_review.current], ['増えたテーマ', d.theme_review.added], ['減ったテーマ', d.theme_review.removed]]);
+  if (d.thought_shift) _grp('思想変化レビュー', [['新しく信じ始めたこと', d.thought_shift.new_beliefs], ['捨てた考え', d.thought_shift.dropped], ['深まった考え', d.thought_shift.deepened]]);
+  if (d.relationship_review) {
+    const r = d.relationship_review;
+    _grp('大切にしたい人レビュー', [['本当に関係を深めたい人', r.deepen], ['優先順位の変化', r.priority_shift]]);
+    if (r.time_spent) md += `最近時間を使えているか：${r.time_spent}\n\n`;
+  }
+  if (d.partner_candidate_review) _grp('経営パートナー候補レビュー', [['新規追加', d.partner_candidate_review.added], ['昇格', d.partner_candidate_review.promoted], ['停滞', d.partner_candidate_review.stalled], ['除外', d.partner_candidate_review.removed]]);
+  if (d.ai_self_check) {
+    const a = d.ai_self_check, h = a.hypotheses || {};
+    md += `## AI自己点検\n`;
+    if (h.aiming) md += `・何を目指しているか：${h.aiming}\n`;
+    if (h.struggling) md += `・何に悩んでいるか：${h.struggling}\n`;
+    if (h.developing) md += `・誰を育てようとしているか：${h.developing}\n`;
+    if (h.discarding) md += `・何を捨てようとしているか：${h.discarding}\n`;
+    if (a.takeshima_eval) md += `・竹嶋評価：${a.takeshima_eval}\n`;
+    md += `\n`;
+  }
+  return md.trim() || JSON.stringify(d, null, 2);
+}
+
+function getAixDraft(tab) {
+  tab = tab || 'daily';
+  const KEY = { daily:'aix_draft_latest', weekly:'aix_review_weekly', monthly:'aix_review_monthly' }[tab] || 'aix_draft_latest';
+  let raw = localStorage.getItem(KEY);
+  if (!raw && tab === 'daily') raw = localStorage.getItem('oneday_aix_draft');
+  if (!raw) return null;
+  try {
+    const d = JSON.parse(raw);
+    if (typeof d === 'object' && d !== null) return briefJsonToMarkdown(d);
+  } catch(e) {}
+  return raw;
 }
 
 function markdownToHtml(md) {
@@ -1049,24 +1091,59 @@ function markdownToHtml(md) {
   if (inList) html += '</ul>';
   return html;
 }
+let currentBriefTab = 'daily';
+const BRIEF_TABS = {
+  daily:   { label: '毎朝', title: '📋 Morning Brief' },
+  weekly:  { label: '週次', title: '📋 Strategic Review（週次）' },
+  monthly: { label: '月次', title: '📋 Executive Review（月次）' },
+};
+
 function openBriefPage() {
-  const draft = getAixDraft();
-  if (!draft) { toast('Morning Briefがありません'); return; }
+  // 毎朝が無くても週次/月次がある場合に開けるよう、いずれか1つでもあれば開く
+  const hasAny = ['daily','weekly','monthly'].some(t => getAixDraft(t));
+  if (!hasAny) { toast('Morning Briefがありません'); return; }
+  currentBriefTab = getAixDraft('daily') ? 'daily' : (getAixDraft('weekly') ? 'weekly' : 'monthly');
   const existing = document.getElementById('briefPage');
   if (existing) existing.remove();
 
   const page = document.createElement('div');
   page.id = 'briefPage';
   page.className = 'brief-page';
+  const tabBtns = Object.keys(BRIEF_TABS).map(t =>
+    `<button class="brief-tab${t===currentBriefTab?' active':''}" data-tab="${t}" onclick="switchBriefTab('${t}')">${BRIEF_TABS[t].label}</button>`
+  ).join('');
   page.innerHTML = `
     <div class="brief-header">
       <button class="brief-back" onclick="closeBriefPage()">← 戻る</button>
-      <div class="brief-title">📋 Morning Brief</div>
+      <div class="brief-title" id="briefTitle">${BRIEF_TABS[currentBriefTab].title}</div>
     </div>
-    <div class="brief-body">${markdownToHtml(draft)}</div>
+    <nav class="brief-tabs">${tabBtns}</nav>
+    <div class="brief-body" id="briefBody"></div>
   `;
   document.body.appendChild(page);
+  renderBriefBody();
 }
+
+function renderBriefBody() {
+  const body = document.getElementById('briefBody');
+  const titleEl = document.getElementById('briefTitle');
+  if (!body) return;
+  if (titleEl) titleEl.textContent = BRIEF_TABS[currentBriefTab].title;
+  const draft = getAixDraft(currentBriefTab);
+  if (draft) {
+    body.innerHTML = markdownToHtml(draft);
+  } else {
+    body.innerHTML = `<div class="brief-empty">${BRIEF_TABS[currentBriefTab].label}レビューはまだ生成されていません。<br>Coworkで${BRIEF_TABS[currentBriefTab].label}レビューを実行すると、ここに表示されます。</div>`;
+  }
+}
+
+function switchBriefTab(tab) {
+  if (!BRIEF_TABS[tab]) return;
+  currentBriefTab = tab;
+  document.querySelectorAll('.brief-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  renderBriefBody();
+}
+
 
 function closeBriefPage() {
   const page = document.getElementById('briefPage');
@@ -1076,7 +1153,7 @@ function closeBriefPage() {
 function updateBriefBtn() {
   const btn = document.getElementById('sbBriefBtn');
   if (!btn) return;
-  const draft = getAixDraft();
+  const draft = ['daily','weekly','monthly'].some(t => getAixDraft(t));
   if (draft) btn.classList.remove('disabled');
   else btn.classList.add('disabled');
 }
@@ -1636,7 +1713,10 @@ document.addEventListener('DOMContentLoaded', function() {
   updateBriefBtn();
   // storageイベントでBriefボタン状態を更新
   window.addEventListener('storage', function(e) {
-    if (e.key === 'oneday_aix_draft' || e.key === 'aix_draft_latest') updateBriefBtn();
+    if (e.key === 'oneday_aix_draft' || e.key === 'aix_draft_latest' || e.key === 'aix_review_weekly' || e.key === 'aix_review_monthly') {
+      updateBriefBtn();
+      if (document.getElementById('briefPage')) renderBriefBody();
+    }
   });
   var mobImp = document.getElementById('importFileInputMob');
   if(mobImp) {
