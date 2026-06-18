@@ -911,22 +911,31 @@ function reflectToHitomemo(){
   const byId={}; hm.forEach(p=>{ if(p&&p.id) byId[p.id]=p; });
   const byName={}; hm.forEach(p=>{ const nm=norm((p.name&&p.name.value)||p.name); if(nm && !(nm in byName)) byName[nm]=p; });
   const top10 = (persons||[]).filter(su => su.isTop10);   // Top10のみ反映
+  const top10HmIds = new Set();
   let updated=0, noLink=0;
   top10.forEach(su=>{
     const na = (su.nextAction||'').trim();
     let p = (su.hitoId && byId[su.hitoId]) ? byId[su.hitoId] : (byName[norm(su.name)]||null);
     if(!p){ if(na) noLink++; return; }
+    top10HmIds.add(p.id);
     if((p.nextExperience||'') !== na){
       p.nextExperience = na;
       p.updatedAt = new Date().toISOString();
       updated++;
     }
   });
-  if(updated) localStorage.setItem(HM_KEY, JSON.stringify(hm));
+  // Top10フラグをヒトメモへ同期（Top10=true / 外れた人=false）
+  let flagChanged=0;
+  hm.forEach(p=>{
+    const want = top10HmIds.has(p.id);
+    if(!!p.isTop10 !== want){ p.isTop10 = want; p.updatedAt = new Date().toISOString(); flagChanged++; }
+  });
+  if(updated || flagChanged) localStorage.setItem(HM_KEY, JSON.stringify(hm));
   let msg = `Top10のネクストアクションを、ヒトメモの「次に渡す経験」に ${updated}件 反映しました。（Top10 ${top10.length}人中）`;
+  if(flagChanged) msg += `\nTop10バッジを ${flagChanged}件 更新しました。`;
   if(noLink) msg += `\n（${noLink}件はヒトメモに該当者が見つからず未反映。ヒトメモから移行した人なら自動で紐づきます）`;
   if(top10.length===0) msg = 'Top10が設定されていません。SUでTop10をオンにしてから反映してください。';
-  else if(updated===0 && noLink===0) msg = '反映対象がありませんでした（ネクストアクションが空、または既に最新です）。';
+  else if(updated===0 && noLink===0 && flagChanged===0) msg = '反映対象がありませんでした（既に最新です）。';
   alert(msg);
 }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
