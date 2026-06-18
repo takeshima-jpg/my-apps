@@ -2027,21 +2027,21 @@ const App = () => {
         {/* コア（常時表示） */}
         <div className="detail-section">
           <div className="detail-section-title">基本</div>
-          <Field label="氏名（ふりがな）" field="name" />
-          <Field label="所属・役職・事業" field="position" multi />
-          <Field label="価値観・大切にしていること" field="values" multi />
-          <Field label="核となる一言" field="coreMessage" multi />
+          {Field({label:'氏名（ふりがな）', field:'name'})}
+          {Field({label:'所属・役職・事業', field:'position', multi:true})}
+          {Field({label:'価値観・大切にしていること', field:'values', multi:true})}
+          {Field({label:'核となる一言', field:'coreMessage', multi:true})}
         </div>
 
         {/* 詳細（折りたたみ） */}
         <details className="detail-section">
           <summary className="detail-section-title" style={{ cursor: 'pointer', userSelect: 'none' }}>詳細（誕生日・経歴・個性・印象・メモ）</summary>
           <div style={{ marginTop: 12 }}>
-            <Field label="誕生日" field="birthday" />
-            <Field label="経歴・背景" field="history" multi />
-            <Field label="個性・傾向" field="behavior" multi />
-            <Field label="印象・洞察" field="impression" multi />
-            <Field label="メモ" field="other" multi />
+            {Field({label:'誕生日', field:'birthday'})}
+            {Field({label:'経歴・背景', field:'history', multi:true})}
+            {Field({label:'個性・傾向', field:'behavior', multi:true})}
+            {Field({label:'印象・洞察', field:'impression', multi:true})}
+            {Field({label:'メモ', field:'other', multi:true})}
           </div>
         </details>
 
