@@ -465,7 +465,10 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
   <div class="map-center">
     <div class="map-toolbar">
       <div class="map-stats" id="mapStats"></div>
-      <div style="font-size:10px;color:var(--s400)">ドラッグで自由配置 ／ ダブルクリックで詳細編集</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="hbtn hbtn-ghost" style="font-size:12px;padding:5px 10px;" onclick="reflectToHitomemo()" title="各人のネクストアクションを、ヒトメモの『次に渡す経験』へ書き戻します">→ ヒトメモに反映</button>
+        <div style="font-size:10px;color:var(--s400)">ドラッグで自由配置 ／ ダブルクリックで詳細編集</div>
+      </div>
     </div>
     <div class="map-cols" id="mapCols">
       <!-- rendered by JS -->
@@ -897,6 +900,33 @@ function td(){ return new Date().toISOString().split('T')[0]; }
 function ts(){ return new Date().toISOString(); }
 function ld(k){ try{ const r=localStorage.getItem(k); if(r) return JSON.parse(r); }catch{} return null; }
 function sv(k,d){ localStorage.setItem(k,JSON.stringify(d)); }
+
+// SUのネクストアクションを、ヒトメモの「次に渡す経験」へ書き戻す（hitoId優先・名前フォールバック）
+function reflectToHitomemo(){
+  const HM_KEY='hitomemo_profiles_v1';
+  let hm=[];
+  try{ hm=JSON.parse(localStorage.getItem(HM_KEY)||'[]'); }catch(e){ hm=[]; }
+  if(!Array.isArray(hm)||!hm.length){ alert('ヒトメモに人物データが見つかりません。'); return; }
+  const norm = z => String(z||'').replace(/さん$/,'').replace(/\s+/g,'').trim();
+  const byId={}; hm.forEach(p=>{ if(p&&p.id) byId[p.id]=p; });
+  const byName={}; hm.forEach(p=>{ const nm=norm((p.name&&p.name.value)||p.name); if(nm && !(nm in byName)) byName[nm]=p; });
+  let updated=0, noLink=0;
+  (persons||[]).forEach(su=>{
+    const na = (su.nextAction||'').trim();
+    let p = (su.hitoId && byId[su.hitoId]) ? byId[su.hitoId] : (byName[norm(su.name)]||null);
+    if(!p){ if(na) noLink++; return; }
+    if((p.nextExperience||'') !== na){
+      p.nextExperience = na;
+      p.updatedAt = new Date().toISOString();
+      updated++;
+    }
+  });
+  if(updated) localStorage.setItem(HM_KEY, JSON.stringify(hm));
+  let msg = `ヒトメモの「次に渡す経験」を ${updated}件 更新しました。`;
+  if(noLink) msg += `\n（${noLink}件はヒトメモに該当者が見つからず未反映。ヒトメモから移行した人なら自動で紐づきます）`;
+  if(updated===0 && noLink===0) msg = '反映対象がありませんでした（ネクストアクションが空、または既に最新です）。';
+  alert(msg);
+}
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function sel2(id,v){ const e=document.getElementById(id); if(!e)return; for(const o of e.options) if(o.value===v){o.selected=true;break;} }
 
