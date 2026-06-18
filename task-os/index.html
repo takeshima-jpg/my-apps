@@ -1980,6 +1980,70 @@ async function gdUpload(name, contentStr){
   });
 }
 
+// ===== ヒトメモ自動取り込み（aix-hitomemo.json → localStorage hitomemo_profiles_v1 / 未登録）=====
+// ヒトメモがGDrive未ログインでも、Task OSを開くだけで未登録に入る。冪等キーはヒトメモと共有。
+function _hitomemoParseBlock(text){
+  const extract = (label) => {
+    const r = new RegExp(label + '[：:](.*?)(?=\\n\\s*[■氏所価核関次誕経個印メ]|$)', 's');
+    const m = text.match(r); return m ? m[1].trim() : '';
+  };
+  const normEng = (x) => {
+    if(!x) return '未設定';
+    if(x.includes('育成')) return '育成（若手）';
+    if(x.includes('共同成長')) return '共同成長（同世代）';
+    if(x.includes('相互学習')) return '相互学習（年上・専門家）';
+    if(x.includes('維持')) return '維持（確定パートナー・専門家）';
+    return '未設定';
+  };
+  const now = new Date().toISOString();
+  return {
+    id: Date.now().toString() + Math.random().toString(36).slice(2,6),
+    createdAt: now, updatedAt: now,
+    relationFlag: 'normal', meetings: [], meetingSummary: '',
+    tier: '未登録', stage: '知人', changeLog: [],
+    nextExperience: extract('次に渡す経験'),
+    engagementType: normEng(extract('関わり方タイプ')),
+    lastContactDate: null, myRole: '見守る', _fieldsV2: true,
+    name:        { value: extract('氏名（ふりがな）') },
+    position:    { value: extract('所属・役職・事業') },
+    values:      { value: extract('価値観・大切にしていること') },
+    coreMessage: { value: extract('核となる一言') },
+    birthday:    { value: extract('誕生日') },
+    history:     { value: extract('経歴・背景') },
+    behavior:    { value: extract('個性・傾向') },
+    impression:  { value: extract('印象・洞察') },
+    other:       { value: extract('メモ') },
+  };
+}
+async function importHitomemoFromAix(){
+  const HM_KEY = 'hitomemo_profiles_v1';
+  const LAST_KEY = 'hitomemo_aix_last_modified';   // ヒトメモと共有（二重取り込み防止）
+  const AIX_HM_FILE = 'aix-hitomemo.json';
+  const f = await gdFindInFolder(AIX_HM_FILE);
+  if(!f) return 0;
+  const last = localStorage.getItem(LAST_KEY);
+  if(last && last === f.modifiedTime) return 0;     // 既に取込済み（冪等）
+  const data = JSON.parse(await gdDownload(f.id));
+  const people = (data && Array.isArray(data.people)) ? data.people : [];
+  let cur = [];
+  try { cur = JSON.parse(localStorage.getItem(HM_KEY) || '[]'); } catch(e){ cur = []; }
+  const norm = z => String(z||'').replace(/さん$/,'').replace(/\s+/g,'').trim();
+  const seen = new Set(cur.map(x => norm((x.name&&x.name.value)||x.name||'')).filter(Boolean));
+  const added = [];
+  people.forEach(t => {
+    if(typeof t !== 'string' || !t.trim()) return;
+    try {
+      const p = _hitomemoParseBlock(t);
+      const nm = norm((p.name&&p.name.value)||'');
+      if(!nm || seen.has(nm)) return;
+      seen.add(nm); added.push(p);
+    } catch(e){}
+  });
+  if(added.length){ localStorage.setItem(HM_KEY, JSON.stringify([...cur, ...added])); }
+  localStorage.setItem(LAST_KEY, f.modifiedTime);   // 0件でもマーク（処理済み）
+  return added.length;
+}
+
 async function gdAutoSync(manual){
   if(!gdToken){ if(manual) gdConnect(); return; }
   gdSetStatus('syncing');
@@ -1997,6 +2061,12 @@ async function gdAutoSync(manual){
         }
       }
     } catch(e){ if(e.code===401) throw e; console.warn('aix自動取込スキップ', e); }
+
+    // C2: aix-hitomemo.json をヒトメモ未登録へ取り込み（冪等・ヒトメモ未ログインでも入る）
+    try {
+      const hmAdded = await importHitomemoFromAix();
+      if(hmAdded > 0) importMsg = (importMsg ? importMsg + ' / ' : '') + `ヒトメモ${hmAdded}人を未登録へ`;
+    } catch(e){ if(e.code===401) throw e; console.warn('hitomemo自動取込スキップ', e); }
 
     // A: スナップショットを一方向で書き出し（読み戻しはしない）
     const snap = await collectAllOSDataWithReflect();
