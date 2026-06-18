@@ -798,15 +798,22 @@ function applyAixTasks(parsed){
   let draftCount = 0;
   let briefLoaded = false;
   if (isNewFormat) {
-    // ② aix_drafts → localStorage['aix_drafts'] にマージ（同日付は上書き）
+    // ② aix_drafts → localStorage['aix_drafts'] にマージ（同日付は上書き／登録済み日付はスキップ）
     if (Array.isArray(parsed.aix_drafts) && parsed.aix_drafts.length > 0) {
+      // 既に1dayログに登録済みの日付は、ドラフトを再追加しない（承認済みドラフトの復活防止）
+      let loggedDates = new Set();
+      try {
+        const logs = JSON.parse(localStorage.getItem('oneday_logs_v1') || '[]');
+        loggedDates = new Set((logs||[]).filter(l => l && !l.archived && l.date).map(l => l.date));
+      } catch(e){}
       const existingDrafts = JSON.parse(localStorage.getItem('aix_drafts') || '[]');
       const draftMap = {};
       const keyOf = d => d && (d.targetDate || d.date);
-      for (const d of existingDrafts) { const k = keyOf(d); if (k) draftMap[k] = d; }
+      for (const d of existingDrafts) { const k = keyOf(d); if (k && !loggedDates.has(k)) draftMap[k] = d; } // 登録済みの既存ドラフトも除去
       for (const d of parsed.aix_drafts) {
         const k = keyOf(d);
-        if (k) { if (!d.targetDate) d.targetDate = d.date; draftMap[k] = d; draftCount++; }
+        if (!k || loggedDates.has(k)) continue;   // 登録済み日付はスキップ
+        if (!d.targetDate) d.targetDate = d.date; draftMap[k] = d; draftCount++;
       }
       const mergedDrafts = Object.values(draftMap).sort((a, b) => (((a.targetDate||a.date||'') < (b.targetDate||b.date||'')) ? 1 : -1));
       localStorage.setItem('aix_drafts', JSON.stringify(mergedDrafts));
