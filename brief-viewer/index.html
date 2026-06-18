@@ -225,6 +225,7 @@ async function getAccountEmail() {
 async function loadBrief() {
   if (!token) { showLogin(); return; }
   const FILE_NAME = TABS[currentTab].file;
+  const BASE = FILE_NAME.replace(/\.json$/, '');
   document.getElementById('tabs').style.display = 'flex';
   const btn = document.getElementById('refreshBtn');
   btn.style.display = 'inline-block';
@@ -232,11 +233,11 @@ async function loadBrief() {
   setStatus('loading', '読み込み中…');
   const COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';
   try {
-    // 完全一致で探す：① マイドライブ／所有 → ② 共有アイテム(sharedWithMe)
+    // 部分一致で最新を探す（Drive Desktop同期で末尾に (5) 等が付いた重複も拾い、modifiedTime降順で最新を採用）
     let file = null;
-    for (const cond of [`%22${FOLDER_ID}%22+in+parents+and+name%3D%22${FILE_NAME}%22+and+trashed%3Dfalse`,
-                        `name%3D%22${FILE_NAME}%22+and+trashed%3Dfalse`,
-                        `name%3D%22${FILE_NAME}%22+and+sharedWithMe%3Dtrue+and+trashed%3Dfalse`]) {
+    for (const cond of [`%22${FOLDER_ID}%22+in+parents+and+name+contains+%22${BASE}%22+and+trashed%3Dfalse`,
+                        `name+contains+%22${BASE}%22+and+trashed%3Dfalse`,
+                        `name+contains+%22${BASE}%22+and+sharedWithMe%3Dtrue+and+trashed%3Dfalse`]) {
       try {
         const lr = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${cond}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=10${COMMON}`);
         const ld = await lr.json();
@@ -502,14 +503,20 @@ function setBadge(tab, on) {
 async function refreshBadges() {
   if (!token) return;
   const COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';
-  const names = Object.values(TABS).map(t => `name%3D%22${t.file}%22`).join('+or+');
+  const names = Object.values(TABS).map(t => `name+contains+%22${t.file.replace(/\.json$/, '')}%22`).join('+or+');
   try {
     const r = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=(${names})+and+trashed%3Dfalse&fields=files(name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=30${COMMON}`);
     const d = await r.json();
+    // 各タブのbase名を含むファイルの最新modifiedTimeを集計（重複(5)等も考慮）
     const latest = {};
-    (d.files || []).forEach(f => { if (!latest[f.name] || f.modifiedTime > latest[f.name]) latest[f.name] = f.modifiedTime; });
+    (d.files || []).forEach(f => {
+      Object.entries(TABS).forEach(([tab, t]) => {
+        const base = t.file.replace(/\.json$/, '');
+        if (f.name.indexOf(base) !== -1 && (!latest[tab] || f.modifiedTime > latest[tab])) latest[tab] = f.modifiedTime;
+      });
+    });
     ['weekly', 'monthly'].forEach(tab => {
-      const mt = latest[TABS[tab].file];
+      const mt = latest[tab];
       const seen = localStorage.getItem('bv_seen_' + tab);
       setBadge(tab, !!mt && (!seen || mt > seen));
     });
