@@ -1620,7 +1620,7 @@ function bulkDelete() {
 
 // ── SUMMARY ──
 function updateSummary() {
-  const a = tasks.filter(t => t.status !== 'done' && t.status !== 'pending');
+  const a = tasks.filter(t => t.status !== 'done' && t.status !== 'pending' && t.status !== 'rejected');
   document.getElementById('s-overdue').textContent = a.filter(t => getDateState(t.dueDate)==='overdue').length;
   document.getElementById('s-today').textContent   = a.filter(t => getDateState(t.dueDate)==='today').length;
   document.getElementById('s-week').textContent    = a.filter(t => getDateState(t.dueDate)==='thisweek').length;
