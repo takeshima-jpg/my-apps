@@ -1437,6 +1437,7 @@ const App = () => {
           <span style={{display:'flex',alignItems:'center',gap:7}}>
             <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={()=>toggleSelect(p.id)} style={{width:15,height:15,cursor:'pointer',flexShrink:0,marginTop:2}} title="SU移行用に選択" />
             <span style={{fontWeight:700,fontSize:15,color:'#1a1a2e'}}>{(p.name&&p.name.value)||p.name||'名前未設定'}</span>
+            {p.isTop10 && <span style={{fontSize:10,fontWeight:700,color:'#b45309',background:'#fef3c7',borderRadius:5,padding:'1px 6px',flexShrink:0}}>★Top10</span>}
           </span>
           {tierBadge(p.tier||'記録のみ')}
         </div>
