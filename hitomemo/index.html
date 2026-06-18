@@ -2081,14 +2081,6 @@ const App = () => {
             </select>
           </div>
           <div className="fg" style={{marginBottom:12}}>
-            <label className="fl">自分の関わり方</label>
-            <select className="fi" value={current.myRole||'見守る'} onChange={e => { updDirect('myRole', e.target.value); saveCurrentBlur(); }}>
-              <option>見守る</option>
-              <option>任せる</option>
-              <option>教える</option>
-            </select>
-          </div>
-          <div className="fg" style={{marginBottom:12}}>
             <label className="fl">最終接触日</label>
             <input type="date" className="fi" value={current.lastContactDate||''} onChange={e => { updDirect('lastContactDate', e.target.value); saveCurrentBlur(); }} />
           </div>
