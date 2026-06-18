@@ -985,7 +985,7 @@ const importFromMemo = (text) => {
     relationFlag: 'normal',
     meetings: [],
     meetingSummary: '',
-    tier: '仲間候補',
+    tier: '未登録',
     stage: '知人',
     changeLog: [],
     nextExperience: extract('次に渡す経験'),
@@ -1344,6 +1344,7 @@ const App = () => {
     };
 
     // 階層別分類
+    const unregistered = profiles.filter(p => (p.tier||'') === '未登録');
     const partners = profiles.filter(p => (p.tier||'記録のみ') === '経営パートナー候補');
     const candidates = profiles.filter(p => (p.tier||'記録のみ') === '仲間候補');
 
@@ -1360,6 +1361,7 @@ const App = () => {
     const hasNextExp = [...partners, ...candidates].filter(p => p.nextExperience && p.nextExperience.trim());
 
     const tierBadge = (tier) => {
+      if (tier === '未登録') return <span className="tier-badge" style={{background:'#fef3c7',color:'#92400e'}}>📥 未登録</span>;
       if (tier === '経営パートナー候補') return <span className="tier-badge tier-partner">🌟 パートナー候補</span>;
       if (tier === '仲間候補') return <span className="tier-badge tier-candidate">👥 仲間候補</span>;
       if (tier === '家族') return <span className="tier-badge" style={{background:'#fce7f3',color:'#9d174d'}}>❤️ 家族</span>;
@@ -1387,7 +1389,7 @@ const App = () => {
         </div>
         {(p.position&&p.position.value) && <div style={{fontSize:12,color:'#64748b',marginBottom:4,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{p.position.value}</div>}
         <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}} onClick={e=>e.stopPropagation()}>
-          {quickSel('tier', p.tier, ['経営パートナー候補','仲間候補','家族','記録のみ'], '記録のみ')}
+          {quickSel('tier', p.tier, ['未登録','経営パートナー候補','仲間候補','家族','記録のみ'], '記録のみ')}
           {quickSel('stage', p.stage, ['知人','協力者','管理職','事業責任者','経営人材','経営パートナー'], '知人')}
           {quickSel('engagementType', p.engagementType, ['未設定','育成（若手）','共同成長（同世代）','相互学習（年上・専門家）','維持（確定パートナー・専門家）'], '未設定')}
         </div>
@@ -1456,6 +1458,22 @@ const App = () => {
           </div>
         )}
 
+        {/* 未登録（取り込み直後・階層を決める） */}
+        {unregistered.length > 0 && (
+          <>
+            <div className="section-header">
+              <span className="section-title-new">📥 未登録 — 階層を決めてください</span>
+              <span className="section-count">{unregistered.length}人</span>
+            </div>
+            <div style={{fontSize:12,color:'#92400e',background:'#fffbeb',border:'1px solid #fde68a',borderRadius:8,padding:'8px 12px',marginBottom:10}}>取り込んだ人物です。各カードの「未登録」を経営パートナー候補／仲間候補／家族／記録のみのいずれかに変えると、本登録されます。</div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
+            {unregistered
+              .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
+              .map(p => ProfileCard({p, compact:true}))}
+            </div>
+          </>
+        )}
+
         {/* 経営パートナー候補 */}
         {partners.length > 0 && (
           <>
@@ -1515,14 +1533,14 @@ const App = () => {
           </>
         )}
 
-        {profiles.filter(p => { const t=p.tier||'記録のみ'; return t!=='経営パートナー候補'&&t!=='仲間候補'&&t!=='家族'; }).length > 0 && (
+        {profiles.filter(p => { const t=p.tier||'記録のみ'; return t!=='経営パートナー候補'&&t!=='仲間候補'&&t!=='家族'&&t!=='未登録'; }).length > 0 && (
           <>
             <div className="section-header">
               <span className="section-title-new">🗂 記録のみ</span>
-              <span className="section-count">{profiles.filter(p => { const t=p.tier||'記録のみ'; return t!=='経営パートナー候補'&&t!=='仲間候補'&&t!=='家族'; }).length}人</span>
+              <span className="section-count">{profiles.filter(p => { const t=p.tier||'記録のみ'; return t!=='経営パートナー候補'&&t!=='仲間候補'&&t!=='家族'&&t!=='未登録'; }).length}人</span>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {profiles.filter(p => { const t=p.tier||'記録のみ'; return t!=='経営パートナー候補'&&t!=='仲間候補'&&t!=='家族'; })
+            {profiles.filter(p => { const t=p.tier||'記録のみ'; return t!=='経営パートナー候補'&&t!=='仲間候補'&&t!=='家族'&&t!=='未登録'; })
               .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
               .map(p => ProfileCard({p, compact:true}))}
             </div>
@@ -1791,9 +1809,12 @@ const App = () => {
     const doImport = () => {
       try {
         const p = importFromMemo(importText);
+        const nm = ((p.name&&p.name.value)||'').trim();
+        if (!nm) { alert('氏名が読み取れませんでした。\n「氏名（ふりがな）：」の行が含まれているか確認してください。'); return; }
         const next = [...profiles, p];
         updateList(next);
-        setCurrent(p); setView('detail');
+        alert('✓ ' + nm + ' を「未登録」に取り込みました。\n一覧の「📥 未登録」で階層を決めてください。');
+        setView('list');
       } catch { alert('インポートに失敗しました。形式を確認してください。'); }
     };
     return (
