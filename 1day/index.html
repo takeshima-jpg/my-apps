@@ -1775,17 +1775,26 @@ function setFilter(f) {
 // ── AIX 未承認ビュー ──
 function _aixLoadDrafts() {
   // aix_drafts（配列）と oneday_aix_draft（単一）の両方に対応
+  let result = [];
   try {
     const arr = JSON.parse(localStorage.getItem('aix_drafts') || 'null');
-    if (Array.isArray(arr) && arr.length) return arr;
+    if (Array.isArray(arr) && arr.length) result = arr;
   } catch(e) {}
-  const single = localStorage.getItem('oneday_aix_draft');
-  if (single) {
-    const today = new Date(); today.setDate(today.getDate()-1);
-    const yesterday = today.toLocaleDateString('sv');
-    return [{ targetDate: yesterday, events: single, generatedAt: new Date().toISOString() }];
+  if (!result.length) {
+    const single = localStorage.getItem('oneday_aix_draft');
+    if (single) {
+      const t = new Date(); t.setDate(t.getDate()-1);
+      const yesterday = t.toLocaleDateString('sv');
+      result = [{ targetDate: yesterday, events: single, generatedAt: new Date().toISOString() }];
+    }
   }
-  return [];
+  // 既に1dayログに登録済みの日付のドラフトは隠す（承認済みドラフトの復活防止）
+  try {
+    const logs = (typeof state !== 'undefined' && state && Array.isArray(state.logs)) ? state.logs : JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+    const logged = new Set((logs||[]).filter(l => l && !l.archived && l.date).map(l => l.date));
+    result = result.filter(d => { const k = d && (d.targetDate || d.date); return !k || !logged.has(k); });
+  } catch(e) {}
+  return result;
 }
 
 function _aixSaveDrafts(drafts) {
