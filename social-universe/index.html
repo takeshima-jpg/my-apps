@@ -510,8 +510,6 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
         <select class="fs" id="fEnergy"><option>増える</option><option>普通</option><option>消耗</option></select></div>
     </div>
     <div class="fg2">
-      <div class="fg"><label class="fl">関わり方タイプ</label>
-        <select class="fs" id="fType2"><option>未設定</option><option>育成（若手）</option><option>共同成長（同世代）</option><option>相互学習（年上・専門家）</option><option>維持（確定パートナー・専門家）</option></select></div>
       <div class="fg"><label class="fl">頻度</label>
         <select class="fs" id="fFreq"><option>毎週〜隔週</option><option>月1〜年数回</option><option>半年に1回以下</option></select></div>
     </div>
@@ -1332,7 +1330,6 @@ function renderQAP(){
       <div class="qap-badges">
         <span class="bd bd-${ecls}">${p.energyState}</span>
         <span class="bd bd-${PUR_CLS[p.relationshipPurpose]||'biz'}">${p.relationshipPurpose}</span>
-        <span class="bd" style="background:var(--s100);color:var(--s600)">${shortRT(p.relationshipType)}</span>
         ${p.isTop10?'<span class="bd bd-t10">⭐ Top10</span>':''}
         ${p.isDraining?'<span class="bd bd-draining">⚠ 消耗</span>':''}
         ${p.isDormant?'<span class="bd bd-dorm">🌿 余白</span>':''}
@@ -1350,8 +1347,6 @@ function renderQAP(){
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','frequency',this.value)">${fOpts}</select></div>
         <div><span class="qap-fl">インパクト</span>
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','impact',this.value)">${impOpts}</select></div>
-        <div><span class="qap-fl">関わり方タイプ</span>
-          <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','relationshipType',this.value)">${typeOpts}</select></div>
         <div><span class="qap-fl">価値の流れ</span>
           <select class="qap-sel" onchange="qapUp('${p.id}','valueFlow',this.value)">${vfOpts}</select></div>
       </div>
@@ -1465,7 +1460,6 @@ function openModal(id){
   document.getElementById('fName').value=p?.name??'';
   sel2('fPurpose',   p?.relationshipPurpose??'事業・成果');
   sel2('fEnergy',    p?.energyState??'普通');
-  sel2('fType2',     p?.relationshipType??'未設定');
   sel2('fFreq',      p?.frequency??'月1〜年数回');
   sel2('fImpact',    p?.impact??'中');
   sel2('fValueFlow', p?.valueFlow??'');
@@ -1491,7 +1485,7 @@ function doSave(){
     name,
     relationshipPurpose:document.getElementById('fPurpose').value,
     energyState:document.getElementById('fEnergy').value,
-    relationshipType:document.getElementById('fType2').value,
+    relationshipType:((document.getElementById('editId').value && (persons.find(x=>x.id===document.getElementById('editId').value)||{}).relationshipType) || '未設定'),
     frequency:document.getElementById('fFreq').value,
     impact:document.getElementById('fImpact').value,
     valueFlow:document.getElementById('fValueFlow').value,
