@@ -68,6 +68,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .bv-meta .date-pill { font-family: var(--font-mono); background: var(--bg3); border-radius: 20px; padding: 3px 12px; color: var(--text2); }
 .bv-fresh { max-width: 760px; margin: 16px auto 0; padding: 11px 18px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 700; gap: 10px; }
 .bv-fresh .bv-fresh-date { font-family: var(--font-mono); font-size: 12px; font-weight: 500; opacity: 0.85; }
+.bv-meta .luck-pill { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 20px; padding: 3px 12px; color: #c2410c; font-weight: 600; }
 @media (max-width: 600px) { .bv-fresh { margin: 12px 18px 0; padding: 10px 14px; font-size: 14px; flex-wrap: wrap; } }
 .brief-body { max-width: 760px; margin: 0 auto; padding: 14px 24px 60px; line-height: 1.8; width: 100%; }
 .brief-body h1 { font-size: 1.4rem; font-weight: 700; margin: 24px 0 12px; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 6px; }
@@ -248,7 +249,7 @@ async function loadBrief() {
       const raw = await cr.text();
       let data;
       try { data = JSON.parse(raw); } catch (e) { data = raw; }
-      render(toMarkdown(data), file.modifiedTime);
+      render(toMarkdown(data), file.modifiedTime, (data && typeof data === 'object') ? data.lucky_day : '');
       setStatus('connected', '接続済み');
       localStorage.setItem('bv_seen_' + currentTab, file.modifiedTime || '');
       setBadge(currentTab, false);
@@ -473,13 +474,14 @@ function freshnessBanner(iso) {
   } catch (e) { return ''; }
 }
 
-function render(md, modifiedTime) {
+function render(md, modifiedTime, luckyDay) {
   const main = document.getElementById('main');
   main.innerHTML = `
     ${freshnessBanner(modifiedTime)}
     <div class="bv-meta">
       <span>${TABS[currentTab].title}</span>
       <span class="date-pill">最終更新 ${fmtDate(modifiedTime)}</span>
+      ${luckyDay ? `<span class="luck-pill">📅 ${luckyDay}</span>` : ''}
     </div>
     <div class="brief-body">${markdownToHtml(md)}</div>`;
 }
