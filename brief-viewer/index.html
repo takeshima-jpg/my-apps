@@ -66,6 +66,9 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 /* BRIEF BODY */
 .bv-meta { max-width: 760px; margin: 0 auto; padding: 18px 24px 0; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text3); }
 .bv-meta .date-pill { font-family: var(--font-mono); background: var(--bg3); border-radius: 20px; padding: 3px 12px; color: var(--text2); }
+.bv-fresh { max-width: 760px; margin: 16px auto 0; padding: 11px 18px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 700; gap: 10px; }
+.bv-fresh .bv-fresh-date { font-family: var(--font-mono); font-size: 12px; font-weight: 500; opacity: 0.85; }
+@media (max-width: 600px) { .bv-fresh { margin: 12px 18px 0; padding: 10px 14px; font-size: 14px; flex-wrap: wrap; } }
 .brief-body { max-width: 760px; margin: 0 auto; padding: 14px 24px 60px; line-height: 1.8; width: 100%; }
 .brief-body h1 { font-size: 1.4rem; font-weight: 700; margin: 24px 0 12px; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 6px; }
 .brief-body h2 { font-size: 1.15rem; font-weight: 700; margin: 32px 0 10px; color: var(--text); display: flex; align-items: center; gap: 8px; }
@@ -455,9 +458,25 @@ function fmtDate(iso) {
   } catch (e) { return iso; }
 }
 
+function freshnessBanner(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso), now = new Date();
+    const d0 = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const n0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diff = Math.round((n0 - d0) / 86400000);
+    let label, bg, fg, ico;
+    if (diff <= 0)      { label = '本日の最新版'; bg = '#dcfce7'; fg = '#15803d'; ico = '🟢'; }
+    else if (diff === 1){ label = '昨日のブリーフ（本日分は未生成）'; bg = '#fef9c3'; fg = '#a16207'; ico = '🟡'; }
+    else                { label = diff + '日前のブリーフ・更新推奨'; bg = '#fee2e2'; fg = '#b91c1c'; ico = '🔴'; }
+    return `<div class="bv-fresh" style="background:${bg};color:${fg}"><span>${ico} ${label}</span><span class="bv-fresh-date">${fmtDate(iso)} 時点</span></div>`;
+  } catch (e) { return ''; }
+}
+
 function render(md, modifiedTime) {
   const main = document.getElementById('main');
   main.innerHTML = `
+    ${freshnessBanner(modifiedTime)}
     <div class="bv-meta">
       <span>${TABS[currentTab].title}</span>
       <span class="date-pill">最終更新 ${fmtDate(modifiedTime)}</span>
