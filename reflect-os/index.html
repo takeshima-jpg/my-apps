@@ -316,7 +316,7 @@ nav{display:flex;flex-direction:column;gap:0;}
     <nav id="nav">
       <button class="nb on" data-tab="home"><span class="nav-icon">◉</span> ホーム</button>
       <button class="nb" data-tab="log"><span class="nav-icon">≡</span> ログ</button>
-      <button class="nb" id="unthemed-btn" style="padding-left:32px;font-size:13px;color:#b09040;" onclick="S.tab='log';S.unthemedOnly=!S.unthemedOnly;this.classList.toggle('on',S.unthemedOnly);updateNav();renderLog();">
+      <button class="nb" id="unthemed-btn" style="padding-left:32px;font-size:13px;color:#b09040;" onclick="S.tab='log';S.unthemedOnly=!S.unthemedOnly;updateNav();ra();">
         <span class="nav-icon" style="font-size:11px;">△</span> テーマ未紐づけ <span id="unthemed-badge" class="sb-badge" style="background:#fdf8e8;color:#b09040;border:1px solid #e8d880;"></span>
       </button>
 
@@ -616,7 +616,7 @@ const Sel=(a,...c)=>h('select',a,...c);
 const Opt=(v,t,sel)=>h('option',{value:v,...(sel?{selected:''}:{})},t);
 
 /* ── State ── */
-let S={vision:{vision:'',yearGoal:''},themes:[],logs:[],checks:{},tab:'home',forming:null,editing:null,fd:{},_activeTheme:null,_unlinkedNotice:0};
+let S={vision:{vision:'',yearGoal:''},themes:[],logs:[],checks:{},tab:'home',forming:null,editing:null,fd:{},_activeTheme:null,_unlinkedNotice:0,unthemedOnly:false};
 
 /* ── Constants ── */
 const TM={note:{label:'振り返り',bg:'#f0f5f1',ac:'#2a6a3a'},moya:{label:'モヤモヤ',bg:'#f0f0f8',ac:'#4a4a8a'},vision:{label:'VISION点検',bg:'#faf0e8',ac:'#7a5020'},strategy:{label:'戦略テーマ',bg:'#f0f5f0',ac:'#1a6050'},philosophy:{label:'思想変化',bg:'#f4f1fa',ac:'#5a4a8a'}};
@@ -1089,15 +1089,23 @@ function renderHome(){
 /* ── LOG tab ── */
 function renderLog(){
   const f=document.createDocumentFragment();
+  if(S.unthemedOnly){
+    const bn=D({css:'display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff8e8;border:1px solid #f0d060;border-radius:6px;padding:10px 14px;margin-bottom:16px'});
+    bn.appendChild(Sp({css:'font-size:13px;color:#7a6000'},'△ テーマに紐づいていない振り返りのみ表示中'));
+    const clrB=Bt({cls:'chip'},'すべて表示');
+    clrB.addEventListener('click',()=>{S.unthemedOnly=false;updateNav();ra();});
+    bn.appendChild(clrB);
+    f.appendChild(bn);
+  }
   const hd=D({css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px'});
-  hd.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0'},'ログ（'+S.logs.length+'件）'));
+  hd.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0'}, S.unthemedOnly ? 'テーマ未紐づけ（'+S.logs.filter(r=>!r.themes||r.themes.length===0).length+'件）' : 'ログ（'+S.logs.length+'件）'));
   const fc=D({css:'display:flex;gap:4px;flex-wrap:wrap'});
   let ft='all';const fB={};
   ['all',...Object.keys(TM)].forEach(t=>{const lb=t==='all'?'すべて':TM[t]?.label||t;const c=Bt({cls:'chip'+(t==='all'?' on':'')},lb);fB[t]=c;c.addEventListener('click',()=>{ft=t;Object.entries(fB).forEach(([k,v])=>v.className='chip'+(k===t?' on':''));upd();});fc.appendChild(c);});
   hd.appendChild(fc);
   // テーマフィルター
   const myThemesLog=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
-  if(myThemesLog.length){
+  if(myThemesLog.length && !S.unthemedOnly){
     const tfc=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px'});
     let thFilt='all';const thB={};
     const allThBtn=Bt({cls:'chip on'},'全テーマ');thB['all']=allThBtn;
@@ -1113,7 +1121,7 @@ function renderLog(){
   }
   hd.appendChild(fc);f.appendChild(hd);
   const lw=D({});f.appendChild(lw);
-  function upd(){lw.innerHTML='';const rs=ft==='all'?S.logs:S.logs.filter(r=>r.type===ft);if(!rs.length){lw.appendChild(D({cls:'empty'},'記録がありません'));return;}rs.forEach(r=>lw.appendChild(logCard(r)));}
+  function upd(){lw.innerHTML='';let rs=ft==='all'?S.logs:S.logs.filter(r=>r.type===ft);if(S.unthemedOnly)rs=rs.filter(r=>!r.themes||r.themes.length===0);if(!rs.length){lw.appendChild(D({cls:'empty'},'記録がありません'));return;}rs.forEach(r=>lw.appendChild(logCard(r)));}
   upd();return f;
 }
 
@@ -1525,8 +1533,9 @@ function updateNav(){
   const eb=document.getElementById('e-badge');if(eb)eb.textContent=eCount||'';
   const unthemed=pub.filter(r=>!r.themes||r.themes.length===0).length;
   const ub=document.getElementById('unthemed-badge');if(ub)ub.textContent=unthemed||'';
+  const ubtn=document.getElementById('unthemed-btn');if(ubtn)ubtn.classList.toggle('on',!!S.unthemedOnly);
 }
-document.getElementById('nav').addEventListener('click',e=>{const t=e.target.dataset.tab;if(!t)return;S.tab=t;S.forming=null;S.editing=null;updateNav();ra();});
+document.getElementById('nav').addEventListener('click',e=>{const tb=e.target.closest('[data-tab]');if(!tb)return;S.tab=tb.dataset.tab;S.unthemedOnly=false;S.forming=null;S.editing=null;updateNav();ra();});
 
 /* ── Export / Import ── */
 document.getElementById('btn-exp').addEventListener('click',()=>{const d=JSON.stringify({version:7,vision:S.vision,themes:S.themes,logs:S.logs,exportedAt:new Date().toISOString()},null,2);const a=document.createElement('a');a.href='data:application/json,'+encodeURIComponent(d);a.download=`reflect-os-${tod()}.json`;a.click();});
