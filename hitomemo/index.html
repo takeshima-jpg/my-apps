@@ -733,10 +733,10 @@ async function gdriveAutoLoad() {
 }
 
 // Coworkが aix-drafts に書いた aix-hitomemo.json を読み、未登録に自動取り込み
-async function gdriveAutoImportHitomemo(retry) {
-  if (!gdriveToken) return;
+async function gdriveAutoImportHitomemo(retry, manual) {
+  if (!gdriveToken) { if (manual) alert('先にサイドバーの「🔗 Googleでログイン」をしてください。'); return; }
   if (!window.__hitomemoImportPeople) {           // React未マウント → 少し待って再試行
-    if ((retry||0) < 10) setTimeout(() => gdriveAutoImportHitomemo((retry||0)+1), 800);
+    if ((retry||0) < 10) setTimeout(() => gdriveAutoImportHitomemo((retry||0)+1, manual), 800);
     return;
   }
   try {
@@ -744,9 +744,9 @@ async function gdriveAutoImportHitomemo(retry) {
     const findRes = await gdriveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,modifiedTime)&orderBy=modifiedTime+desc&pageSize=1`);
     const findData = await findRes.json();
     const file = findData.files && findData.files[0];
-    if (!file) return;                              // ファイルなし＝何もしない
+    if (!file) { if (manual) alert('aix-hitomemo.json が見つかりません。Coworkがまだ書き出していない可能性があります。'); return; }
     const last = localStorage.getItem(AIX_LAST_KEY);
-    if (last && last === file.modifiedTime) return; // 既に取り込み済み（冪等）
+    if (last && last === file.modifiedTime) { if (manual) toast('最新です（新規の取り込みはありません）'); return; } // 既に取り込み済み（冪等）
     const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
     const data = await res.json();
     const people = (data && Array.isArray(data.people)) ? data.people : [];
@@ -754,7 +754,8 @@ async function gdriveAutoImportHitomemo(retry) {
     if (people.length) added = window.__hitomemoImportPeople(people) || 0;
     localStorage.setItem(AIX_LAST_KEY, file.modifiedTime);
     if (added > 0) toast(`📥 ${added}人を未登録に取り込みました`);
-  } catch(e) { /* 権限不足等は静かに無視（手動の📋メモからインポートにフォールバック） */ }
+    else if (manual) toast('新規の取り込みはありません（全員登録済み）');
+  } catch(e) { if (manual) alert('取り込みに失敗しました。接続/権限を確認してください。'); /* 自動時は静かに無視（手動の📋メモからインポートにフォールバック） */ }
 }
 
 // 起動時に自動保存（ログインしている場合）
@@ -850,6 +851,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:4px 2px 2px;letter-spacing:0.5px;">新規登録</div>
       <button id="sbNewPersonBtn" class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;" onclick="window.__hitomemoNewPerson?.()">＋ 新しい人物を記録</button>
       <button id="sbImportMemoBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoImportMemo?.()">📋 メモからインポート</button>
+      <button id="sbAixImportBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;background:rgba(245,158,11,0.22);border:1px solid rgba(245,158,11,0.4);" onclick="gdriveAutoImportHitomemo(0,true)">📥 AIから取り込み（未登録へ）</button>
 
       <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:6px 2px 2px;letter-spacing:0.5px;">プロンプト</div>
       <button class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoShowPrompt?.('survey')">🔍 ① WEB調査</button>
