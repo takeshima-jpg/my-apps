@@ -775,7 +775,26 @@ function logCard(r){
     thNames.forEach(n=>thRow.appendChild(Sp({css:'font-size:11px;background:var(--go-lt);color:var(--go);border-radius:10px;padding:1px 8px;'},n)));
     item.appendChild(thRow);
   } else {
-    item.appendChild(Sp({css:'font-size:11px;color:#b09040;background:#fdf8e8;border:1px solid #e8d880;border-radius:10px;padding:1px 8px;margin:4px 0 2px;display:inline-block'},'テーマ未紐づけ'));
+    const uwrap=D({css:'margin:4px 0 2px'});
+    uwrap.appendChild(Sp({css:'font-size:11px;color:#b09040;background:#fdf8e8;border:1px solid #e8d880;border-radius:10px;padding:1px 8px;display:inline-block'},'テーマ未紐づけ'));
+    const linkable=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
+    if(linkable.length){
+      const pk=D({css:'display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px'});
+      pk.appendChild(Sp({css:'font-size:11px;color:var(--di)'},'テーマに紐づける：'));
+      linkable.forEach(t=>{
+        const c=Bt({cls:'chip',css:'font-size:11px'},t.title);
+        c.addEventListener('click',async e=>{
+          e.stopPropagation();
+          r.themes=[...(r.themes||[]),t.id];
+          await dbput('logs',r);
+          const i=S.logs.findIndex(x=>x.id===r.id);if(i>=0)S.logs[i]=r;
+          updateNav();ra();
+        });
+        pk.appendChild(c);
+      });
+      uwrap.appendChild(pk);
+    }
+    item.appendChild(uwrap);
   }
   // 気づき・学び（1行）
   if(r.lesson){const ls=r.lesson.split(/\n/).find(l=>l.trim())||'';const lsc=ls.trim();item.appendChild(D({cls:'log-lesson'},lsc.length>100?lsc.slice(0,100)+'…':lsc));}
