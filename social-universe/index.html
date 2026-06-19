@@ -1026,7 +1026,15 @@ function migRelType(p){
   return p;
 }
 function shortRT(v){ return String(v||'').replace(/（[^）]*）/,''); }
-let persons = ld(SK) ? mergeWithINI(ld(SK)) : (sv(SK,INI.map(ensureXY)), INI.map(ensureXY));
+// 初回（SKキーが未作成）のみINIで初期化。以降は保存データ（空配列を含む）をそのまま尊重し、
+// INIの自動再投入はしない（「全消去」が効くようにするため）。
+let persons;
+if (localStorage.getItem(SK) === null) {
+  persons = INI.map(ensureXY);
+  sv(SK, persons);
+} else {
+  persons = (ld(SK) || []).map(ensureXY);
+}
 persons = persons.map(migRelType);
 let selectedId = null;
 let currentSort = null;
