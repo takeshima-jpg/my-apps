@@ -2002,33 +2002,38 @@ const GD_CLEANUP_BASES = ['aix_draft_latest','aix-tasks','aix-hitomemo','aix_rev
 function gdCanonBase(name){
   return name.replace(/\.json$/i,'').replace(/\s*\(\d+\)\s*$/,'').trim();
 }
+async function gdDedupeDrafts(){
+  // 対象baseごとに最新1つだけ残し、古い重複をゴミ箱へ移動。{trashed, kept}を返す。
+  const q = encodeURIComponent(`'${GD_FOLDER_ID}' in parents and trashed=false`);
+  const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=200`);
+  const files = (await r.json()).files || [];
+  const groups = {};
+  files.forEach(f=>{
+    const base = gdCanonBase(f.name);
+    if(!GD_CLEANUP_BASES.includes(base)) return;   // 対象baseのみ（backup等は除外）
+    (groups[base] = groups[base] || []).push(f);
+  });
+  let trashed = 0; const kept = [];
+  for(const base of Object.keys(groups)){
+    const arr = groups[base].sort((a,b)=> (b.modifiedTime||'').localeCompare(a.modifiedTime||''));
+    kept.push(arr[0].name);
+    for(let i=1;i<arr.length;i++){
+      try{
+        await gdFetch(`https://www.googleapis.com/drive/v3/files/${arr[i].id}`, {
+          method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({trashed:true})
+        });
+        trashed++;
+      }catch(e){ console.warn('trash失敗', arr[i].name, e); }
+    }
+  }
+  return { trashed, kept };
+}
 async function gdCleanupDrafts(){
   if(!gdToken){ gdConnect(); return; }
   if(!confirm('aix-drafts内の重複draftを整理します。\n各種別（aix-tasks / aix_draft_latest / aix-hitomemo / 週次・月次レビュー）について最新1つだけ残し、古い重複をゴミ箱へ移動します。\nmyapps-all-backup.json は対象外です。実行しますか？')) return;
   gdSetStatus('syncing');
   try{
-    const q = encodeURIComponent(`'${GD_FOLDER_ID}' in parents and trashed=false`);
-    const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=200`);
-    const files = (await r.json()).files || [];
-    const groups = {};
-    files.forEach(f=>{
-      const base = gdCanonBase(f.name);
-      if(!GD_CLEANUP_BASES.includes(base)) return;   // 対象baseのみ（backup等は除外）
-      (groups[base] = groups[base] || []).push(f);
-    });
-    let trashed = 0; const kept = [];
-    for(const base of Object.keys(groups)){
-      const arr = groups[base].sort((a,b)=> (b.modifiedTime||'').localeCompare(a.modifiedTime||''));
-      kept.push(arr[0].name);
-      for(let i=1;i<arr.length;i++){
-        try{
-          await gdFetch(`https://www.googleapis.com/drive/v3/files/${arr[i].id}`, {
-            method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({trashed:true})
-          });
-          trashed++;
-        }catch(e){ console.warn('trash失敗', arr[i].name, e); }
-      }
-    }
+    const {trashed, kept} = await gdDedupeDrafts();
     gdSetStatus('ok');
     alert(`整理完了：${trashed}件をゴミ箱へ移動しました。\n残した最新ファイル：\n`+ (kept.length?kept.map(n=>'・'+n).join('\n'):'（なし）'));
   }catch(e){
@@ -2129,6 +2134,12 @@ async function gdAutoSync(manual){
     const snap = await collectAllOSDataWithReflect();
     snap.reflectOS_idb = await dumpReflectIDB();   // Reflectの完全データ（全ログ/問い/実験/チェック）も同梱。スナップショット単体で復元可能にする
     await gdUpload(GD_SNAPSHOT_FILE, JSON.stringify(snap, null, 2));
+
+    // 同期のたびに重複draftを自動整理（実行後のドライブを常にきれいに保つ）
+    try {
+      const dd = await gdDedupeDrafts();
+      if(dd.trashed > 0) importMsg = (importMsg ? importMsg + ' / ' : '') + `重複${dd.trashed}件を整理`;
+    } catch(e){ if(e.code===401) throw e; console.warn('dedupe自動実行スキップ', e); }
 
     gdSetStatus('ok');
     if(importMsg && typeof toast==='function') toast('☁️ '+importMsg);
