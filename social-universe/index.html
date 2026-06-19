@@ -1606,7 +1606,7 @@ function buildPrint(){
       const xPct=Math.max(5,Math.min(95,p.x??50));
       const yPct=Math.max(5,Math.min(95,p.y??50));
       mapH+=`<div class="pp-pc pp-pc-${ecls} ${scls} ${fcls}" style="left:${xPct}%;top:${yPct}%">
-        ${esc(p.name)}
+        ${esc(nameDisp(p.name))}
         ${p.isTop10?`<div class="pp-star">★</div>`:''}
         ${p.isDraining?`<div class="pp-warn-p">!</div>`:''}
         ${vf?`<div class="pp-vf-badge" style="position:absolute;bottom:-0.8mm;right:-0.8mm;font-size:5pt;width:2.8mm;height:2.8mm;border-radius:50%;background:white;border:0.4pt solid rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:${vfc}">${vf}</div>`:''}
@@ -1627,7 +1627,7 @@ function buildPrint(){
     top10.forEach((p,i)=>{
       t10h+=`<tr>
         <td class="pp-t10-num">${i+1}</td>
-        <td class="pp-t10-name">${esc(p.name)}</td>
+        <td class="pp-t10-name">${esc(nameDisp(p.name))}</td>
         <td class="pp-t10-act">${esc(p.nextAction)}</td>
       </tr>`;
     });
