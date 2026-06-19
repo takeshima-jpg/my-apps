@@ -344,6 +344,7 @@ select.fi{cursor:pointer;}
     <label class="sb-backup-btn" style="cursor:pointer;">🤖 AIタスク読込<input type="file" id="aixTaskInput" accept=".json" style="display:none" onchange="handleAixTaskImport(event)"></label>
     <div style="border-top:1px solid rgba(255,255,255,0.08);margin:4px 0;"></div>
     <button class="sb-backup-btn" id="gdriveBtn" onclick="gdToggle()">☁️ GDrive接続</button>
+    <button class="sb-backup-btn" onclick="gdCleanupDrafts()">🧹 重複draft掃除</button>
   </div>
   <div class="sb-ft" id="sbDate"></div>
 </div>
@@ -1966,6 +1967,13 @@ async function gdFindInFolder(name){
   const d = await r.json();
   return (d.files && d.files[0]) || null;
 }
+// 末尾に (N) が付いた重複（Drive Desktop同期で発生）も拾い、最終更新が最新のものを返す
+async function gdFindNewestByBase(base){
+  const q = encodeURIComponent(`'${GD_FOLDER_ID}' in parents and name contains '${base}' and trashed=false`);
+  const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=10`);
+  const d = await r.json();
+  return (d.files && d.files[0]) || null;
+}
 async function gdDownload(id){
   const r = await gdFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`);
   return await r.text();
@@ -1985,6 +1993,48 @@ async function gdUpload(name, contentStr){
   await gdFetch(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`, {
     method:'PATCH', headers:{'Content-Type':'application/json'}, body: contentStr
   });
+}
+
+// ===== 🧹 重複draft掃除（aix-drafts内：種別ごとに最新1つだけ残し、古い重複をゴミ箱へ）=====
+// Drive Desktop同期で aix_draft_latest (5).json 等の重複が溜まるのを定期的に整理する。
+// 中間生成物（draft）は使い捨て前提。myapps-all-backup.json は対象外。ゴミ箱なので30日は復元可。
+const GD_CLEANUP_BASES = ['aix_draft_latest','aix-tasks','aix-hitomemo','aix_review_weekly','aix_review_monthly'];
+function gdCanonBase(name){
+  return name.replace(/\.json$/i,'').replace(/\s*\(\d+\)\s*$/,'').trim();
+}
+async function gdCleanupDrafts(){
+  if(!gdToken){ gdConnect(); return; }
+  if(!confirm('aix-drafts内の重複draftを整理します。\n各種別（aix-tasks / aix_draft_latest / aix-hitomemo / 週次・月次レビュー）について最新1つだけ残し、古い重複をゴミ箱へ移動します。\nmyapps-all-backup.json は対象外です。実行しますか？')) return;
+  gdSetStatus('syncing');
+  try{
+    const q = encodeURIComponent(`'${GD_FOLDER_ID}' in parents and trashed=false`);
+    const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=200`);
+    const files = (await r.json()).files || [];
+    const groups = {};
+    files.forEach(f=>{
+      const base = gdCanonBase(f.name);
+      if(!GD_CLEANUP_BASES.includes(base)) return;   // 対象baseのみ（backup等は除外）
+      (groups[base] = groups[base] || []).push(f);
+    });
+    let trashed = 0; const kept = [];
+    for(const base of Object.keys(groups)){
+      const arr = groups[base].sort((a,b)=> (b.modifiedTime||'').localeCompare(a.modifiedTime||''));
+      kept.push(arr[0].name);
+      for(let i=1;i<arr.length;i++){
+        try{
+          await gdFetch(`https://www.googleapis.com/drive/v3/files/${arr[i].id}`, {
+            method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({trashed:true})
+          });
+          trashed++;
+        }catch(e){ console.warn('trash失敗', arr[i].name, e); }
+      }
+    }
+    gdSetStatus('ok');
+    alert(`整理完了：${trashed}件をゴミ箱へ移動しました。\n残した最新ファイル：\n`+ (kept.length?kept.map(n=>'・'+n).join('\n'):'（なし）'));
+  }catch(e){
+    if(e.code===401){ gdClear(); gdSetStatus('ok'); alert('GDriveの認証が切れました。再接続してください。'); gdConnect(); return; }
+    gdSetStatus('err'); alert('整理中にエラーが発生しました：'+(e.message||e));
+  }
 }
 
 // ===== ヒトメモ自動取り込み（aix-hitomemo.json → localStorage hitomemo_profiles_v1 / 未登録）=====
@@ -2026,7 +2076,7 @@ async function importHitomemoFromAix(){
   const HM_KEY = 'hitomemo_profiles_v1';
   const LAST_KEY = 'hitomemo_aix_last_modified';   // ヒトメモと共有（二重取り込み防止）
   const AIX_HM_FILE = 'aix-hitomemo.json';
-  const f = await gdFindInFolder(AIX_HM_FILE);
+  const f = await gdFindNewestByBase('aix-hitomemo');
   if(!f) return 0;
   const last = localStorage.getItem(LAST_KEY);
   if(last && last === f.modifiedTime) return 0;     // 既に取込済み（冪等）
@@ -2058,7 +2108,7 @@ async function gdAutoSync(manual){
     // C: aix-tasks.json を自動取り込み（冪等）
     let importMsg = '';
     try {
-      const f = await gdFindInFolder(GD_AIX_FILE);
+      const f = await gdFindNewestByBase('aix-tasks');
       if(f){
         const parsed = JSON.parse(await gdDownload(f.id));
         const res = applyAixTasks(parsed);
@@ -2077,6 +2127,7 @@ async function gdAutoSync(manual){
 
     // A: スナップショットを一方向で書き出し（読み戻しはしない）
     const snap = await collectAllOSDataWithReflect();
+    snap.reflectOS_idb = await dumpReflectIDB();   // Reflectの完全データ（全ログ/問い/実験/チェック）も同梱。スナップショット単体で復元可能にする
     await gdUpload(GD_SNAPSHOT_FILE, JSON.stringify(snap, null, 2));
 
     gdSetStatus('ok');
