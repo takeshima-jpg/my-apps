@@ -349,6 +349,19 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .rf-tx { flex: 1; line-height: 1.5; }
 .rf-th { flex: none; font-size: 10px; color: var(--text3); border: 1px solid var(--border); border-radius: 10px; padding: 1px 8px; }
 @media (max-width: 600px) { .reflect-area { padding: 0 16px; } .rf-th { display: none; } }
+.centerpin-area { padding: 14px 32px 0; width: 100%; box-sizing: border-box; }
+.cp-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; }
+.cp-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.cp-eye { font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; color: var(--text3); }
+.cp-open { font-size: 12px; padding: 4px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--text2); white-space: nowrap; }
+.cp-open:hover { background: var(--bg3); border-color: var(--accent); color: var(--accent); }
+.cp-item { display: flex; align-items: baseline; gap: 9px; padding: 5px 0; font-size: 14px; color: var(--text); }
+.cp-item + .cp-item { border-top: 1px solid var(--border); }
+.cp-mk { flex: none; }
+.cp-tx { flex: 1; line-height: 1.5; font-weight: 500; }
+.cp-pj { flex: none; font-size: 10px; color: var(--text3); border: 1px solid var(--border); border-radius: 10px; padding: 1px 8px; }
+.cp-warn { color: #d98324; font-size: 11px; margin-left: 6px; }
+@media (max-width: 600px) { .centerpin-area { padding: 10px 16px 0; } .cp-pj { display: none; } }
 </style>
 <script src="https://accounts.google.com/gsi/client"></script>
 <script>
@@ -824,6 +837,9 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </div>
 
+    <!-- 今週のセンターピン（Project OS 進行中PJ） -->
+    <div class="centerpin-area" id="centerpinArea" style="display:none"></div>
+
     <!-- VISIONエリア -->
     <div class="vision-area" id="visionArea"></div>
 
@@ -1207,7 +1223,43 @@ function updateBriefBtn() {
 function render() {
   document.getElementById('weekDisplay').textContent = `W ${currentWeekRange()}`;
   renderLogList();
+  renderCenterPin();
   renderReflectToday();
+}
+
+// ── Project OS（pos_v4）から進行中PJのセンターピンを読み、ログ画面の先頭に表示 ──
+function renderCenterPin() {
+  const area = document.getElementById('centerpinArea');
+  if (!area) return;
+  let data = null;
+  try { data = JSON.parse(localStorage.getItem('pos_v4') || 'null'); } catch (e) {}
+  const aixView = document.getElementById('aix-view');
+  const aixVisible = aixView && aixView.style.display === 'block';
+  const projects = (data && Array.isArray(data.projects)) ? data.projects : [];
+
+  const eligible = projects.filter(p => p && p.centerPin && String(p.centerPin).trim() && !p.archived && p.status !== '完了' && p.status !== '保留');
+  let pins = eligible.filter(p => p.status === '進行中');
+  if (!pins.length) pins = eligible;   // 進行中が無ければ、完了・保留以外のPJを表示
+  const order = { '進行中': 0, '停滞': 1 };
+  pins = pins.slice().sort((a, b) => (order[a.status] ?? 2) - (order[b.status] ?? 2));
+
+  if (!pins.length || aixVisible) { area.innerHTML = ''; area.style.display = 'none'; return; }
+
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const rows = pins.slice(0, 4).map(p => {
+    const first = (String(p.centerPin).split('\n').find(l => l.trim()) || String(p.centerPin)).trim();
+    const warn = p.status === '停滞' ? '<span class="cp-warn">停滞</span>' : '';
+    return `<div class="cp-item"><span class="cp-mk">🎯</span><span class="cp-tx">${esc(first)}${warn}</span><span class="cp-pj">${esc(p.name || '')}</span></div>`;
+  }).join('');
+
+  area.innerHTML = `<div class="cp-card">
+      <div class="cp-top">
+        <span class="cp-eye">PROJECT ｜ 今週のセンターピン</span>
+        <button class="cp-open" onclick="window.open('../project-os/index.html','_blank')">Projectで開く →</button>
+      </div>
+      ${rows}
+    </div>`;
+  area.style.display = '';
 }
 
 // ── Reflect OS（reflectOS_v1）から「今日回す実験／重要な問い」を読み、ログ画面上部に表示 ──
@@ -1893,6 +1945,12 @@ function showView(v) {
   if (filterBar) filterBar.style.display = v === 'log' ? '' : 'none';
   if (weekDisplay) weekDisplay.style.display = v === 'log' ? '' : 'none';
   if (visionArea) visionArea.style.display = v === 'log' ? '' : 'none';
+
+  const centerpinArea = document.getElementById('centerpinArea');
+  if (centerpinArea) {
+    if (v === 'log' && typeof renderCenterPin === 'function') renderCenterPin();
+    else centerpinArea.style.display = 'none';
+  }
 
   const reflectArea = document.getElementById('reflectArea');
   if (reflectArea) {
