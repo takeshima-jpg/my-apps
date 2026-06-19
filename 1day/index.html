@@ -1463,6 +1463,17 @@ function renderLogList() {
   }
 }
 
+// ── 1day → Reflect 逆ループ：違和感／深掘りログを Reflect の「問い」に昇格 ──
+function addReflectQuestion(text) {
+  let o;
+  try { o = JSON.parse(localStorage.getItem('reflectOS_v1') || 'null'); } catch (e) { o = null; }
+  if (!o || typeof o !== 'object') o = { logs: [], themes: [], settings: [], checks: [] };
+  ['logs', 'themes', 'settings', 'checks'].forEach(k => { if (!Array.isArray(o[k])) o[k] = []; });
+  const id = 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  o.logs.unshift({ id, date: today(), status: 'published', title: '1dayから', lesson: '', question: text, nextExp: '', themes: [], _from: '1day' });
+  localStorage.setItem('reflectOS_v1', JSON.stringify(o));
+}
+
 function buildCard(log) {
   const card = document.createElement('div');
   card.className = 'log-card' + (state.selected.has(log.id) ? ' selected' : '');
@@ -1490,6 +1501,7 @@ function buildCard(log) {
         <div class="log-sat ${sc}">${sl}</div>
         <div class="log-card-actions">
           ${log.date === today() && getAixDraft() ? '<button class="card-action-btn brief-btn">📋 Briefを見る</button>' : ''}
+          ${((log.flags||[]).includes('deep') || (log.flags||[]).includes('unease') || (log.unease && log.unease.trim())) ? '<button class="card-action-btn reflect-q-btn">→ 問いにする</button>' : ''}
           <button class="card-action-btn edit-btn">編集</button>
           ${unarchiveBtn}
           <button class="card-action-btn delete delete-btn">削除</button>
@@ -1508,6 +1520,12 @@ function buildCard(log) {
   card.querySelector('.log-events').addEventListener('click', function() { this.classList.toggle('truncated'); });
   card.querySelector('.edit-btn').addEventListener('click', e => { e.stopPropagation(); openEntryModal(log.id); });
   card.querySelector('.brief-btn')?.addEventListener('click', e => { e.stopPropagation(); openBriefPage(); });
+  card.querySelector('.reflect-q-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const seed = (log.unease && log.unease.trim()) ? log.unease.trim() : ((log.events || '').split('\n').find(l => l.trim()) || '').trim();
+    const q = prompt('この気づきをReflectの「問い」にします。問いの形に整えてください：', seed);
+    if (q && q.trim()) { addReflectQuestion(q.trim()); toast('✓ Reflectに問いを追加しました'); }
+  });
   card.querySelector('.delete-btn').addEventListener('click', e => {
     e.stopPropagation();
     if (confirm('このログを削除しますか？')) {
