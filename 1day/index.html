@@ -333,6 +333,19 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .gdrive-btn { background: none; border: 1px solid var(--border2); border-radius: 4px; padding: 3px 10px; font-size: 11px; color: var(--text2); cursor: pointer; font-family: inherit; white-space: nowrap; }
 .gdrive-btn:hover { background: var(--bg2); }
 .gdrive-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.reflect-area { padding: 0 32px; max-width: 760px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.rf-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; margin: 4px 0 16px; }
+.rf-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.rf-eye { font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; color: var(--text3); }
+.rf-open { font-size: 12px; padding: 4px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--text2); white-space: nowrap; }
+.rf-open:hover { background: var(--bg3); border-color: var(--accent); color: var(--accent); }
+.rf-sec { font-size: 10px; color: var(--text3); letter-spacing: .04em; margin: 9px 0 3px; }
+.rf-item { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; font-size: 13.5px; color: var(--text); }
+.rf-mk { flex: none; font-size: 12px; color: var(--text3); }
+.rf-mk.doing { color: var(--accent); }
+.rf-tx { flex: 1; line-height: 1.5; }
+.rf-th { flex: none; font-size: 10px; color: var(--text3); border: 1px solid var(--border); border-radius: 10px; padding: 1px 8px; }
+@media (max-width: 600px) { .reflect-area { padding: 0 16px; } .rf-th { display: none; } }
 </style>
 <script src="https://accounts.google.com/gsi/client"></script>
 <script>
@@ -811,6 +824,9 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- VISIONエリア -->
     <div class="vision-area" id="visionArea"></div>
 
+    <!-- Reflect 今日回す実験/問い -->
+    <div class="reflect-area" id="reflectArea" style="display:none"></div>
+
     <!-- AIX未承認ドラフト一覧 -->
     <div id="aix-view" style="display:none; padding: 24px 32px; max-width: 680px; margin: 0 auto;">
       <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px;">AIX — 未承認ドラフト一覧</div>
@@ -1188,6 +1204,54 @@ function updateBriefBtn() {
 function render() {
   document.getElementById('weekDisplay').textContent = `W ${currentWeekRange()}`;
   renderLogList();
+  renderReflectToday();
+}
+
+// ── Reflect OS（reflectOS_v1）から「今日回す実験／重要な問い」を読み、ログ画面上部に表示 ──
+function renderReflectToday() {
+  const area = document.getElementById('reflectArea');
+  if (!area) return;
+  let o = null;
+  try { o = JSON.parse(localStorage.getItem('reflectOS_v1') || 'null'); } catch (e) {}
+  const aixVisible = (document.getElementById('aix-view') || {}).style && document.getElementById('aix-view').style.display === 'block';
+  if (!o || !Array.isArray(o.logs)) { area.innerHTML = ''; area.style.display = 'none'; return; }
+
+  const checkMap = {};
+  (o.checks || []).forEach(c => { if (c && c.id) checkMap[c.id] = c.state || (c.done ? 'done' : 'todo'); });
+  const themeName = {};
+  (o.themes || []).forEach(t => { if (t && t.id) themeName[t.id] = t.title || ''; });
+  const firstTheme = r => (r.themes || []).map(id => themeName[id]).filter(Boolean)[0] || '';
+
+  const exps = [], qs = [];
+  (o.logs || []).filter(r => r && r.status !== 'draft').forEach(r => {
+    if (r.nextExp) r.nextExp.split('\n').filter(l => l.trim()).forEach((line, i) => {
+      const st = checkMap['e_' + r.id + '_' + i] || 'todo';
+      if (st === 'done' || st === 'skip') return;
+      exps.push({ text: line.trim(), doing: st === 'doing', theme: firstTheme(r) });
+    });
+    if (r.question) r.question.split('\n').filter(l => l.trim()).forEach((line, i) => {
+      const st = checkMap['q_' + r.id + '_' + i] || 'todo';
+      if (st === 'important') qs.push({ text: line.trim(), theme: firstTheme(r) });
+    });
+  });
+  exps.sort((a, b) => (b.doing ? 1 : 0) - (a.doing ? 1 : 0));
+
+  if ((!exps.length && !qs.length) || aixVisible) { area.innerHTML = ''; area.style.display = 'none'; return; }
+
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const row = (mk, cls, it) => `<div class="rf-item"><span class="rf-mk${cls}">${mk}</span><span class="rf-tx">${esc(it.text)}</span>${it.theme ? `<span class="rf-th">${esc(it.theme)}</span>` : ''}</div>`;
+  const expHtml = exps.slice(0, 3).map(e => row('▶', e.doing ? ' doing' : '', e)).join('');
+  const qHtml = qs.slice(0, 2).map(q => row('？', '', q)).join('');
+
+  area.innerHTML = `<div class="rf-card">
+      <div class="rf-head">
+        <span class="rf-eye">REFLECT ｜ 今日回す</span>
+        <button class="rf-open" onclick="window.open('../reflect-os/index.html','_blank')">Reflectで開く →</button>
+      </div>
+      ${exps.length ? `<div class="rf-sec">実験 ${exps.length}件</div>${expHtml}` : ''}
+      ${qs.length ? `<div class="rf-sec">重要な問い ${qs.length}件</div>${qHtml}` : ''}
+    </div>`;
+  area.style.display = '';
 }
 
 function getWeekStarts(n) {
@@ -1826,6 +1890,12 @@ function showView(v) {
   if (filterBar) filterBar.style.display = v === 'log' ? '' : 'none';
   if (weekDisplay) weekDisplay.style.display = v === 'log' ? '' : 'none';
   if (visionArea) visionArea.style.display = v === 'log' ? '' : 'none';
+
+  const reflectArea = document.getElementById('reflectArea');
+  if (reflectArea) {
+    if (v === 'log' && typeof renderReflectToday === 'function') renderReflectToday();
+    else reflectArea.style.display = 'none';
+  }
 
   ['log','aix'].forEach(name => {
     const btn = document.getElementById('nav-' + name);
