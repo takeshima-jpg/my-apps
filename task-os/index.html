@@ -784,15 +784,29 @@ function applyAixTasks(parsed){
   const tasks = isNewFormat ? (parsed.tasks || []) : parsed;
   if (!Array.isArray(tasks)) throw new Error('形式エラー: tasksが配列ではありません');
 
-  // ① tasks → shot-task-os-v1 にマージ（id+dueDateで判定：同一IDでも別日のタスクは取り込む）
+  // ① tasks → shot-task-os-v1 にマージ
+  // ・冪等キーは「期日+タイトル」。Coworkが毎日同じid(t1..t10)を使い回しても、別日のタスクは取り込む。
+  // ・配列内のid重複は新idを振って解消する。Shot Task OSは t.id で完了/削除を引くため、
+  //   id重複があると別日の同idタスクを誤操作してしまう（既存の重複も読み込み時に正規化）。
   const existing = JSON.parse(localStorage.getItem('shot-task-os-v1') || '[]');
-  const keyOfTask = t => (t && t.id ? t.id + '__' + (t.dueDate || '') : null);
+  const seenIds = new Set();
+  for (const t of existing) {                         // 既存の重複idを正規化（先頭を残し以降は新id）
+    if (!t.id || seenIds.has(t.id)) t.id = genId();
+    seenIds.add(t.id);
+  }
+  const keyOfTask = t => t && t.dueDate
+    ? ('d__' + t.dueDate + '__' + (t.title || ''))
+    : ('i__' + ((t && t.id) || '') + '__' + ((t && t.title) || ''));
   const existingKeys = new Set(existing.map(keyOfTask));
   let added = 0;
   for (const task of tasks) {
+    if (!task || !task.title) continue;
     const k = keyOfTask(task);
-    if (!k || existingKeys.has(k)) continue;
-    existing.push(task);
+    if (existingKeys.has(k)) continue;                // 同一タスク（同期日・同タイトル）は再追加しない
+    const t = Object.assign({}, task);
+    if (!t.id || seenIds.has(t.id)) t.id = genId();   // id衝突は新idで回避
+    existing.push(t);
+    seenIds.add(t.id);
     existingKeys.add(k);
     added++;
   }
