@@ -784,14 +784,16 @@ function applyAixTasks(parsed){
   const tasks = isNewFormat ? (parsed.tasks || []) : parsed;
   if (!Array.isArray(tasks)) throw new Error('形式エラー: tasksが配列ではありません');
 
-  // ① tasks → shot-task-os-v1 にマージ
+  // ① tasks → shot-task-os-v1 にマージ（id+dueDateで判定：同一IDでも別日のタスクは取り込む）
   const existing = JSON.parse(localStorage.getItem('shot-task-os-v1') || '[]');
-  const existingIds = new Set(existing.map(t => t.id));
+  const keyOfTask = t => (t && t.id ? t.id + '__' + (t.dueDate || '') : null);
+  const existingKeys = new Set(existing.map(keyOfTask));
   let added = 0;
   for (const task of tasks) {
-    if (!task.id || existingIds.has(task.id)) continue;
+    const k = keyOfTask(task);
+    if (!k || existingKeys.has(k)) continue;
     existing.push(task);
-    existingIds.add(task.id);
+    existingKeys.add(k);
     added++;
   }
   localStorage.setItem('shot-task-os-v1', JSON.stringify(existing));
