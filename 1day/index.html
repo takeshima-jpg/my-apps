@@ -973,20 +973,43 @@ function briefJsonToMarkdown(d) {
   if (typeof d !== 'object' || d === null) return String(d);
   let md = '';
   if (d.cadence_notice) md += `**📣 ${d.cadence_notice}**\n\n`;
+  // ── 今日の要点 ──
+  if (d.top_theme || d.center_pin || d.changes?.length || d.decisions?.length) md += `# 今日の要点\n\n`;
   if (d.top_theme) md += `## 今日の最重要テーマ\n${d.top_theme}\n\n`;
   if (d.center_pin) md += `## 今週のセンターピン\n${d.center_pin}\n\n`;
-  if (d.changes?.length) md += `## 昨日からの重要変化\n${d.changes.map(c=>`・${c}`).join('\n')}\n\n`;
-  if (d.decisions?.length) md += `## 今日判断すべきこと\n${d.decisions.map(c=>`・${c}`).join('\n')}\n\n`;
-  if (d.week_question?.length) md += `## 今週の問い\n${d.week_question.map(c=>`・${c}`).join('\n')}\n\n`;
-  if (d.engagement?.length) md += `## 今日関わるべき人\n${d.engagement.map(p=>`・${p.name}${p.type?`（${p.type}）`:''}：${p.reason||''}`).join('\n')}\n\n`;
-  else if (d['育成']?.length) md += `## 今日関わるべき人\n${d['育成'].map(p=>`・${p.name}：${p.reason}`).join('\n')}\n\n`;
-  if (d['会う価値']?.length) md += `## 今日接触する価値のある人\n${d['会う価値'].map(p=>`・${p.name}：${p.purpose}`).join('\n')}\n\n`;
-  if (d.risks?.length) md += `## 放置リスク\n${d.risks.map(c=>`・${c}`).join('\n')}\n\n`;
-  if (d.winning_moves?.length) md += `## 今週の勝ち筋\n${d.winning_moves.map(c=>`・${c}`).join('\n')}\n\n`;
-  if (d.proposals?.length) md += `## AI参謀からの提言\n${d.proposals.map(p=>`・${p.content}${p.partner_relation?' — '+p.partner_relation:''}`).join('\n')}\n\n`;
-  if (d.os_gaps?.length) md += `## OS齟齬レポート\n${d.os_gaps.map(c=>`・${c}`).join('\n')}\n\n`;
-  if (d.previous_proposal_tracking?.length) md += `## 前回提言の進捗\n${d.previous_proposal_tracking.map(c=>`・${c}`).join('\n')}\n\n`;
-  if (d.external_env?.length) md += `## 外部環境モニタリング\n${d.external_env.map(c=>`・${c}`).join('\n')}\n\n`;
+  if (d.changes?.length) md += `## 昨日からの重要変化\n${d.changes.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.decisions?.length) md += `## 今日判断すべきこと\n${d.decisions.map(c => `・${c}`).join('\n')}\n\n`;
+  // ── ④ 内省・学び ──
+  if (d.vision_brief || d.vision_proposals?.length || d.explore_themes?.length || d.week_question?.length || (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) || (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length))) md += `# ④ 内省・学び\n\n`;
+  if (d.vision_brief) md += `## 今日のVISION\n${d.vision_brief}\n\n`;
+  if (d.vision_proposals?.length) md += `## VISIONへの提言\n${d.vision_proposals.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.explore_themes?.length) md += `## 探索テーマ\n${d.explore_themes.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.week_question?.length) md += `## 今週の問い\n${d.week_question.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) {
+    const rf = d.reflect;
+    md += `## 内省（Reflect）\n`;
+    if (rf.open_questions?.length) md += `今向き合う問い：\n` + rf.open_questions.map(c => `・${c}`).join('\n') + '\n';
+    if (rf.active_experiments?.length) md += `実験中：\n` + rf.active_experiments.map(c => `・${c}`).join('\n') + '\n';
+    if (rf.proposals?.length) md += rf.proposals.map(p => {
+      const t = (typeof p === 'string') ? p : `${p.based_on ? p.based_on + ' → ' : ''}${p.suggestion || ''}${p.why ? '（' + p.why + '）' : ''}`;
+      return `・提案：${t}`;
+    }).join('\n') + '\n';
+    md += `\n`;
+  }
+  if (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length)) {
+    const ll = d.life_list;
+    md += `## やりたいこと（100LIST）\n`;
+    if (ll.focus_today?.length) md += ll.focus_today.map(c => `・${c}`).join('\n') + '\n';
+    if (ll.one_joy) md += `・今日の彩り：${ll.one_joy}\n`;
+    if (ll.proposals?.length) md += ll.proposals.map(p => {
+      const t = (typeof p === 'string') ? p : `${p.want || ''}${p.reason ? '（' + p.reason + '）' : ''}`;
+      return `・新しい願望の提案：${t}`;
+    }).join('\n') + '\n';
+    md += `\n`;
+  }
+  // ── ③ 財務・外部環境 ──
+  if (d.external_env?.length || d.structural_alerts?.length) md += `# ③ 財務・外部環境\n\n`;
+  if (d.external_env?.length) md += `## 外部環境モニタリング\n${d.external_env.map(c => `・${c}`).join('\n')}\n\n`;
   if (d.structural_alerts?.length) {
     md += `## 構造アラート\n` + d.structural_alerts.map(a => {
       const parts = [];
@@ -1001,38 +1024,27 @@ function briefJsonToMarkdown(d) {
       return `・${parts.filter(Boolean).join('｜')}`;
     }).join('\n') + `\n\n`;
   }
-  if (d.vision_brief) md += `## 今日のVISION\n${d.vision_brief}\n\n`;
-  if (d.vision_proposals?.length) md += `## VISIONへの提言\n${d.vision_proposals.map(c=>`・${c}`).join('\n')}\n\n`;
-  if (d.explore_themes?.length) md += `## 探索テーマ\n${d.explore_themes.map(c=>`・${c}`).join('\n')}\n\n`;
-  if (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) {
-    const rf = d.reflect;
-    md += `## 内省（Reflect）\n`;
-    if (rf.open_questions?.length) md += `今向き合う問い：\n` + rf.open_questions.map(c=>`・${c}`).join('\n') + '\n';
-    if (rf.active_experiments?.length) md += `実験中：\n` + rf.active_experiments.map(c=>`・${c}`).join('\n') + '\n';
-    if (rf.proposals?.length) md += rf.proposals.map(p => {
-      const t = (typeof p === 'string') ? p : `${p.based_on ? p.based_on + ' → ' : ''}${p.suggestion || ''}${p.why ? '（' + p.why + '）' : ''}`;
-      return `・提案：${t}`;
-    }).join('\n') + '\n';
-    md += `\n`;
-  }
-  if (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length)) {
-    const ll = d.life_list;
-    md += `## やりたいこと（100LIST）\n`;
-    if (ll.focus_today?.length) md += ll.focus_today.map(c=>`・${c}`).join('\n') + '\n';
-    if (ll.one_joy) md += `・今日の彩り：${ll.one_joy}\n`;
-    if (ll.proposals?.length) md += ll.proposals.map(p => {
-      const t = (typeof p === 'string') ? p : `${p.want || ''}${p.reason ? '（' + p.reason + '）' : ''}`;
-      return `・新しい願望の提案：${t}`;
-    }).join('\n') + '\n';
-    md += `\n`;
-  }
+  // ── ② 事業・実行 ──
+  if (d.winning_moves?.length || d.risks?.length) md += `# ② 事業・実行\n\n`;
+  if (d.winning_moves?.length) md += `## 今週の勝ち筋\n${d.winning_moves.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.risks?.length) md += `## 放置リスク\n${d.risks.map(c => `・${c}`).join('\n')}\n\n`;
+  // ── ① 人材・関係 ──
+  if (d.engagement?.length || d['育成']?.length || d['会う価値']?.length || (d.partner_progress && d.partner_progress.current != null)) md += `# ① 人材・関係\n\n`;
+  if (d.engagement?.length) md += `## 今日関わるべき人\n${d.engagement.map(p => `・${p.name}${p.type ? `（${p.type}）` : ''}：${p.reason || ''}`).join('\n')}\n\n`;
+  else if (d['育成']?.length) md += `## 今日関わるべき人\n${d['育成'].map(p => `・${p.name}：${p.reason}`).join('\n')}\n\n`;
+  if (d['会う価値']?.length) md += `## 今日接触する価値のある人\n${d['会う価値'].map(p => `・${p.name}：${p.purpose}`).join('\n')}\n\n`;
   if (d.partner_progress && d.partner_progress.current != null) {
     const pp = d.partner_progress;
     md += `## 経営パートナー進捗（${pp.current ?? 0}/${pp.target ?? 10}）\n`;
     const lines = [].concat(pp.alerts || [], pp.recent_changes || []);
-    if (lines.length) md += lines.map(c=>`・${c}`).join('\n') + '\n';
+    if (lines.length) md += lines.map(c => `・${c}`).join('\n') + '\n';
     md += `\n`;
   }
+  // ── 参謀から・運用 ──
+  if (d.proposals?.length || d.previous_proposal_tracking?.length || d.os_gaps?.length || (d.delete_candidate && d.delete_candidate.target)) md += `# 参謀から・運用\n\n`;
+  if (d.proposals?.length) md += `## AI参謀からの提言\n${d.proposals.map(p => `・${p.content}${p.partner_relation ? ' — ' + p.partner_relation : ''}`).join('\n')}\n\n`;
+  if (d.previous_proposal_tracking?.length) md += `## 前回提言の進捗\n${d.previous_proposal_tracking.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.os_gaps?.length) md += `## OS齟齬レポート\n${d.os_gaps.map(c => `・${c}`).join('\n')}\n\n`;
   if (d.delete_candidate && d.delete_candidate.target) {
     const dc = d.delete_candidate;
     md += `## 削除候補\n・${dc.target}${dc.type ? `（${dc.type}）` : ''}${dc.reason ? '：' + dc.reason : ''}${dc.effect ? '／効果：' + dc.effect : ''}\n\n`;
