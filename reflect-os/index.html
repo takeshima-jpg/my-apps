@@ -1453,6 +1453,7 @@ function renderQuestions(){
   const lbl=D({cls:'sec-lbl',css:'margin-bottom:16px'});f.insertBefore(lbl,qfc);
   function rebuildQ(){
     qWrap.innerHTML='';
+    const pub=S.logs.filter(r=>r.status!=='draft'&&r.question?.trim());
     const filtered=qThFilt==='all'?pub:pub.filter(r=>(r.themes||[]).includes(qThFilt));
     const activeQCount=filtered.reduce((n,r)=>n+r.question.split(/\n/).filter(l=>l.trim()&&(S.checks['q_'+r.id+'_'+r.question.split(/\n/).filter(l=>l.trim()).indexOf(l)]||'todo')!=='done'&&(S.checks['q_'+r.id+'_'+r.question.split(/\n/).filter(l=>l.trim()).indexOf(l)]||'todo')!=='skip').length,0);
     lbl.textContent='未解決の問い（'+filtered.reduce((n,r)=>n+r.question.split(/\n/).filter((l,i)=>{const st=S.checks['q_'+r.id+'_'+i]||'todo';return l.trim()&&st!=='done'&&st!=='skip';}).length,0)+'件）';
@@ -1507,9 +1508,10 @@ function renderExperiments(){
   f.appendChild(efc);
   const eLbl=D({cls:'sec-lbl',css:'margin-bottom:16px'});f.appendChild(eLbl);
   const eWrap=D({});f.appendChild(eWrap);
-  if(!pub.length){eWrap.appendChild(D({cls:'empty'},'実験の記録がまだありません'));return f;}
   function rebuildE(){
     eWrap.innerHTML='';
+    const pub=S.logs.filter(r=>r.status!=='draft'&&r.nextExp?.trim());
+    if(!pub.length){eLbl.textContent='実験中・未着手（0件）';eWrap.appendChild(D({cls:'empty'},'実験の記録がまだありません'));return;}
     const filtered=eThFilt==='all'?pub:pub.filter(r=>(r.themes||[]).includes(eThFilt));
     const list=D({cls:'checklist'});
     let activeCount=0;
