@@ -993,6 +993,14 @@ function briefJsonToMarkdown(d) {
   if (typeof d !== 'object' || d === null) return String(d);
   let md = '';
   if (d.cadence_notice) md += `**📣 ${d.cadence_notice}**\n\n`;
+  // ── 📅 今日の予定 ──
+  if (d.today_schedule?.length) {
+    md += `# 📅 今日の予定\n\n`;
+    md += d.today_schedule.map(e => {
+      if (e && typeof e === 'object') { const t = [e.time, e.title].filter(Boolean).join(' '); return `・${t}${e.note ? '（' + e.note + '）' : ''}`; }
+      return `・${e}`;
+    }).join('\n') + '\n\n';
+  }
   // ── 今日の要点 ──
   if (d.top_theme || d.center_pin || d.changes?.length || d.decisions?.length) md += `# 今日の要点\n\n`;
   if (d.top_theme) md += `## 今日の最重要テーマ\n${d.top_theme}\n\n`;
@@ -1000,7 +1008,18 @@ function briefJsonToMarkdown(d) {
   if (d.changes?.length) md += `## 昨日からの重要変化\n${d.changes.map(c => `・${c}`).join('\n')}\n\n`;
   if (d.decisions?.length) md += `## 今日判断すべきこと\n${d.decisions.map(c => `・${c}`).join('\n')}\n\n`;
   // ── ④ 内省・学び ──
-  if (d.vision_brief || d.vision_proposals?.length || d.explore_themes?.length || d.week_question?.length || (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) || (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length))) md += `# ① 内省・学び\n\n`;
+  if (d.lectica_daily_practice || d.vision_brief || d.vision_proposals?.length || d.explore_themes?.length || d.week_question?.length || (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) || (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length))) md += `# ① 内省・学び\n\n`;
+  if (d.lectica_daily_practice && (d.lectica_daily_practice.selectedExperimentId || d.lectica_daily_practice.selectedExperimentTitle)) {
+    const lp = d.lectica_daily_practice;
+    md += `## ✦ 今日のLectica実験\n`;
+    if (lp.selectedExperimentId) md += `・実験ID：${lp.selectedExperimentId}\n`;
+    if (lp.selectedExperimentTitle) md += `・実験名：${lp.selectedExperimentTitle}\n`;
+    if (lp.category) md += `・カテゴリ：${lp.category}\n`;
+    if (lp.targetSchedule) md += `・使う場面：${lp.targetSchedule}\n`;
+    if (lp.reason) md += `・選定理由：${lp.reason}\n`;
+    if (lp.completionCondition) md += `・完了条件：${lp.completionCondition}\n`;
+    md += `・実行後にReflect OSへ実績を記録する\n\n`;
+  }
   if (d.vision_brief) md += `## 今日のVISION\n${d.vision_brief}\n\n`;
   if (d.vision_proposals?.length) md += `## VISIONへの提言\n${d.vision_proposals.map(c => `・${c}`).join('\n')}\n\n`;
   if (d.explore_themes?.length) md += `## 探索テーマ\n${d.explore_themes.map(c => `・${c}`).join('\n')}\n\n`;
@@ -1140,7 +1159,7 @@ function markdownToHtml(md) {
   let html = '';
   let inList = false;
   let curCat = '';
-  const _bc = t => /要点/.test(t)?'key':/内省/.test(t)?'ins':/財務|外部/.test(t)?'fin':/事業|実行/.test(t)?'biz':/人材|関係/.test(t)?'ppl':/参謀|運用/.test(t)?'ops':'';
+  const _bc = t => /要点|予定/.test(t)?'key':/内省/.test(t)?'ins':/財務|外部/.test(t)?'fin':/事業|実行/.test(t)?'biz':/人材|関係/.test(t)?'ppl':/参謀|運用/.test(t)?'ops':'';
   for (let line of lines) {
     line = line
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
