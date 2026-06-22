@@ -698,6 +698,8 @@ function collectAllOSData() {
     lecticaExperiments:         JSON.parse(localStorage.getItem('lectica_experiments_master_v1') || 'null'),
     lecticaExperimentsMarkdown: localStorage.getItem('lectica_experiments_master_markdown_v1')    || null,
     lecticaLogs:                JSON.parse(localStorage.getItem('lectica_experiment_logs_v1')     || 'null'),
+    aixReviewWeekly:            JSON.parse(localStorage.getItem('aix_review_weekly')              || 'null'),
+    aixReviewMonthly:           JSON.parse(localStorage.getItem('aix_review_monthly')             || 'null'),
   };
 }
 
@@ -717,6 +719,8 @@ function restoreAllOSData(data) {
   if (data.lecticaExperiments)         localStorage.setItem('lectica_experiments_master_v1',          JSON.stringify(data.lecticaExperiments));
   if (data.lecticaExperimentsMarkdown) localStorage.setItem('lectica_experiments_master_markdown_v1', data.lecticaExperimentsMarkdown);
   if (data.lecticaLogs)                localStorage.setItem('lectica_experiment_logs_v1',             JSON.stringify(data.lecticaLogs));
+  if (data.aixReviewWeekly)            localStorage.setItem('aix_review_weekly',                      JSON.stringify(data.aixReviewWeekly));
+  if (data.aixReviewMonthly)           localStorage.setItem('aix_review_monthly',                     JSON.stringify(data.aixReviewMonthly));
 }
 
 // ── JSON 保存 / 読込 ──
@@ -1913,6 +1917,19 @@ const GD_TOKEN_KEY = 'gdrive_token_taskos';
 const GD_FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U'; // aix-drafts（3Aアカウント）
 const GD_AIX_FILE = 'aix-tasks.json';
 const GD_SNAPSHOT_FILE = 'myapps-all-backup.json';
+const GD_WEEKLY_PREFIX = 'myapps-weekly-';   // 週次スナップショット（ISO週キー）
+const GD_WEEKLY_KEEP = 8;                     // 直近8週ぶん保持（古いものはゴミ箱）
+// ISO 8601 週番号（YYYY-Www）
+function isoWeekKey(d){
+  const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = (dt.getUTCDay()+6)%7;          // 月曜=0
+  dt.setUTCDate(dt.getUTCDate()-day+3);       // その週の木曜
+  const firstThu = new Date(Date.UTC(dt.getUTCFullYear(),0,4));
+  const fday = (firstThu.getUTCDay()+6)%7;
+  firstThu.setUTCDate(firstThu.getUTCDate()-fday+3);
+  const week = 1 + Math.round((dt - firstThu)/(7*24*3600*1000));
+  return dt.getUTCFullYear()+'-W'+String(week).padStart(2,'0');
+}
 let gdToken = null;
 
 function gdHandleRedirect(){
@@ -1977,6 +1994,25 @@ async function gdUpload(name, contentStr){
   await gdFetch(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`, {
     method:'PATCH', headers:{'Content-Type':'application/json'}, body: contentStr
   });
+}
+
+// 週次スナップショット（myapps-weekly-*）を新しい順に並べ、直近GD_WEEKLY_KEEP週を残して古いものをゴミ箱へ。
+// 週キー（YYYY-Www）は辞書順＝時系列順。Drive Desktopの「(1)」等の同名複製も週キー単位で最新だけ残す。
+async function gdPruneWeekly(){
+  try{
+    const q = encodeURIComponent(`'${GD_FOLDER_ID}' in parents and name contains '${GD_WEEKLY_PREFIX}' and trashed=false`);
+    const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&pageSize=200`);
+    const files = ((await r.json()).files)||[];
+    const ordered = files.sort((a,b)=> (b.name||'').localeCompare(a.name||''));  // 新しい週が先頭
+    const seen = {}; let kept = 0;
+    for(const f of ordered){
+      const key = (f.name||'').replace(/\s*\(\d+\)/,'').replace(/\.json$/i,'');
+      if(!seen[key] && kept < GD_WEEKLY_KEEP){ seen[key]=1; kept++; continue; }  // 残す
+      try{ await gdFetch(`https://www.googleapis.com/drive/v3/files/${f.id}`, {
+        method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({trashed:true})
+      }); }catch(e){ console.warn('weekly trash失敗', f.name, e); }
+    }
+  }catch(e){ console.warn('gdPruneWeekly', e); }
 }
 
 // ===== 🧹 重複draft掃除（aix-drafts内：種別ごとに最新1つだけ残し、古い重複をゴミ箱へ）=====
@@ -2126,7 +2162,13 @@ async function gdAutoSync(manual){
     // A: スナップショットを一方向で書き出し（読み戻しはしない）
     const snap = await collectAllOSDataWithReflect();
     snap.reflectOS_idb = await dumpReflectIDB();   // Reflectの完全データ（全ログ/問い/実験/チェック）も同梱。スナップショット単体で復元可能にする
-    await gdUpload(GD_SNAPSHOT_FILE, JSON.stringify(snap, null, 2));
+    const snapStr = JSON.stringify(snap, null, 2);
+    await gdUpload(GD_SNAPSHOT_FILE, snapStr);
+    // A2: 週次スナップショット（ISO週キー・同一週は上書き）。週差分レビュー用に直近8週を保持。
+    try {
+      await gdUpload(GD_WEEKLY_PREFIX + isoWeekKey(new Date()) + '.json', snapStr);
+      await gdPruneWeekly();
+    } catch(e){ if(e.code===401) throw e; console.warn('週次スナップショット保存スキップ', e); }
 
     // 同期のたびに重複draftを自動整理（実行後のドライブを常にきれいに保つ）
     try {
