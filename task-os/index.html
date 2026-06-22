@@ -273,25 +273,6 @@ select.fi{cursor:pointer;}
 .modal-f{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
 
 /* ── TOAST ── */
-.waiting-row{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border);}
-.waiting-row:last-child{border-bottom:none;}
-.waiting-row-title{flex:1;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.waiting-row-meta{font-size:10px;color:var(--text3);flex-shrink:0;}
-.btn-wait{padding:3px 9px;border-radius:5px;border:1px solid rgba(155,127,217,.3);
-  background:rgba(155,127,217,.08);color:#4B44A8;font-size:13px;font-weight:600;
-  cursor:pointer;font-family:inherit;white-space:nowrap;}
-.btn-wait:hover{background:rgba(155,127,217,.18);}
-.wait-pop{position:absolute;z-index:300;background:var(--surface);border:1px solid var(--border);
-  border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.14);padding:4px;min-width:120px;
-  display:flex;flex-direction:column;gap:1px;}
-.wait-pop-item{padding:7px 12px;border-radius:5px;font-size:14px;font-weight:600;
-  color:var(--text);cursor:pointer;white-space:nowrap;background:none;border:none;
-  font-family:inherit;text-align:left;transition:background .08s;}
-.wait-pop-item:hover{background:var(--purple-l,rgba(127,119,221,.1));color:#4B44A8;}
-.wait-pop-label{padding:5px 12px 3px;font-size:9px;font-weight:700;color:var(--text3);
-  text-transform:uppercase;letter-spacing:.1em;}
-.wait-anchor{position:relative;display:inline-flex;}
-.empty-waiting{padding:20px;text-align:center;font-size:14px;color:var(--text3);}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;
   padding:8px 16px;border-radius:8px;font-size:14px;font-weight:500;
   z-index:999;opacity:0;transition:opacity .2s;pointer-events:none;
@@ -344,8 +325,6 @@ select.fi{cursor:pointer;}
     <div class="ni" onclick="nav('social')"><span class="ni-ico"><img src="../social-universe/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>ソーシャルU</div>
     <div class="ni" onclick="nav('kosolog')"><span class="ni-ico"><img src="../koso-log/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>コーソーログ</div>
     <div class="ni" onclick="nav('hitomemo')"><span class="ni-ico"><img src="../hitomemo/icons/icon-32.png" style="width:18px;height:18px;border-radius:4px;vertical-align:middle;"></span>ヒトメモ</div>
-    <div class="sb-sep"></div>
-    <div class="ni" id="ni-waiting" onclick="openWaitingList()" style="font-size:11px;"><span class="ni-ico" style="color:#9B7FD9;">◇</span>ウェイティング <span id="waiting-count" style="margin-left:auto;font-size:10px;opacity:.6;"></span></div>
   </nav>
   <div class="sb-backup-panel">
     <button class="sb-backup-btn" onclick="exportAllJSON()">⬇ JSON保存</button>
@@ -525,17 +504,6 @@ select.fi{cursor:pointer;}
     <span class="os-fullscreen-title" id="os-overlay-title"></span>
   </div>
   <iframe class="os-frame" id="os-overlay-frame"></iframe>
-</div>
-
-<!-- WAITING LIST MODAL -->
-<div class="modal-bg hid" id="waitingModal">
-  <div class="modal" style="width:420px;max-height:75vh;overflow-y:auto;">
-    <div class="modal-h">
-      <span class="modal-t">⏳ 待ちタスク</span>
-      <button class="modal-cl" onclick="closeModal('waitingModal')">✕</button>
-    </div>
-    <div class="modal-b" id="waitingList" style="padding:0;"></div>
-  </div>
 </div>
 
 <!-- SHOT QUICK-ADD MODAL -->
@@ -727,7 +695,6 @@ function collectAllOSData() {
                       archives: JSON.parse(localStorage.getItem('kouso_archive_v1')   || 'null') },
     socialUniverse: JSON.parse(localStorage.getItem('su-v6-persons')         || 'null'),
     hitomemo:       JSON.parse(localStorage.getItem('hitomemo_profiles_v1')  || 'null'),
-    taskOSWaiting:  JSON.parse(localStorage.getItem('taskos_waiting_v1')     || 'null'),
     lecticaExperiments:         JSON.parse(localStorage.getItem('lectica_experiments_master_v1') || 'null'),
     lecticaExperimentsMarkdown: localStorage.getItem('lectica_experiments_master_markdown_v1')    || null,
     lecticaLogs:                JSON.parse(localStorage.getItem('lectica_experiment_logs_v1')     || 'null'),
@@ -747,7 +714,6 @@ function restoreAllOSData(data) {
   if (data.kosoLog?.archives)  localStorage.setItem('kouso_archive_v1',   JSON.stringify(data.kosoLog.archives));
   if (data.socialUniverse) localStorage.setItem('su-v6-persons',          JSON.stringify(data.socialUniverse));
   if (data.hitomemo)       localStorage.setItem('hitomemo_profiles_v1',   JSON.stringify(data.hitomemo));
-  if (data.taskOSWaiting)  localStorage.setItem('taskos_waiting_v1',      JSON.stringify(data.taskOSWaiting));
   if (data.lecticaExperiments)         localStorage.setItem('lectica_experiments_master_v1',          JSON.stringify(data.lecticaExperiments));
   if (data.lecticaExperimentsMarkdown) localStorage.setItem('lectica_experiments_master_markdown_v1', data.lecticaExperimentsMarkdown);
   if (data.lecticaLogs)                localStorage.setItem('lectica_experiment_logs_v1',             JSON.stringify(data.lecticaLogs));
@@ -1006,8 +972,7 @@ function allTasks(){
     (p.events||[]).forEach(e=>addEvent(e));
   });
 
-  // Task OS 専用 WAITING フィルタ（各OS側データは変更しない）
-  return tasks.filter(t => !isHidden(t.id));
+  return tasks;
 }
 
 // ── SCORE (internal only, not displayed) ──
@@ -1108,84 +1073,6 @@ function savePj(){
   closeModal('pjModal'); refresh();
 }
 function closeModal(id){ document.getElementById(id).classList.add('hid'); _pjT=null; }
-// ── WAITING (Task OS専用・各OS非破壊) ──
-const WAIT_KEY = 'taskOS_hiddenTasks';
-
-function getWaiting(){
-  try{ return JSON.parse(localStorage.getItem(WAIT_KEY))||{}; }catch{ return {}; }
-}
-function saveWaiting(obj){ localStorage.setItem(WAIT_KEY, JSON.stringify(obj)); }
-
-function isHidden(taskId){
-  const w = getWaiting();
-  if(!w[taskId]) return false;
-  // 復元日が来ていたら自動解除
-  if(w[taskId].restoreAt && w[taskId].restoreAt <= TODAY){
-    delete w[taskId]; saveWaiting(w); return false;
-  }
-  return true;
-}
-
-// days: 1=明日, 3=3日, 7=1週間, 30=来月
-function hideTask(taskId, title, days){
-  const w = getWaiting();
-  const d = new Date(TODAY+'T00:00:00'); d.setDate(d.getDate()+days);
-  const restoreAt = d.toLocaleDateString('sv');
-  w[taskId] = { hiddenAt: TODAY, restoreAt, reason:'waiting', title };
-  saveWaiting(w);
-  updateWaitingCount();
-  closeWaitPop();
-  toast('⏳ 待ち → '+restoreAt);
-  refresh();
-}
-
-// ─ ポップオーバー管理
-let _popEl = null;
-function closeWaitPop(){
-  if(_popEl){ _popEl.remove(); _popEl=null; }
-}
-function showWaitPop(btn){
-  closeWaitPop();
-  const taskId    = btn.dataset.taskid;
-  const taskTitle = btn.dataset.tasktitle || '';
-  const options = [
-    { label:'明日',   days:1  },
-    { label:'3日後',  days:3  },
-    { label:'1週間',  days:7  },
-    { label:'来月',   days:30 },
-  ];
-  const pop = document.createElement('div');
-  pop.className = 'wait-pop';
-  pop.innerHTML =
-    `<div class="wait-pop-label">WAIT UNTIL</div>` +
-    options.map(o=>
-      `<button class="wait-pop-item" data-days="${o.days}">${o.label}</button>`
-    ).join('');
-  // data属性経由でクリックイベントを付与（HTML属性内の文字列エスケープ問題を回避）
-  pop.querySelectorAll('.wait-pop-item').forEach(btn=>{
-    btn.addEventListener('click', ()=>hideTask(taskId, taskTitle, parseInt(btn.dataset.days)));
-  });
-  // ボタン基準で配置
-  const anchor = btn.closest('.wait-anchor') || btn.parentElement;
-  anchor.style.position = 'relative';
-  anchor.appendChild(pop);
-  _popEl = pop;
-  // 外クリックで閉じる（1回限りのリスナ）
-  setTimeout(()=>{
-    document.addEventListener('click', function outside(e){
-      if(!pop.contains(e.target)){ closeWaitPop(); document.removeEventListener('click', outside); }
-    });
-  }, 0);
-}
-
-function unhideTask(taskId){
-  const w = getWaiting();
-  delete w[taskId]; saveWaiting(w);
-  updateWaitingCount();
-  toast('✓ 待ち解除しました');
-  refresh();
-  renderWaitingList();
-}
 
 // ══════════════════════════════════════
 // APP LAUNCHER
@@ -1322,48 +1209,6 @@ function toggle100List(){
 function togglePj(){
   homePjOpen = !homePjOpen;
   renderHome();
-}
-
-function updateWaitingCount(){
-  const w = getWaiting();
-  // 期限切れを自動解除してカウント
-  let count = 0;
-  Object.keys(w).forEach(id=>{
-    if(w[id].restoreAt && w[id].restoreAt <= TODAY){ delete w[id]; }
-    else count++;
-  });
-  saveWaiting(w);
-  const el = document.getElementById('waiting-count');
-  if(el) el.textContent = count > 0 ? count : '';
-}
-
-function openWaitingList(){
-  renderWaitingList();
-  document.getElementById('waitingModal').classList.remove('hid');
-}
-
-function renderWaitingList(){
-  const w = getWaiting();
-  const tasks = allTasks();
-  const list = document.getElementById('waitingList');
-  const ids = Object.keys(w).filter(id => !(w[id].restoreAt && w[id].restoreAt <= TODAY));
-
-  if(!ids.length){
-    list.innerHTML = '<div class="empty-waiting">待ちタスクはありません</div>';
-    return;
-  }
-
-  list.innerHTML = ids.map(id => {
-    const info = w[id];
-    const t = tasks.find(x=>x.id===id);
-    const title = t ? t.title : (info.title||id);
-    return `<div class="waiting-row">
-      <div class="ni-dot" style="background:#9B7FD9;flex-shrink:0;width:7px;height:7px;border-radius:50%;"></div>
-      <div class="waiting-row-title" title="${esc(title)}">${esc(title)}</div>
-      <div class="waiting-row-meta">→ ${info.restoreAt||'?'}</div>
-      <button class="btn-wait" onclick="unhideTask('${id}')">解除</button>
-    </div>`;
-  }).join('');
 }
 
 const now = () => new Date().toISOString();
@@ -1650,21 +1495,14 @@ function trowHtml(t){
   let cls=''; if(ov) cls=' ov'; else if(td) cls=' today-due';
   const links=renderLinks(t);
   let acts='';
-  // data属性でid/titleを渡す（onclick内文字列エスケープ問題を完全回避）
-  const tid  = esc(t.id);
-  const ttl  = esc(t.title);
-  const waitBtn = `<span class="wait-anchor"><button class="btn-wait" data-taskid="${tid}" data-tasktitle="${ttl}" onclick="event.stopPropagation();showWaitPop(this)" title="待ち期間を選択">⏳</button></span>`;
   if(t.src==='shot'){
     acts=`<button class="btn-done" onclick="completeSh('${t.rawId}');event.stopPropagation()">✓</button>
-    ${waitBtn}
     <button class="btn-open" onclick="nav('shot');event.stopPropagation()">開く</button>`;
   } else if(t.src==='routine'){
     acts=`<button class="btn-done" onclick="completeRt('${t.rawId}');event.stopPropagation()">✓</button>
-    ${waitBtn}
     <button class="btn-open" onclick="nav('routine');event.stopPropagation()">開く</button>`;
   } else {
     acts=`<button class="btn-done" onclick="completePj('${t.pId}','${t.kind}','${t.rawId}');event.stopPropagation()">✓</button>
-    ${waitBtn}
     <button class="btn-open" onclick="nav('project');event.stopPropagation()">開く</button>`;
   }
   return `<div class="trow${cls}">
@@ -1747,12 +1585,9 @@ function todayRow(t){
   const isDone=done[t.id];
   const links=renderLinks(t);
   let acts='';
-  const tid2  = esc(t.id);
-  const ttl2  = esc(t.title);
-  const tWaitBtn = `<span class="wait-anchor"><button class="btn-wait" data-taskid="${tid2}" data-tasktitle="${ttl2}" onclick="event.stopPropagation();showWaitPop(this)" title="待ち期間を選択">⏳</button></span>`;
-  if(t.src==='shot') acts=`<button class="btn-done" onclick="completeSh('${t.rawId}');markDone('${t.id}')">✓</button>${tWaitBtn}`;
-  else if(t.src==='routine') acts=`<button class="btn-done" onclick="completeRt('${t.rawId}');markDone('${t.id}')">✓</button>${tWaitBtn}`;
-  else acts=`<button class="btn-done" onclick="completePj('${t.pId}','${t.kind}','${t.rawId}');markDone('${t.id}')">✓</button>${tWaitBtn}`;
+  if(t.src==='shot') acts=`<button class="btn-done" onclick="completeSh('${t.rawId}');markDone('${t.id}')">✓</button>`;
+  else if(t.src==='routine') acts=`<button class="btn-done" onclick="completeRt('${t.rawId}');markDone('${t.id}')">✓</button>`;
+  else acts=`<button class="btn-done" onclick="completePj('${t.pId}','${t.kind}','${t.rawId}');markDone('${t.id}')">✓</button>`;
 
   return `<div class="t-row" id="tr-${esc(t.id)}" style="${isDone?'opacity:.4;':''}">
     <input type="checkbox" class="t-chk" ${isDone?'checked':''} onchange="chkToggle('${t.id}',this.checked)" onclick="event.stopPropagation()">
@@ -1826,12 +1661,11 @@ function updateClock(){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
-  updateWaitingCount();
   updateClock();
   setInterval(updateClock, 30000);
   renderHome();
   setInterval(()=>{ if(curView==='home') renderHome(); }, 60000);
-  ['pjModal','linkModal','waitingModal'].forEach(id=>{
+  ['pjModal','linkModal'].forEach(id=>{
     document.getElementById(id).addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal(id); });
   });
 });
