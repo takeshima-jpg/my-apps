@@ -849,8 +849,9 @@ function handleAixTaskImport(e) {
     try {
       const parsed = JSON.parse(ev.target.result);
       const res = applyAixTasks(parsed);
+      const lxNew = autoGenLecticaShot();
 
-      if (res.added === 0 && res.draftCount === 0 && !res.briefLoaded) {
+      if (res.added === 0 && res.draftCount === 0 && !res.briefLoaded && !lxNew) {
         toast('追加できる新規データはありませんでした');
         e.target.value = '';
         return;
@@ -1433,6 +1434,76 @@ function lecticaAddPending(){
     if(expId){ try{const m=JSON.parse(localStorage.getItem('lectica_experiments_master_v1')||'[]'); const e=m.find(x=>x&&x.id===expId); if(e&&e.status==='not_started'){e.status='active';localStorage.setItem('lectica_experiments_master_v1',JSON.stringify(m));}}catch(e){} }
     renderHome();
   }catch(e){ alert('\u8ffd\u52a0\u30a8\u30e9\u30fc: '+e.message); }
+}
+
+// Lectica実験のShotを自動生成（毎朝・冪等）。
+// ・今日のLectica Shotが既にあれば何もしない
+// ・直近14日に使った実験は除外（同じものの連続回避）
+// ・参謀の「本日（日付一致）の提案」で最近未使用ならそれを優先、なければ最近使っていない実験からランダム
+// 戻り値：生成したら1、しなければ0
+function autoGenLecticaShot(){
+  try{
+    const today=TODAY;
+    let shot=[]; try{ shot=JSON.parse(localStorage.getItem('shot-task-os-v1')||'[]')||[]; }catch(e){ shot=[]; }
+    // 冪等：今日のLectica Shotが既にあれば何もしない
+    if(shot.some(t=>t&&t.category==='Lectica'&&t.dueDate===today)) return 0;
+    let master=[]; try{ master=JSON.parse(localStorage.getItem('lectica_experiments_master_v1')||'[]')||[]; }catch(e){ master=[]; }
+    if(!master.length) return 0;   // 56件マスター未投入なら生成しない
+    let logs=[]; try{ logs=JSON.parse(localStorage.getItem('lectica_experiment_logs_v1')||'[]')||[]; }catch(e){ logs=[]; }
+    let pending=null; try{ pending=JSON.parse(localStorage.getItem('aix_lectica_pending')||'null'); }catch(e){}
+
+    // 直近14日に使った実験IDを集める（連続回避）
+    const WINDOW=14;
+    const cut=new Date(today+'T00:00:00'); cut.setDate(cut.getDate()-WINDOW);
+    const cutStr=cut.toLocaleDateString('sv');
+    const recent={};
+    logs.forEach(l=>{ if(l&&l.experimentId&&l.date&&l.date>=cutStr) recent[l.experimentId]=1; });
+    shot.forEach(t=>{ if(t&&t.category==='Lectica'&&t.dueDate&&t.dueDate>=cutStr){ const m=(t.memo||'').match(/実験ID：(L\d+)/); if(m) recent[m[1]]=1; } });
+
+    const byId=id=>master.find(x=>x&&x.id===id);
+    const usable=e=>e&&e.status!=='completed'&&e.status!=='skipped';
+
+    let chosen=null, sanboShot=null;
+    // ① 参謀の本日の提案（日付一致・最近未使用・usable）を優先
+    if(pending){
+      const pdate=(pending.shotTask&&pending.shotTask.dueDate)||pending.date||'';
+      const pid=pending.selectedExperimentId||'';
+      if(pdate===today && pid){
+        const pe=byId(pid);
+        if(usable(pe) && !recent[pid]){ chosen=pe; sanboShot=pending.shotTask||null; }
+      }
+    }
+    // ② なければ最近使っていない usable な実験からランダム（active/thisWeekを軽く優先）
+    if(!chosen){
+      let pool=master.filter(e=>usable(e)&&!recent[e.id]);
+      if(!pool.length) pool=master.filter(usable);   // 全部最近使用なら条件緩和
+      if(!pool.length) pool=master.slice();           // それでも空なら全件
+      if(pool.length){
+        const pri=pool.filter(e=>e.status==='active'||e.thisWeek);
+        const src=pri.length?pri:pool;
+        chosen=src[Math.floor(Math.random()*src.length)];
+      }
+    }
+    if(!chosen) return 0;
+
+    // Shot生成
+    const now=new Date().toISOString();
+    let title, cat='Lectica', memo='';
+    if(sanboShot){
+      title=sanboShot.title||('今日のLectica実験：'+(pending.selectedExperimentTitle||chosen.title||''));
+      cat=sanboShot.category||'Lectica';
+      memo=sanboShot.memo||'';
+    }else{
+      title='今日のLectica実験：'+(chosen.title||chosen.id);
+    }
+    if(memo.indexOf('実験ID：')<0) memo=(memo?memo+'\n':'')+'実験ID：'+chosen.id;
+    if(memo.indexOf('Reflect')<0) memo=memo+'\n実行後：Reflect OSに実績を記録する';
+    shot.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title:title,category:cat,priority:'normal',status:'todo',dueDate:today,memo:memo,createdAt:now,completedAt:null,updatedAt:now});
+    localStorage.setItem('shot-task-os-v1',JSON.stringify(shot));
+    // 実験ステータス not_started→active
+    try{ const e=byId(chosen.id); if(e&&e.status==='not_started'){ e.status='active'; localStorage.setItem('lectica_experiments_master_v1',JSON.stringify(master)); } }catch(_){}
+    return 1;
+  }catch(e){ console.warn('autoGenLecticaShot', e); return 0; }
 }
 
 function renderHome(){
@@ -2043,6 +2114,15 @@ async function gdAutoSync(manual){
       if(hmAdded > 0) importMsg = (importMsg ? importMsg + ' / ' : '') + `ヒトメモ${hmAdded}人を未登録へ`;
     } catch(e){ if(e.code===401) throw e; console.warn('hitomemo自動取込スキップ', e); }
 
+    // C3: Lectica実験のShotを自動生成（毎朝・冪等／参謀提案優先・なければランダム）
+    try {
+      const lx = autoGenLecticaShot();
+      if(lx > 0){
+        if(typeof renderHome==='function') renderHome();
+        importMsg = (importMsg ? importMsg + ' / ' : '') + 'Lectica実験を自動生成';
+      }
+    } catch(e){ console.warn('lectica自動生成スキップ', e); }
+
     // A: スナップショットを一方向で書き出し（読み戻しはしない）
     const snap = await collectAllOSDataWithReflect();
     snap.reflectOS_idb = await dumpReflectIDB();   // Reflectの完全データ（全ログ/問い/実験/チェック）も同梱。スナップショット単体で復元可能にする
@@ -2074,6 +2154,7 @@ gdHandleRedirect();
 document.addEventListener('DOMContentLoaded', ()=>{
   gdUpdateBtn();
   if(gdToken){ setTimeout(()=>{ try{ gdAutoSync(false); }catch(e){ console.warn(e); } }, 1200); }
+  else { setTimeout(()=>{ try{ if(autoGenLecticaShot()>0 && typeof renderHome==='function') renderHome(); }catch(e){ console.warn(e); } }, 300); }
 });
 </script>
 </body>
