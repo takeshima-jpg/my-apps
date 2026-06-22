@@ -300,6 +300,17 @@ select.fi{cursor:pointer;}
 
 /* ── EMPTY ── */
 .empty{padding:40px 20px;text-align:center;color:var(--text3);font-size:15px;}
+
+.lx-home{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:14px;}
+.lx-home-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #eef2f7;font-size:14px;line-height:1.5;}
+.lx-home-row:last-child{border-bottom:none;}
+.lx-home-row.done{opacity:.55;text-decoration:line-through;}
+.lx-home-tag{display:inline-block;font-size:11px;font-weight:700;color:#4f46e5;background:#eef2ff;border-radius:8px;padding:1px 7px;margin-right:6px;}
+.lx-home-sub{font-size:12px;color:#64748b;margin-top:2px;}
+.lx-home-pending{margin-top:8px;padding-top:8px;border-top:1px dashed #e2e8f0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+.lx-home-done-tag{font-size:12px;color:#15803d;font-weight:700;}
+.lx-home-note{font-size:11px;color:#94a3b8;margin-top:8px;}
+.lx-home-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
 </style>
 </head>
 <body>
@@ -717,6 +728,9 @@ function collectAllOSData() {
     socialUniverse: JSON.parse(localStorage.getItem('su-v6-persons')         || 'null'),
     hitomemo:       JSON.parse(localStorage.getItem('hitomemo_profiles_v1')  || 'null'),
     taskOSWaiting:  JSON.parse(localStorage.getItem('taskos_waiting_v1')     || 'null'),
+    lecticaExperiments:         JSON.parse(localStorage.getItem('lectica_experiments_master_v1') || 'null'),
+    lecticaExperimentsMarkdown: localStorage.getItem('lectica_experiments_master_markdown_v1')    || null,
+    lecticaLogs:                JSON.parse(localStorage.getItem('lectica_experiment_logs_v1')     || 'null'),
   };
 }
 
@@ -734,6 +748,9 @@ function restoreAllOSData(data) {
   if (data.socialUniverse) localStorage.setItem('su-v6-persons',          JSON.stringify(data.socialUniverse));
   if (data.hitomemo)       localStorage.setItem('hitomemo_profiles_v1',   JSON.stringify(data.hitomemo));
   if (data.taskOSWaiting)  localStorage.setItem('taskos_waiting_v1',      JSON.stringify(data.taskOSWaiting));
+  if (data.lecticaExperiments)         localStorage.setItem('lectica_experiments_master_v1',          JSON.stringify(data.lecticaExperiments));
+  if (data.lecticaExperimentsMarkdown) localStorage.setItem('lectica_experiments_master_markdown_v1', data.lecticaExperimentsMarkdown);
+  if (data.lecticaLogs)                localStorage.setItem('lectica_experiment_logs_v1',             JSON.stringify(data.lecticaLogs));
 }
 
 // ── JSON 保存 / 読込 ──
@@ -848,6 +865,11 @@ function applyAixTasks(parsed){
     if (parsed.brief_monthly && typeof parsed.brief_monthly === 'object') {
       localStorage.setItem('aix_review_monthly', JSON.stringify(parsed.brief_monthly));
       briefLoaded = true;
+    }
+    // ⑤ lectica_daily_practice → 保留保存（HOMEで半自動「追加」ボタンに使う。自動追加はしない）
+    const ldp = parsed.lectica_daily_practice || (parsed.brief && parsed.brief.lectica_daily_practice);
+    if (ldp && typeof ldp === 'object') {
+      try { localStorage.setItem('aix_lectica_pending', JSON.stringify(ldp)); } catch(e){}
     }
   }
   return { added, draftCount, briefLoaded, isNewFormat };
@@ -1528,6 +1550,46 @@ function homeProjects(activePj) {
   return h;
 }
 
+function homeLectica(){
+  let master=[],shot=[],pending=null;
+  try{master=JSON.parse(localStorage.getItem('lectica_experiments_master_v1')||'[]')||[];}catch(e){}
+  try{shot=JSON.parse(localStorage.getItem('shot-task-os-v1')||'[]')||[];}catch(e){}
+  try{const p=localStorage.getItem('aix_lectica_pending');if(p)pending=JSON.parse(p);}catch(e){}
+  const today=TODAY;
+  const todayShot=shot.filter(t=>t&&t.category==='Lectica'&&t.dueDate===today);
+  const active=master.filter(e=>e&&e.status==='active');
+  let rows='',count=0;const seen={};
+  todayShot.forEach(t=>{if(count>=3)return;const m=(t.memo||'').match(/実験ID：(L\d+)/);if(m)seen[m[1]]=1;const done=t.status==='done';rows+='<div class="lx-home-row'+(done?' done':'')+'"><div><span class="lx-home-tag">'+(done?'実施済':'今日のShot')+'</span>'+esc(String(t.title||'').replace(/^今日のLectica実験：/,''))+'</div></div>';count++;});
+  active.forEach(e=>{if(count>=3)return;if(seen[e.id])return;seen[e.id]=1;rows+='<div class="lx-home-row"><div><span class="lx-home-tag">実験中</span>'+esc(e.id+'：'+e.title)+'</div></div>';count++;});
+  let pendingHtml='';
+  if(pending&&(pending.selectedExperimentId||pending.shotTask)){
+    const ptitle=pending.selectedExperimentTitle||(pending.shotTask&&pending.shotTask.title)||'';
+    const pid=pending.selectedExperimentId||'';
+    const already=todayShot.some(t=>pid&&(t.memo||'').indexOf('実験ID：'+pid)>=0);
+    pendingHtml='<div class="lx-home-pending"><div class="lx-home-sub">参謀の本日の提案：'+esc(ptitle)+(pending.reason?'（'+esc(pending.reason)+'）':'')+'</div>'+(already?'<span class="lx-home-done-tag">追加済</span>':'<button class="btn-open" onclick="lecticaAddPending()">＋ Shotに追加</button>')+'</div>';
+  }
+  const inner=(rows||pendingHtml)?(rows+pendingHtml):'<div class="empty" style="font-size:13px">Reflect OSで今日の実験を1つ選んでください。</div>';
+  const note='<div class="lx-home-note">毎日1件を会議・1on1・意思決定・育成で実践（最大3件表示）。</div>';
+  const btns='<div class="lx-home-btns"><button class="btn-open" onclick="nav(\'reflect\')">Reflect OSを開く</button><button class="btn-open" onclick="nav(\'shot\')">Shot Taskを開く</button></div>';
+  return secLabel('\u25b6 \u4eca\u65e5\u306eLectica\u5b9f\u9a13','')+'<div class="lx-home">'+inner+note+btns+'</div></div>';
+}
+function lecticaAddPending(){
+  try{
+    const p=JSON.parse(localStorage.getItem('aix_lectica_pending')||'null'); if(!p){alert('\u63d0\u6848\u304c\u3042\u308a\u307e\u305b\u3093');return;}
+    const st=p.shotTask||{};
+    const today=(st.dueDate||p.date||TODAY);
+    const expId=p.selectedExperimentId||'';
+    const arr=JSON.parse(localStorage.getItem('shot-task-os-v1')||'[]');
+    if(arr.some(t=>t&&t.dueDate===today&&expId&&t.memo&&t.memo.indexOf('\u5b9f\u9a13ID\uff1a'+expId)>=0)){ alert('\u4eca\u65e5\u306e\u3053\u306e\u5b9f\u9a13\u306eShot\u30bf\u30b9\u30af\u306f\u65e2\u306b\u3042\u308a\u307e\u3059'); return; }
+    const memo=(st.memo||'')+(expId?('\n\u5b9f\u9a13ID\uff1a'+expId):'')+'\n\u5b9f\u884c\u5f8c\uff1aReflect OS\u306b\u5b9f\u7e3e\u3092\u8a18\u9332\u3059\u308b';
+    const now=new Date().toISOString();
+    arr.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title:(st.title||('\u4eca\u65e5\u306eLectica\u5b9f\u9a13\uff1a'+(p.selectedExperimentTitle||''))),category:(st.category||'Lectica'),priority:'normal',status:'todo',dueDate:today,memo:memo,createdAt:now,completedAt:null,updatedAt:now});
+    localStorage.setItem('shot-task-os-v1',JSON.stringify(arr));
+    if(expId){ try{const m=JSON.parse(localStorage.getItem('lectica_experiments_master_v1')||'[]'); const e=m.find(x=>x&&x.id===expId); if(e&&e.status==='not_started'){e.status='active';localStorage.setItem('lectica_experiments_master_v1',JSON.stringify(m));}}catch(e){} }
+    renderHome();
+  }catch(e){ alert('\u8ffd\u52a0\u30a8\u30e9\u30fc: '+e.message); }
+}
+
 function renderHome(){
   renderVision();
   const tasks = allTasks();
@@ -1554,6 +1616,7 @@ function renderHome(){
   h += homeUrgent(ov, td);
   h += homeThisWeek(thisWeek);
   h += homeShot(noDue);
+  h += homeLectica();
   h += home100List();
   h += homeProjects(activePj);
 /* TIMELINE-DISABLED (将来復活可)
