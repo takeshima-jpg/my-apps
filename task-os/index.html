@@ -747,6 +747,19 @@ function restoreReflectIDB(dump) {
   } catch(e) { return Promise.resolve(false); }
 }
 
+// Reflectの生ログ(stores.logs)を直近days日に絞ったコピーを返す。themes/settings/checksはそのまま。
+// 毎朝Coworkが読むファイルを軽くするため（要約reflectOSは別途保持、全履歴は週次スナップショットに残す）。
+function trimReflectIDBLogs(idb, days){
+  try{
+    if(!idb || !idb.stores) return idb;
+    const cut = new Date(); cut.setDate(cut.getDate()-days);
+    const cutStr = cut.toLocaleDateString('sv');
+    const logs = Array.isArray(idb.stores.logs) ? idb.stores.logs : [];
+    const recentLogs = logs.filter(r => r && (!r.date || r.date >= cutStr));  // 日付なしは安全側で残す
+    return { ...idb, stores: { ...idb.stores, logs: recentLogs } };
+  }catch(e){ return idb; }
+}
+
 async function exportAllJSON() {
   const data = await collectAllOSDataWithReflect();
   data.reflectOS_idb = await dumpReflectIDB();
@@ -2160,13 +2173,18 @@ async function gdAutoSync(manual){
     } catch(e){ console.warn('lectica自動生成スキップ', e); }
 
     // A: スナップショットを一方向で書き出し（読み戻しはしない）
-    const snap = await collectAllOSDataWithReflect();
-    snap.reflectOS_idb = await dumpReflectIDB();   // Reflectの完全データ（全ログ/問い/実験/チェック）も同梱。スナップショット単体で復元可能にする
-    const snapStr = JSON.stringify(snap, null, 2);
-    await gdUpload(GD_SNAPSHOT_FILE, snapStr);
-    // A2: 週次スナップショット（ISO週キー・同一週は上書き）。週差分レビュー用に直近8週を保持。
+    const fullSnap = await collectAllOSDataWithReflect();
+    fullSnap.reflectOS_idb = await dumpReflectIDB();   // 完全データ（復元・週次スナップショット用）
+    const fullSnapStr = JSON.stringify(fullSnap, null, 2);
+
+    // 毎朝Coworkが読むファイルは軽量化：Reflectの生ログは直近60日だけに絞る（要約reflectOSは保持）。
+    // 全履歴は週次スナップショット／手動エクスポートに残るため復元能力は維持。
+    const morningSnap = { ...fullSnap, reflectOS_idb: trimReflectIDBLogs(fullSnap.reflectOS_idb, 60) };
+    await gdUpload(GD_SNAPSHOT_FILE, JSON.stringify(morningSnap, null, 2));
+
+    // A2: 週次スナップショット（完全版。ISO週キー・同一週は上書き）。週差分レビュー＋完全復元用に直近8週を保持。
     try {
-      await gdUpload(GD_WEEKLY_PREFIX + isoWeekKey(new Date()) + '.json', snapStr);
+      await gdUpload(GD_WEEKLY_PREFIX + isoWeekKey(new Date()) + '.json', fullSnapStr);
       await gdPruneWeekly();
     } catch(e){ if(e.code===401) throw e; console.warn('週次スナップショット保存スキップ', e); }
 
