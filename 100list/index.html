@@ -1809,13 +1809,8 @@ function rowHtml(i){
       </tr>`;
 }
 
-function renderList(){
-  const el = document.getElementById('page-list');
-  const focusName = settings.focusListName||'重点リスト';
+function computeListRows(){
   const prioOrd = {High:0,Medium:1,Low:2};
-  const yr = thisYear(), mo = thisMonth();
-
-  // フィルター（statusはtabで上書き）
   let allRows = items.filter(i=>!i.discarded).filter(i=>{
     if(listF.search){const q=listF.search.toLowerCase(); if(!i.title.toLowerCase().includes(q) && !(i.memo||'').toLowerCase().includes(q)) return false;}
     if(listF.year!=='all' && String(i.year)!==listF.year) return false;
@@ -1829,11 +1824,8 @@ function renderList(){
     if(listF.count && !i.isCountGoal) return false;
     return true;
   });
-
   const incompleteRows = allRows.filter(i=>!i.completed);
   const completeRows = allRows.filter(i=>i.completed);
-
-  // 未完了: 期日あり→期日順、期日なし→優先度順で後ろ
   function sortIncomplete(rows){
     return rows.slice().sort((a,b)=>{
       const aHasDate = a.year || a.month;
@@ -1845,12 +1837,9 @@ function renderList(){
         const by = (b.year||9999)*100+(b.month||99);
         if(ay!==by) return ay-by;
       }
-      // 同日付 or 両方なし → 優先度順
       return (prioOrd[a.priority]??2)-(prioOrd[b.priority]??2);
     });
   }
-
-  // 完了: 完了日が新しい順
   function sortComplete(rows){
     return rows.slice().sort((a,b)=>{
       const da = a.completedAt||'';
@@ -1860,15 +1849,35 @@ function renderList(){
       return 0;
     });
   }
-
   const rows = listTab==='incomplete' ? sortIncomplete(incompleteRows) : sortComplete(completeRows);
+  return {rows, incompleteRows, completeRows};
+}
+
+// 検索など: 入力欄を作り直さず、結果テーブルと件数バッジだけ差し替える
+function updateListResults(){
+  const {rows, incompleteRows, completeRows} = computeListRows();
+  const tb = document.getElementById('list-tbody');
+  if(tb){
+    tb.innerHTML = rows.length===0
+      ? `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">${listTab==='complete'?'✅':'📭'}</div><p>${listTab==='complete'?'完了済みのタスクはありません':'条件に一致するタスクがありません'}</p></div></td></tr>`
+      : rows.map(rowHtml).join('');
+  }
+  const bi = document.getElementById('badge-incomplete'); if(bi) bi.textContent = incompleteRows.length;
+  const bc = document.getElementById('badge-complete'); if(bc) bc.textContent = completeRows.length;
+}
+
+function renderList(){
+  const el = document.getElementById('page-list');
+  const focusName = settings.focusListName||'重点リスト';
+  const yr = thisYear(), mo = thisMonth();
+  const {rows, incompleteRows, completeRows} = computeListRows();
   const years = [...new Set(items.map(i=>i.year).filter(Boolean))].sort();
 
   el.innerHTML = `
 <h2 class="page-title">≡ リスト一覧</h2>
 <div class="card" style="padding:15px 18px;margin-bottom:14px">
   <div class="filter-bar">
-    <input type="text" id="listSearchInput" placeholder="🔍 タイトル・メモで検索" value="${esc(listF.search)}" oninput="if(!window._imeOn && !(event&&event.isComposing)){listF.search=this.value;renderListResults();}" oncompositionstart="window._imeOn=true" oncompositionend="window._imeOn=false;var _el=this;setTimeout(function(){listF.search=_el.value;renderListResults();},0)">
+    <input type="text" id="listSearchInput" placeholder="🔍 タイトル・メモで検索" value="${esc(listF.search)}" oninput="if(!window._imeOn && !(event&&event.isComposing)){listF.search=this.value;updateListResults();}" oncompositionstart="window._imeOn=true" oncompositionend="window._imeOn=false;listF.search=this.value;updateListResults();">
     <select onchange="listF.year=this.value;renderList()">
       <option value="all">年: すべて</option>
       ${years.map(y=>`<option value="${y}" ${String(listF.year)===String(y)?'selected':''}>${y}年</option>`).join('')}
@@ -1891,10 +1900,10 @@ function renderList(){
 
 <div class="flex gap-8" style="margin-bottom:14px;align-items:center;flex-wrap:nowrap">
   <button onclick="listTab='incomplete';renderList()" style="flex:1;padding:8px 6px;border-radius:10px;border:2px solid ${listTab==='incomplete'?'#f6ad55':'#e2e8f0'};background:${listTab==='incomplete'?'#fffaf0':'#fff'};font-size:14px;font-weight:700;cursor:pointer;color:${listTab==='incomplete'?'#c05621':'#718096'};white-space:nowrap;text-align:center;min-width:0;">
-    📋 未完了 <span style="background:#f6ad55;color:#1a202c;border-radius:999px;padding:1px 8px;font-size:13px;margin-left:4px">${incompleteRows.length}</span>
+    📋 未完了 <span id="badge-incomplete" style="background:#f6ad55;color:#1a202c;border-radius:999px;padding:1px 8px;font-size:13px;margin-left:4px">${incompleteRows.length}</span>
   </button>
   <button onclick="listTab='complete';renderList()" style="flex:1;padding:8px 6px;border-radius:10px;border:2px solid ${listTab==='complete'?'#48bb78':'#e2e8f0'};background:${listTab==='complete'?'#f0fff4':'#fff'};font-size:14px;font-weight:700;cursor:pointer;color:${listTab==='complete'?'#276749':'#718096'};white-space:nowrap;text-align:center;min-width:0;">
-    ✅ 完了 <span style="background:#48bb78;color:#fff;border-radius:999px;padding:1px 8px;font-size:13px;margin-left:4px">${completeRows.length}</span>
+    ✅ 完了 <span id="badge-complete" style="background:#48bb78;color:#fff;border-radius:999px;padding:1px 8px;font-size:13px;margin-left:4px">${completeRows.length}</span>
   </button>
   <button onclick="renderList()" title="インライン編集した内容を期日順に並び替えます"
     style="flex-shrink:0;padding:8px 12px;border-radius:10px;border:2px solid #63b3ed;background:#ebf8ff;font-size:13px;font-weight:700;cursor:pointer;color:#2b6cb0;white-space:nowrap">
@@ -1914,7 +1923,7 @@ function renderList(){
       <th style="width:80px">タグ</th>
       <th style="width:90px">操作</th>
     </tr></thead>
-    <tbody>
+    <tbody id="list-tbody">
     ${rows.length===0
       ?`<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">${listTab==='complete'?'✅':'📭'}</div><p>${listTab==='complete'?'完了済みのタスクはありません':'条件に一致するタスクがありません'}</p></div></td></tr>`
       :rows.map(rowHtml).join('')
