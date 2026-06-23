@@ -798,19 +798,31 @@ function applyAixTasks(parsed){
     ? ('d__' + t.dueDate + '__' + (t.title || ''))
     : ('i__' + ((t && t.id) || '') + '__' + ((t && t.title) || ''));
   const existingKeys = new Set(existing.map(keyOfTask));
+  // 取り込み済み台帳：一度取り込んだAIタスクは、完了・不採用・削除した後でも再取り込みで復活させない
+  let importedKeys;
+  try { importedKeys = new Set(JSON.parse(localStorage.getItem('aix_imported_keys') || '[]')); }
+  catch(e){ importedKeys = new Set(); }
+  for (const k of existingKeys) importedKeys.add(k);   // 現在あるタスクのキーも台帳に含める（シード）
   let added = 0;
   for (const task of tasks) {
     if (!task || !task.title) continue;
     const k = keyOfTask(task);
-    if (existingKeys.has(k)) continue;                // 同一タスク（同期日・同タイトル）は再追加しない
+    if (existingKeys.has(k) || importedKeys.has(k)) continue;   // 既存 or 過去に取り込み済みは再追加しない
     const t = Object.assign({}, task);
     if (!t.id || seenIds.has(t.id)) t.id = genId();   // id衝突は新idで回避
     existing.push(t);
     seenIds.add(t.id);
     existingKeys.add(k);
+    importedKeys.add(k);
     added++;
   }
   localStorage.setItem('shot-task-os-v1', JSON.stringify(existing));
+  // 台帳を保存（直近800キーにキャップして肥大化を防ぐ）
+  try {
+    let arr = Array.from(importedKeys);
+    if (arr.length > 800) arr = arr.slice(arr.length - 800);
+    localStorage.setItem('aix_imported_keys', JSON.stringify(arr));
+  } catch(e){}
 
   let draftCount = 0;
   let briefLoaded = false;
