@@ -1511,10 +1511,11 @@ function lxRecordForm(master){
   const cancel=Bt({cls:'btn-g'},'キャンセル');cancel.addEventListener('click',function(){S.lxForm=null;ra();});
   acts.appendChild(save);acts.appendChild(cancel);box.appendChild(acts);
   box.appendChild(D({css:'font-size:12px;color:var(--di);margin-top:6px'},'最低でも「使った場面 / 気づき / 次回変えること」のどれか1つを書けば保存できます。'));
+  setTimeout(function(){try{box.scrollIntoView({behavior:'smooth',block:'nearest'});}catch(e){}},0);
   return box;
 }
 
-function lxCard(e,logs){
+function lxCard(e,logs,master){
   const col=lxCatColor(e.category);
   const card=D({css:'border:1px solid var(--bd);border-left:4px solid '+col+';border-radius:8px;padding:12px 14px;margin-bottom:10px;background:var(--bg)'});
   const top=D({css:'display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:4px'});
@@ -1533,12 +1534,13 @@ function lxCard(e,logs){
   const btns=D({css:'display:flex;flex-wrap:wrap;gap:6px'});
   function b(label,fn){const x=Bt({cls:'btn-g',css:'font-size:12px'},label);x.addEventListener('click',fn);btns.appendChild(x);}
   b('Shot Taskに追加',function(){lxAddShotTask(e);ra();});
-  b('実績を記録',function(){S.lxForm={experimentId:e.id,date:tod(),usedScene:'',people:'',actualAction:'',insight:'',nextChange:'',result:'continue'};ra();});
+  b('実績を記録',function(){S.lxForm={experimentId:e.id,date:tod(),usedScene:'',people:'',actualAction:'',insight:'',nextChange:'',result:'continue',anchor:'card'};ra();});
   b(e.thisWeek?'今週やる解除':'今週やる',function(){lxSetField(e.id,'thisWeek',!e.thisWeek);ra();});
   b('完了にする',function(){lxSetField(e.id,'status','completed');ra();});
   b('保留にする',function(){lxSetField(e.id,'status','paused');ra();});
   if(e.status==='completed'||e.status==='paused'||e.status==='skipped')b('実験中に戻す',function(){lxSetField(e.id,'status','active');ra();});
   card.appendChild(btns);
+  if(S.lxForm&&S.lxForm.anchor==='card'&&S.lxForm.experimentId===e.id){ card.appendChild(lxRecordForm(master||lxReadMaster()||[])); }
   return card;
 }
 
@@ -1554,13 +1556,13 @@ function renderLectica(){
     head.appendChild(D({css:'font-size:20px;font-weight:700;margin-bottom:2px'},'✦ Lectica Daily Practice'));
     head.appendChild(D({css:'font-size:13px;color:var(--di)'},'毎日1件を会議・1on1・意思決定・育成で実践し、Reflectに記録する。'));
     f.appendChild(head);
-    if(S.lxForm){ f.appendChild(lxRecordForm(master)); }
+    if(S.lxForm&&S.lxForm.anchor!=='card'){ f.appendChild(lxRecordForm(master)); }
     const counts={active:0,completed:0,paused:0};
     master.forEach(function(e){if(counts[e.status]!==undefined)counts[e.status]++;});
     const sum=D({css:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px'});
     sum.appendChild(D({css:'font-size:13px;color:var(--di)'},'実験中 '+counts.active+' ／ 完了 '+counts.completed+' ／ 保留 '+counts.paused+' ／ 全'+master.length+'件'));
     const recBtn=Bt({cls:'btn-g',css:'font-size:13px;margin-left:auto'},'＋ 実績を記録');
-    recBtn.addEventListener('click',function(){const base=master.find(function(e){return e.status==='active';})||master[0];S.lxForm={experimentId:base.id,date:tod(),usedScene:'',people:'',actualAction:'',insight:'',nextChange:'',result:'continue'};ra();});
+    recBtn.addEventListener('click',function(){const base=master.find(function(e){return e.status==='active';})||master[0];S.lxForm={experimentId:base.id,date:tod(),usedScene:'',people:'',actualAction:'',insight:'',nextChange:'',result:'continue',anchor:'top'};ra();});
     sum.appendChild(recBtn);
     f.appendChild(sum);
     const filters=[['all','全実験'],['this_week','今週やる'],['active','実験中'],['completed','完了'],['paused','保留'],['priority','最初の30日優先']];
@@ -1588,7 +1590,7 @@ function renderLectica(){
     f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:10px'},'実験（'+list.length+'件）'));
     if(!list.length){f.appendChild(D({cls:'empty'},'該当する実験がありません'));return f;}
     const wrap=D({});
-    list.forEach(function(e){wrap.appendChild(lxCard(e,logs));});
+    list.forEach(function(e){wrap.appendChild(lxCard(e,logs,master));});
     f.appendChild(wrap);
   }catch(err){ f.appendChild(D({cls:'empty'},'Lectica表示エラー: '+err.message)); }
   return f;
