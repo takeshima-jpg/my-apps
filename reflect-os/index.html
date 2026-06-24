@@ -1488,7 +1488,7 @@ function lxSaveLog(){
 function lxRecordForm(master){
   const fm=S.lxForm;
   const exp=master.find(function(e){return e.id===fm.experimentId;})||master[0];
-  const box=D({css:'border:1px solid var(--bd);border-radius:8px;padding:14px;margin-bottom:16px;background:#f7faf7'});
+  const box=D({css:'border:1px solid var(--bd);border-radius:8px;padding:14px;margin-bottom:16px;background:#f7faf7;scroll-margin-top:200px'});
   box.appendChild(D({css:'font-size:15px;font-weight:700;margin-bottom:8px'},'実績を記録'));
   const sel=Sel({css:'width:100%;font-size:14px;padding:7px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx)'});
   master.forEach(function(e){sel.appendChild(Opt(e.id,e.id+'：'+e.title,e.id===fm.experimentId));});
@@ -1547,7 +1547,7 @@ function lxParseImport(text){
 }
 
 function lxImportPanel(master){
-  const box=D({css:'border:1px solid var(--bd);border-radius:8px;padding:14px;margin-bottom:16px;background:#f7faf7'});
+  const box=D({css:'border:1px solid var(--bd);border-radius:8px;padding:14px;margin-bottom:16px;background:#f7faf7;scroll-margin-top:200px'});
   box.appendChild(D({css:'font-size:15px;font-weight:700;margin-bottom:4px'},'📋 振り返りまとめを貼り付けて取り込む'));
   box.appendChild(D({css:'font-size:12px;color:var(--di);margin-bottom:8px'},'AIの振り返り出力をそのまま貼り付け。末尾の ---REFLECT-IMPORT--- ブロックから1件のLecticaログを作成します。'));
   const ta=Ta({placeholder:'ここに振り返りまとめ全文を貼り付け...'});
@@ -1632,11 +1632,11 @@ function renderLectica(){
     head.appendChild(D({css:'font-size:20px;font-weight:700;margin-bottom:2px'},'✦ Lectica Daily Practice'));
     head.appendChild(D({css:'font-size:13px;color:var(--di)'},'毎日1件を会議・1on1・意思決定・育成で実践し、Reflectに記録する。'));
     f.appendChild(head);
-    if(S.lxForm&&S.lxForm.anchor!=='card'){ f.appendChild(lxRecordForm(master)); }
-    if(S.lxImport){ f.appendChild(lxImportPanel(master)); }
     const counts={active:0,completed:0,paused:0};
     master.forEach(function(e){if(counts[e.status]!==undefined)counts[e.status]++;});
-    const sum=D({css:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px'});
+    // ── スクロールしても上部に固定されるツールバー ──
+    const bar=D({css:'position:sticky;top:0;z-index:50;background:var(--bg);padding:6px 0 8px;margin-bottom:6px;border-bottom:1px solid var(--bd)'});
+    const sum=D({css:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px'});
     sum.appendChild(D({css:'font-size:13px;color:var(--di)'},'実験中 '+counts.active+' ／ 完了 '+counts.completed+' ／ 保留 '+counts.paused+' ／ 全'+master.length+'件'));
     const btnGrp=D({css:'display:flex;gap:8px;margin-left:auto;flex-wrap:wrap'});
     const impBtn=Bt({cls:'btn-g',css:'font-size:13px'},'📋 貼り付けて取り込む');
@@ -1646,20 +1646,24 @@ function renderLectica(){
     recBtn.addEventListener('click',function(){const base=master.find(function(e){return e.status==='active';})||master[0];S.lxForm={experimentId:base.id,date:tod(),usedScene:'',people:'',actualAction:'',insight:'',nextChange:'',result:'continue',anchor:'top'};ra();});
     btnGrp.appendChild(recBtn);
     sum.appendChild(btnGrp);
-    f.appendChild(sum);
+    bar.appendChild(sum);
     const filters=[['all','全実験'],['this_week','今週やる'],['active','実験中'],['completed','完了'],['paused','保留'],['priority','最初の30日優先']];
-    const fc=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px'});
+    const fc=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px'});
     filters.forEach(function(p){const c=Bt({cls:'chip'+(S.lxFilter===p[0]?' on':'')},p[1]);c.addEventListener('click',function(){S.lxFilter=p[0];ra();});fc.appendChild(c);});
-    f.appendChild(fc);
+    bar.appendChild(fc);
     const cats=['all','Clarity','Perspective coordination','Collaborative capacity','Decision-making process','Contextual thinking','育成','学習感情'];
-    const cc=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px'});
+    const cc=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px'});
     cats.forEach(function(k){const c=Bt({cls:'chip'+(S.lxCat===k?' on':'')},k==='all'?'全カテゴリ':k);c.addEventListener('click',function(){S.lxCat=k;ra();});cc.appendChild(c);});
-    f.appendChild(cc);
+    bar.appendChild(cc);
     const sb=In({type:'text',placeholder:'タイトル・説明で検索...'});
-    sb.value=S.lxQ;sb.style.cssText='width:100%;font-size:14px;padding:8px 10px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);margin-bottom:14px';
+    sb.value=S.lxQ;sb.style.cssText='width:100%;font-size:14px;padding:8px 10px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);margin-bottom:0';
     sb.addEventListener('input',function(){S.lxQ=sb.value;});
     sb.addEventListener('keydown',function(e){if(e.key==='Enter')ra();});
-    f.appendChild(sb);
+    bar.appendChild(sb);
+    f.appendChild(bar);
+    // フォーム（開いているときだけ・固定バーの下に表示）
+    if(S.lxForm&&S.lxForm.anchor!=='card'){ f.appendChild(lxRecordForm(master)); }
+    if(S.lxImport){ f.appendChild(lxImportPanel(master)); }
     let list=master.slice();
     if(S.lxFilter==='active')list=list.filter(function(e){return e.status==='active';});
     else if(S.lxFilter==='completed')list=list.filter(function(e){return e.status==='completed';});
