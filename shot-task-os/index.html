@@ -360,6 +360,8 @@ select option { background: var(--surface); }
 .act-btn.ab-del:hover { border-color: var(--red); color: var(--red); }
 .act-btn.ab-del.armed { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
 .act-btn.ab-del.armed:hover { background: var(--red); border-color: var(--red); color: #fff; }
+.act-btn.ab-lx { border-color: #6366f1; color: #6366f1; font-weight: 600; }
+.act-btn.ab-lx:hover { background: #6366f1; border-color: #6366f1; color: #fff; }
 .act-btn.ab-tmr:hover { border-color: var(--purple); color: var(--purple); }
 .act-btn.ab-week:hover { border-color: var(--purple); color: var(--purple); }
 .act-btn.ab-reject { color: #dc2626; }
@@ -897,6 +899,58 @@ input[type=checkbox] {
 </div>
 
 <!-- REVIEW MODAL -->
+<div class="modal-overlay" id="lxRecModal">
+  <div class="modal" style="width:500px">
+    <div class="modal-title">✦ Lectica実績を記録</div>
+    <div class="form-group">
+      <label class="form-label">実験</label>
+      <input type="text" id="lxRecExp" readonly>
+    </div>
+    <div class="form-group">
+      <label class="form-label">実行日</label>
+      <input type="date" id="lxRecDate">
+    </div>
+    <div class="form-group">
+      <label class="form-label">使った場面</label>
+      <input type="text" id="lxRecScene" placeholder="例：12:30 方針勉強会">
+    </div>
+    <div class="form-group">
+      <label class="form-label">関係者（任意・カンマ区切り）</label>
+      <input type="text" id="lxRecPeople" placeholder="例：田中, 佐藤">
+    </div>
+    <div class="form-group">
+      <label class="form-label">実際にやったこと（任意）</label>
+      <input type="text" id="lxRecAction">
+    </div>
+    <div class="form-group">
+      <label class="form-label">気づき</label>
+      <input type="text" id="lxRecInsight">
+    </div>
+    <div class="form-group">
+      <label class="form-label">次回変えること</label>
+      <input type="text" id="lxRecNext">
+    </div>
+    <div class="form-group">
+      <label class="form-label">結果</label>
+      <select id="lxRecResult">
+        <option value="continue">継続（実験中）</option>
+        <option value="complete">完了</option>
+        <option value="change">変更（実験中）</option>
+        <option value="pause">保留</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
+        <input type="checkbox" id="lxRecDone" checked style="width:auto;margin:0"> 記録してこのタスクを完了にする
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="lxRecordClose()">キャンセル</button>
+      <button class="btn-save" onclick="lxRecordSave()">記録する</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="reviewModal">
   <div class="modal" style="width:520px">
     <div class="modal-title">月次棚卸レビュー</div>
@@ -1364,6 +1418,59 @@ function openEdit(id) {
   document.getElementById('editModal').classList.add('open');
 }
 function closeEdit() { document.getElementById('editModal').classList.remove('open'); editingId = null; }
+
+// ── Lectica 実績記録（Reflect OSと同一スキーマで lectica_experiment_logs_v1 に書き込む）──
+const LX_LOGS_KEY = 'lectica_experiment_logs_v1';
+const LX_MASTER_KEY = 'lectica_experiments_master_v1';
+let lxRecTaskId = null;
+function lxReadLogs(){ try{ const r=localStorage.getItem(LX_LOGS_KEY); const a=r?JSON.parse(r):[]; return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function lxWriteLogs(a){ try{ localStorage.setItem(LX_LOGS_KEY, JSON.stringify(a)); }catch(e){ console.warn('lectica logs save失敗', e); } }
+function lxParseExpId(memo){ const m=(memo||'').match(/実験ID：\s*([A-Za-z0-9]+)/); return m?m[1].toUpperCase():''; }
+function lxMasterTitle(id){ try{ const m=JSON.parse(localStorage.getItem(LX_MASTER_KEY)||'[]'); const e=Array.isArray(m)?m.find(x=>x&&x.id===id):null; return e?e.title:''; }catch(e){ return ''; } }
+function lxSetMasterStatus(id,status){ try{ const m=JSON.parse(localStorage.getItem(LX_MASTER_KEY)||'[]'); if(!Array.isArray(m))return; const e=m.find(x=>x&&x.id===id); if(!e)return; e.status=status; e.updatedAt=new Date().toISOString(); localStorage.setItem(LX_MASTER_KEY, JSON.stringify(m)); }catch(e){ console.warn(e); } }
+function lxIsLecticaTask(t){ return !!(t && t.category==='Lectica' && /実験ID：\s*([A-Za-z0-9]+)/.test(t.memo||'')); }
+function lxRecordOpen(taskId){
+  const t = tasks.find(x => x.id === taskId); if(!t) return;
+  const expId = lxParseExpId(t.memo);
+  lxRecTaskId = taskId;
+  const title = lxMasterTitle(expId);
+  const expEl = document.getElementById('lxRecExp');
+  expEl.value = expId + (title ? '：' + title : '');
+  expEl.dataset.expid = expId;
+  document.getElementById('lxRecDate').value = t.dueDate || new Date().toLocaleDateString('sv');
+  ['lxRecScene','lxRecPeople','lxRecAction','lxRecInsight','lxRecNext'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('lxRecResult').value = 'continue';
+  document.getElementById('lxRecDone').checked = true;
+  document.getElementById('lxRecModal').classList.add('open');
+}
+function lxRecordClose(){ document.getElementById('lxRecModal').classList.remove('open'); lxRecTaskId = null; }
+function lxRecordSave(){
+  const expId = document.getElementById('lxRecExp').dataset.expid || '';
+  const scene = document.getElementById('lxRecScene').value.trim();
+  const action = document.getElementById('lxRecAction').value.trim();
+  const insight = document.getElementById('lxRecInsight').value.trim();
+  const next = document.getElementById('lxRecNext').value.trim();
+  if(!scene && !insight && !next && !action){ alert('使った場面・気づき・次回変えること のいずれかを入力してください'); return; }
+  const date = document.getElementById('lxRecDate').value || new Date().toLocaleDateString('sv');
+  const result = document.getElementById('lxRecResult').value || 'continue';
+  const people = document.getElementById('lxRecPeople').value.split(/[,、，]/).map(s=>s.trim()).filter(Boolean);
+  const doneIt = document.getElementById('lxRecDone').checked;
+  const tid = lxRecTaskId;
+  const now = new Date().toISOString();
+  const logs = lxReadLogs();
+  logs.unshift({
+    id: 'log_' + date.replace(/-/g,'') + '_' + Math.random().toString(36).slice(2,8),
+    experimentId: expId, date: date, source: 'manual',
+    usedScene: scene, people: people, actualAction: action, insight: insight, nextChange: next,
+    result: result, createdAt: now, updatedAt: now
+  });
+  lxWriteLogs(logs);
+  const map = { continue:'active', complete:'completed', change:'active', pause:'paused' };
+  if(map[result] && expId) lxSetMasterStatus(expId, map[result]);
+  lxRecordClose();
+  toast('Lectica実績を記録しました');
+  if(doneIt && tid){ changeStatus(tid, 'done'); } else { render(); }
+}
 function saveEdit() {
   if (!editingId) return;
   const t = tasks.find(x => x.id === editingId); if (!t) return;
@@ -1565,6 +1672,9 @@ function buildCardHTML(t) {
     }
   } else {
     acts += `<button class="act-btn ab-back" onclick="changeStatus('${id}','todo')">戻す</button>`;
+  }
+  if (lxIsLecticaTask(t)) {
+    acts += `<button class="act-btn ab-lx" onclick="lxRecordOpen('${id}')">✦ 実績を記録</button>`;
   }
   acts += `<button class="act-btn ab-edit" onclick="openEdit('${id}')">編集</button>`;
   acts += `<button class="act-btn ab-del${confirmDelId===id?' armed':''}" onclick="deleteTask('${id}','${titleEsc}')">${confirmDelId===id?'本当に削除':'削除'}</button>`;
