@@ -1217,6 +1217,7 @@ const App = () => {
     window.__hitomemoImportMemo = () => { setImportText(''); setView('import'); };
     window.__hitomemoShowPrompt = (type) => { setPromptType(type); setView('prompt'); };
     window.__hitomemoShowList = () => { setCurrent(null); setView('list'); };
+    window.__hitomemoAiUpdate = () => { setAiUpdateText(''); setAiUpdateResult(null); setView('ai-update'); };
 
     // 自動取り込み（GDrive aix-hitomemo.json → 未登録に追加）。同名は重複スキップ。追加件数を返す。
     window.__hitomemoImportPeople = (blocks) => {
