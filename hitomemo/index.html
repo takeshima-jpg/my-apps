@@ -1325,6 +1325,12 @@ const App = () => {
   }, [profiles]);
 
   const updateList = (list) => { setProfiles(list); saveProfiles(list); };
+  const lxNormName = (s) => String((s && s.value) || s || '')
+    .replace(/[（(][^）)]*[）)]/g, '')
+    .replace(/さん$/, '')
+    .replace(/\s+/g, '')
+    .normalize('NFKC')
+    .toLowerCase();
   const toggleSelect = (id) => setSelectedIds(s => s.includes(id) ? s.filter(x=>x!==id) : [...s, id]);
   const moveToSU = () => {
     let su=[]; try{ su=JSON.parse(localStorage.getItem('su-v6-persons')||'[]'); }catch(e){ su=[]; }
@@ -1426,6 +1432,15 @@ const App = () => {
     // 次の経験あり
     const hasNextExp = [...partners, ...candidates].filter(p => p.nextExperience && p.nextExperience.trim());
 
+    // 同名重複の検出（正規化名で2件以上）
+    const dupMap = {};
+    profiles.forEach(p => {
+      const k = lxNormName((p.name && p.name.value) || p.name || '');
+      if (!k) return;
+      (dupMap[k] = dupMap[k] || []).push(p);
+    });
+    const dupGroups = Object.values(dupMap).filter(g => g.length > 1);
+
     // パートナー形成ファネル（経営パートナー候補tier内：候補（未着手）→育成中→確定）
     const isConfirmed = p => p.stage === '経営パートナー' || /維持/.test(p.engagementType || '');
     const confirmed = partners.filter(isConfirmed);
@@ -1514,6 +1529,26 @@ const App = () => {
           <input className="search-input" placeholder="氏名・所属・価値観で検索..."
             value={query} onChange={e => setQuery(e.target.value)} />
         </div>
+
+        {/* 同名重複の検出 */}
+        {dupGroups.length > 0 && (
+          <div className="alert-card" style={{background:'#fef2f2',borderColor:'#fecaca'}}>
+            <div className="alert-label" style={{color:'#b91c1c'}}>⚠ 同名の重複が {dupGroups.length}組</div>
+            <div style={{fontSize:11,color:'#b91c1c',marginBottom:6}}>同じ人が二重登録されている可能性。残す方を開いて、不要な方は削除してください。</div>
+            {dupGroups.map((g, gi) => (
+              <div key={gi} style={{padding:'6px 0',borderBottom:'1px solid #fecaca'}}>
+                <div style={{fontSize:13,fontWeight:700,color:'#7f1d1d',marginBottom:3}}>{(g[0].name&&g[0].name.value)||g[0].name} — {g.length}件</div>
+                {g.map(p => (
+                  <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'3px 0',cursor:'pointer'}}
+                    onClick={() => { setCurrent(p); setView('detail'); }}>
+                    <span style={{fontSize:12,color:'#374151'}}>{p.tier||'記録のみ'}・{(p.changeLog||[]).length}ログ・接触{daysDiff(p.lastContactDate||p.updatedAt)}日前</span>
+                    <span style={{fontSize:11,color:'#9ca3af'}}>開く ›</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* 停滞アラート */}
         {staleProfiles.length > 0 && (
@@ -1738,10 +1773,19 @@ const App = () => {
         const nameLine = lines.find(l => l.startsWith('###'));
         if (!nameLine) continue;
         const nameStr = nameLine.replace(/^###\s*/, '').replace(/さん$/, '').trim();
-        const matched = profiles.find(p => {
-          const pName = ((p.name && p.name.value) || p.name || '');
-          return pName.includes(nameStr) || nameStr.includes(pName.replace(/さん$/, ''));
-        });
+        const key = lxNormName(nameStr);
+        const cands = key ? profiles.filter(p => {
+          const pn = lxNormName((p.name && p.name.value) || p.name || '');
+          return pn && (pn.includes(key) || key.includes(pn));
+        }) : [];
+        let matched = null, ambiguous = false;
+        if (cands.length === 1) {
+          matched = cands[0];
+        } else if (cands.length > 1) {
+          const exact = cands.filter(p => lxNormName((p.name && p.name.value) || p.name || '') === key);
+          if (exact.length === 1) matched = exact[0];
+          else ambiguous = true;
+        }
         const changes = {};
         const newChangeLogs = [];
         let inChangeLog = false;
@@ -1790,7 +1834,14 @@ const App = () => {
             }
           }
         }
-        results.push({ nameStr, matched: matched || null, changes, newChangeLogs });
+        results.push({
+          nameStr,
+          matched: matched || null,
+          ambiguous,
+          candidates: cands.map(c => ({ id: c.id, name: (c.name && c.name.value) || c.name || '名前未設定' })),
+          changes,
+          newChangeLogs,
+        });
       }
       setAiUpdateResult(results);
     };
@@ -1824,6 +1875,11 @@ const App = () => {
       setView('list');
     };
 
+    const chooseCandidate = (i, id) => {
+      const prof = profiles.find(p => p.id === id) || null;
+      setAiUpdateResult(prev => (prev || []).map((r, idx) => idx === i ? { ...r, matched: prof, ambiguous: false } : r));
+    };
+
     return (
       <div className="page">
         <div className="page-header">
@@ -1850,15 +1906,29 @@ const App = () => {
           ) : (
             <>
               <div style={{marginBottom:12}}>
-                {aiUpdateResult.map((r, i) => (
-                  <div key={i} style={{background: r.matched ? '#f0fdf4' : '#fff7ed', border:'1px solid ' + (r.matched ? '#bbf7d0' : '#fed7aa'), borderRadius:10, padding:'12px 14px', marginBottom:8}}>
-                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                {aiUpdateResult.map((r, i) => {
+                  const state = r.matched ? 'matched' : (r.ambiguous ? 'ambiguous' : 'unmatched');
+                  const bg = state==='matched' ? '#f0fdf4' : state==='ambiguous' ? '#fefce8' : '#fff7ed';
+                  const bd = state==='matched' ? '#bbf7d0' : state==='ambiguous' ? '#fde68a' : '#fed7aa';
+                  const tname = r.matched ? ((r.matched.name && r.matched.name.value) || r.matched.name || '') : '';
+                  return (
+                  <div key={i} style={{background: bg, border:'1px solid ' + bd, borderRadius:10, padding:'12px 14px', marginBottom:8}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}}>
                       <span style={{fontWeight:700,fontSize:15}}>{r.nameStr}</span>
-                      {r.matched
-                        ? <span style={{fontSize:11,background:'#dcfce7',color:'#166534',padding:'1px 8px',borderRadius:8}}>✅ マッチ</span>
-                        : <span style={{fontSize:11,background:'#fef3c7',color:'#92400e',padding:'1px 8px',borderRadius:8}}>⚠ 未マッチ</span>
-                      }
+                      {state==='matched' && <span style={{fontSize:11,background:'#dcfce7',color:'#166534',padding:'1px 8px',borderRadius:8}}>✅ {tname} に反映</span>}
+                      {state==='ambiguous' && <span style={{fontSize:11,background:'#fef9c3',color:'#854d0e',padding:'1px 8px',borderRadius:8}}>⚠ 複数一致（要選択）</span>}
+                      {state==='unmatched' && <span style={{fontSize:11,background:'#fef3c7',color:'#92400e',padding:'1px 8px',borderRadius:8}}>⚠ 未マッチ</span>}
                     </div>
+                    {state==='ambiguous' && (
+                      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
+                        {r.candidates.map(c => (
+                          <button key={c.id} onClick={() => chooseCandidate(i, c.id)}
+                            style={{fontSize:12,padding:'3px 10px',background:'#fff',border:'1px solid #d4d4d8',borderRadius:14,cursor:'pointer'}}>
+                            {c.name} を選ぶ
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     {Object.entries(r.changes).map(([k, v]) => (
                       <div key={k} style={{fontSize:12,color:'#374151',marginBottom:2}}>
                         <span style={{color:'#6b7280',marginRight:8}}>{k}:</span>{v}
@@ -1870,7 +1940,8 @@ const App = () => {
                       </div>
                     ))}
                   </div>
-                ))}
+                  );
+                })}
               </div>
               <div style={{display:'flex',gap:8}}>
                 <button style={{flex:1,padding:'10px',background:'#f1f5f9',color:'#374151',border:'1px solid #e2e8f0',borderRadius:8,fontSize:14,cursor:'pointer'}} onClick={() => setAiUpdateResult(null)}>
