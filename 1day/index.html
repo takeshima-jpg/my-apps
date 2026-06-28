@@ -1088,6 +1088,13 @@ function briefJsonToMarkdown(d) {
     const dc = d.delete_candidate;
     md += `## 削除候補\n・${dc.target}${dc.type ? `（${dc.type}）` : ''}${dc.reason ? '：' + dc.reason : ''}${dc.effect ? '／効果：' + dc.effect : ''}\n\n`;
   }
+  // ── 🔭 今日の視点補正（日次・視野補正）──
+  if (d.perspective_correction && (d.perspective_correction.critical_question || d.perspective_correction.another_angle)) {
+    const pc = d.perspective_correction;
+    md += `# 🔭 今日の視点補正\n\n`;
+    if (pc.critical_question) md += `## クリティカルな問い\n${pc.critical_question}\n\n`;
+    if (pc.another_angle) md += `## 別角度の一言\n${pc.another_angle}\n\n`;
+  }
   // ===== 週次／月次レビュー専用セクション =====
   const _grp = (t, groups) => {
     const body = groups.filter(g => Array.isArray(g[1]) && g[1].length)
