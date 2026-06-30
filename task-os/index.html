@@ -145,6 +145,10 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
 .trow.today-due{border-left:3px solid #C97A00;padding-left:11px;}
 .src-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .src-r{background:var(--r);} .src-s{background:var(--s);} .src-p{background:var(--p);}
+.src-shot{background:var(--accent);} .src-routine{background:var(--r);} .src-project{background:#6C5CE7;}
+.src-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;
+  color:#5B53A6;background:rgba(108,92,231,.10);border:1px solid rgba(108,92,231,.28);
+  border-radius:10px;padding:1px 8px;white-space:nowrap;flex-shrink:0;cursor:help;}
 .trow-title{flex:1;font-size:15px;font-weight:500;line-height:1.4;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;}
 .trow-date{font-size:13px;color:var(--text3);white-space:nowrap;flex-shrink:0;}
@@ -1608,6 +1612,7 @@ function trowHtml(t){
   return `<div class="trow${cls}">
     <div class="src-dot src-${t.src}"></div>
     <div class="trow-title" title="${esc(t.title)}">${esc(t.title)}</div>
+    ${t.src==='project'?`<span class="src-badge" title="Project由来のタスクです。完了はスプレッドシートの「状態」列を完了にしてから再取り込みしてください。アプリ側で✓しても、シート再取り込みで戻ります。">📊 Project</span>`:''}
     ${links}
     ${t.due?`<div class="trow-date ${ov?'ov':td?'td':''}">${fmtDate(t.due)}</div>`:''}
     <div class="trow-actions">${acts}</div>
@@ -1745,7 +1750,7 @@ const J   = s => JSON.stringify(String(s||''));
 function osTag(src){
   if(src==='routine') return '<span class="os-tag tag-r">R</span>';
   if(src==='shot')    return '<span class="os-tag tag-s">S</span>';
-  if(src==='project') return '<span class="os-tag tag-p">P</span>';
+  if(src==='project') return '<span class="src-badge" title="Project由来のタスクです。完了はスプレッドシートの「状態」列を完了にしてから再取り込みしてください。アプリ側で✓しても、シート再取り込みで戻ります。">📊 Project</span>';
   return '';
 }
 function toast(msg){
