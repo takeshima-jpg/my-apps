@@ -360,6 +360,7 @@ select option { background: var(--surface); }
 .act-btn.ab-del:hover { border-color: var(--red); color: var(--red); }
 .act-btn.ab-del.armed { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
 .act-btn.ab-del.armed:hover { background: var(--red); border-color: var(--red); color: #fff; }
+.act-btn.ab-skip:hover { border-color: var(--gray); color: var(--gray); }
 .act-btn.ab-tmr:hover { border-color: var(--purple); color: var(--purple); }
 .act-btn.ab-week:hover { border-color: var(--purple); color: var(--purple); }
 .act-btn.ab-reject { color: #dc2626; }
@@ -1348,6 +1349,30 @@ function deleteTask(id, title) {
   save(); render();
 }
 
+// ── Lectica: スキップ（result=保留 のログを1行だけ残してタスクを消す）──
+function lxSkip(id) {
+  const t = tasks.find(x => x.id === id); if (!t) return;
+  const m = (t.memo||'').match(/実験ID：\s*([A-Za-z0-9]+)/);
+  const expId = m ? m[1].toUpperCase() : '';
+  const date = t.dueDate || new Date().toLocaleDateString('sv');
+  const now = new Date().toISOString();
+  try {
+    const KEY = 'lectica_experiment_logs_v1';
+    let logs = [];
+    try { const r = localStorage.getItem(KEY); const a = r ? JSON.parse(r) : []; logs = Array.isArray(a) ? a : []; } catch (e) { logs = []; }
+    logs.unshift({
+      id: 'log_' + date.replace(/-/g,'') + '_' + Math.random().toString(36).slice(2,8),
+      experimentId: expId, date: date, source: 'skip',
+      usedScene: '', people: [], actualAction: '', insight: 'スキップ（実施できず）', nextChange: '',
+      result: 'pause', createdAt: now, updatedAt: now
+    });
+    localStorage.setItem(KEY, JSON.stringify(logs));
+  } catch (e) { console.warn('lectica skip log失敗', e); }
+  tasks = tasks.filter(x => x.id !== id);
+  save(); render();
+  toast('Lecticaをスキップ（保留ログを記録）');
+}
+
 // ── EDIT ──
 function openEdit(id) {
   editingId = id;
@@ -1562,6 +1587,9 @@ function buildCardHTML(t) {
     acts += `<button class="act-btn ab-pend" onclick="changeStatus('${id}','pending')">保留</button>`;
     if ((t.memo||'').includes('AI参謀 Morning Brief自動生成')) {
       acts += `<button class="act-btn ab-reject" onclick="rejectTask('${id}')">不採用</button>`;
+    }
+    if (t.category==='Lectica' && /実験ID：\s*([A-Za-z0-9]+)/.test(t.memo||'')) {
+      acts += `<button class="act-btn ab-skip" onclick="lxSkip('${id}')">スキップ</button>`;
     }
   } else {
     acts += `<button class="act-btn ab-back" onclick="changeStatus('${id}','todo')">戻す</button>`;
