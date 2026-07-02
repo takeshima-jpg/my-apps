@@ -1136,9 +1136,10 @@ function getAixDraft(tab) {
   if (!raw) return null;
   try {
     const d = JSON.parse(raw);
-    if (typeof d === 'object' && d !== null) return briefJsonToMarkdown(d);
+    if (d && typeof d === 'object') return briefJsonToMarkdown(d);
+    if (typeof d === 'string') return d; // JSON文字列として保存されたmarkdownにも対応
   } catch(e) {}
-  return raw;
+  return raw; // 生のmarkdown文字列はそのまま表示
 }
 
 // ── 未読バッジ：localStorageの中身が「前回開いたとき」と変われば未読 ──
