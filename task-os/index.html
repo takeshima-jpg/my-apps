@@ -691,7 +691,8 @@ function collectAllOSData() {
     savedAt:        new Date().toISOString(),
     shotTaskOS:     JSON.parse(localStorage.getItem('shot-task-os-v1')       || 'null'),
     routineOS:      { tasks:    JSON.parse(localStorage.getItem('routineOS_tasks')    || 'null'),
-                      logs:     JSON.parse(localStorage.getItem('routineOS_logs')     || 'null') },
+                      logs:     JSON.parse(localStorage.getItem('routineOS_logs')     || 'null'),
+                      holidays: JSON.parse(localStorage.getItem('routineOS_holidays') || 'null') },
     projectOS:      JSON.parse(localStorage.getItem('pos_v4')                || 'null'),
     list100:        JSON.parse(localStorage.getItem('yaritai_items_v4')      || 'null'),
     onedayLogs:     JSON.parse(localStorage.getItem('oneday_logs_v1')        || 'null'),
@@ -732,6 +733,7 @@ function restoreAllOSData(data) {
   if (data.shotTaskOS)     localStorage.setItem('shot-task-os-v1',        JSON.stringify(data.shotTaskOS));
   if (data.routineOS?.tasks)  localStorage.setItem('routineOS_tasks',     JSON.stringify(data.routineOS.tasks));
   if (data.routineOS?.logs)   localStorage.setItem('routineOS_logs',      JSON.stringify(data.routineOS.logs));
+  if (data.routineOS?.holidays) localStorage.setItem('routineOS_holidays', JSON.stringify(data.routineOS.holidays));
   if (data.projectOS)      localStorage.setItem('pos_v4',                 JSON.stringify(data.projectOS));
   if (data.list100)        localStorage.setItem('yaritai_items_v4',       JSON.stringify(data.list100));
   if (data.onedayLogs)     localStorage.setItem('oneday_logs_v1',         JSON.stringify(data.onedayLogs));
