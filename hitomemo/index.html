@@ -1219,24 +1219,30 @@ const App = () => {
     window.__hitomemoShowList = () => { setCurrent(null); setView('list'); };
     window.__hitomemoAiUpdate = () => { setAiUpdateText(''); setAiUpdateResult(null); setView('ai-update'); };
 
-    // 自動取り込み（GDrive aix-hitomemo.json → 未登録に追加）。同名は重複スキップ。追加件数を返す。
+    // 自動取り込み（GDrive aix-hitomemo.json → 未登録に追加）。正規化名＋取り込み台帳で重複スキップ。追加件数を返す。
     window.__hitomemoImportPeople = (blocks) => {
       if (!Array.isArray(blocks) || blocks.length === 0) return 0;
-      const norm = z => String(z||'').replace(/さん$/,'').replace(/\s+/g,'').trim();
       const cur = profilesRef.current || [];
-      const seen = new Set(cur.map(x => norm((x.name&&x.name.value)||x.name||'')).filter(Boolean));
+      const seen = new Set(cur.map(x => lxNormName((x.name&&x.name.value)||x.name||'')).filter(Boolean));
+      let ledger = [];
+      try { ledger = JSON.parse(localStorage.getItem('hitomemo_aix_imported') || '[]'); } catch(e){}
+      const ledgerSet = new Set(Array.isArray(ledger) ? ledger : []);
       const added = [];
       blocks.forEach(t => {
         if (typeof t !== 'string' || !t.trim()) return;
         try {
           const p = importFromMemo(t);
-          const nm = norm((p.name&&p.name.value)||'');
-          if (!nm || seen.has(nm)) return;
+          const nm = lxNormName((p.name&&p.name.value)||'');
+          if (!nm) return;
+          const dup = seen.has(nm) || ledgerSet.has(nm);
+          ledgerSet.add(nm); // 取り込み済み/既存の名前は台帳に記録（削除後の復活防止）
+          if (dup) return;
           seen.add(nm);
           added.push(p);
         } catch(e){}
       });
       if (added.length) updateList([...(profilesRef.current||[]), ...added]);
+      try { localStorage.setItem('hitomemo_aix_imported', JSON.stringify([...ledgerSet].slice(-500))); } catch(e){}
       return added.length;
     };
 
