@@ -948,8 +948,19 @@ function migrateFields(p) {
   return p;
 }
 
+const genUid = () => Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 const loadProfiles = () => {
-  try { return (JSON.parse(localStorage.getItem(STORAGE_KEY)) || []).map(migrateFields); } catch { return []; }
+  try {
+    const list = (JSON.parse(localStorage.getItem(STORAGE_KEY)) || []).map(migrateFields);
+    // ID重複の自動修復（過去の Date.now() 衝突対策：同一IDだと1件削除で全員消える）
+    const seen = new Set(); let fixed = false;
+    list.forEach(p => {
+      if (!p.id || seen.has(p.id)) { p.id = genUid(); fixed = true; }
+      seen.add(p.id);
+    });
+    if (fixed) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch(e){} }
+    return list;
+  } catch { return []; }
 };
 const saveProfiles = (list) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
@@ -1023,7 +1034,7 @@ const importFromMemo = (text) => {
     return '未設定';
   };
   return {
-    id: Date.now().toString(),
+    id: genUid(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     relationFlag: 'normal',
@@ -1696,7 +1707,7 @@ const App = () => {
     const isLast = qIdx === QUESTIONS.length - 1;
     const finish = () => {
       const p = {
-        id: Date.now().toString(),
+        id: genUid(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         relationFlag: 'normal',
@@ -2026,7 +2037,7 @@ const App = () => {
     };
     const addMeeting = () => {
       if (!meetDate || !meetContent) { alert('日付と内容を入力してください'); return; }
-      const m = { id: Date.now().toString(), date: meetDate, content: meetContent, createdAt: new Date().toISOString() };
+      const m = { id: genUid(), date: meetDate, content: meetContent, createdAt: new Date().toISOString() };
       const updated = { ...current, meetings: [...(current.meetings || []), m], updatedAt: new Date().toISOString() };
       setCurrent(updated);
       updateList(profiles.map(p => p.id === updated.id ? updated : p));
