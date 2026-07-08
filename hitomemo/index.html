@@ -2154,7 +2154,7 @@ const App = () => {
         </div>
 
         {/* 詳細（折りたたみ） */}
-        <details className="detail-section">
+        <details className="detail-section" open={!!(fv('history') || fv('behavior') || fv('impression') || fv('other') || fv('birthday'))}>
           <summary className="detail-section-title" style={{ cursor: 'pointer', userSelect: 'none' }}>詳細（誕生日・経歴・個性・印象・メモ）</summary>
           <div style={{ marginTop: 12 }}>
             {Field({label:'誕生日', field:'birthday'})}
