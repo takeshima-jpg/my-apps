@@ -1804,13 +1804,22 @@ const App = () => {
           else ambiguous = true;
         }
         const changes = {};
+        const profileChanges = {}; // プロフィール欄（複数行対応・上書き）
+        const PROFILE_LABELS = {
+          '所属・役職・事業':'position', '価値観・大切にしていること':'values', '核となる一言':'coreMessage',
+          '誕生日':'birthday', '経歴・背景':'history', '個性・傾向':'behavior', '印象・洞察':'impression', 'メモ':'other',
+        };
         const newChangeLogs = [];
         let inChangeLog = false;
+        let curField = null; // 収集中のプロフィール欄
         for (const line of lines) {
+          if (line.startsWith('###')) { curField = null; continue; }
           if (line.startsWith('tier:')) {
+            curField = null; inChangeLog = false;
             const v = line.slice(5).trim();
             if (v) changes.tier = v;
           } else if (line.startsWith('stage:')) {
+            curField = null; inChangeLog = false;
             const v = line.slice(6).trim();
             const arrowIdx = v.indexOf(ARROW);
             if (arrowIdx >= 0) {
@@ -1822,13 +1831,16 @@ const App = () => {
               changes.stage = v;
             }
           } else if (line.startsWith('lastContactDate:')) {
+            curField = null; inChangeLog = false;
             const v = line.slice(16).trim();
             if (v) changes.lastContactDate = v;
-          } else if (line.startsWith('nextExperience:')) {
-            const v = line.slice(15).trim();
+          } else if (line.startsWith('nextExperience:') || line.startsWith('次に渡す経験：') || line.startsWith('次に渡す経験:')) {
+            curField = null; inChangeLog = false;
+            const v = line.replace(/^(nextExperience:|次に渡す経験[：:])/, '').trim();
             changes.nextExperience = v;
-          } else if (line.startsWith('engagementType:')) {
-            const v = line.slice(15).trim();
+          } else if (line.startsWith('engagementType:') || line.startsWith('関わり方タイプ：') || line.startsWith('関わり方タイプ:')) {
+            curField = null; inChangeLog = false;
+            const v = line.replace(/^(engagementType:|関わり方タイプ[：:])/, '').trim();
             if (v && v !== '変化なし' && v !== 'なし') {
               changes.engagementType = v.includes('育成') ? '育成（若手）'
                 : v.includes('共同成長') ? '共同成長（同世代）'
@@ -1836,7 +1848,10 @@ const App = () => {
                 : v.includes('維持') ? '維持（確定パートナー・専門家）'
                 : v;
             }
+          } else if (/^氏名（ふりがな）[：:]/.test(line)) {
+            curField = null; inChangeLog = false; // 名前は###で照合するため無視
           } else if (line.startsWith('changeLog:')) {
+            curField = null;
             inChangeLog = true;
           } else if (inChangeLog && line.startsWith('- ')) {
             const logLine = line.slice(2);
@@ -1849,14 +1864,33 @@ const App = () => {
             } else {
               newChangeLogs.push({ type: '気づき', text: logLine.trim() });
             }
+          } else {
+            // プロフィール欄のラベル開始か判定
+            let started = false;
+            for (const [label, fkey] of Object.entries(PROFILE_LABELS)) {
+              if (line.startsWith(label + '：') || line.startsWith(label + ':')) {
+                curField = fkey; inChangeLog = false;
+                profileChanges[fkey] = line.slice(label.length + 1).trim();
+                started = true; break;
+              }
+            }
+            if (!started && curField) {
+              // 収集中の欄への継続行（複数行対応）
+              profileChanges[curField] = (profileChanges[curField] ? profileChanges[curField] + '\n' : '') + line;
+            }
           }
         }
+        Object.keys(profileChanges).forEach(k => {
+          profileChanges[k] = String(profileChanges[k] || '').trim();
+          if (!profileChanges[k]) delete profileChanges[k];
+        });
         results.push({
           nameStr,
           matched: matched || null,
           ambiguous,
           candidates: cands.map(c => ({ id: c.id, name: (c.name && c.name.value) || c.name || '名前未設定' })),
           changes,
+          profileChanges,
           newChangeLogs,
         });
       }
@@ -1873,6 +1907,11 @@ const App = () => {
         const idx = updated.findIndex(p => p.id === r.matched.id);
         if (idx < 0) continue;
         const base = { ...updated[idx], ...r.changes, updatedAt: new Date().toISOString() };
+        if (r.profileChanges) {
+          for (const [k, v] of Object.entries(r.profileChanges)) {
+            if (v && String(v).trim()) base[k] = { value: String(v).trim() }; // 上書き方針
+          }
+        }
         if (r.newChangeLogs.length > 0) {
           base.changeLog = [
             ...(base.changeLog || []),
@@ -1951,6 +1990,14 @@ const App = () => {
                         <span style={{color:'#6b7280',marginRight:8}}>{k}:</span>{v}
                       </div>
                     ))}
+                    {Object.entries(r.profileChanges || {}).map(([k, v]) => {
+                      const JP = {position:'所属・役職・事業', values:'価値観', coreMessage:'核となる一言', birthday:'誕生日', history:'経歴・背景', behavior:'個性・傾向', impression:'印象・洞察', other:'メモ'};
+                      return (
+                        <div key={k} style={{fontSize:12,color:'#374151',marginBottom:4,whiteSpace:'pre-wrap'}}>
+                          <span style={{color:'#b45309',marginRight:8}}>✏ {JP[k]||k}（上書き）:</span>{v.length > 160 ? v.slice(0,160) + '…' : v}
+                        </div>
+                      );
+                    })}
                     {r.newChangeLogs.map((l, j) => (
                       <div key={j} style={{fontSize:12,color:'#8b5cf6',marginBottom:2}}>
                         [{l.type}] {l.text}
