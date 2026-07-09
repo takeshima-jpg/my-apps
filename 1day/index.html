@@ -1217,6 +1217,32 @@ const BRIEF_TABS = {
   monthly: { label: '月次', title: '📋 Executive Review（月次）' },
 };
 
+// ── Brief鮮度対策：brief-viewerのGDriveトークン（同一オリジン共有）で最新を直接取得 ──
+const BRIEF_FILE_BASE = { daily:'aix_draft_latest', weekly:'aix_review_weekly', monthly:'aix_review_monthly' };
+const BRIEF_LS_KEY    = { daily:'aix_draft_latest', weekly:'aix_review_weekly', monthly:'aix_review_monthly' };
+async function refreshBriefFromDrive(tab) {
+  tab = tab || 'daily';
+  const token = localStorage.getItem('brief_viewer_token');
+  if (!token) return false; // brief-viewer未接続なら静かにスキップ
+  const COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';
+  const BASE = BRIEF_FILE_BASE[tab];
+  const hdr = { headers: { 'Authorization': 'Bearer ' + token } };
+  try {
+    const q = `name+contains+%22${BASE}%22+and+trashed%3Dfalse`;
+    const lr = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=10${COMMON}`, hdr);
+    if (!lr.ok) return false; // 期限切れ等は静かにフォールバック
+    const ld = await lr.json();
+    const file = ld.files && ld.files[0];
+    if (!file) return false;
+    const cr = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media${COMMON}`, hdr);
+    if (!cr.ok) return false;
+    const raw = await cr.text();
+    const prev = localStorage.getItem(BRIEF_LS_KEY[tab]);
+    if (raw && raw !== prev) { localStorage.setItem(BRIEF_LS_KEY[tab], raw); return true; }
+    return false;
+  } catch (e) { return false; }
+}
+
 function openBriefPage() {
   // 毎朝が無くても週次/月次がある場合に開けるよう、いずれか1つでもあれば開く
   const hasAny = ['daily','weekly','monthly'].some(t => getAixDraft(t));
@@ -1241,6 +1267,10 @@ function openBriefPage() {
   `;
   document.body.appendChild(page);
   renderBriefBody();
+  // 開いた後にDriveの最新を取得できたら差し替え（brief-viewer接続時のみ）
+  refreshBriefFromDrive(currentBriefTab).then(updated => {
+    if (updated && document.getElementById('briefPage')) { renderBriefBody(); toast('最新のBriefに更新しました'); }
+  });
 }
 
 function renderBriefBody() {
@@ -1264,6 +1294,9 @@ function switchBriefTab(tab) {
   currentBriefTab = tab;
   document.querySelectorAll('.brief-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   renderBriefBody();
+  refreshBriefFromDrive(tab).then(updated => {
+    if (updated && currentBriefTab === tab && document.getElementById('briefPage')) { renderBriefBody(); toast('最新のBriefに更新しました'); }
+  });
 }
 
 
