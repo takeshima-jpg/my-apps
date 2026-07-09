@@ -1465,7 +1465,8 @@ function homeLectica(){
   todayShot.forEach(t=>{if(count>=3)return;const m=(t.memo||'').match(/実験ID：(L\d+)/);if(m)seen[m[1]]=1;const done=t.status==='done';rows+='<div class="lx-home-row'+(done?' done':'')+'"><div><span class="lx-home-tag">'+(done?'実施済':'今日のShot')+'</span>'+esc(String(t.title||'').replace(/^今日のLectica実験：/,''))+'</div></div>';count++;});
   active.forEach(e=>{if(count>=3)return;if(seen[e.id])return;seen[e.id]=1;rows+='<div class="lx-home-row"><div><span class="lx-home-tag">実験中</span>'+esc(e.id+'：'+e.title)+'</div></div>';count++;});
   let pendingHtml='';
-  if(pending&&(pending.selectedExperimentId||pending.shotTask)){
+  const pendingDate=pending&&(pending.date||(pending.shotTask&&pending.shotTask.dueDate));
+  if(pending&&(pending.selectedExperimentId||pending.shotTask)&&pendingDate===today){
     const ptitle=pending.selectedExperimentTitle||(pending.shotTask&&pending.shotTask.title)||'';
     const pid=pending.selectedExperimentId||'';
     const already=todayShot.some(t=>pid&&(t.memo||'').indexOf('実験ID：'+pid)>=0);
@@ -1479,6 +1480,8 @@ function homeLectica(){
 function lecticaAddPending(){
   try{
     const p=JSON.parse(localStorage.getItem('aix_lectica_pending')||'null'); if(!p){alert('\u63d0\u6848\u304c\u3042\u308a\u307e\u305b\u3093');return;}
+    const pDate=p.date||(p.shotTask&&p.shotTask.dueDate);
+    if(pDate!==TODAY){alert('本日の提案がありません（表示は過去の提案です）');return;}
     const st=p.shotTask||{};
     const today=(st.dueDate||p.date||TODAY);
     const expId=p.selectedExperimentId||'';
