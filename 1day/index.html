@@ -650,72 +650,6 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
-<!-- MODAL: 週次レビュー -->
-<div class="modal-overlay" id="reviewModal">
-  <div class="modal modal-wide">
-    <div class="modal-header">
-      <div class="modal-date">週次レビュー — <span id="reviewWeekLabel"></span></div>
-      <button class="modal-close" id="closeReview">✕</button>
-    </div>
-    <div class="review-section">
-      <div class="review-section-title">// 今週のパターン</div>
-      <div class="review-insights">
-        <div class="insight-card" id="insightUnease"></div>
-        <div class="insight-card" id="insightEnergy"></div>
-        <div class="insight-card" id="insightWords"></div>
-        <div class="insight-card" id="insightBlog"></div>
-      </div>
-    </div>
-    <div class="review-section">
-      <div class="review-section-title">// 観測ログ</div>
-      <div class="review-fields">
-        <div class="field">
-          <div class="field-label">今週の違和感</div>
-          <div class="field-hint">未整理でOK。言語化できなくてもOK。</div>
-          <textarea id="rv_unease" placeholder="なんか引っかかったこと、ズレたこと" rows="1"></textarea>
-        </div>
-        <div class="field">
-          <div class="field-label">今週のエネルギー源</div>
-          <div class="field-hint">人、会話、挑戦、未来、家族、学びなど</div>
-          <textarea id="rv_energy" placeholder="誰・何・どこで前に進めた？" rows="1"></textarea>
-        </div>
-        <div class="field">
-          <div class="field-label">繰り返しているパターン</div>
-          <div class="field-hint">良い悪いではなく、自分の癖を観測する。</div>
-          <textarea id="rv_pattern" placeholder="また説明しすぎた　また期待した　また頭で処理した　また抱えた　また遠慮した" rows="1"></textarea>
-        </div>
-        <div class="field">
-          <div class="field-label">来週の小さな実験</div>
-          <div class="field-hint">改善ではなく実験。</div>
-          <textarea id="rv_experiment" placeholder="小さく試すことを1つだけ" rows="1"></textarea>
-        </div>
-        <div class="field">
-          <div class="field-label">VISIONとズレた瞬間</div>
-          <div class="field-hint">責める場所ではなく、観測する場所。</div>
-          <textarea id="rv_vision_off" placeholder="忖度した　感情で判断した　ワクワクしないのに進めた　確信がないまま動いた　遠慮した" rows="1"></textarea>
-        </div>
-        <div class="field">
-          <div class="field-label">確信を感じた瞬間</div>
-          <div class="field-hint">頭だけではなく、心もYESだった瞬間。</div>
-          <textarea id="rv_vision_on" placeholder="未来を感じた　仲間感があった　腹落ちした　挑戦できた　自然に動けた" rows="1"></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="review-section">
-      <div class="review-section-title">// 今週の確信度</div>
-      <div class="conviction-row" id="convictionRow">
-        <button class="conv-btn" data-value="smooth">○ スッと進めた</button>
-        <button class="conv-btn" data-value="off">○ 少しズレた</button>
-        <button class="conv-btn" data-value="forced">○ 無理していた</button>
-        <button class="conv-btn" data-value="lost">○ わからなくなった</button>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-save" id="saveReview">レビューを保存</button>
-    </div>
-  </div>
-</div>
-
 <!-- MAIN -->
 <!-- MOBILE HEADER -->
 <div class="mob-header" id="mobHeader">
@@ -756,7 +690,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
   <div class="drawer-section">
     <div class="drawer-lbl">アクション</div>
-    <button class="drawer-btn" onclick="document.getElementById('openReview').click();closeMobDrawer()">◈ 週次レビュー</button>
+    
   </div>
   <div class="drawer-section">
     <div class="drawer-lbl">Google Drive</div>
@@ -785,7 +719,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="sb-section">
     <div class="sb-section-lbl">アクション</div>
     <button class="sb-action primary" onclick="document.getElementById('openEntry').click()">＋ 記録する</button>
-    <button class="sb-action" onclick="document.getElementById('openReview').click()">◈ 週次レビュー</button>
+    
     <button class="sb-action sb-brief-btn" id="sbBriefBtn" onclick="openBriefPage()">📋 Briefを見る</button>
   </div>
   <div class="sb-section">
@@ -829,7 +763,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="week-display" id="weekDisplay"></div>
       <div class="topbar-right">
         <input type="text" id="searchInput" placeholder="検索…" class="search-input">
-        <button class="btn-review" id="openReview" style="display:none">週次レビュー</button>
+        
         <button class="btn-primary" id="openEntry" style="display:none">記録する</button>
       </div>
     </div>
@@ -1346,13 +1280,13 @@ function renderCenterPin() {
     return `<div class="cp-item"><span class="cp-mk">🎯</span><span class="cp-tx">${esc(first)}${warn}</span><span class="cp-pj">${esc(p.name || '')}</span></div>`;
   }).join('');
 
-  area.innerHTML = `<div class="cp-card">
-      <div class="cp-top">
-        <span class="cp-eye">PROJECT ｜ 今週のセンターピン</span>
-        <button class="cp-open" onclick="window.open('../project-os/index.html','_blank')">Projectで開く →</button>
-      </div>
+  area.innerHTML = `<details class="cp-card">
+      <summary class="cp-top" style="cursor:pointer">
+        <span class="cp-eye">▸ PROJECT ｜ 今週のセンターピン（${pins.length}件）</span>
+        <button class="cp-open" onclick="event.preventDefault();event.stopPropagation();window.open('../project-os/index.html','_blank')">Projectで開く →</button>
+      </summary>
       ${rows}
-    </div>`;
+    </details>`;
   area.style.display = '';
 }
 
@@ -1392,14 +1326,16 @@ function renderReflectToday() {
   const expHtml = exps.slice(0, 3).map(e => row('▶', e.doing ? ' doing' : '', e)).join('');
   const qHtml = qs.slice(0, 2).map(q => row('？', '', q)).join('');
 
-  area.innerHTML = `<div class="rf-top">
-        <span class="rf-eye">REFLECT ｜ 今日回す</span>
-        <button class="rf-open" onclick="window.open('../reflect-os/index.html','_blank')">Reflectで開く →</button>
-      </div>
+  area.innerHTML = `<details>
+      <summary class="rf-top" style="cursor:pointer">
+        <span class="rf-eye">▸ REFLECT ｜ 今日回す（実験${exps.length}・問い${qs.length}）</span>
+        <button class="rf-open" onclick="event.preventDefault();event.stopPropagation();window.open('../reflect-os/index.html','_blank')">Reflectで開く →</button>
+      </summary>
       <div class="rf-grid">
         ${exps.length ? `<div class="rf-card"><div class="rf-sec rf-sec-exp">実験 ${exps.length}件</div>${expHtml}</div>` : ''}
         ${qs.length ? `<div class="rf-card"><div class="rf-sec rf-sec-q">重要な問い ${qs.length}件</div>${qHtml}</div>` : ''}
-      </div>`;
+      </div>
+    </details>`;
   area.style.display = '';
 }
 
@@ -1792,75 +1728,6 @@ function saveEntry() {
 }
 
 // REVIEW MODAL
-function openReviewModal() {
-  document.getElementById('reviewWeekLabel').textContent = currentWeekRange();
-  ['rv_unease','rv_energy','rv_pattern','rv_experiment','rv_vision_off','rv_vision_on'].forEach(id => { document.getElementById(id).value = ''; });
-  selectedConviction = '';
-  document.querySelectorAll('.conv-btn').forEach(b => b.classList.remove('selected'));
-  const existing = state.reviews.find(r => r.week === isoWeek(today()));
-  if (existing) {
-    document.getElementById('rv_unease').value      = existing.unease      || '';
-    document.getElementById('rv_energy').value       = existing.energy      || '';
-    document.getElementById('rv_pattern').value      = existing.pattern     || '';
-    document.getElementById('rv_experiment').value   = existing.experiment  || '';
-    document.getElementById('rv_vision_off').value   = existing.vision_off  || '';
-    document.getElementById('rv_vision_on').value    = existing.vision_on   || '';
-    selectedConviction = existing.conviction || '';
-    if (selectedConviction) document.querySelector(`.conv-btn[data-value="${selectedConviction}"]`)?.classList.add('selected');
-  }
-  buildReviewInsights();
-  document.getElementById('reviewModal').classList.add('open');
-}
-function closeReviewModal() { document.getElementById('reviewModal').classList.remove('open'); }
-
-function buildReviewInsights() {
-  const logs = getThisWeekLogs();
-  const uneases = logs.filter(l => l.unease).map(l => l.unease);
-  document.getElementById('insightUnease').innerHTML = uneases.length
-    ? `<div class="insight-label">△ 違和感 (${uneases.length}件)</div><div class="insight-value">${uneases.slice(0,2).map(u=>escHtml(u)).join('<br>')}</div>`
-    : `<div class="insight-label">△ 違和感</div><div class="insight-value" style="color:var(--text3)">今週は記録なし</div>`;
-
-  const energyDays = logs.filter(l => (l.flags||[]).includes('energy'));
-  const badDays    = logs.filter(l => l.satisfaction === 'bad');
-  document.getElementById('insightEnergy').innerHTML =
-    `<div class="insight-label">🔥 エネルギー</div><div class="insight-value">高: ${energyDays.length}件 / ×: ${badDays.length}件</div>`;
-
-  const words = getTopWords(logs.map(l => (l.events||'') + ' ' + (l.unease||'')).join(' '), 5);
-  document.getElementById('insightWords').innerHTML =
-    `<div class="insight-label">📝 頻出ワード</div><div class="insight-value">${words.length ? words.join('　') : '—'}</div>`;
-
-  const blogLogs = logs.filter(l => (l.flags||[]).includes('blog'));
-  document.getElementById('insightBlog').innerHTML = blogLogs.length
-    ? `<div class="insight-label">≡ ブログ候補 (${blogLogs.length}件)</div><div class="insight-value">${escHtml((blogLogs[0].events||'').slice(0,60))}…</div>`
-    : `<div class="insight-label">≡ ブログ候補</div><div class="insight-value" style="color:var(--text3)">今週は記録なし</div>`;
-}
-
-function getTopWords(text, n) {
-  const stop = new Set(['の','に','は','を','が','で','て','と','し','も','な','こと','した','いる','ある','これ','それ','から','って','たら','です','ます','ない','ため','など','いう','よう','その','この','という','でも','だった','だ','だと','れる','られ','なる','なった']);
-  const words = text.replace(/[、。！？\n「」『』【】()（）]/g,' ').split(/\s+/).filter(w => w.length >= 2 && !stop.has(w));
-  const freq = {};
-  for (const w of words) freq[w] = (freq[w]||0) + 1;
-  return Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,n).map(e=>e[0]);
-}
-
-function saveReview() {
-  const wk = isoWeek(today());
-  const data = {
-    week: wk,
-    unease:      document.getElementById('rv_unease').value.trim(),
-    energy:      document.getElementById('rv_energy').value.trim(),
-    pattern:     document.getElementById('rv_pattern').value.trim(),
-    experiment:  document.getElementById('rv_experiment').value.trim(),
-    vision_off:  document.getElementById('rv_vision_off').value.trim(),
-    vision_on:   document.getElementById('rv_vision_on').value.trim(),
-    conviction:  selectedConviction,
-    savedAt:     new Date().toISOString(),
-  };
-  const idx = state.reviews.findIndex(r => r.week === wk);
-  if (idx >= 0) state.reviews[idx] = data; else state.reviews.push(data);
-  saveReviews(); closeReviewModal(); toast('週次レビューを保存しました ✓');
-}
-
 // EXPORT
 function exportData() {
   const blob = new Blob([JSON.stringify({ logs:state.logs, reviews:state.reviews, exportedAt:new Date().toISOString() }, null, 2)], { type:'application/json' });
@@ -1930,16 +1797,6 @@ function bindEvents() {
   }));
 
   document.getElementById('saveEntry').addEventListener('click', saveEntry);
-  document.getElementById('openReview').addEventListener('click', openReviewModal);
-  document.getElementById('closeReview').addEventListener('click', closeReviewModal);
-  document.getElementById('reviewModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeReviewModal(); });
-  document.getElementById('saveReview').addEventListener('click', saveReview);
-
-  // 確信度ボタン
-  document.querySelectorAll('.conv-btn').forEach(btn => btn.addEventListener('click', () => {
-    document.querySelectorAll('.conv-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected'); selectedConviction = btn.dataset.value;
-  }));
 
   document.querySelectorAll('.filter-chip').forEach(chip => chip.addEventListener('click', () => {
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
