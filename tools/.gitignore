@@ -1,0 +1,4 @@
+# drive_cleanup.py の秘密情報・生成物（コミット禁止）
+credentials.json
+token.json
+logs/

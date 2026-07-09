@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+#
+# my-apps コミット前検証フック
+#   1. 各 */index.html の vanilla <script> を連結して `node --check`
+#   2. type="text/babel" があれば esbuild で構文検証（JSX）
+#   3. hitomemo: `Date.now().toString()`（radix無し）の再混入を禁止（genUid必須）
+#   4. task-os: BUILD_VER が当日日付か（警告のみ・ブロックしない）
+#
+# 検証はステージ済みの内容（git show :file）に対して行う。
+# インストール: tools/install-hooks.sh
+
+set -u
+
+ROOT="$(git rev-parse --show-toplevel)"
+EXTRACT="$ROOT/tools/extract_scripts.js"
+TODAY="$(date +%Y-%m-%d)"
+FAIL=0
+
+# ステージされた index.html を収集
+FILES="$(git diff --cached --name-only --diff-filter=ACM | grep -E '(^|/)index\.html$' || true)"
+if [ -z "$FILES" ]; then
+  exit 0
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "✗ node が見つかりません。Node.js を入れてください（検証に必須）。"
+  exit 1
+fi
+
+# esbuild の起動コマンドを決定
+ESBUILD=""
+if command -v esbuild >/dev/null 2>&1; then
+  ESBUILD="esbuild"
+elif command -v npx >/dev/null 2>&1; then
+  ESBUILD="npx --yes esbuild"
+fi
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  echo "── 検証: $f"
+  d="$TMP/$(echo "$f" | tr '/' '_')"
+  mkdir -p "$d"
+
+  # ステージ済み内容を取り出す
+  if ! git show ":$f" > "$d/staged.html" 2>/dev/null; then
+    echo "  ✗ ステージ内容を取得できませんでした"
+    FAIL=1
+    continue
+  fi
+
+  # スクリプト抽出
+  if ! node "$EXTRACT" "$d/staged.html" "$d"; then
+    echo "  ✗ スクリプト抽出に失敗"
+    FAIL=1
+    continue
+  fi
+
+  # 1. vanilla JS を node --check
+  if [ -f "$d/vanilla.js" ]; then
+    if ! node --check "$d/vanilla.js"; then
+      echo "  ✗ vanilla JS 構文エラー（$f）"
+      FAIL=1
+    else
+      echo "  ✅ vanilla JS 構文OK"
+    fi
+  fi
+
+  # 2. babel(JSX) を esbuild で検証
+  if [ -f "$d/babel.jsx" ]; then
+    if [ -z "$ESBUILD" ]; then
+      echo "  ✗ esbuild が無く JSX を検証できません。'npm i -g esbuild' を実行してください。"
+      FAIL=1
+    elif ! $ESBUILD "$d/babel.jsx" --jsx=transform --log-level=warning >/dev/null; then
+      echo "  ✗ JSX 構文エラー（$f）"
+      FAIL=1
+    else
+      echo "  ✅ JSX 構文OK"
+    fi
+  fi
+
+  # 3. hitomemo: Date.now().toString()（radix無し）の再混入禁止
+  case "$f" in
+    *hitomemo/index.html)
+      if grep -nE 'Date\.now\(\)\.toString\(\)' "$d/staged.html" >/dev/null; then
+        echo "  ✗ 禁止パターン検出: Date.now().toString()（ID衝突→削除事故の前科）。genUid() を使ってください。"
+        grep -nE 'Date\.now\(\)\.toString\(\)' "$d/staged.html" | sed 's/^/      /'
+        FAIL=1
+      fi
+      ;;
+  esac
+
+  # 4. task-os: BUILD_VER が当日か（警告のみ）
+  case "$f" in
+    *task-os/index.html)
+      ver="$(grep -oE "BUILD_VER *= *'[0-9]{4}-[0-9]{2}-[0-9]{2}'" "$d/staged.html" | head -1 | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}')"
+      if [ -n "$ver" ] && [ "$ver" != "$TODAY" ]; then
+        echo "  ⚠ BUILD_VER=$ver が当日($TODAY)ではありません（UI変更時は更新推奨・ブロックはしません）"
+      fi
+      ;;
+  esac
+done <<< "$FILES"
+
+if [ "$FAIL" -ne 0 ]; then
+  echo ""
+  echo "✗ コミットを中止しました。上記の構文/規約エラーを直してください。"
+  exit 1
+fi
+
+echo "✅ 事前検証パス"
+exit 0
