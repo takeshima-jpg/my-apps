@@ -1446,6 +1446,33 @@ function lxCopyFallback(txt,done){
   }catch(e){ done(false); }
 }
 function lxReadLogs(){try{const r=localStorage.getItem(LX_LOGS_KEY);return r?JSON.parse(r):[];}catch(e){return [];}}
+// 実験中の自動整理：直近14日にログが無い「実験中」を「未着手」に戻す（1日1回）
+// 「実験中＝最近実際に回している実験」に意味を保つ。完了・保留は触らない。
+function lxAutoRevertStale(){
+  const GUARD='lectica_auto_revert_last';
+  const today=tod();
+  try{ if(localStorage.getItem(GUARD)===today) return 0; }catch(e){}
+  const DAYS=14, cutoff=Date.now()-DAYS*86400000;
+  const master=lxReadMaster(); if(!Array.isArray(master)||!master.length) return 0;
+  const logs=lxReadLogs();
+  const lastLog={};
+  logs.forEach(l=>{
+    if(!l||!l.experimentId||!l.date) return;
+    const t=new Date(l.date+'T23:59:59').getTime();
+    if(!lastLog[l.experimentId]||t>lastLog[l.experimentId]) lastLog[l.experimentId]=t;
+  });
+  let n=0;
+  master.forEach(e=>{
+    if(!e||e.status!=='active') return;
+    const touched=Math.max(lastLog[e.id]||0, e.updatedAt?new Date(e.updatedAt).getTime():0);
+    if(touched && touched>=cutoff) return;
+    e.status='not_started'; e.updatedAt=new Date().toISOString(); n++;
+  });
+  if(n>0) lxWriteMaster(master);
+  try{ localStorage.setItem(GUARD,today); }catch(e){}
+  if(n>0&&typeof toast==='function') toast('✦ 14日間ログの無い実験中 '+n+'件を未着手に戻しました');
+  return n;
+}
 function lxWriteLogs(a){try{localStorage.setItem(LX_LOGS_KEY,JSON.stringify(a));}catch(e){console.warn('lectica logs save失敗',e);}}
 function lxInit(){
   try{
@@ -1648,6 +1675,7 @@ function renderLectica(){
     if(S.lxCat===undefined)S.lxCat='all';
     if(S.lxQ===undefined)S.lxQ='';
     let master=lxReadMaster(); if(!Array.isArray(master)||!master.length){lxInit();master=lxReadMaster()||[];}
+    if(lxAutoRevertStale()>0){ master=lxReadMaster()||master; }
     const logs=lxReadLogs();
     const head=D({css:'margin-bottom:14px'});
     head.appendChild(D({css:'font-size:20px;font-weight:700;margin-bottom:2px'},'✦ Lectica Daily Practice'));
