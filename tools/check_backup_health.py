@@ -16,6 +16,13 @@ import re
 import unicodedata
 from datetime import datetime, timezone, date, timedelta
 
+# Windowsコンソール(cp932)でも絵文字・日本語を出力できるよう標準出力をUTF-8化
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 # ── 共通ユーティリティ ──────────────────────────────────────────
 
 def as_list(v, *keys):

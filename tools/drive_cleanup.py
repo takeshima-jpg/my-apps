@@ -19,6 +19,13 @@ import sys
 import argparse
 from datetime import datetime
 
+# Windowsコンソール(cp932)でも日本語ログを出力できるよう標準出力をUTF-8化
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 try:
     from google.oauth2.credentials import Credentials
     from google_auth_oauthlib.flow import InstalledAppFlow
