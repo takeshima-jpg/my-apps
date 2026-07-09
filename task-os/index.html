@@ -875,18 +875,27 @@ function applyAixTasks(parsed){
       const mergedDrafts = Object.values(draftMap).sort((a, b) => (((a.targetDate||a.date||'') < (b.targetDate||b.date||'')) ? 1 : -1));
       localStorage.setItem('aix_drafts', JSON.stringify(mergedDrafts));
     }
-    // ③ brief → localStorage['aix_draft_latest'] に保存
+    // ③ brief → localStorage['aix_draft_latest'] に保存（オブジェクト／markdown文字列の両対応）
     if (parsed.brief && typeof parsed.brief === 'object') {
       localStorage.setItem('aix_draft_latest', JSON.stringify(parsed.brief));
+      briefLoaded = true;
+    } else if (typeof parsed.brief === 'string' && parsed.brief.trim()) {
+      localStorage.setItem('aix_draft_latest', parsed.brief);
       briefLoaded = true;
     }
     // ④ brief_weekly / brief_monthly → 1day OSの週次/月次タブ用（該当日のみ含まれる）
     if (parsed.brief_weekly && typeof parsed.brief_weekly === 'object') {
       localStorage.setItem('aix_review_weekly', JSON.stringify(parsed.brief_weekly));
       briefLoaded = true;
+    } else if (typeof parsed.brief_weekly === 'string' && parsed.brief_weekly.trim()) {
+      localStorage.setItem('aix_review_weekly', parsed.brief_weekly);
+      briefLoaded = true;
     }
     if (parsed.brief_monthly && typeof parsed.brief_monthly === 'object') {
       localStorage.setItem('aix_review_monthly', JSON.stringify(parsed.brief_monthly));
+      briefLoaded = true;
+    } else if (typeof parsed.brief_monthly === 'string' && parsed.brief_monthly.trim()) {
+      localStorage.setItem('aix_review_monthly', parsed.brief_monthly);
       briefLoaded = true;
     }
     // ⑤ lectica_daily_practice → 保留保存（HOMEで半自動「追加」ボタンに使う。自動追加はしない）
