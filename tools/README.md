@@ -29,7 +29,10 @@ python tools/check_backup_health.py <myapps-all-backup-*.json のパス>
 3. **ヒトメモ同名重複** — 名前を正規化（括弧注記・空白除去・NFKC・小文字化）して重複検出
 4. **Shot滞留** — `status=todo` かつ `dueDate` が3日以上過去（同一Lectica実験の重複滞留は★で強調）
 5. **Lectica鮮度** — `status=active` なのに直近14日のログが無い実験
-6. **仕組みの空転** — `nextExperience` 設定済みなのに直近30日に「経験」ログが無い人物数
+6. **仕組みの空転** — `nextExperience` 設定済みなのに直近30日に「経験」ログが無い人物数。
+   **socialUniverse で `isTop10=true` の人物に限定**（Top10外の過去設定はノイズなので数えない）。
+   SU⇔ヒトメモの紐づけは `hitoId` 優先・名前フォールバック（SU本体の `reflectToHitomemo` と同方式）。
+   紐づかなかったTop10人物は「対象外」として明示する
 7. **1dayログ欠落** — `onedayLogs` の最新日付と今日の差が2日以上
 8. **必須キー欠落** — バックアップの主要キーが null（収集漏れ検知）
 9. **routineOS.holidays** — null（祝日がバックアップされていない）

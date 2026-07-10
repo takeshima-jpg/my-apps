@@ -89,6 +89,39 @@ def field_val(v):
     return v
 
 
+def link_key(s):
+    """SU⇔ヒトメモの名前フォールバック照合キー（正規化に加えSU側の敬称「さん」も落とす）。"""
+    return re.sub(r'さん$', '', norm_name(s))
+
+
+def top10_ids(profiles, su_persons):
+    """socialUniverseでisTop10=trueの人物に対応するヒトメモidの集合と、紐づかなかったSU人物名。
+
+    紐づけはSU本体と同じ hitoId優先・名前フォールバック（social-universe の reflectToHitomemo）。
+    """
+    by_id = {}
+    by_name = {}
+    for p in profiles:
+        if not isinstance(p, dict):
+            continue
+        if p.get('id'):
+            by_id[p['id']] = p
+        k = link_key(get_name(p))
+        if k and k not in by_name:
+            by_name[k] = p
+
+    ids, unlinked = set(), []
+    for su in su_persons:
+        if not isinstance(su, dict) or not su.get('isTop10'):
+            continue
+        p = by_id.get(su.get('hitoId')) or by_name.get(link_key(su.get('name')))
+        if p:
+            ids.add(p.get('id'))
+        else:
+            unlinked.append(su.get('name') or '(名前空)')
+    return ids, unlinked
+
+
 # ── 各チェック（ok, 見出し行群）を返す ──────────────────────────
 
 def check_freshness(data):
@@ -205,11 +238,17 @@ def check_lectica_stale(experiments, logs):
     return True, ['✅ Lectica鮮度: active実験はすべて直近14日にログあり']
 
 
-def check_mechanism_idle(profiles):
+def check_mechanism_idle(profiles, su_persons):
+    """socialUniverseでisTop10=trueの人物に限定して判定する。
+    Top10外の過去のnextExperience設定はノイズなので数えない。"""
+    ids, unlinked = top10_ids(profiles, su_persons)
+    if not ids and not unlinked:
+        return True, ['ℹ 仕組みの空転: socialUniverseにTop10設定が無いためスキップ']
+
     today = date.today()
     idle = []
     for p in profiles:
-        if not isinstance(p, dict):
+        if not isinstance(p, dict) or p.get('id') not in ids:
             continue
         nx = field_val(p.get('nextExperience'))
         if not nx or not str(nx).strip():
@@ -227,11 +266,17 @@ def check_mechanism_idle(profiles):
                 break
         if not recent:
             idle.append(get_name(p))
+
+    total = len(ids) + len(unlinked)
     if idle:
-        lines = ['⚠ 仕組みの空転: nextExperience設定済みだが直近30日に経験ログ無し {}人'.format(len(idle))]
+        lines = ['⚠ 仕組みの空転: Top10のうち nextExperience設定済みだが直近30日に経験ログ無し {}人（Top10 {}人中）'.format(len(idle), total)]
         lines.append('    ' + ' / '.join((n or '(名前空)') for n in idle[:15]))
-        return False, lines
-    return True, ['✅ 仕組みの空転: なし']
+    else:
+        lines = ['✅ 仕組みの空転: なし（Top10 {}人中）'.format(total)]
+    if unlinked:
+        # 対象から漏れている＝チェックが黙って過少になるので必ず表に出す
+        lines.append('    ⚠ SU Top10のうち {}人はヒトメモに紐づかず対象外: {}'.format(len(unlinked), ' / '.join(unlinked[:10])))
+    return (not idle and not unlinked), lines
 
 
 def check_oneday_gap(logs):
@@ -291,6 +336,7 @@ def main():
     oneday_logs = as_list(data.get('onedayLogs'), 'logs')
     experiments = as_list(data.get('lecticaExperiments'), 'items', 'experiments')
     lectica_logs = as_list(data.get('lecticaLogs'), 'logs', 'items')
+    su_persons = as_list(data.get('socialUniverse'), 'persons')
 
     checks = [
         ('鮮度', lambda: check_freshness(data)),
@@ -298,7 +344,7 @@ def main():
         ('ヒトメモ同名重複', lambda: check_hitomemo_dupname(profiles)),
         ('Shot滞留', lambda: check_shot_stale(shot_tasks)),
         ('Lectica鮮度', lambda: check_lectica_stale(experiments, lectica_logs)),
-        ('仕組みの空転', lambda: check_mechanism_idle(profiles)),
+        ('仕組みの空転', lambda: check_mechanism_idle(profiles, su_persons)),
         ('1dayログ欠落', lambda: check_oneday_gap(oneday_logs)),
         ('必須キー欠落', lambda: check_required_keys(data)),
         ('routineOS.holidays', lambda: check_holidays(data)),
