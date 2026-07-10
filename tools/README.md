@@ -1,16 +1,17 @@
 # tools — my-apps 保守スクリプト
 
-3点セット。いずれも日本語出力・実行例はリポジトリ直下からの相対パス。
+保守スクリプト群。いずれも日本語出力・実行例はリポジトリ直下からの相対パス。
 
 | ツール | 役割 | 依存 |
 |--------|------|------|
 | `check_backup_health.py` | 全OSバックアップJSONの健全性を9項目チェック | Python 3.10+（標準ライブラリのみ） |
+| `weekly_facts.py` | 週次レビュー用の「事実の差分」を機械計算 | Python 3.10+（標準ライブラリのみ） |
 | `pre-commit` + `install-hooks.sh` + `extract_scripts.js` | コミット前の構文・規約検証 | Node.js（+ JSX検証に esbuild） |
 | `drive_cleanup.py` | Drive の aix-drafts 固定名ファイルの重複掃除 | Python 3.10+ + google API クライアント |
 
-> **前提**: この環境では `python` が Windows ストアのスタブのみ（実体未導入）でした。
-> Python製2ツールを使う前に、python.org から Python 3.10+ を入れて
-> `python --version` が正しく表示されることを確認してください。Node.js は導入済み。
+> **前提**: PATH上の `python` は Windows ストアのスタブなので使わない。実体は
+> `%LOCALAPPDATA%\Programs\Python\Python312\python.exe`（2026-07-09 にwingetで導入）。
+> Windowsコンソールで日本語が化ける場合は `$env:PYTHONUTF8=1` を付ける。Node.js は導入済み。
 
 ---
 
@@ -39,7 +40,56 @@ python tools/check_backup_health.py <myapps-all-backup-*.json のパス>
 
 ---
 
-## 2. pre-commit — コミット前検証フック
+## 2. weekly_facts.py — 週次「事実の差分」
+
+週次レビューの「成果／停滞」の数字を、AIの解釈ではなく**機械計算の事実**にする。
+Claude Codeが差分JSONを作り、Coworkはその数字をそのまま使う（数え直さない・改変しない）。
+
+```
+python tools/weekly_facts.py <今週のbackup.json> <先週のスナップショット.json>
+python tools/weekly_facts.py <今週> <先週> --out path/to/aix_weekly_facts.json
+```
+
+`aix_weekly_facts.json`（既定はカレントディレクトリ）を出力し、標準出力にmarkdown表を表示する。
+
+### 期間の定義
+
+「今週」＝ 先週スナップショットの `savedAt` 〜 今週backupの `savedAt`（ローカルタイム＝JSTで判定）。
+
+- **時刻付きの値**（`completedAt` / `createdAt`）は `(先週savedAt, 今週savedAt]` の半開区間。
+  先週スナップショット取得前に完了したものを二重計上しないため。
+- **日付のみの値**（`lecticaLogs.date` / `onedayLogs.date` / `lastContactDate` / `changeLog.date`）は
+  `[先週の日付, 今週の日付]` の閉区間（時刻情報が無いため）。
+
+### 算出上の注意（データの制約）
+
+- **Shotタスクにプロジェクト参照フィールドが無い**ため、`projects.important_no_activity` の判定に
+  「対応Shot完了」は含められない。projectOS側のシグナルのみで判定する。
+- **シート取り込みアイテムの `updatedAt` は予定日そのもの**（`"<date>T00:00:00.000Z"`）で、実編集の時刻ではない。
+  これを活動とみなすと未来の予定日（例 2030-12-31）が「最終活動日」になり `days_stale` が負になるため、除外している。
+- PJの活動シグナル＝ 本体 `updatedAt` ／ アイテムの実編集 `updatedAt` ／ 完了イベントの `date`。
+- `overdue_*` の「未完了」は status が `todo` / `pending`（`done` / `rejected` は除く）。
+- Top10がヒトメモに紐づかない場合は、黙って落とさず `not_contacted_names` に「（ヒトメモ未紐づけ）」付きで出す。
+
+出力JSONには仕様のキーに加えて `_meta`（期間ルールと上記の注意書き）を含む。Coworkは無視してよい。
+
+### 運用フロー
+
+1. 週次レビューの朝、`weekly_facts.py` を今週backupと先週スナップショットに対して実行
+2. 生成された `aix_weekly_facts.json` をCoworkの作業フォルダにコピー
+3. Coworkが週次レビューを生成（数字は事実ファイル準拠）
+
+### テスト
+
+```
+python tools/test_weekly_facts.py
+```
+
+架空の2スナップショットで19件（完了数・接触数・欠落日・期間境界・シート取り込みupdatedAtの回帰 等）。
+
+---
+
+## 3. pre-commit — コミット前検証フック
 
 ### インストール（1回だけ）
 
@@ -70,7 +120,7 @@ JSX 検証には esbuild が必要。未導入でも `npx --yes esbuild` に自�
 
 ---
 
-## 3. drive_cleanup.py — Drive掃除・世代管理（夜間ジョブ）
+## 4. drive_cleanup.py — Drive掃除・世代管理（夜間ジョブ）
 
 aix-drafts フォルダ（ID: `1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U`）の固定名ファイルを
 「最新1件だけ残し、古い同名はゴミ箱へ」自動整理する。
