@@ -8,6 +8,9 @@ token.json
 # drive_cleanup.py の実行ログ
 tools/logs/
 
+# Pythonの生成物
+__pycache__/
+
 # 全OSバックアップのローカルコピー（誤ってリポジトリに置いてもコミットしない）
 *.backup.json
 myapps-all-backup-*.json
