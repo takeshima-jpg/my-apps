@@ -2341,7 +2341,8 @@ function rowToObj(row, colMap, projName, year) {
     return { ...base, title,
       what: content, why: goal,
       stakeholders: target || assignee,
-      status: date && date >= today() ? 'future' : 'past',
+      // シートで完了＝確定分岐(past)。日付だけで判定すると完了済みの未来分岐がfutureのまま残る
+      status: (status === '完了') ? 'past' : (date && date >= today() ? 'future' : 'past'),
     };
   }
   if (category === 'records') {
