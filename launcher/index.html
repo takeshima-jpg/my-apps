@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>竹嶋OS — コックピット</title>
+<style>
+:root {
+  --bg: #f5f5f7; --bg2: #ffffff; --bg3: #ebebee;
+  --border: #d8d8e0; --border2: #c8c8d4;
+  --text: #1a1a22; --text2: #5a5a6e; --text3: #9898a8;
+  --accent: #5b51d8;
+  --radius: 8px;
+  --font-body: 'Meiryo', 'Hiragino Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; }
+
+.shell { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── 左タブバー ── */
+.tabbar { width: 96px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; padding: 8px 0; }
+.tab { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 100%; padding: 9px 4px; background: none; border: none; border-left: 3px solid transparent; color: var(--text2); font-family: var(--font-body); font-size: 11px; cursor: pointer; }
+.tab .ico { font-size: 17px; }
+.tab:hover { background: var(--bg3); }
+.tab.active { color: var(--accent); border-left-color: var(--accent); font-weight: 700; background: var(--bg3); }
+.tab-others { margin-top: auto; padding: 10px 8px; border-top: 1px solid var(--border); }
+.tab-others .lbl { font-size: 9px; color: var(--text3); letter-spacing: .12em; margin-bottom: 4px; }
+.tab-others a { display: block; font-size: 11px; color: var(--text3); text-decoration: none; padding: 2px 0; }
+.tab-others a:hover { color: var(--accent); }
+.tab-vision { padding: 8px; font-size: 9px; color: var(--text3); line-height: 1.5; }
+
+/* ── メイン ── */
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.miniheader { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 12px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+.mh-name { font-size: 13px; font-weight: 700; color: var(--text2); }
+.mh-actions { display: flex; align-items: center; gap: 6px; }
+.mh-actions button { padding: 4px 10px; font-size: 12px; background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text2); cursor: pointer; font-family: var(--font-body); }
+.mh-actions button:hover { border-color: var(--accent); color: var(--accent); }
+.mh-help { font-size: 10px; color: var(--text3); }
+.stage { flex: 1; position: relative; min-height: 0; }
+.osframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; background: var(--bg2); }
+
+/* ── 今日タブ ── */
+.today { position: absolute; inset: 0; overflow-y: auto; padding: 18px 20px 60px; max-width: 860px; }
+.today h2 { font-size: 13px; color: var(--text3); letter-spacing: .1em; margin: 22px 0 8px; font-weight: 700; }
+.qa-bar { display: flex; gap: 8px; }
+.qa-bar input { flex: 1; padding: 11px 14px; font-size: 15px; border: 1px solid var(--border2); border-radius: var(--radius); font-family: var(--font-body); background: var(--bg2); color: var(--text); }
+.qa-bar input:focus { outline: none; border-color: var(--accent); }
+.qa-bar button { padding: 11px 20px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); cursor: pointer; font-family: var(--font-body); }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.task-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--bg3); }
+.task-row:last-child { border-bottom: none; }
+.task-check { width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px; border: 2px solid var(--border2); border-radius: 50%; background: none; cursor: pointer; font-size: 12px; line-height: 1; color: transparent; }
+.task-check:hover { border-color: var(--accent); color: var(--accent); }
+.task-title { flex: 1; font-size: 15px; }
+.task-tag { font-size: 10px; padding: 2px 8px; border-radius: 999px; background: var(--bg3); color: var(--text2); white-space: nowrap; }
+.task-tag.lectica { background: #efe9ff; color: var(--accent); }
+.task-overdue { font-size: 10px; color: #d31f2c; white-space: nowrap; }
+.empty { font-size: 13px; color: var(--text3); padding: 8px 0; }
+.brief-more { margin-top: 8px; padding: 6px 14px; font-size: 12px; background: none; border: 1px solid var(--border); border-radius: 999px; color: var(--text2); cursor: pointer; font-family: var(--font-body); }
+.brief-more:hover { border-color: var(--accent); color: var(--accent); }
+.lx-row { font-size: 14px; }
+.lx-row a { color: var(--accent); cursor: pointer; text-decoration: underline; font-size: 13px; }
+
+/* brief markdown */
+.brief-body h1 { font-size: 15px; margin: 12px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.brief-body h2 { font-size: 13px; margin: 10px 0 4px; color: var(--text2); }
+.brief-body h3 { font-size: 13px; margin: 8px 0 4px; color: var(--text2); }
+.brief-body ul { padding-left: 20px; margin: 4px 0; }
+.brief-body li { font-size: 13px; margin: 2px 0; }
+.brief-body p { font-size: 13px; margin: 3px 0; }
+.brief-body br { line-height: 0.5; }
+.brief-body hr { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+.brief-body code { background: var(--bg3); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+.brief-body .bv-link { color: var(--accent); word-break: break-all; }
+.brief-body .bv-fav { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
+
+/* トースト */
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #1a1a22; color: #fff; padding: 9px 18px; border-radius: 999px; font-size: 13px; z-index: 9999; opacity: 0; transition: opacity .25s; pointer-events: none; }
+.toast.show { opacity: 1; }
+
+/* ── モバイル：サイドバーを上部横スクロールタブに ── */
+@media (max-width: 768px) {
+  .shell { flex-direction: column; }
+  .tabbar { width: 100%; flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: none; border-bottom: 1px solid var(--border); padding: 0 4px; }
+  .tab { flex-direction: row; gap: 5px; width: auto; padding: 9px 10px; border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+  .tab.active { border-bottom-color: var(--accent); background: none; }
+  .tab-others, .tab-vision { display: none; }
+  .mh-help { display: none; }
+  .today { padding: 14px 12px 60px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="tabbar" id="tabbar"></nav>
+  <div class="main">
+    <div class="miniheader">
+      <span class="mh-name" id="curTabName"></span>
+      <span class="mh-help">Googleログインは「↗ 別タブで開く」から（ログイン後に ⟳）</span>
+      <span class="mh-actions">
+        <button id="btnReload" onclick="reloadCurrent()">⟳ 再読込</button>
+        <button id="btnOpen" onclick="openCurrent()">↗ 別タブで開く</button>
+      </span>
+    </div>
+    <div class="stage" id="stage">
+      <div id="todayView" class="today"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── タブ定義（並び替え・追加はここだけ）──
+const TABS = [
+  { id:'today',    label:'今日',     icon:'🏠', url:null },
+  { id:'task',     label:'Task',     icon:'✅', url:'../task-os/index.html' },
+  { id:'shot',     label:'Shot',     icon:'⚡', url:'../shot-task-os/index.html' },
+  { id:'routine',  label:'Routine',  icon:'🔁', url:'../routine-os/index.html' },
+  { id:'project',  label:'Project',  icon:'📊', url:'../project-os/index.html' },
+  { id:'oneday',   label:'1day',     icon:'📓', url:'../1day/index.html' },
+  { id:'reflect',  label:'Reflect',  icon:'💭', url:'../reflect-os/index.html' },
+  { id:'koso',     label:'構想',     icon:'💡', url:'../koso-log/index.html' },
+  { id:'list100',  label:'100',      icon:'💯', url:'../100list/index.html' },
+  { id:'su',       label:'SU',       icon:'🌌', url:'../social-universe/index.html' },
+  { id:'hitomemo', label:'ヒトメモ', icon:'👥', url:'../hitomemo/index.html' },
+];
+const OTHER_LINKS = [ { label:'brief-viewer', url:'../brief-viewer/index.html' } ];
+const LAST_TAB_KEY = 'launcher_last_tab';
+
+let currentTab = null;
+const frames = {};   // タブid → iframe（初回クリックで生成・以後display切替で状態保持）
+
+function buildTabbar(){
+  const bar = document.getElementById('tabbar');
+  bar.innerHTML = TABS.map(t =>
+    '<button class="tab" data-id="' + t.id + '" onclick="switchTab(\'' + t.id + '\')">'
+    + '<span class="ico">' + t.icon + '</span><span>' + t.label + '</span></button>'
+  ).join('')
+  + '<div class="tab-others"><div class="lbl">その他</div>'
+  + OTHER_LINKS.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener">↗ ' + l.label + '</a>').join('')
+  + '</div>'
+  + '<div class="tab-vision">守りの総合支援を通して、挑戦する人が成長できる社会をつくる</div>';
+}
+
+function switchTab(id){
+  const tab = TABS.find(t => t.id === id) || TABS[0];
+  currentTab = tab.id;
+  try { localStorage.setItem(LAST_TAB_KEY, tab.id); } catch(e) {}
+  document.querySelectorAll('.tabbar .tab').forEach(b => b.classList.toggle('active', b.dataset.id === tab.id));
+  document.getElementById('curTabName').textContent = tab.icon + ' ' + tab.label;
+  const todayView = document.getElementById('todayView');
+  const openBtn = document.getElementById('btnOpen');
+  if (tab.url === null) {
+    todayView.style.display = '';
+    Object.values(frames).forEach(f => f.style.display = 'none');
+    openBtn.style.display = 'none';
+    renderToday();   // 表示のたびに再読込（他タブでの変更を反映）
+  } else {
+    todayView.style.display = 'none';
+    openBtn.style.display = '';
+    if (!frames[tab.id]) {   // 遅延生成
+      const f = document.createElement('iframe');
+      f.className = 'osframe';
+      f.src = tab.url;
+      frames[tab.id] = f;
+      document.getElementById('stage').appendChild(f);
+    }
+    Object.entries(frames).forEach(([k, f]) => { f.style.display = (k === tab.id) ? '' : 'none'; });
+  }
+}
+
+function reloadCurrent(){
+  if (currentTab === 'today') { renderToday(); return; }
+  const f = frames[currentTab];
+  if (!f) return;
+  try { f.contentWindow.location.reload(); } catch(e) { f.src = f.src; }
+}
+
+function openCurrent(){
+  const tab = TABS.find(t => t.id === currentTab);
+  if (!tab || !tab.url) return;
+  window.open(tab.url, '_blank');
+}
+
+function toast(msg){
+  let el = document.querySelector('.toast');
+  if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ══ 今日タブ ══════════════════════════════════════════════
+// 書き込みは「クイック追加」と「✓完了」の2つだけ（対象は shot-task-os-v1 のみ）
+
+function todayKey(){ const d = new Date(); const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()); }
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// shot-task-os の genId() と同一方式
+function shotGenId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function readShotTasks(){ try { const a = JSON.parse(localStorage.getItem('shot-task-os-v1')) || []; return Array.isArray(a) ? a : []; } catch(e) { return []; } }
+function writeShotTasks(a){ localStorage.setItem('shot-task-os-v1', JSON.stringify(a)); }
+function reloadShotFrame(){ if (frames.shot) { try { frames.shot.contentWindow.location.reload(); } catch(e) {} } }
+
+// クイック追加（shot-task-os の addTask と同一フィールド構成）
+function quickAdd(){
+  const inp = document.getElementById('qaInput');
+  const title = inp.value.trim();
+  if (!title) { inp.focus(); return; }
+  const now = new Date().toISOString();
+  const tasks = readShotTasks();
+  tasks.push({
+    id: shotGenId(),
+    title,
+    category: '今日のタスク',
+    priority: 'high',
+    status: 'todo',
+    dueDate: todayKey(),
+    memo: '',
+    createdAt: now, completedAt: null, updatedAt: now
+  });
+  writeShotTasks(tasks);
+  inp.value = '';
+  renderTodayTasks();
+  reloadShotFrame();
+  toast('Shotタスクに追加しました');
+}
+
+// ✓完了（shot-task-os の changeStatus(id,'done') と同一の書き方）
+function completeTask(id){
+  const tasks = readShotTasks();
+  const t = tasks.find(x => x && x.id === id);
+  if (!t) return;
+  t.status = 'done';
+  t.completedAt = new Date().toISOString();
+  t.updatedAt = t.completedAt;
+  writeShotTasks(tasks);
+  renderTodayTasks();
+  reloadShotFrame();
+  toast('完了しました ✓');
+}
+
+// ── 以下2関数は 1day/index.html からの転記（brief描画。1day側が正）──
+function briefJsonToMarkdown(d) {
+  if (typeof d === 'string') return d;
+  if (typeof d !== 'object' || d === null) return String(d);
+  let md = '';
+  if (d.cadence_notice) md += `**📣 ${d.cadence_notice}**\n\n`;
+  // ── 📅 今日の予定 ──
+  if (d.today_schedule?.length) {
+    md += `# 📅 今日の予定\n\n`;
+    md += d.today_schedule.map(e => {
+      if (e && typeof e === 'object') { const t = [e.time, e.title].filter(Boolean).join(' '); return `・${t}${e.note ? '（' + e.note + '）' : ''}`; }
+      return `・${e}`;
+    }).join('\n') + '\n\n';
+  }
+  // ── 今日の要点 ──
+  if (d.top_theme || d.center_pin || d.changes?.length || d.decisions?.length) md += `# 今日の要点\n\n`;
+  if (d.top_theme) md += `## 今日の最重要テーマ\n${d.top_theme}\n\n`;
+  if (d.center_pin) md += `## 今週のセンターピン\n${d.center_pin}\n\n`;
+  if (d.changes?.length) md += `## 昨日からの重要変化\n${d.changes.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.decisions?.length) md += `## 今日判断すべきこと\n${d.decisions.map(c => `・${c}`).join('\n')}\n\n`;
+  // ── ④ 内省・学び ──
+  if (d.lectica_daily_practice || d.vision_brief || d.vision_proposals?.length || d.explore_themes?.length || d.week_question?.length || (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) || (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length))) md += `# ① 内省・学び\n\n`;
+  if (d.lectica_daily_practice && (d.lectica_daily_practice.selectedExperimentId || d.lectica_daily_practice.selectedExperimentTitle)) {
+    const lp = d.lectica_daily_practice;
+    md += `## ✦ 今日のLectica実験\n`;
+    if (lp.selectedExperimentId) md += `・実験ID：${lp.selectedExperimentId}\n`;
+    if (lp.selectedExperimentTitle) md += `・実験名：${lp.selectedExperimentTitle}\n`;
+    if (lp.category) md += `・カテゴリ：${lp.category}\n`;
+    if (lp.targetSchedule) md += `・使う場面：${lp.targetSchedule}\n`;
+    if (lp.reason) md += `・選定理由：${lp.reason}\n`;
+    if (lp.completionCondition) md += `・完了条件：${lp.completionCondition}\n`;
+    md += `・実行後にReflect OSへ実績を記録する\n\n`;
+  }
+  if (d.vision_brief) md += `## 今日のVISION\n${d.vision_brief}\n\n`;
+  if (d.vision_proposals?.length) md += `## VISIONへの提言\n${d.vision_proposals.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.explore_themes?.length) md += `## 探索テーマ\n${d.explore_themes.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.week_question?.length) md += `## 今週の問い\n${d.week_question.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) {
+    const rf = d.reflect;
+    md += `## 内省（Reflect）\n`;
+    if (rf.open_questions?.length) md += `今向き合う問い：\n` + rf.open_questions.map(c => `・${c}`).join('\n') + '\n';
+    if (rf.active_experiments?.length) md += `実験中：\n` + rf.active_experiments.map(c => `・${c}`).join('\n') + '\n';
+    if (rf.proposals?.length) md += rf.proposals.map(p => {
+      const t = (typeof p === 'string') ? p : `${p.based_on ? p.based_on + ' → ' : ''}${p.suggestion || ''}${p.why ? '（' + p.why + '）' : ''}`;
+      return `・提案：${t}`;
+    }).join('\n') + '\n';
+    md += `\n`;
+  }
+  if (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length)) {
+    const ll = d.life_list;
+    md += `## やりたいこと（100LIST）\n`;
+    if (ll.focus_today?.length) md += ll.focus_today.map(c => `・${c}`).join('\n') + '\n';
+    if (ll.one_joy) md += `・今日の彩り：${ll.one_joy}\n`;
+    if (ll.proposals?.length) md += ll.proposals.map(p => {
+      const t = (typeof p === 'string') ? p : `${p.want || ''}${p.reason ? '（' + p.reason + '）' : ''}`;
+      return `・新しい願望の提案：${t}`;
+    }).join('\n') + '\n';
+    md += `\n`;
+  }
+  // ── ③ 財務・外部環境 ──
+  if (d.external_env?.length || d.structural_alerts?.length) md += `# ② 財務・外部環境\n\n`;
+  if (d.external_env?.length) md += `## 外部環境モニタリング\n${d.external_env.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.structural_alerts?.length) {
+    md += `## 構造アラート\n` + d.structural_alerts.map(a => {
+      const parts = [];
+      const lv = a.level ? `[${a.level}] ` : '';
+      const dt = a.date ? `（${a.date}）` : '';
+      parts.push(`${lv}${a.title || ''}${dt}`.trim());
+      if (Array.isArray(a.summary) && a.summary.length) parts.push(a.summary.join(' / '));
+      else if (a.summary) parts.push(a.summary);
+      if (a.impact) parts.push(`影響：${a.impact}`);
+      if (a.action) parts.push(`アクション：${a.action}`);
+      if (a.url) parts.push('[🔗 ' + (a.source || '出典記事') + '](' + a.url + ')');
+      return `・${parts.filter(Boolean).join('｜')}`;
+    }).join('\n') + `\n\n`;
+  }
+  // ── ② 事業・実行 ──
+  if (d.winning_moves?.length || d.risks?.length) md += `# ③ 事業・実行\n\n`;
+  if (d.winning_moves?.length) md += `## 今週の勝ち筋\n${d.winning_moves.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.risks?.length) md += `## 放置リスク\n${d.risks.map(c => `・${c}`).join('\n')}\n\n`;
+  // ── ① 人材・関係 ──
+  if (d.engagement?.length || d['育成']?.length || d['会う価値']?.length || (d.partner_progress && d.partner_progress.current != null)) md += `# ④ 人材・関係\n\n`;
+  if (d.engagement?.length) md += `## 今日関わるべき人\n${d.engagement.map(p => `・${p.name}${p.type ? `（${p.type}）` : ''}：${p.reason || ''}`).join('\n')}\n\n`;
+  else if (d['育成']?.length) md += `## 今日関わるべき人\n${d['育成'].map(p => `・${p.name}：${p.reason}`).join('\n')}\n\n`;
+  if (d['会う価値']?.length) md += `## 今日接触する価値のある人\n${d['会う価値'].map(p => `・${p.name}：${p.purpose}`).join('\n')}\n\n`;
+  if (d.partner_progress && d.partner_progress.current != null) {
+    const pp = d.partner_progress;
+    md += `## 経営パートナー進捗（${pp.current ?? 0}/${pp.target ?? 10}）\n`;
+    const lines = [].concat(pp.alerts || [], pp.recent_changes || []);
+    if (lines.length) md += lines.map(c => `・${c}`).join('\n') + '\n';
+    md += `\n`;
+  }
+  // ── 参謀から・運用 ──
+  if (d.proposals?.length || d.previous_proposal_tracking?.length || d.os_gaps?.length || (d.delete_candidate && d.delete_candidate.target)) md += `# 参謀から・運用\n\n`;
+  if (d.proposals?.length) md += `## AI参謀からの提言\n${d.proposals.map(p => `・${p.content}${p.partner_relation ? ' — ' + p.partner_relation : ''}`).join('\n')}\n\n`;
+  if (d.previous_proposal_tracking?.length) md += `## 前回提言の進捗\n${d.previous_proposal_tracking.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.os_gaps?.length) md += `## OS齟齬レポート\n${d.os_gaps.map(c => `・${c}`).join('\n')}\n\n`;
+  if (d.delete_candidate && d.delete_candidate.target) {
+    const dc = d.delete_candidate;
+    md += `## 削除候補\n・${dc.target}${dc.type ? `（${dc.type}）` : ''}${dc.reason ? '：' + dc.reason : ''}${dc.effect ? '／効果：' + dc.effect : ''}\n\n`;
+  }
+  // ── 🔭 今日の視点補正（日次・視野補正）──
+  if (d.perspective_correction && (d.perspective_correction.critical_question || d.perspective_correction.another_angle)) {
+    const pc = d.perspective_correction;
+    md += `# 🔭 今日の視点補正\n\n`;
+    if (pc.critical_question) md += `## クリティカルな問い\n${pc.critical_question}\n\n`;
+    if (pc.another_angle) md += `## 別角度の一言\n${pc.another_angle}\n\n`;
+  }
+  // ===== 週次／月次レビュー専用セクション =====
+  const _grp = (t, groups) => {
+    const body = groups.filter(g => Array.isArray(g[1]) && g[1].length)
+      .map(g => `${g[0]}：\n${g[1].map(x=>`・${x}`).join('\n')}`).join('\n');
+    if (body) md += `## ${t}\n${body}\n\n`;
+  };
+  if (d.project_review) _grp('Projectレビュー', [['前進', d.project_review.advancing], ['停滞', d.project_review.stalled], ['完了', d.project_review.completed], ['削除候補', d.project_review.delete_candidates]]);
+  if (d.engagement_review) _grp('関わり方レビュー', [['育った人（若手）', d.engagement_review.develop], ['共同成長（同世代）', d.engagement_review.co_growth], ['相互学習（年上・専門家）', d.engagement_review.mutual_learning], ['次に経験を渡す人', d.engagement_review.next_experience]]);
+  if (d.question_review) _grp('問いレビュー', [['今育てる問い', d.question_review.nurturing], ['答えが出た問い', d.question_review.answered], ['捨てる問い', d.question_review.discard]]);
+  if (d.ai_understanding) _grp('AI理解度レビュー', [['AIが重要と認識', d.ai_understanding.recognized], ['実際とのズレ', d.ai_understanding.gaps]]);
+  if (d.life_list_review) _grp('100リストレビュー', [['進んだもの', d.life_list_review.advanced], ['止まっているもの', d.life_list_review.stalled], ['最近追加', d.life_list_review.recent], ['AI提案', d.life_list_review.proposals]]);
+  if (d.delete_review) _grp('削除候補レビュー', [['Project', d.delete_review.projects], ['人間関係', d.delete_review.people], ['問い', d.delete_review.questions], ['テーマ', d.delete_review.themes], ['構想', d.delete_review.ideas], ['役割', d.delete_review.roles]]);
+  if (d.theme_review) _grp('重点テーマレビュー', [['今探求していること', d.theme_review.current], ['増えたテーマ', d.theme_review.added], ['減ったテーマ', d.theme_review.removed]]);
+  if (d.thought_shift) _grp('思想変化レビュー', [['新しく信じ始めたこと', d.thought_shift.new_beliefs], ['捨てた考え', d.thought_shift.dropped], ['深まった考え', d.thought_shift.deepened]]);
+  if (d.relationship_review) {
+    const r = d.relationship_review;
+    _grp('大切にしたい人レビュー', [['本当に関係を深めたい人', r.deepen], ['優先順位の変化', r.priority_shift]]);
+    if (r.time_spent) md += `最近時間を使えているか：${r.time_spent}\n\n`;
+  }
+  if (d.partner_candidate_review) _grp('経営パートナー候補レビュー', [['新規追加', d.partner_candidate_review.added], ['昇格', d.partner_candidate_review.promoted], ['停滞', d.partner_candidate_review.stalled], ['除外', d.partner_candidate_review.removed]]);
+  if (d.ai_self_check) {
+    const a = d.ai_self_check, h = a.hypotheses || {};
+    md += `## AI自己点検\n`;
+    if (h.aiming) md += `・何を目指しているか：${h.aiming}\n`;
+    if (h.struggling) md += `・何に悩んでいるか：${h.struggling}\n`;
+    if (h.developing) md += `・誰を育てようとしているか：${h.developing}\n`;
+    if (h.discarding) md += `・何を捨てようとしているか：${h.discarding}\n`;
+    if (a.takeshima_eval) md += `・竹嶋評価：${a.takeshima_eval}\n`;
+    md += `\n`;
+  }
+  return md.trim() || JSON.stringify(d, null, 2);
+}
+
+function markdownToHtml(md) {
+  if (!md) return '';
+  const lines = md.split('\n');
+  let html = '';
+  let inList = false;
+  let curCat = '';
+  const _bc = t => /要点|予定/.test(t)?'key':/内省/.test(t)?'ins':/財務|外部/.test(t)?'fin':/事業|実行/.test(t)?'biz':/人材|関係/.test(t)?'ppl':/参謀|運用/.test(t)?'ops':'';
+  for (let line of lines) {
+    line = line
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/`(.+?)`/g,'<code>$1</code>');
+    // markdownリンク [label](url) → ファビコン付き青リンク
+    line = line.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function(_m, label, url) {
+      let host = ''; try { host = new URL(url.replace(/&amp;/g, '&')).hostname; } catch(e) {}
+      const fav = host ? '<img class="bv-fav" src="https://www.google.com/s2/favicons?domain=' + host + '&sz=64" alt="" loading="lazy">' : '';
+      return '<a href="' + url + '" target="_blank" rel="noopener" class="bv-link">' + fav + label + '</a>';
+    });
+    // 生URLも青リンク化（属性内のURLは除外）
+    line = line.replace(/(^|[^"'>])(https?:\/\/[^\s｜、。<>"]+)/g, '$1<a href="$2" target="_blank" rel="noopener" class="bv-link">$2</a>');
+    if (/^### (.+)/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<h3>' + line.replace(/^### /,'') + '</h3>';
+    } else if (/^## (.+)/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<h2 class="bcat-' + curCat + '">' + line.replace(/^## /,'') + '</h2>';
+    } else if (/^# (.+)/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      const _t = line.replace(/^# /,''); curCat = _bc(_t); html += '<h1 class="bcat-' + curCat + '">' + _t + '</h1>';
+    } else if (/^---+$/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<hr>';
+    } else if (/^[-・*] (.+)/.test(line)) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += '<li>' + line.replace(/^[-・*] /,'') + '</li>';
+    } else if (/^\d+\. (.+)/.test(line)) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += '<li>' + line.replace(/^\d+\. /,'') + '</li>';
+    } else if (line.trim() === '') {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<br>';
+    } else {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<p>' + line + '</p>';
+    }
+  }
+  if (inList) html += '</ul>';
+  return html;
+}
+
+// 1day の getAixDraft と同等の3形式判定（オブジェクト／文字列／JSON文字列）。dailyのみ
+function getAixDraft(){
+  let raw = localStorage.getItem('aix_draft_latest');
+  if (!raw) raw = localStorage.getItem('oneday_aix_draft');
+  if (!raw) return null;
+  try {
+    const d = JSON.parse(raw);
+    if (d && typeof d === 'object') return briefJsonToMarkdown(d);
+    if (typeof d === 'string') return d;
+  } catch(e) {}
+  return raw;
+}
+
+let briefExpanded = false;
+// 既定表示は「# 今日の予定」「# 今日の要点」セクションまで
+function briefHeadMarkdown(md){
+  const lines = md.split('\n');
+  const out = [];
+  for (const line of lines) {
+    const m = line.match(/^# (.+)/);
+    if (m && !/予定|要点/.test(m[1])) break;
+    out.push(line);
+  }
+  return out.join('\n').trim();
+}
+function toggleBrief(){ briefExpanded = !briefExpanded; renderTodayBrief(); }
+
+function renderToday(){
+  const el = document.getElementById('todayView');
+  el.innerHTML = `
+    <div class="qa-bar">
+      <input id="qaInput" type="text" placeholder="今日のShotタスクを追加…（Enterで登録）">
+      <button onclick="quickAdd()">追加</button>
+    </div>
+    <h2>📋 今日のBRIEF（要点）</h2>
+    <div class="card"><div id="briefArea"></div></div>
+    <h2>✅ 今日のタスク</h2>
+    <div class="card"><div id="todayTasks"></div></div>
+    <h2>✦ 今日のLECTICA</h2>
+    <div class="card"><div id="todayLectica"></div></div>
+  `;
+  document.getElementById('qaInput').addEventListener('keydown', e => { if (e.key === 'Enter') quickAdd(); });
+  renderTodayBrief();
+  renderTodayTasks();
+  renderTodayLectica();
+}
+
+function renderTodayBrief(){
+  const area = document.getElementById('briefArea');
+  if (!area) return;
+  const md = getAixDraft();
+  if (!md) { area.innerHTML = '<div class="empty">今日のBriefはまだありません（Cowork実行後に表示されます）</div>'; return; }
+  const head = briefHeadMarkdown(md);
+  const shown = briefExpanded ? md : (head || md);
+  const hasMore = !briefExpanded && head && head.length < md.trim().length;
+  area.innerHTML = '<div class="brief-body">' + markdownToHtml(shown) + '</div>'
+    + (briefExpanded || hasMore
+        ? '<button class="brief-more" onclick="toggleBrief()">' + (briefExpanded ? '要点だけにする' : '全文を見る') + '</button>'
+        : '');
+}
+
+function renderTodayTasks(){
+  const area = document.getElementById('todayTasks');
+  if (!area) return;
+  const today = todayKey();
+  const tasks = readShotTasks()
+    .filter(t => t && t.status === 'todo' && t.dueDate && t.dueDate <= today)
+    .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || '') || (a.priority === 'high' ? -1 : 1));
+  if (!tasks.length) { area.innerHTML = '<div class="empty">今日のタスクはありません 🎉</div>'; return; }
+  area.innerHTML = tasks.map(t => {
+    const lect = t.category === 'Lectica';
+    const overdue = t.dueDate < today;
+    return '<div class="task-row">'
+      + '<button class="task-check" onclick="completeTask(\'' + escHtml(t.id) + '\')" title="完了にする">✓</button>'
+      + '<span class="task-title">' + escHtml(t.title) + '</span>'
+      + (overdue ? '<span class="task-overdue">' + escHtml(t.dueDate.slice(5).replace('-', '/')) + '〜</span>' : '')
+      + '<span class="task-tag' + (lect ? ' lectica' : '') + '">' + escHtml(t.category || '') + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+function renderTodayLectica(){
+  const area = document.getElementById('todayLectica');
+  if (!area) return;
+  let p = null;
+  try { p = JSON.parse(localStorage.getItem('aix_lectica_pending') || 'null'); } catch(e) {}
+  const pDate = p && (p.date || (p.shotTask && p.shotTask.dueDate));
+  if (!p || pDate !== todayKey()) { area.innerHTML = '<div class="empty">今日のLectica提案はありません</div>'; return; }
+  const name = [p.selectedExperimentId, p.selectedExperimentTitle].filter(Boolean).join('：');
+  area.innerHTML = '<div class="lx-row"><span class="task-tag lectica">今日の実験</span> ' + escHtml(name || '(実験名なし)')
+    + (p.targetSchedule ? '<div class="empty" style="padding:2px 0 0;">使う場面：' + escHtml(p.targetSchedule) + '</div>' : '')
+    + '<div style="margin-top:6px;"><a onclick="switchTab(\'reflect\')">→ Reflectタブで記録</a></div></div>';
+}
+
+// ── 起動 ──
+buildTabbar();
+let _initTab = 'today';
+try { _initTab = localStorage.getItem(LAST_TAB_KEY) || 'today'; } catch(e) {}
+switchTab(TABS.some(t => t.id === _initTab) ? _initTab : 'today');
+// 別タブ（本体ページ）での変更を今日タブへ反映
+window.addEventListener('storage', e => {
+  if (currentTab === 'today' && ['shot-task-os-v1', 'aix_draft_latest', 'oneday_aix_draft', 'aix_lectica_pending'].includes(e.key)) renderToday();
+});
+</script>
+</body>
+</html>
