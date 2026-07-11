@@ -4,7 +4,7 @@
 
 | ツール | 役割 | 依存 |
 |--------|------|------|
-| `check_backup_health.py` | 全OSバックアップJSONの健全性を9項目チェック | Python 3.10+（標準ライブラリのみ） |
+| `check_backup_health.py` | 全OSバックアップJSONの健全性を11項目チェック | Python 3.10+（標準ライブラリのみ） |
 | `weekly_facts.py` | 週次レビュー用の「事実の差分」を機械計算 | Python 3.10+（標準ライブラリのみ） |
 | `pre-commit` + `install-hooks.sh` + `extract_scripts.js` | コミット前の構文・規約検証 | Node.js（+ JSX検証に esbuild） |
 | `drive_cleanup.py` | Drive の aix-drafts 固定名ファイルの重複掃除 | Python 3.10+ + google API クライアント |
@@ -38,6 +38,11 @@ python tools/check_backup_health.py <myapps-all-backup-*.json のパス>
 7. **1dayログ欠落** — `onedayLogs` の最新日付と今日の差が2日以上
 8. **必須キー欠落** — バックアップの主要キーが null（収集漏れ検知）
 9. **routineOS.holidays** — null（祝日がバックアップされていない）
+10. **Reflect本体** — `reflectOS_idb` の存在と中身（reflect-os未移行のブラウザでバックアップすると空になる）
+11. **巻き戻り検知** — 前回実行時の各OSの「最新エントリ日付」「件数」を `tools/logs/health_state.json` に
+    保存し、減っていたら⚠（2026-07 1day巻き戻り事故の再発検知）。基準の更新は検査対象の `savedAt` が
+    基準より新しいときだけ（古いバックアップの検査で基準を壊さない）。Reflectログは日次スナップショットで
+    直近60日に間引かれるため件数比較をせず最新日付のみ比較
 
 ---
 

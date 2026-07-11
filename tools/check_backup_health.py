@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-myapps データ健全性チェック（9項目）
+myapps データ健全性チェック（11項目）
 
 使い方:
     python tools/check_backup_health.py <myapps-all-backup-*.json のパス>
 
 終了コード: 異常なし=0 / 警告あり=1
 すべて過去に実際に起きた事故の再発検知を目的にしている。標準ライブラリのみ。
+
+巻き戻り検知: 前回実行時の各OSの「最新エントリ日付」「件数」を tools/logs/health_state.json に
+保存し、次回実行で減っていたら⚠（2026-07 1day巻き戻り事故の再発検知）。
+基準の更新は「検査対象のsavedAtが基準より新しいとき」だけ行う（古いファイルの検査で基準を壊さない）。
 """
 
+import os
 import sys
 import json
 import re
 import unicodedata
 from datetime import datetime, timezone, date, timedelta
+
+STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', 'health_state.json')
 
 # Windowsコンソール(cp932)でも絵文字・日本語を出力できるよう標準出力をUTF-8化
 for _s in (sys.stdout, sys.stderr):
@@ -314,6 +321,122 @@ def check_holidays(data):
     return True, ['✅ routineOS.holidays: あり（{}件）'.format(len(holidays) if hasattr(holidays, '__len__') else '?')]
 
 
+def check_reflect_presence(data):
+    """統合バックアップにReflect本体（reflectOS_idb）が入っているか。
+    reflect-osを一度も開いていないブラウザ（localStorage未移行）でバックアップすると空になる。"""
+    idb = data.get('reflectOS_idb')
+    if not isinstance(idb, dict) or not isinstance(idb.get('stores'), dict):
+        return False, ['⚠ Reflect本体: reflectOS_idb が無い（旧形式バックアップ or 収集漏れ）']
+    stores = idb['stores']
+    counts = {s: len(stores.get(s) or []) for s in ('logs', 'themes', 'settings', 'checks')}
+    if all(c == 0 for c in counts.values()):
+        return False, ['⚠ Reflect本体: 全ストアが空（reflect-os未移行のブラウザでバックアップした可能性）']
+    return True, ['✅ Reflect本体: logs {logs} / themes {themes} / settings {settings} / checks {checks}'.format(**counts)]
+
+
+def collect_metrics(data):
+    """巻き戻り検知用に各OSの件数・最新日付を集める。
+    Reflectログは日次スナップショットで直近60日に間引かれるため件数比較をしない（date_only）。"""
+    def latest_date(items, *fields):
+        best = None
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            for f in fields:
+                d = parse_ymd(it.get(f))
+                if d and (best is None or d > best):
+                    best = d
+        return best.isoformat() if best else None
+
+    oneday = as_list(data.get('onedayLogs'), 'logs')
+    shot = as_list(data.get('shotTaskOS'), 'tasks')
+    ro = data.get('routineOS') if isinstance(data.get('routineOS'), dict) else {}
+    pos = data.get('projectOS') if isinstance(data.get('projectOS'), dict) else {}
+    l100 = as_list(data.get('list100'), 'items')
+    koso = data.get('kosoLog') if isinstance(data.get('kosoLog'), dict) else {}
+    su = as_list(data.get('socialUniverse'), 'persons')
+    hito = as_list(data.get('hitomemo'), 'profiles')
+    llogs = as_list(data.get('lecticaLogs'), 'logs', 'items')
+    idb = data.get('reflectOS_idb') if isinstance(data.get('reflectOS_idb'), dict) else {}
+    rlogs = (idb.get('stores') or {}).get('logs') or []
+
+    return {
+        '1dayログ':      {'count': len(oneday), 'latest': latest_date(oneday, 'date')},
+        '1dayレビュー':  {'count': len(as_list(data.get('onedayReviews'), 'reviews'))},
+        'Shotタスク':    {'count': len(shot), 'latest': latest_date(shot, 'updatedAt', 'createdAt')},
+        'Routineタスク': {'count': len(ro.get('tasks') or [])},
+        'Routineログ':   {'count': len(ro.get('logs') or [])},
+        'Project':       {'count': len(pos.get('projects') or [])},
+        '100LIST':       {'count': len(l100), 'latest': latest_date(l100, 'updatedAt', 'createdAt')},
+        '構想ログ':      {'count': len(koso.get('items') or [])},
+        'SU人物':        {'count': len(su)},
+        'ヒトメモ':      {'count': len(hito)},
+        'Lecticaログ':   {'count': len(llogs), 'latest': latest_date(llogs, 'date')},
+        'Reflectログ':   {'count': len(rlogs), 'latest': latest_date(rlogs, 'date'), 'date_only': True},
+    }
+
+
+def check_rollback(data):
+    """前回実行時のスナップショットと比較し、最新日付・件数が減っていたら⚠。"""
+    cur = collect_metrics(data)
+    cur_saved = parse_iso(data.get('savedAt'))
+
+    prev = None
+    try:
+        with open(STATE_PATH, 'r', encoding='utf-8') as f:
+            prev = json.load(f)
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        _save_state(cur, data)
+        return False, ['⚠ 巻き戻り検知: 前回状態が読めない（{}）。今回値で基準を作り直した'.format(e)]
+
+    if prev is None:
+        if _save_state(cur, data):
+            return True, ['ℹ 巻き戻り検知: 初回実行。今回の値を基準として記録した']
+        return False, ['⚠ 巻き戻り検知: 基準（{}）の書き込みに失敗'.format(STATE_PATH)]
+
+    warns = []
+    pm = prev.get('metrics') or {}
+    for name, c in cur.items():
+        p = pm.get(name)
+        if not isinstance(p, dict):
+            continue
+        pl, cl = p.get('latest'), c.get('latest')
+        if pl and cl and cl < pl:
+            warns.append('    {}: 最新 {} → {} に巻き戻り'.format(name, pl, cl))
+        if not c.get('date_only'):
+            pc, cc = p.get('count'), c.get('count')
+            if isinstance(pc, int) and isinstance(cc, int) and cc < pc:
+                warns.append('    {}: 件数 {} → {} に減少'.format(name, pc, cc))
+
+    # 基準の更新は「今回のsavedAtが基準以上に新しいとき」だけ（古いファイル検査で基準を壊さない）
+    prev_saved = parse_iso(prev.get('savedAt'))
+    lines = []
+    if cur_saved and prev_saved and cur_saved < prev_saved:
+        lines.append('    ℹ 検査対象は基準（savedAt {}）より古いため基準は更新しない'.format(prev.get('savedAt')))
+    else:
+        _save_state(cur, data)
+
+    if warns:
+        return False, ['⚠ 巻き戻り検知: 前回（{}時点）より減っている項目あり'.format(prev.get('checkedAt', '?')[:16])] + warns + lines
+    return True, ['✅ 巻き戻り検知: 前回（{}時点）から減少なし'.format(prev.get('checkedAt', '?')[:16])] + lines
+
+
+def _save_state(metrics, data):
+    try:
+        os.makedirs(os.path.dirname(STATE_PATH), exist_ok=True)
+        with open(STATE_PATH, 'w', encoding='utf-8') as f:
+            json.dump({
+                'checkedAt': datetime.now(timezone.utc).astimezone().isoformat(),
+                'savedAt': data.get('savedAt'),
+                'metrics': metrics,
+            }, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception:
+        return False
+
+
 # ── メイン ──────────────────────────────────────────────────────
 
 def main():
@@ -348,6 +471,8 @@ def main():
         ('1dayログ欠落', lambda: check_oneday_gap(oneday_logs)),
         ('必須キー欠落', lambda: check_required_keys(data)),
         ('routineOS.holidays', lambda: check_holidays(data)),
+        ('Reflect本体', lambda: check_reflect_presence(data)),
+        ('巻き戻り検知', lambda: check_rollback(data)),
     ]
 
     today = date.today().isoformat()
