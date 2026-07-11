@@ -19,6 +19,10 @@ myapps-weekly-*.json
 # weekly_facts.py の生成物（Coworkの作業フォルダへコピーして使う）
 aix_weekly_facts.json
 
+# シート台帳の実データ（プロジェクト名・spreadsheetIdは個人情報。公開リポジトリに載せない）
+docs/sheets.local.md
+sheet_*.tsv
+
 # 議事録の原文と振り分け結果は個人情報。このリポジトリは公開なのでフォルダだけ残して中身は追跡しない
 inbox/*
 !inbox/.gitkeep

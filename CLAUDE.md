@@ -12,6 +12,7 @@
 - ファイル構成：<os名>/index.html（os名: task-os, shot-task-os, routine-os, project-os,
   reflect-os, 1day, brief-viewer, koso-log, 100list, social-universe, hitomemo, launcher）
 - 「inboxを振り分けて」と言われたら docs/claude-code-minutes-triage-spec.md の手順に従う（inbox/ を読み outputs/triage-YYYY-MM-DD.md を出力。どのOSにも自動書き込みしない）
+- シート更新は docs/claude-code-sheets-integration-spec.md の手順に従う（書き込み前バックアップ＋差分承認必須。台帳は docs/sheets.md / docs/sheets.local.md）
 
 ## 検証（コミット前に必須）
 - vanilla JS のOS：<script>（src無し）を連結して `node --check`
