@@ -1194,20 +1194,23 @@ const VD={vision:['守りの総合支援を通して、挑戦する人が成長�
 function renderAiImport(){
   const wrap = document.createElement('div');
   wrap.className = 'ai-import-wrap fu';
+  const promptRow = function(label, constName, usage){
+    return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+      '<button class="btn-s" style="min-width:225px;text-align:left;" onclick="lxCopyText(' + constName + ',this)">' + label + '</button>' +
+      '<span style="font-size:12px;color:var(--mu);">' + usage + '</span></div>';
+  };
   wrap.innerHTML =
     '<div class="ai-import-title">⬇ 取り込む</div>' +
-    '<div class="ai-import-sub">AIとの壁打ち・思考整理の結果を貼り付けて一括登録</div>' +
-    '<div style="margin:2px 0 10px;">' +
-      '<button class="btn-s" onclick="lxCopyText(RF_PROMPT_SPARRING,this)">🥊 壁打ち用をコピー（内省→記録→行動）</button>' +
-      '<div style="font-size:12px;color:var(--mu);margin-top:4px;">新規チャットに貼って壁打ち → 最後に出る【振り返り】ブロックを下のテキストエリアに貼って登録</div>' +
+    '<div class="ai-import-sub">AIとの壁打ち・振り返りの起点と、結果の登録をここに集約</div>' +
+    '<div style="font-size:13px;font-weight:700;margin:14px 0 6px;">プロンプト</div>' +
+    '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px;">' +
+      promptRow('🥊 Reflect壁打ち をコピー','RF_PROMPT_SPARRING','モヤモヤ・進捗の引っかかりを掘る（内省→記録→行動）') +
+      promptRow('✦ Lectica壁打ち をコピー','LX_PROMPT_SPARRING','今日の実験を設計→実行後フィードバック') +
+      promptRow('💬 Lectica振り返り をコピー','LX_PROMPT_START','実験を深掘りして振り返る（従来の新規チャット用）') +
+      promptRow('📄 Lecticaまとめ をコピー','LX_PROMPT_SUMMARY','振り返りチャットの最後に貼って取り込みブロック生成') +
     '</div>' +
-    '<details class="ai-prompt-box"><summary>📋 AIへの指示プロンプト（コピーして使う）</summary>' +
-    '<div class="ai-prompt-inner">' +
-    '<p class="ai-prompt-note">以下をClaudeに渡すと、取り込みフォーマットで返してくれます。</p>' +
-    '<pre class="ai-prompt-pre" id="ai-prompt-text">以下の振り返りメモを、Reflect OS の取り込みフォーマットに整形してください。\n\n【重要】\nこの作業は要約ではありません。\n経験・感情・教訓の中から、「自分が一番腹落ちしたこと」「考え方が変わったこと」「次の行動につながる学び」を抽出してください。\n抽象的な一般論ではなく、本人が実際に感じたこと・悩んだこと・気づいたことを優先してください。\n「○○とは何か」という綺麗なまとめよりも、「○○だと思っていたが、実は△△だった」という腹落ちを重視してください。\n\n【判断基準】\n良い例\n・仲間探しをやめる\n・資本政策ではなく人生応援だった\n・事業ではなく挑戦の環境を作りたい\n・承継を通じて経営者としての器を広げる\n\n悪い例\n・仲間とは何か\n・資本政策とは何か\n・承継とは何か\n\n【ルール】\n・タイプは【振り返り】【モヤモヤ】【VISION点検】【戦略テーマ】【思想変化】のいずれか\n・基本的には【振り返り】を優先する\n・思想そのものが変化した場合のみ【思想変化】を使う\n・タイトルは腹落ちした教訓を一言で表現する\n・各項目は必ず改行して1行1項目で出力する\n・気づき・学びは最大5項目\n・問いは未解決の問いを最大3項目\n・問いは必ず「〜か？」で終える\n・次の実験は具体的行動にする\n・次の実験は必ず「〜してみる」で終える\n・冗長な説明は省く\n・【メモ】以降は出力しない\n\n【出力フォーマット】\n【振り返り】\nタイトル：（腹落ちした教訓を一言で）\n日付：YYYY-MM-DD\n気づき・学び：\n・〇〇\n・〇〇\n問い：\n・〇〇か？\n・〇〇か？\n次の実験：\n・〇〇してみる\n・〇〇してみる\n\n【メモ】\n（ここに振り返りの元テキストを貼る）</pre>' +
-    '<button class="btn-s" onclick="navigator.clipboard.writeText(document.getElementById(\'ai-prompt-text\').textContent);this.textContent=\'コピーしました ✓\';setTimeout(()=>this.textContent=\'コピー\',2000)">コピー</button>' +
-    '</div></details>' +
-    '<textarea class="ai-textarea" id="ai-input" placeholder="ここにAIとの対話結果・思考整理テキストを貼り付けてください..."></textarea>' +
+    '<div style="font-size:13px;font-weight:700;margin:0 0 6px;">貼り付けて登録</div>' +
+    '<textarea class="ai-textarea" id="ai-input" placeholder="壁打ち・振り返りの出力をそのまま貼り付けてください（【振り返り】ブロック / ---REFLECT-IMPORT--- ブロックのどちらでも自動判別します）"></textarea>' +
     '<div class="ai-btn-row">' +
       '<button class="btn-p" onclick="registerAiInput()">登録する</button>' +
       '<span class="ai-status" id="ai-parse-status"></span>' +
@@ -1283,25 +1286,57 @@ function parseAiReflect(text){
 
 async function registerAiInput(){
   const text = document.getElementById('ai-input').value.trim();
-  const statusEl = document.getElementById('ai-parse-status');
+  let statusEl = document.getElementById('ai-parse-status');
   if(!text){ statusEl.textContent='入力が空です'; statusEl.className='ai-status err'; return; }
-  let entries;
-  try { entries = parseAiReflect(text); }
-  catch(err){ statusEl.textContent='解析エラー: '+err.message; statusEl.className='ai-status err'; return; }
-  if(!entries.length){
-    statusEl.textContent='【振り返り】などのタイプ行が見つかりません'; statusEl.className='ai-status err'; return;
+  // 自動判別：---REFLECT-IMPORT--- → Lectica実績 ／ 【振り返り】等 → 汎用登録 ／ 両方 → 両方処理
+  const hasLectica = /---REFLECT-IMPORT---/.test(text);
+  // Lecticaブロック内の「気づき：」等の行を汎用パーサが誤認識しないよう、除いた残りで判定する
+  const genericText = text.replace(/---REFLECT-IMPORT---[\s\S]*?(?:---END---|$)/g,'').trim();
+
+  let entries = [];
+  if(genericText){
+    try { entries = parseAiReflect(genericText); }
+    catch(err){
+      if(!hasLectica){ statusEl.textContent='解析エラー: '+err.message; statusEl.className='ai-status err'; return; }
+    }
   }
+  if(!entries.length && !hasLectica){
+    statusEl.textContent='【振り返り】などのタイプ行も ---REFLECT-IMPORT--- ブロックも見つかりません'; statusEl.className='ai-status err'; return;
+  }
+
+  // 汎用ブロックの登録（従来ロジックのまま）
   for(const r of entries){
     await dbput('logs', r);
     const i = S.logs.findIndex(x=>x.id===r.id);
     if(i>=0) S.logs[i]=r; else S.logs.unshift(r);
   }
-  S.logs.sort((a,b)=>b.date.localeCompare(a.date));
-  // 未紐づきチェック
-  const unlinked=entries.filter(e=>!(e.themes&&e.themes.length));
-  if(unlinked.length) S._unlinkedNotice=unlinked.length;
-  statusEl.textContent = entries.length+'件を登録しました ✓'; statusEl.className='ai-status ok';
-  document.getElementById('ai-input').value='';
+  if(entries.length){
+    S.logs.sort((a,b)=>b.date.localeCompare(a.date));
+    // 未紐づきチェック
+    const unlinked=entries.filter(e=>!(e.themes&&e.themes.length));
+    if(unlinked.length) S._unlinkedNotice=unlinked.length;
+  }
+
+  // Lectica実績の登録（Lecticaタブの lxParseImport / lxImportSave を共有。複製しない）
+  let lecticaOk=false;
+  if(hasLectica){
+    S.lxImport={text:text};
+    lecticaOk = lxImportSave()===true;   // 実験ID検証・重複確認・ステータス更新は既存挙動のまま（失敗はalert）
+    if(!lecticaOk) S.lxImport=null;      // 失敗時にLecticaタブへ取り込みパネルが残らないよう後始末
+  }
+
+  // 結果表示（lxImportSave成功時はra()でDOMが再構築されるため要素を取り直す）
+  statusEl = document.getElementById('ai-parse-status');
+  const input = document.getElementById('ai-input');
+  const parts=[];
+  if(entries.length) parts.push('振り返り'+entries.length+'件');
+  if(lecticaOk) parts.push('Lectica実績1件');
+  if(!parts.length){
+    if(statusEl){ statusEl.textContent='登録できませんでした（内容を確認してください）'; statusEl.className='ai-status err'; }
+    return;
+  }
+  if(statusEl){ statusEl.textContent = parts.join('＋')+'を登録しました ✓'; statusEl.className='ai-status ok'; }
+  if(input) input.value='';
   setTimeout(()=>{S.tab='home';ra();updateNav();},800);
 }
 
@@ -1618,17 +1653,18 @@ function lxImportPanel(master){
 }
 
 function lxImportSave(master){
+  // 戻り値：取り込み成功=true／失敗・キャンセル=false（取り込むタブの自動判別が結果表示に使う）
   try{
     const parsed=lxParseImport(S.lxImport&&S.lxImport.text);
-    if(!parsed){ alert('取り込みブロックが見つかりません。---REFLECT-IMPORT--- 〜 ---END--- を含めて貼り付けてください。'); return; }
-    if(!parsed.experimentId){ alert('実験ID（L0xx）が読み取れませんでした。ブロックに「実験ID：L029」の行を入れてください。'); return; }
+    if(!parsed){ alert('取り込みブロックが見つかりません。---REFLECT-IMPORT--- 〜 ---END--- を含めて貼り付けてください。'); return false; }
+    if(!parsed.experimentId){ alert('実験ID（L0xx）が読み取れませんでした。ブロックに「実験ID：L029」の行を入れてください。'); return false; }
     const mas=master||lxReadMaster()||[];
     const exp=mas.find(function(e){return e&&e.id===parsed.experimentId;});
-    if(!exp){ alert('実験ID '+parsed.experimentId+' がマスターに見つかりません。IDを確認してください。'); return; }
-    if(!(parsed.usedScene||parsed.insight||parsed.nextChange||parsed.actualAction)){ alert('使った場面・気づき・次回変えること・実際にやったこと のいずれかが必要です。'); return; }
+    if(!exp){ alert('実験ID '+parsed.experimentId+' がマスターに見つかりません。IDを確認してください。'); return false; }
+    if(!(parsed.usedScene||parsed.insight||parsed.nextChange||parsed.actualAction)){ alert('使った場面・気づき・次回変えること・実際にやったこと のいずれかが必要です。'); return false; }
     const logs=lxReadLogs();
     const dup=logs.some(function(l){return l&&l.experimentId===parsed.experimentId&&l.date===parsed.date&&(l.insight||'')===(parsed.insight||'');});
-    if(dup&&!confirm('同じ実験・同じ日・同じ気づきのログが既にあります。それでも取り込みますか？')) return;
+    if(dup&&!confirm('同じ実験・同じ日・同じ気づきのログが既にあります。それでも取り込みますか？')) return false;
     const now=new Date().toISOString();
     logs.unshift({
       id:'log_'+(parsed.date||tod()).replace(/-/g,'')+'_'+Math.random().toString(36).slice(2,8),
@@ -1642,7 +1678,8 @@ function lxImportSave(master){
     const stMap={continue:'active',complete:'completed',change:'active',pause:'paused'};
     if(stMap[parsed.result])lxSetField(parsed.experimentId,'status',stMap[parsed.result]);
     S.lxImport=null; toast('取り込みました：'+parsed.experimentId+'（'+parsed.date+'）'); ra(); updateNav();
-  }catch(e){ alert('取り込みエラー: '+e.message); }
+    return true;
+  }catch(e){ alert('取り込みエラー: '+e.message); return false; }
 }
 
 function lxCard(e,logs,master){
@@ -1693,16 +1730,11 @@ function renderLectica(){
     const bar=D({css:'position:sticky;top:0;z-index:50;background:var(--bg);padding:6px 0 8px;margin-bottom:6px;border-bottom:1px solid var(--bd)'});
     const sum=D({css:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px'});
     sum.appendChild(D({css:'font-size:13px;color:var(--di)'},'実験中 '+counts.active+' ／ 完了 '+counts.completed+' ／ 保留 '+counts.paused+' ／ 全'+master.length+'件'));
-    const btnGrp=D({css:'display:flex;gap:8px;margin-left:auto;flex-wrap:wrap'});
-    const sparBtn=Bt({cls:'btn-g',css:'font-size:13px'},'🥊 壁打ち用をコピー');
-    sparBtn.addEventListener('click',function(){lxCopyText(LX_PROMPT_SPARRING,sparBtn);});
-    btnGrp.appendChild(sparBtn);
-    const startBtn=Bt({cls:'btn-g',css:'font-size:13px'},'💬 新規チャット用をコピー');
-    startBtn.addEventListener('click',function(){lxCopyText(LX_PROMPT_START,startBtn);});
-    btnGrp.appendChild(startBtn);
-    const sumBtn=Bt({cls:'btn-g',css:'font-size:13px'},'📄 まとめ用をコピー');
-    sumBtn.addEventListener('click',function(){lxCopyText(LX_PROMPT_SUMMARY,sumBtn);});
-    btnGrp.appendChild(sumBtn);
+    const btnGrp=D({css:'display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center'});
+    // プロンプト3種のコピーは「⬇ 取り込む」タブに集約（2026-07）。跡地は導線リンクのみ
+    const hubLink=Sp({css:'font-size:12px;color:var(--di);text-decoration:underline;cursor:pointer'},'プロンプトは ⬇取り込む タブに集約');
+    hubLink.addEventListener('click',function(){S.tab='ai-import';ra();updateNav();});
+    btnGrp.appendChild(hubLink);
     const impBtn=Bt({cls:'btn-g',css:'font-size:13px'},'📋 貼り付けて取り込む');
     impBtn.addEventListener('click',function(){S.lxImport=S.lxImport?null:{text:''};ra();});
     btnGrp.appendChild(impBtn);
