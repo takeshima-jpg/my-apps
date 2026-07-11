@@ -332,7 +332,10 @@ select.fi{cursor:pointer;}
   </nav>
   <div class="sb-backup-panel">
     <button class="sb-backup-btn" onclick="exportAllJSON()">⬇ JSON保存</button>
-    <button class="sb-backup-btn" onclick="importAllJSON()">⬆ JSON読込</button>
+    <details>
+      <summary style="cursor:pointer;font-size:11px;opacity:.6;padding:4px 0;">詳細（復旧用）</summary>
+      <button class="sb-backup-btn" onclick="importAllJSON()">⬆ JSON読込</button>
+    </details>
     <input type="file" id="jsonImportInput" accept=".json" style="display:none" onchange="handleJSONImport(event)">
     <div style="border-top:1px solid rgba(255,255,255,0.08);margin:4px 0;"></div>
     <label class="sb-backup-btn" style="cursor:pointer;">🤖 AIタスク読込<input type="file" id="aixTaskInput" accept=".json" style="display:none" onchange="handleAixTaskImport(event)"></label>
@@ -710,7 +713,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-07-02';
+const BUILD_VER = '2026-07-11';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -938,6 +941,120 @@ function handleAixTaskImport(e) {
   reader.readAsText(file);
 }
 
+// ── 復元ガード（共通仕様：鮮度比較＋直前スナップショット＋アンドゥ。CLAUDE.md参照）──
+const RG_OS = 'task-os';
+const RG_KEYS = [
+  'shot-task-os-v1', 'routineOS_tasks', 'routineOS_logs', 'routineOS_holidays',
+  'pos_v4', 'yaritai_items_v4', 'oneday_logs_v1', 'oneday_reviews_v1',
+  'kouso_backlog_v1', 'kouso_archive_v1', 'su-v6-persons', 'hitomemo_profiles_v1',
+  'lectica_experiments_master_v1', 'lectica_experiments_master_markdown_v1', 'lectica_experiment_logs_v1',
+  'aix_review_weekly', 'aix_review_monthly', 'reflectOS_v1',
+];
+const RG_SNAP_KEY = 'taskos_pre_restore_snapshot';
+
+// 鮮度比較ダイアログ。巻き戻り時は赤字警告＋「巻き戻す」の入力を要求。resolve(true)で続行
+// extra: {detailHtml: 追加表示, rollback: 判定の上書き}（統合復元など向け・省略可）
+function rgConfirm(inc, cur, label, extra) {
+  extra = extra || {};
+  return new Promise(resolve => {
+    const rollback = (typeof extra.rollback === 'boolean') ? extra.rollback
+      : (cur.latest !== '—' && (inc.latest === '—' || inc.latest < cur.latest || inc.count < cur.count));
+    const ov = document.createElement('div');
+    ov.id = 'rgConfirmOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;color:#1a1a22;border-radius:10px;max-width:440px;width:100%;padding:20px;font-size:14px;line-height:1.7;box-shadow:0 8px 30px rgba(0,0,0,.25);';
+    let html = '<div style="font-weight:700;margin-bottom:10px;">' + label + '</div>'
+      + '<div style="border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin-bottom:10px;">'
+      + '読み込むデータ：最新 <b>' + inc.latest + '</b>・' + inc.count + '件<br>'
+      + '現在のデータ　：最新 <b>' + cur.latest + '</b>・' + cur.count + '件</div>';
+    if (extra.detailHtml) {
+      html += '<div style="border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin-bottom:10px;max-height:180px;overflow-y:auto;font-size:12px;line-height:1.8;">' + extra.detailHtml + '</div>';
+    }
+    if (rollback) {
+      html += '<div id="rgRollbackWarn" style="color:#d31f2c;font-weight:700;margin-bottom:8px;">⚠ 巻き戻りが発生します（読み込むデータの方が古い／少ない）</div>'
+        + '<div style="margin-bottom:6px;">続けるには「巻き戻す」と入力してください：</div>'
+        + '<input id="rgWord" type="text" autocomplete="off" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;margin-bottom:12px;font-size:14px;box-sizing:border-box;">';
+    } else {
+      html += '<div style="margin-bottom:12px;">現在のデータは上書きされます（直前の状態は自動退避されます）。</div>';
+    }
+    html += '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+      + '<button id="rgCancel" style="padding:8px 16px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#1a1a22;cursor:pointer;">キャンセル</button>'
+      + '<button id="rgOk" style="padding:8px 16px;border:none;border-radius:6px;background:' + (rollback ? '#d31f2c' : '#5b51d8') + ';color:#fff;cursor:pointer;">' + (rollback ? '巻き戻して復元' : '復元する') + '</button></div>';
+    box.innerHTML = html;
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    const done = v => { ov.remove(); resolve(v); };
+    box.querySelector('#rgCancel').onclick = () => done(false);
+    box.querySelector('#rgOk').onclick = () => {
+      if (rollback) {
+        const w = box.querySelector('#rgWord');
+        if (w.value.trim() !== '巻き戻す') { w.style.borderColor = '#d31f2c'; w.focus(); return; }
+      }
+      done(true);
+    };
+  });
+}
+
+// 復元直前の状態をlocalStorage退避（1世代）＋JSON自動ダウンロード
+function rgSnapshot() {
+  const snap = { os: RG_OS, savedAt: new Date().toISOString(), data: {} };
+  RG_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) snap.data[k] = v; });
+  try { localStorage.setItem(RG_SNAP_KEY, JSON.stringify(snap)); } catch(e) {}
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' }));
+    a.download = RG_OS + '-pre-restore-' + new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19) + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch(e) {}
+}
+
+function rgShowUndo() {
+  if (document.getElementById('rgUndoBtn')) return;
+  const b = document.createElement('button');
+  b.id = 'rgUndoBtn';
+  b.textContent = '↩ 復元前に戻す';
+  b.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:99998;padding:10px 18px;border:none;border-radius:999px;background:#1a1a22;color:#fff;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);';
+  b.onclick = rgUndo;
+  document.body.appendChild(b);
+}
+
+function rgUndo() {
+  try {
+    const snap = JSON.parse(localStorage.getItem(RG_SNAP_KEY) || 'null');
+    if (!snap || !snap.data) { alert('復元前スナップショットが見つかりません'); return; }
+    if (!confirm('復元前（' + (snap.savedAt || '').slice(0, 16).replace('T', ' ') + '）の状態に戻します。よろしいですか？')) return;
+    RG_KEYS.forEach(k => { if (k in snap.data) localStorage.setItem(k, snap.data[k]); else localStorage.removeItem(k); });
+    location.reload();
+  } catch(e) { alert('戻せませんでした: ' + e.message); }
+}
+
+// 統合バックアップ／現在のlocalStorageの各OS件数（比較表示用）
+function rgCountRows(data) {
+  const n = v => Array.isArray(v) ? v.length : 0;
+  const g = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch(e) { return null; } };
+  const pos = g('pos_v4'), ref = g('reflectOS_v1');
+  return [
+    ['Shotタスク',    n(data.shotTaskOS),                                        n(g('shot-task-os-v1'))],
+    ['Routineタスク', n(data.routineOS && data.routineOS.tasks),                  n(g('routineOS_tasks'))],
+    ['Routineログ',   n(data.routineOS && data.routineOS.logs),                   n(g('routineOS_logs'))],
+    ['Project',       n(data.projectOS && data.projectOS.projects),               n(pos && pos.projects)],
+    ['100LIST',       n(data.list100),                                            n(g('yaritai_items_v4'))],
+    ['1dayログ',      n(data.onedayLogs),                                         n(g('oneday_logs_v1'))],
+    ['1dayレビュー',  n(data.onedayReviews),                                      n(g('oneday_reviews_v1'))],
+    ['構想ログ',      n(data.kosoLog && data.kosoLog.items),                      n(g('kouso_backlog_v1'))],
+    ['SU人物',        n(data.socialUniverse),                                     n(g('su-v6-persons'))],
+    ['ヒトメモ',      n(data.hitomemo),                                           n(g('hitomemo_profiles_v1'))],
+    ['Reflectログ',   n(data.reflectOS_idb && data.reflectOS_idb.stores && data.reflectOS_idb.stores.logs), n(ref && ref.logs)],
+  ];
+}
+function rgOnedayLatest(logs) {
+  let m = '';
+  (Array.isArray(logs) ? logs : []).forEach(r => { if (r && r.date && r.date > m) m = r.date; });
+  return m || '—';
+}
+
 function handleJSONImport(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -945,11 +1062,31 @@ function handleJSONImport(e) {
   reader.onload = async ev => {
     try {
       const data = JSON.parse(ev.target.result);
-      if (!confirm(`JSONから読み込みます。現在のデータは上書きされます。よろしいですか？\n（保存日時: ${data.savedAt || '不明'}）`)) return;
+      // 鮮度比較：最新=1dayログ日付、件数=全OS合計。OSごとの件数減少も⚠表示
+      const rows = rgCountRows(data);
+      let incTotal = 0, curTotal = 0, anyDown = false, detailHtml = '';
+      rows.forEach(([name, ic, cc]) => {
+        incTotal += ic; curTotal += cc;
+        const down = ic < cc;
+        if (down) anyDown = true;
+        detailHtml += '<div' + (down ? ' style="color:#d31f2c;font-weight:700;"' : '') + '>'
+          + name + '：読込 ' + ic + '件 ／ 現在 ' + cc + '件' + (down ? ' ⚠' : '') + '</div>';
+      });
+      let curOneday = [];
+      try { curOneday = JSON.parse(localStorage.getItem('oneday_logs_v1') || '[]'); } catch(_) {}
+      const inc = { latest: rgOnedayLatest(data.onedayLogs), count: incTotal };
+      const cur = { latest: rgOnedayLatest(curOneday), count: curTotal };
+      const rollback = anyDown || (cur.latest !== '—' && (inc.latest === '—' || inc.latest < cur.latest));
+      const ok = await rgConfirm(inc, cur,
+        '統合バックアップから全OSを復元します（保存日時: ' + (data.savedAt || '不明') + '）<br><span style="font-weight:400;font-size:12px;color:#5a5a6e;">最新=1dayログ日付、件数=全OS合計</span>',
+        { detailHtml: detailHtml, rollback: rollback });
+      if (!ok) { e.target.value = ''; return; }
+      rgSnapshot();
       restoreAllOSData(data);
       if (data.reflectOS_idb) await restoreReflectIDB(data.reflectOS_idb);
       renderHome();
       toast('✅ JSONから読み込みました（Reflect含む）');
+      rgShowUndo();
     } catch(err) {
       alert('読込エラー: JSONファイルが正しくありません');
     }

@@ -19,6 +19,14 @@
 - hitomemo（React/JSX, type="text/babel"）：esbuild --jsx=transform で構文検証
 - pre-commit hook（tools/pre-commit）が自動実行する。hookを外さない
 
+## 復元ガード（2026-07 1day巻き戻り事故の再発防止）
+- 復元（読込）系の操作にはすべて鮮度比較ダイアログ＋直前スナップショットを付ける。
+  新規に復元機能を作る場合も同様。保存はいつでも可、復元は壊れたときだけ
+- 実装は各OS共通の rgConfirm / rgSnapshot / rgShowUndo / rgUndo パターン（1day/index.html が参照実装）。
+  退避キーは `<os>_pre_restore_snapshot`（1世代）＋JSON自動ダウンロード
+- 正本は Task OS の統合バックアップ（myapps-all-backup）。個別GDriveバックアップは復活させない。
+  JSON保存（エクスポート）は全OS存続、JSON読込は「詳細（復旧用）」折りたたみ内に置く
+
 ## GDrive実装 共通注意（新OSへコピー時必読）
 - gdriveLoad後は save() でなく saveData()/saveReviews() を呼ぶ
 - gdriveFindFile() のURLは GDRIVE_FILE_NAME 定数を参照（直書きNG）

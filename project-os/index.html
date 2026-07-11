@@ -944,9 +944,12 @@ textarea.fc.tall { min-height: 130px; }
         <p>すべてのデータはブラウザ（localStorage）に自動保存されます。定期的なJSONエクスポートを推奨します。</p>
         <div class="set-btns">
           <button class="btn btn-outline" onclick="doExport()">↓ JSONエクスポート</button>
-          <button class="btn btn-outline" onclick="doImport()">↑ JSONインポート</button>
           <button class="btn btn-danger"  onclick="doReset()">⚠ 初期化する</button>
         </div>
+        <details>
+          <summary style="cursor:pointer;font-size:11px;color:var(--text3);padding:4px 0;">詳細（復旧用）</summary>
+          <button class="btn btn-outline" onclick="doImport()">↑ JSONインポート</button>
+        </details>
       </div>
       <div class="set-box">
         <h3>Project OS について</h3>
@@ -2128,17 +2131,114 @@ function doExport(){
   const a=document.createElement('a'); a.href=url; a.download=`project_os_${today()}.json`; a.click();
   URL.revokeObjectURL(url);
 }
+// ── 復元ガード（共通仕様：鮮度比較＋直前スナップショット＋アンドゥ。CLAUDE.md参照）──
+const RG_OS = 'project-os';
+const RG_KEYS = ['pos_v4'];
+const RG_SNAP_KEY = 'project-os_pre_restore_snapshot';
+
+// 主データ(S形式オブジェクト)から {latest, count} を機械判定
+function rgStat(s) {
+  const o = (s && typeof s === 'object') ? s : {};
+  const a = Array.isArray(o.projects) ? o.projects : [];
+  let latest = o.savedAt ? String(o.savedAt).slice(0, 10) : '';
+  a.forEach(p => {
+    if (p && p.updatedAt) { const d = String(p.updatedAt).slice(0, 10); if (d > latest) latest = d; }
+  });
+  return { latest: latest || '—', count: a.length };
+}
+
+// 鮮度比較ダイアログ。巻き戻り時は赤字警告＋「巻き戻す」の入力を要求。resolve(true)で続行
+// extra: {detailHtml: 追加表示, rollback: 判定の上書き}（統合復元など向け・省略可）
+function rgConfirm(inc, cur, label, extra) {
+  extra = extra || {};
+  return new Promise(resolve => {
+    const rollback = (typeof extra.rollback === 'boolean') ? extra.rollback
+      : (cur.latest !== '—' && (inc.latest === '—' || inc.latest < cur.latest || inc.count < cur.count));
+    const ov = document.createElement('div');
+    ov.id = 'rgConfirmOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;color:#1a1a22;border-radius:10px;max-width:440px;width:100%;padding:20px;font-size:14px;line-height:1.7;box-shadow:0 8px 30px rgba(0,0,0,.25);';
+    let html = '<div style="font-weight:700;margin-bottom:10px;">' + label + '</div>'
+      + '<div style="border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin-bottom:10px;">'
+      + '読み込むデータ：最新 <b>' + inc.latest + '</b>・' + inc.count + '件<br>'
+      + '現在のデータ　：最新 <b>' + cur.latest + '</b>・' + cur.count + '件</div>';
+    if (extra.detailHtml) {
+      html += '<div style="border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin-bottom:10px;max-height:180px;overflow-y:auto;font-size:12px;line-height:1.8;">' + extra.detailHtml + '</div>';
+    }
+    if (rollback) {
+      html += '<div id="rgRollbackWarn" style="color:#d31f2c;font-weight:700;margin-bottom:8px;">⚠ 巻き戻りが発生します（読み込むデータの方が古い／少ない）</div>'
+        + '<div style="margin-bottom:6px;">続けるには「巻き戻す」と入力してください：</div>'
+        + '<input id="rgWord" type="text" autocomplete="off" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;margin-bottom:12px;font-size:14px;box-sizing:border-box;">';
+    } else {
+      html += '<div style="margin-bottom:12px;">現在のデータは上書きされます（直前の状態は自動退避されます）。</div>';
+    }
+    html += '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+      + '<button id="rgCancel" style="padding:8px 16px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#1a1a22;cursor:pointer;">キャンセル</button>'
+      + '<button id="rgOk" style="padding:8px 16px;border:none;border-radius:6px;background:' + (rollback ? '#d31f2c' : '#5b51d8') + ';color:#fff;cursor:pointer;">' + (rollback ? '巻き戻して復元' : '復元する') + '</button></div>';
+    box.innerHTML = html;
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    const done = v => { ov.remove(); resolve(v); };
+    box.querySelector('#rgCancel').onclick = () => done(false);
+    box.querySelector('#rgOk').onclick = () => {
+      if (rollback) {
+        const w = box.querySelector('#rgWord');
+        if (w.value.trim() !== '巻き戻す') { w.style.borderColor = '#d31f2c'; w.focus(); return; }
+      }
+      done(true);
+    };
+  });
+}
+
+// 復元直前の状態をlocalStorage退避（1世代）＋JSON自動ダウンロード
+function rgSnapshot() {
+  const snap = { os: RG_OS, savedAt: new Date().toISOString(), data: {} };
+  RG_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) snap.data[k] = v; });
+  try { localStorage.setItem(RG_SNAP_KEY, JSON.stringify(snap)); } catch(e) {}
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' }));
+    a.download = RG_OS + '-pre-restore-' + new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19) + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch(e) {}
+}
+
+function rgShowUndo() {
+  if (document.getElementById('rgUndoBtn')) return;
+  const b = document.createElement('button');
+  b.id = 'rgUndoBtn';
+  b.textContent = '↩ 復元前に戻す';
+  b.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:99998;padding:10px 18px;border:none;border-radius:999px;background:#1a1a22;color:#fff;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);';
+  b.onclick = rgUndo;
+  document.body.appendChild(b);
+}
+
+function rgUndo() {
+  try {
+    const snap = JSON.parse(localStorage.getItem(RG_SNAP_KEY) || 'null');
+    if (!snap || !snap.data) { alert('復元前スナップショットが見つかりません'); return; }
+    if (!confirm('復元前（' + (snap.savedAt || '').slice(0, 16).replace('T', ' ') + '）の状態に戻します。よろしいですか？')) return;
+    RG_KEYS.forEach(k => { if (k in snap.data) localStorage.setItem(k, snap.data[k]); else localStorage.removeItem(k); });
+    location.reload();
+  } catch(e) { alert('戻せませんでした: ' + e.message); }
+}
+
 function doImport(){
   const inp=document.createElement('input'); inp.type='file'; inp.accept='.json,application/json';
   inp.onchange=e=>{
     const file=e.target.files[0]; if(!file) return;
     const reader=new FileReader();
-    reader.onload=ev=>{
+    reader.onload=async ev=>{
       try{
         const data=JSON.parse(ev.target.result);
         if(!data.projects) throw new Error('invalid');
-        if(!confirm('現在のデータを上書きします。よろしいですか？')) return;
+        const ok = await rgConfirm(rgStat(data), rgStat(S), 'JSONから復元します（プロジェクト' + (data.projects||[]).length + '件）');
+        if(!ok){ e.target.value=''; return; }
+        rgSnapshot();
         S=data; save(); nav('dash'); alert('インポートが完了しました。');
+        rgShowUndo();
       }catch(err){alert('読み込みに失敗しました: '+err.message);}
     };
     reader.readAsText(file);
