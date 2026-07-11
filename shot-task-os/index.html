@@ -714,7 +714,6 @@ input[type=checkbox] {
   .header-nav{margin-left:0;}
 }
 </style>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -724,7 +723,6 @@ input[type=checkbox] {
   <div class="mob-panel-btns">
     <button class="mob-panel-btn" onclick="showPanel('left')">サマリー</button>
     <button class="mob-panel-btn active" onclick="showPanel('center')">タスク</button>
-    <button class="mob-panel-btn" onclick="showPanel('gdrive')">GDrive</button>
   </div>
   <div class="header-nav">
     <button class="nav-btn active" id="navMain" onclick="switchView('main')">実行判断</button>
@@ -733,15 +731,6 @@ input[type=checkbox] {
   <div class="header-date" id="headerDate"></div>
 </header>
 <div class="vision-area" id="visionArea"></div>
-<div class="gdrive-mob-panel" id="gdriveMobPanel" style="display:none;padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--border);">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-    <span id="gdriveDotMob2" style="width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0;"></span>
-    <span id="gdriveStatusMob2" style="font-size:13px;color:var(--text2);">GDrive未接続</span>
-  </div>
-  <button id="gdriveConnectMob2" onclick="gdriveConnect()" style="width:100%;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;margin-bottom:6px;">🔗 Googleでログイン</button>
-  <button id="gdriveSaveMob2" onclick="gdriveSave()" style="display:none;width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:14px;cursor:pointer;margin-bottom:6px;">⬆ GDrive保存</button>
-  <button id="gdriveLoadMob2" onclick="gdriveLoad()" style="display:none;width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:14px;cursor:pointer;">⬇ GDrive読込</button>
-</div>
 
 <!-- MAIN VIEW -->
 <div id="mainView">
@@ -771,15 +760,6 @@ input[type=checkbox] {
       <div class="divider"></div>
 
       <button class="btn-panel" onclick="openReview()">▸ 月次棚卸</button>
-      <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--text3);">
-          <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:var(--border2);flex-shrink:0;"></span>
-          <span id="gdriveStatusText">GDrive未接続</span>
-        </div>
-        <button id="gdriveConnectBtn" class="btn-panel" onclick="gdriveConnect()">Googleでログイン</button>
-        <button id="gdriveSaveBtn" class="btn-panel" onclick="gdriveSave()" style="display:none">⬆ GDrive保存</button>
-        <button id="gdriveLoadBtn" class="btn-panel" onclick="gdriveLoad()" style="display:none">⬇ GDrive読込</button>
-      </div>
       <button class="btn-panel" onclick="exportJSON()">⬇ JSON保存</button>
       <details>
         <summary style="cursor:pointer;font-size:11px;color:var(--text3);padding:4px 0;">詳細（復旧用）</summary>
@@ -921,141 +901,6 @@ input[type=checkbox] {
 </div>
 
 <script>
-// ── GOOGLE DRIVE SYNC (SHOT TASK OS) ──
-const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
-const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
-const GDRIVE_FILE_NAME = 'shot-task-os-backup.json';
-const GDRIVE_REDIRECT_URI = (location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html'));
-
-let gdriveToken = null;
-let gdriveFolderId = null;
-let gdriveFileId = null;
-
-// リダイレクト方式（スマホ対応）
-function gdriveConnect() {
-  // OAuthコード取得後のリダイレクト処理
-  const params = new URLSearchParams({
-    client_id: GDRIVE_CLIENT_ID,
-    redirect_uri: GDRIVE_REDIRECT_URI,
-    response_type: 'token',
-    scope: GDRIVE_SCOPE,
-    prompt: 'select_account',
-  });
-  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
-}
-
-// リダイレクト後にURLフラグメントからトークンを取得
-function gdriveHandleRedirect() {
-  const hash = new URLSearchParams(location.hash.slice(1));
-  const token = hash.get('access_token');
-  if (token) {
-    gdriveToken = token;
-    localStorage.setItem('gdrive_token', token);
-    // トークンをURLから消す
-    history.replaceState(null, '', location.pathname);
-    gdriveUpdateUI(true);
-    // gdriveAutoLoad(); // ログイン直後の自動確認を無効化（トークン誤削除防止）
-  } else {
-    // 保存済みトークンを確認
-    const saved = localStorage.getItem('gdrive_token');
-    if (saved) {
-      gdriveToken = saved;
-      gdriveUpdateUI(true);
-    }
-  }
-}
-
-// 他のタブでログインした場合にUIを自動更新
-window.addEventListener('storage', function(e) {
-  if (e.key === 'gdrive_token') {
-    if (e.newValue) {
-      gdriveToken = e.newValue;
-      gdriveUpdateUI(true);
-      toast('Googleドライブに接続しました');
-    } else {
-      gdriveToken = null;
-      gdriveUpdateUI(false);
-    }
-  }
-});
-
-function gdriveUpdateUI(connected) {
-  // デスクトップサイドバー
-  const dot = document.getElementById('gdriveDot');
-  const status = document.getElementById('gdriveStatusText');
-  const connectBtn = document.getElementById('gdriveConnectBtn');
-  const saveBtn = document.getElementById('gdriveSaveBtn');
-  const loadBtn = document.getElementById('gdriveLoadBtn');
-  // モバイルドロワー
-  const dotMob = document.getElementById('gdriveDotMob');
-  const statusMob = document.getElementById('gdriveStatusMob');
-  const connectMob = document.getElementById('gdriveConnectMob');
-  const saveMob = document.getElementById('gdriveSaveMob');
-  const loadMob = document.getElementById('gdriveLoadMob');
-  // モバイルGDriveパネル
-  const dotMob2 = document.getElementById('gdriveDotMob2');
-  const statusMob2 = document.getElementById('gdriveStatusMob2');
-  const connectMob2 = document.getElementById('gdriveConnectMob2');
-  const saveMob2 = document.getElementById('gdriveSaveMob2');
-  const loadMob2 = document.getElementById('gdriveLoadMob2');
-
-  if (connected) {
-    if (dot) dot.style.background = '#34a853';
-    if (status) status.textContent = 'Googleドライブ接続済み';
-    if (connectBtn) connectBtn.style.display = 'none';
-    if (saveBtn) saveBtn.style.display = '';
-    if (loadBtn) loadBtn.style.display = '';
-    if (dotMob) dotMob.style.background = '#34a853';
-    if (statusMob) statusMob.textContent = '接続済み';
-    if (connectMob) connectMob.style.display = 'none';
-    if (saveMob) saveMob.style.display = '';
-    if (loadMob) loadMob.style.display = '';
-    if (dotMob2) dotMob2.style.background = '#34a853';
-    if (statusMob2) statusMob2.textContent = 'Googleドライブ接続済み';
-    if (connectMob2) connectMob2.style.display = 'none';
-    if (saveMob2) saveMob2.style.display = '';
-    if (loadMob2) loadMob2.style.display = '';
-  } else {
-    if (dot) dot.style.background = 'var(--border2)';
-    if (status) status.textContent = 'Googleドライブ未接続';
-    if (connectBtn) connectBtn.style.display = '';
-    if (saveBtn) saveBtn.style.display = 'none';
-    if (loadBtn) loadBtn.style.display = 'none';
-    if (dotMob) dotMob.style.background = 'var(--border2)';
-    if (statusMob) statusMob.textContent = '未接続';
-    if (connectMob) connectMob.style.display = '';
-    if (saveMob) saveMob.style.display = 'none';
-    if (loadMob) loadMob.style.display = 'none';
-    if (dotMob2) dotMob2.style.background = 'var(--border2)';
-    if (statusMob2) statusMob2.textContent = 'GDrive未接続';
-    if (connectMob2) connectMob2.style.display = '';
-    if (saveMob2) saveMob2.style.display = 'none';
-    if (loadMob2) loadMob2.style.display = 'none';
-  }
-}
-
-async function gdriveFetch(url, options={}) {
-  const res = await fetch(url, {
-    ...options,
-    headers: { 'Authorization': 'Bearer ' + gdriveToken, ...(options.headers||{}) }
-  });
-  if (res.status === 401) {
-    gdriveToken = null;
-    localStorage.removeItem('gdrive_token');
-    gdriveUpdateUI(false);
-    throw new Error('認証期限切れ。再ログインしてください。');
-  }
-  return res;
-}
-
-async function gdriveFindFile() {
-  const res = await gdriveFetch(
-    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22${GDRIVE_FILE_NAME}%22&fields=files(id,name)`
-  );
-  const data = await res.json();
-  return data.files && data.files.length > 0 ? data.files[0].id : null;
-}
-
 function toast(msg) {
   let el = document.querySelector('.toast-msg');
   if (!el) {
@@ -1069,78 +914,6 @@ function toast(msg) {
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
 }
-
-async function gdriveSave() {
-  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
-  const dot = document.getElementById('gdriveDot');
-  const status = document.getElementById('gdriveStatusText');
-  const btn = document.getElementById('gdriveSaveBtn');
-  const origText = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '保存中...'; btn.disabled = true; }
-  dot.className = 'gdrive-dot saving';
-  status.textContent = '保存中...';
-  try {
-    const payload = JSON.stringify({ exportedAt: new Date().toISOString(), tasks }, null, 2);
-    const fileId = await gdriveFindFile();
-    const metadata = { name: GDRIVE_FILE_NAME, parents: fileId ? undefined : ['appDataFolder'] };
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], {type:'application/json'}));
-    form.append('file', new Blob([payload], {type:'application/json'}));
-    const url = fileId
-      ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
-      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-    await gdriveFetch(url, { method: fileId ? 'PATCH' : 'POST', body: form });
-    dot.className = 'gdrive-dot connected';
-    status.textContent = 'Googleドライブに保存済み (' + new Date().toLocaleTimeString('ja-JP') + ')';
-    toast('Googleドライブに保存しました');
-  } catch(e) {
-    dot.className = 'gdrive-dot connected';
-    status.textContent = '保存エラー: ' + e.message;
-  } finally {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-  }
-}
-
-async function gdriveLoad() {
-  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
-  const btn = document.getElementById('gdriveLoadBtn');
-  const origText = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '読込中...'; btn.disabled = true; }
-  try {
-    const fileId = await gdriveFindFile();
-    if (!fileId) { alert('Googleドライブにバックアップが見つかりません'); return; }
-    const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
-    const data = await res.json();
-    if (data.tasks) {
-      if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
-      tasks = data.tasks || [];
-      save();
-      render();
-      toast('Googleドライブから読み込みました');
-    }
-  } catch(e) {
-    alert('読込エラー: ' + e.message);
-  } finally {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-  }
-}
-
-async function gdriveAutoLoad() {
-  // 接続直後に自動でファイルの存在確認
-  try {
-    const fileId = await gdriveFindFile();
-    if (fileId) {
-      document.getElementById('gdriveStatusText').textContent = 'Googleドライブ接続済み（バックアップあり）';
-    }
-  } catch(e) {}
-}
-
-// 起動時に自動保存（ログインしている場合）
-
-// ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
-document.addEventListener('DOMContentLoaded', function() {
-  gdriveHandleRedirect();
-});
 
 // ── CONSTANTS ──
 const STORAGE_KEY = 'shot-task-os-v1';
@@ -1211,38 +984,6 @@ function load() {
 }
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
-// ── SEED DATA ──
-const SEED_DATA = [
-  { title:"グロースウェルさん連絡", category:"今日のタスク", priority:"normal", status:"todo" },
-  { title:"クロノ千葉さん連絡", category:"今日のタスク", priority:"normal", status:"todo" },
-  { title:"システム思考まとめ", category:"今日のタスク", priority:"normal", status:"todo" },
-  { title:"危機管理研究フォーラム申し込み", category:"今日のタスク", priority:"normal", status:"todo" },
-  { title:"シナリオ書く", category:"JSS関連", priority:"high", status:"todo" },
-  { title:"未来創造三谷さんに連絡", category:"JSS関連", priority:"normal", status:"todo" },
-  { title:"シナリオ書く", category:"チーム竹嶋づくり", priority:"high", status:"todo" },
-  { title:"チーム竹嶋の作り方（候補の棚卸→シナリオ作成）", category:"チーム竹嶋づくり", priority:"normal", status:"todo" },
-  { title:"一流弁護士読む", category:"3AC2030VISION", priority:"normal", status:"todo" },
-  { title:"前田さんが割合に差はつけたいという話になった", category:"増資プロジェクト", priority:"normal", status:"todo", memo:"OK" },
-  { title:"ショットタスク", category:"その他", priority:"normal", status:"todo" },
-  { title:"LDMA受講", category:"学習・インプット", priority:"high", status:"todo", memo:"https://lectica.org/assessment/information?token=11446090587IVPTakHir2026114" },
-  { title:"構造と意思決定のフレームワーク書き出し", category:"学習・インプット", priority:"normal", status:"todo" },
-  { title:"notebookLMさわる", category:"学習・インプット", priority:"normal", status:"todo" },
-  { title:"AIツールについてリサーチ", category:"学習・インプット", priority:"normal", status:"todo" },
-  { title:"ヒトメモとソーシャルユニバースを繋げる", category:"学習・インプット", priority:"normal", status:"todo" },
-  { title:"バリュエーション100本ノック", category:"学習・インプット", priority:"normal", status:"todo", memo:"日本シークレットサービス\nSE会社算定\nCAPM算定" },
-  { title:"VISION振り返り", category:"学習・インプット", priority:"normal", status:"todo" },
-  { title:"渡部さんコーチングまとめ", category:"学習・インプット", priority:"high", status:"todo" },
-  { title:"大山さんコーチングまとめ", category:"学習・インプット", priority:"high", status:"todo" },
-  { title:"脳内に自己を置くためのVISION語り", category:"自己探求", priority:"normal", status:"todo" },
-  { title:"自分の中のニュータイプ探し=自分がニュータイプ", category:"自己探求", priority:"normal", status:"todo", memo:"自分の中の人格にソルジャー、ハタオさん、コーチがいる" },
-  { title:"自分の嫌な状態の時を深ぼって、理由にたどり着く", category:"自己探求", priority:"normal", status:"todo", memo:"苦手だと思っている人の言語化、反面教師にする\nもしくは、自分の文人を作ってかわいがる" },
-  { title:"三好さん会食誘う", category:"ネットワーキング", priority:"normal", status:"todo" },
-  { title:"佐原さん会食誘う", category:"ネットワーキング", priority:"normal", status:"todo" },
-  { title:"三谷さん会食誘う", category:"ネットワーキング", priority:"normal", status:"todo" },
-  { title:"みきさんバンドーさん、マゴさんの動画見て麻布台で日程調整", category:"ネットワーキング", priority:"normal", status:"todo" },
-  { title:"経済界への登録→申し込み", category:"ネットワーキング", priority:"normal", status:"todo" }
-];
-
 function fixOrphanCategories() {
   // カテゴリが存在しないタスクは「今日のタスク」へ
   let changed = false;
@@ -1254,17 +995,6 @@ function fixOrphanCategories() {
   });
   if (changed) save();
 }
-
-function seedIfEmpty() {
-  if (tasks.length > 0) return;
-  const now = new Date().toISOString();
-  SEED_DATA.forEach(s => {
-    tasks.push({ id:genId(), title:s.title, category:s.category, priority:s.priority||'normal',
-      status:s.status||'todo', dueDate:'', memo:s.memo||'', createdAt:now, completedAt:null, updatedAt:now });
-  });
-  save();
-}
-
 
 // ── ADD MODAL ──
 function openAddModal() {
@@ -1958,7 +1688,6 @@ document.addEventListener('keydown', e => {
 // ── INIT ──
 function init() {
   load();
-  seedIfEmpty();
   renderVision();
   // migrate: remove isHeader tasks, keep data clean
   tasks = tasks.filter(t => !t.isHeader);
@@ -1977,16 +1706,10 @@ function showPanel(name){
     const el = document.querySelector(sel);
     if(el) el.classList.remove('mob-show');
   });
-  // GDriveパネル
-  const gdrivePanel = document.getElementById('gdriveMobPanel');
-  if(gdrivePanel) gdrivePanel.style.display = name==='gdrive' ? 'block' : 'none';
-
-  if(name !== 'gdrive'){
-    const target = panels[name];
-    if(target){ const el = document.querySelector(target); if(el) el.classList.add('mob-show'); }
-  }
+  const target = panels[name];
+  if(target){ const el = document.querySelector(target); if(el) el.classList.add('mob-show'); }
   document.querySelectorAll('.mob-panel-btn').forEach((btn,i)=>{
-    const names=['left','center','gdrive'];
+    const names=['left','center'];
     btn.classList.toggle('active', names[i]===name);
   });
 }

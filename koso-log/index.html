@@ -506,7 +506,6 @@ textarea.form-control { resize: vertical; min-height: 56px; }
 .empty-icon { font-size: 32px; margin-bottom: 10px; }
 .priority-inherited { font-size: 9px; color: var(--text4); font-style: italic; }
 </style>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -540,16 +539,6 @@ textarea.form-control { resize: vertical; min-height: 56px; }
     <button class="btn-add" onclick="openModal(null)">＋ 新規追加</button>
   </div>
 
-  <div class="sidebar-footer" style="padding:8px 12px;border-top:1px solid var(--border);">
-    <div style="font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:.08em;">GOOGLE DRIVE</div>
-    <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;">
-      <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;"></span>
-      <span id="gdriveStatusText" style="font-size:11px;color:rgba(255,255,255,0.6);">未接続</span>
-    </div>
-    <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
-    <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;margin-bottom:3px;">⬆ GDrive保存</button>
-    <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;">⬇ GDrive読込</button>
-  </div>
   <div style="border-top:1px solid rgba(255,255,255,0.1);margin:6px 12px 4px;"></div>
   <div style="padding:0 12px 6px;display:flex;flex-direction:column;gap:3px;">
     <button onclick="doExportJSON()" style="width:100%;padding:4px 8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:11px;cursor:pointer;text-align:left;">⬇ JSON保存</button>
@@ -670,125 +659,6 @@ textarea.form-control { resize: vertical; min-height: 56px; }
 <div class="toast" id="toast"></div>
 
 <script>
-// ── GOOGLE DRIVE SYNC (KOSO_LOG) ──
-const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
-const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
-const GDRIVE_FILE_NAME = 'koso-log-backup.json';
-const GDRIVE_REDIRECT_URI = (location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html'));
-
-let gdriveToken = null;
-let gdriveFolderId = null;
-let gdriveFileId = null;
-
-// リダイレクト方式（スマホ対応）
-function gdriveConnect() {
-  // OAuthコード取得後のリダイレクト処理
-  const params = new URLSearchParams({
-    client_id: GDRIVE_CLIENT_ID,
-    redirect_uri: GDRIVE_REDIRECT_URI,
-    response_type: 'token',
-    scope: GDRIVE_SCOPE,
-    prompt: 'select_account',
-  });
-  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
-}
-
-// リダイレクト後にURLフラグメントからトークンを取得
-function gdriveHandleRedirect() {
-  const hash = new URLSearchParams(location.hash.slice(1));
-  const token = hash.get('access_token');
-  if (token) {
-    gdriveToken = token;
-    localStorage.setItem('gdrive_token', token);
-    // トークンをURLから消す
-    history.replaceState(null, '', location.pathname);
-    gdriveUpdateUI(true);
-    // gdriveAutoLoad(); // ログイン直後の自動確認を無効化（トークン誤削除防止）
-  } else {
-    // 保存済みトークンを確認
-    const saved = localStorage.getItem('gdrive_token');
-    if (saved) {
-      gdriveToken = saved;
-      gdriveUpdateUI(true);
-    }
-  }
-}
-
-// 他のタブでログインした場合にUIを自動更新
-window.addEventListener('storage', function(e) {
-  if (e.key === 'gdrive_token') {
-    if (e.newValue) {
-      gdriveToken = e.newValue;
-      gdriveUpdateUI(true);
-      toast('Googleドライブに接続しました');
-    } else {
-      gdriveToken = null;
-      gdriveUpdateUI(false);
-    }
-  }
-});
-
-function gdriveUpdateUI(connected) {
-  // デスクトップサイドバー
-  const dot = document.getElementById('gdriveDot');
-  const status = document.getElementById('gdriveStatusText');
-  const connectBtn = document.getElementById('gdriveConnectBtn');
-  const saveBtn = document.getElementById('gdriveSaveBtn');
-  const loadBtn = document.getElementById('gdriveLoadBtn');
-  // モバイルドロワー
-  const dotMob = document.getElementById('gdriveDotMob');
-  const statusMob = document.getElementById('gdriveStatusMob');
-  const connectMob = document.getElementById('gdriveConnectMob');
-  const saveMob = document.getElementById('gdriveSaveMob');
-  const loadMob = document.getElementById('gdriveLoadMob');
-
-  if (connected) {
-    if (dot) dot.style.background = '#34a853';
-    if (status) status.textContent = 'Googleドライブ接続済み';
-    if (connectBtn) connectBtn.style.display = 'none';
-    if (saveBtn) saveBtn.style.display = '';
-    if (loadBtn) loadBtn.style.display = '';
-    if (dotMob) dotMob.style.background = '#34a853';
-    if (statusMob) statusMob.textContent = '接続済み';
-    if (connectMob) connectMob.style.display = 'none';
-    if (saveMob) saveMob.style.display = '';
-    if (loadMob) loadMob.style.display = '';
-  } else {
-    if (dot) dot.style.background = 'var(--border2)';
-    if (status) status.textContent = 'Googleドライブ未接続';
-    if (connectBtn) connectBtn.style.display = '';
-    if (saveBtn) saveBtn.style.display = 'none';
-    if (loadBtn) loadBtn.style.display = 'none';
-    if (dotMob) dotMob.style.background = 'var(--border2)';
-    if (statusMob) statusMob.textContent = '未接続';
-    if (connectMob) connectMob.style.display = '';
-    if (saveMob) saveMob.style.display = 'none';
-    if (loadMob) loadMob.style.display = 'none';
-  }
-}
-
-async function gdriveFetch(url, options={}) {
-  const res = await fetch(url, {
-    ...options,
-    headers: { 'Authorization': 'Bearer ' + gdriveToken, ...(options.headers||{}) }
-  });
-  if (res.status === 401) {
-    gdriveToken = null;
-    localStorage.removeItem('gdrive_token');
-    gdriveUpdateUI(false);
-    throw new Error('認証期限切れ。再ログインしてください。');
-  }
-  return res;
-}
-
-async function gdriveFindFile() {
-  const res = await gdriveFetch(
-    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22${GDRIVE_FILE_NAME}%22&fields=files(id,name)`
-  );
-  const data = await res.json();
-  return data.files && data.files.length > 0 ? data.files[0].id : null;
-}
-
 function toast(msg) {
   let el = document.querySelector('.toast-msg');
   if (!el) {
@@ -802,78 +672,6 @@ function toast(msg) {
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
 }
-async function gdriveSave() {
-  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
-  const dot = document.getElementById('gdriveDot');
-  const status = document.getElementById('gdriveStatusText');
-  const btn = document.getElementById('gdriveSaveBtn');
-  const origText = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '保存中...'; btn.disabled = true; }
-  dot.className = 'gdrive-dot saving';
-  status.textContent = '保存中...';
-  try {
-    const payload = JSON.stringify({ items, archives, savedAt: new Date().toISOString() }, null, 2);
-    const fileId = await gdriveFindFile();
-    const metadata = { name: GDRIVE_FILE_NAME, parents: fileId ? undefined : ['appDataFolder'] };
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], {type:'application/json'}));
-    form.append('file', new Blob([payload], {type:'application/json'}));
-    const url = fileId
-      ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
-      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-    await gdriveFetch(url, { method: fileId ? 'PATCH' : 'POST', body: form });
-    dot.className = 'gdrive-dot connected';
-    status.textContent = 'Googleドライブに保存済み (' + new Date().toLocaleTimeString('ja-JP') + ')';
-    toast('Googleドライブに保存しました');
-  } catch(e) {
-    dot.className = 'gdrive-dot connected';
-    status.textContent = '保存エラー: ' + e.message;
-  } finally {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-  }
-}
-
-async function gdriveLoad() {
-  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
-  const btn = document.getElementById('gdriveLoadBtn');
-  const origText = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '読込中...'; btn.disabled = true; }
-  try {
-    const fileId = await gdriveFindFile();
-    if (!fileId) { alert('Googleドライブにバックアップが見つかりません'); return; }
-    const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
-    const data = await res.json();
-    if (data.items) {
-      if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
-      items = data.items || [];
-      archives = data.archives || [];
-      save();
-      renderCurrentView();
-      toast('Googleドライブから読み込みました');
-    }
-  } catch(e) {
-    alert('読込エラー: ' + e.message);
-  } finally {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-  }
-}
-
-async function gdriveAutoLoad() {
-  // 接続直後に自動でファイルの存在確認
-  try {
-    const fileId = await gdriveFindFile();
-    if (fileId) {
-      document.getElementById('gdriveStatusText').textContent = 'Googleドライブ接続済み（バックアップあり）';
-    }
-  } catch(e) {}
-}
-
-// 起動時に自動保存（ログインしている場合）
-
-// ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
-document.addEventListener('DOMContentLoaded', function() {
-  gdriveHandleRedirect();
-});
 
 // ═══════════════════════════════════════════════════════
 // DATA
@@ -884,20 +682,6 @@ const STATUSES    = ['検討中','待機','実行中','完了','廃棄'];
 const PRIORITIES  = ['S','A','B','C'];
 const PRI_LABEL   = {S:'今期コア',A:'重要',B:'探索',C:'保留'};
 const PRI_COLOR   = {S:'#b91c1c',A:'#1d4ed8',B:'#6d28d9',C:'#6b7280'};
-
-const SAMPLE = [
-  {id:"G01",type:"構想",parentId:"-",title:"挑戦プラットフォーム",purpose:"挑戦の可視化→評価→資本化の仕組み",success:"支援発生数10件/月",trigger:"コミュニティ初期メンバー10名",prereq:"評価軸設計完了",status:"検討中",priority:"A",review:"2026/04/22"},
-  {id:"E01",type:"実行",parentId:"G01",title:"挑戦登録機能",purpose:"挑戦内容・価値・VISION・進捗を公開",success:"投稿数100件",trigger:"",prereq:"",status:"待機",priority:"A",review:"2026/04/22"},
-  {id:"E02",type:"実行",parentId:"G01",title:"挑戦評価機能",purpose:"自律性・社会価値・学習性・誠実さでプロセス評価",success:"評価数100件/月",trigger:"",prereq:"",status:"待機",priority:"A",review:"2026/04/22"},
-  {id:"E03",type:"実行",parentId:"G01",title:"挑戦資本マッチング",purpose:"投資・寄付・スキル・人材の支援接続",success:"支援発生10件",trigger:"",prereq:"",status:"待機",priority:"A",review:"2026/04/22"},
-  {id:"G02",type:"構想",parentId:"-",title:"日本国防産業ビルダー",purpose:"戦略産業を創出する仕組み",success:"事業創出1件",trigger:"戦略テーマ確定",prereq:"初期領域選定",status:"検討中",priority:"S",review:"2026/04/22"},
-  {id:"E04",type:"実行",parentId:"G02",title:"戦略テーマ設計",purpose:"サイバー等の重点領域を定義",success:"テーマ3件",trigger:"",prereq:"",status:"待機",priority:"S",review:"2026/04/22"},
-  {id:"E05",type:"実行",parentId:"G02",title:"産業ビルダー構築",purpose:"テーマ→会社設立→投資→回収の仕組み",success:"1社設立",trigger:"",prereq:"",status:"待機",priority:"S",review:"2026/04/22"},
-  {id:"G03",type:"構想",parentId:"-",title:"認証信頼性向上に向けた業界団体構想（JAGO）",purpose:"認証の信頼インフラ再構築（透明化・標準化・監督）",success:"ガイドライン公開＋有識者3名＋行政面談1回",trigger:"不正事例・市場歪みの整理完了",prereq:"中立性設計・外部理事候補確保",status:"検討中",priority:"A",review:"2026/04/22"},
-  {id:"E07",type:"実行",parentId:"G03",title:"ガイドライン策定",purpose:"審査品質・利益相反ルール定義",success:"ガイドラインver1.0公開",trigger:"",prereq:"",status:"待機",priority:"A",review:"2026/04/22"},
-  {id:"G04",type:"構想",parentId:"-",title:"挑戦・自律インフラ構想（ループ設計）",purpose:"自律→挑戦→成長→信頼→影響力の好循環を社会に実装",success:"ループ設計定義＋実装プロトタイプ1件",trigger:"挑戦プラットフォーム初期運用開始",prereq:"自律・挑戦の定義明確化",status:"検討中",priority:"B",review:"2026/04/22"},
-  {id:"E13",type:"実行",parentId:"G04",title:"概念定義（自律・挑戦）",purpose:"自律・挑戦の数式/定義を明文化",success:"定義ドキュメント完成",trigger:"",prereq:"",status:"待機",priority:"B",review:"2026/04/22"},
-];
 
 let items    = [];
 let archives = [];
@@ -916,13 +700,13 @@ let discardPrevStatus = '';
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    items = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SAMPLE));
+    items = raw ? JSON.parse(raw) : [];
     items.forEach(i => {
       if (!i.priority) i.priority = 'A';
       if (!i.prereq) i.prereq = '';
       if (!i.trigger) i.trigger = '';
     });
-  } catch { items = JSON.parse(JSON.stringify(SAMPLE)); }
+  } catch { items = []; }
   try {
     const raw2 = localStorage.getItem(ARCHIVE_KEY);
     archives = raw2 ? JSON.parse(raw2) : [];

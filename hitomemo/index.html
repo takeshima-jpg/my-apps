@@ -526,7 +526,6 @@
 // ── GOOGLE DRIVE SYNC (HITOMEMO) ──
 const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.readonly';
-const GDRIVE_FILE_NAME = 'hitomemo-backup.json';
 const AIX_FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U';   // aix-drafts（Coworkが書き出すフォルダ）
 const AIX_HITOMEMO_FILE = 'aix-hitomemo.json';               // Coworkが書く自動取り込み用ファイル
 const AIX_LAST_KEY = 'hitomemo_aix_last_modified';           // 冪等性：最後に取り込んだmodifiedTime
@@ -667,7 +666,6 @@ function gdriveHandleRedirect() {
     // トークンをURLから消す
     history.replaceState(null, '', location.pathname);
     gdriveUpdateUI(true);
-    // gdriveAutoLoad(); // ログイン直後の自動確認を無効化（トークン誤削除防止）
   } else {
     // 保存済みトークンを確認
     const saved = localStorage.getItem('gdrive_token');
@@ -693,41 +691,18 @@ window.addEventListener('storage', function(e) {
 });
 
 function gdriveUpdateUI(connected) {
-  // デスクトップサイドバー
   const dot = document.getElementById('gdriveDot');
   const status = document.getElementById('gdriveStatusText');
   const connectBtn = document.getElementById('gdriveConnectBtn');
-  const saveBtn = document.getElementById('gdriveSaveBtn');
-  const loadBtn = document.getElementById('gdriveLoadBtn');
-  // モバイルドロワー
-  const dotMob = document.getElementById('gdriveDotMob');
-  const statusMob = document.getElementById('gdriveStatusMob');
-  const connectMob = document.getElementById('gdriveConnectMob');
-  const saveMob = document.getElementById('gdriveSaveMob');
-  const loadMob = document.getElementById('gdriveLoadMob');
 
   if (connected) {
     if (dot) dot.style.background = '#34a853';
     if (status) status.textContent = 'Googleドライブ接続済み';
     if (connectBtn) connectBtn.style.display = 'none';
-    if (saveBtn) saveBtn.style.display = '';
-    if (loadBtn) loadBtn.style.display = '';
-    if (dotMob) dotMob.style.background = '#34a853';
-    if (statusMob) statusMob.textContent = '接続済み';
-    if (connectMob) connectMob.style.display = 'none';
-    if (saveMob) saveMob.style.display = '';
-    if (loadMob) loadMob.style.display = '';
   } else {
     if (dot) dot.style.background = 'var(--border2)';
     if (status) status.textContent = 'Googleドライブ未接続';
     if (connectBtn) connectBtn.style.display = '';
-    if (saveBtn) saveBtn.style.display = 'none';
-    if (loadBtn) loadBtn.style.display = 'none';
-    if (dotMob) dotMob.style.background = 'var(--border2)';
-    if (statusMob) statusMob.textContent = '未接続';
-    if (connectMob) connectMob.style.display = '';
-    if (saveMob) saveMob.style.display = 'none';
-    if (loadMob) loadMob.style.display = 'none';
   }
 }
 
@@ -745,14 +720,6 @@ async function gdriveFetch(url, options={}) {
   return res;
 }
 
-async function gdriveFindFile() {
-  const res = await gdriveFetch(
-    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22${GDRIVE_FILE_NAME}%22&fields=files(id,name)`
-  );
-  const data = await res.json();
-  return data.files && data.files.length > 0 ? data.files[0].id : null;
-}
-
 function toast(msg) {
   let el = document.querySelector('.toast-msg');
   if (!el) {
@@ -766,72 +733,6 @@ function toast(msg) {
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
 }
-async function gdriveSave() {
-  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
-  const dot = document.getElementById('gdriveDot');
-  const status = document.getElementById('gdriveStatusText');
-  const btn = document.getElementById('gdriveSaveBtn');
-  const origText = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '保存中...'; btn.disabled = true; }
-  dot.className = 'gdrive-dot saving';
-  status.textContent = '保存中...';
-  try {
-    const list = JSON.parse(localStorage.getItem('hitomemo_profiles_v1') || '[]');
-    const payload = JSON.stringify({ profiles: list, savedAt: new Date().toISOString() }, null, 2);
-    const fileId = await gdriveFindFile();
-    const metadata = { name: GDRIVE_FILE_NAME, parents: fileId ? undefined : ['appDataFolder'] };
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], {type:'application/json'}));
-    form.append('file', new Blob([payload], {type:'application/json'}));
-    const url = fileId
-      ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
-      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-    await gdriveFetch(url, { method: fileId ? 'PATCH' : 'POST', body: form });
-    dot.className = 'gdrive-dot connected';
-    status.textContent = 'Googleドライブに保存済み (' + new Date().toLocaleTimeString('ja-JP') + ')';
-    toast('Googleドライブに保存しました');
-  } catch(e) {
-    dot.className = 'gdrive-dot connected';
-    status.textContent = '保存エラー: ' + e.message;
-  } finally {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-  }
-}
-
-async function gdriveLoad() {
-  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
-  const btn = document.getElementById('gdriveLoadBtn');
-  const origText = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '読込中...'; btn.disabled = true; }
-  try {
-    const fileId = await gdriveFindFile();
-    if (!fileId) { alert('Googleドライブにバックアップが見つかりません'); return; }
-    const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
-    const data = await res.json();
-    if (data.profiles) {
-      if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
-      list = data.profiles || [];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-      toast('Googleドライブから読み込みました');
-      setTimeout(() => location.reload(), 1000);
-    }
-  } catch(e) {
-    alert('読込エラー: ' + e.message);
-  } finally {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-  }
-}
-
-async function gdriveAutoLoad() {
-  // 接続直後に自動でファイルの存在確認
-  try {
-    const fileId = await gdriveFindFile();
-    if (fileId) {
-      document.getElementById('gdriveStatusText').textContent = 'Googleドライブ接続済み（バックアップあり）';
-    }
-  } catch(e) {}
-}
-
 // Coworkが aix-drafts に書いた aix-hitomemo.json を読み、未登録に自動取り込み
 async function gdriveAutoImportHitomemo(retry, manual) {
   if (!gdriveToken) { if (manual) alert('先にサイドバーの「🔗 Googleでログイン」をしてください。'); return; }
@@ -865,8 +766,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // GDriveボタンはonclick属性で直接呼ぶため不要
   // window経由でsidebar onclickから呼べるようにする
   window.__gdriveConnect = gdriveConnect;
-  window.__gdriveSave = gdriveSave;
-  window.__gdriveLoad = gdriveLoad;
   // JSON保存・読込ボタンのイベント設定
   document.getElementById('jsonBackupBtn')?.addEventListener('click', () => {
     if (window.__hitomemoBackup) window.__hitomemoBackup();
@@ -930,8 +829,6 @@ document.addEventListener('DOMContentLoaded', function() {
   gdriveAutoImportHitomemo();
   // window経由でsidebar onclickから呼べるようにする
   window.__gdriveConnect = gdriveConnect;
-  window.__gdriveSave = gdriveSave;
-  window.__gdriveLoad = gdriveLoad;
 
   if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./service-worker.js');
@@ -974,8 +871,6 @@ document.addEventListener('DOMContentLoaded', function() {
       <span id="gdriveStatusText">未接続</span>
     </div>
     <button id="gdriveConnectBtn" class="sb-btn" onclick="gdriveConnect()">🔗 Googleでログイン</button>
-    <button id="gdriveSaveBtn" class="sb-btn" style="display:none" onclick="gdriveSave()">⬆ GDrive保存</button>
-    <button id="gdriveLoadBtn" class="sb-btn" style="display:none" onclick="gdriveLoad()">⬇ GDrive読込</button>
     <div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>
     <button class="sb-btn" onclick="sidebarBackupJSON()">⬇ JSON保存</button>
     <details>

@@ -331,15 +331,6 @@ nav{display:flex;flex-direction:column;gap:0;}
   </div>
 
   <div class="sb-ft">
-    <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1);">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--mu);">
-        <span id="gdriveDot" style="width:6px;height:6px;border-radius:50%;background:var(--di);flex-shrink:0;"></span>
-        <span id="gdriveStatusText">GDrive未接続</span>
-      </div>
-      <button id="gdriveConnectBtn" onclick="gdriveConnect()" style="width:100%;padding:5px;background:transparent;border:1px solid var(--bd);border-radius:5px;color:var(--mu);font-size:12px;cursor:pointer;margin-bottom:3px;">Googleでログイン</button>
-      <button id="gdriveSaveBtn" onclick="gdriveSave()" style="display:none;width:100%;padding:5px;background:transparent;border:1px solid var(--bd);border-radius:5px;color:var(--mu);font-size:12px;cursor:pointer;margin-bottom:3px;">⬆ GDrive保存</button>
-      <button id="gdriveLoadBtn" onclick="gdriveLoad()" style="display:none;width:100%;padding:5px;background:transparent;border:1px solid var(--bd);border-radius:5px;color:var(--mu);font-size:12px;cursor:pointer;">⬇ GDrive読込</button>
-    </div>
     <button id="btn-exp">⬇ JSON保存</button>
     <details>
       <summary style="cursor:pointer;font-size:11px;color:var(--text3);padding:4px 0;">詳細（復旧用）</summary>
@@ -354,125 +345,10 @@ nav{display:flex;flex-direction:column;gap:0;}
 </div>
 
 <script>
-// ── GOOGLE DRIVE SYNC (REFLECT OS) ──
-const GDRIVE_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
-const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
-const GDRIVE_FILE_NAME = 'reflect-os-backup.json';
-const GDRIVE_REDIRECT_URI = (location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html'));
-
-let gdriveToken = null;
-let gdriveFolderId = null;
-let gdriveFileId = null;
-
-// リダイレクト方式（スマホ対応）
-function gdriveConnect() {
-  // OAuthコード取得後のリダイレクト処理
-  const params = new URLSearchParams({
-    client_id: GDRIVE_CLIENT_ID,
-    redirect_uri: GDRIVE_REDIRECT_URI,
-    response_type: 'token',
-    scope: GDRIVE_SCOPE,
-    prompt: 'select_account',
-  });
-  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
-}
-
-// リダイレクト後にURLフラグメントからトークンを取得
-function gdriveHandleRedirect() {
-  const hash = new URLSearchParams(location.hash.slice(1));
-  const token = hash.get('access_token');
-  if (token) {
-    gdriveToken = token;
-    localStorage.setItem('gdrive_token', token);
-    // トークンをURLから消す
-    history.replaceState(null, '', location.pathname);
-    gdriveUpdateUI(true);
-    // gdriveAutoLoad(); // ログイン直後の自動確認を無効化（トークン誤削除防止）
-  } else {
-    // 保存済みトークンを確認
-    const saved = localStorage.getItem('gdrive_token');
-    if (saved) {
-      gdriveToken = saved;
-      gdriveUpdateUI(true);
-    }
-  }
-}
-
-// 他のタブでログインした場合にUIを自動更新
+// 他のタブで保存された場合に再読み込み
 window.addEventListener('storage', function(e) {
   if (e.key === 'reflectOS_v1') { location.reload(); return; }
-  if (e.key === 'gdrive_token') {
-    if (e.newValue) {
-      gdriveToken = e.newValue;
-      gdriveUpdateUI(true);
-      toast('Googleドライブに接続しました');
-    } else {
-      gdriveToken = null;
-      gdriveUpdateUI(false);
-    }
-  }
 });
-
-function gdriveUpdateUI(connected) {
-  // デスクトップサイドバー
-  const dot = document.getElementById('gdriveDot');
-  const status = document.getElementById('gdriveStatusText');
-  const connectBtn = document.getElementById('gdriveConnectBtn');
-  const saveBtn = document.getElementById('gdriveSaveBtn');
-  const loadBtn = document.getElementById('gdriveLoadBtn');
-  // モバイルドロワー
-  const dotMob = document.getElementById('gdriveDotMob');
-  const statusMob = document.getElementById('gdriveStatusMob');
-  const connectMob = document.getElementById('gdriveConnectMob');
-  const saveMob = document.getElementById('gdriveSaveMob');
-  const loadMob = document.getElementById('gdriveLoadMob');
-
-  if (connected) {
-    if (dot) dot.style.background = '#34a853';
-    if (status) status.textContent = 'Googleドライブ接続済み';
-    if (connectBtn) connectBtn.style.display = 'none';
-    if (saveBtn) saveBtn.style.display = '';
-    if (loadBtn) loadBtn.style.display = '';
-    if (dotMob) dotMob.style.background = '#34a853';
-    if (statusMob) statusMob.textContent = '接続済み';
-    if (connectMob) connectMob.style.display = 'none';
-    if (saveMob) saveMob.style.display = '';
-    if (loadMob) loadMob.style.display = '';
-  } else {
-    if (dot) dot.style.background = 'var(--border2)';
-    if (status) status.textContent = 'Googleドライブ未接続';
-    if (connectBtn) connectBtn.style.display = '';
-    if (saveBtn) saveBtn.style.display = 'none';
-    if (loadBtn) loadBtn.style.display = 'none';
-    if (dotMob) dotMob.style.background = 'var(--border2)';
-    if (statusMob) statusMob.textContent = '未接続';
-    if (connectMob) connectMob.style.display = '';
-    if (saveMob) saveMob.style.display = 'none';
-    if (loadMob) loadMob.style.display = 'none';
-  }
-}
-
-async function gdriveFetch(url, options={}) {
-  const res = await fetch(url, {
-    ...options,
-    headers: { 'Authorization': 'Bearer ' + gdriveToken, ...(options.headers||{}) }
-  });
-  if (res.status === 401) {
-    gdriveToken = null;
-    localStorage.removeItem('gdrive_token');
-    gdriveUpdateUI(false);
-    throw new Error('認証期限切れ。再ログインしてください。');
-  }
-  return res;
-}
-
-async function gdriveFindFile() {
-  const res = await gdriveFetch(
-    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22${GDRIVE_FILE_NAME}%22&fields=files(id,name)`
-  );
-  const data = await res.json();
-  return data.files && data.files.length > 0 ? data.files[0].id : null;
-}
 
 function toast(msg) {
   let el = document.querySelector('.toast-msg');
@@ -487,86 +363,6 @@ function toast(msg) {
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
 }
-async function gdriveSave() {
-  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
-  const dot = document.getElementById('gdriveDot');
-  const status = document.getElementById('gdriveStatusText');
-  const btn = document.getElementById('gdriveSaveBtn');
-  const origText = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '保存中...'; btn.disabled = true; }
-  dot.className = 'gdrive-dot saving';
-  status.textContent = '保存中...';
-  try {
-    const allLogs = await dball('logs');
-    const allThemes = await dball('themes');
-    const payload = JSON.stringify({ version:7, vision:S.vision, themes:allThemes, logs:allLogs, savedAt: new Date().toISOString() }, null, 2);
-    const fileId = await gdriveFindFile();
-    const metadata = { name: GDRIVE_FILE_NAME, parents: fileId ? undefined : ['appDataFolder'] };
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], {type:'application/json'}));
-    form.append('file', new Blob([payload], {type:'application/json'}));
-    const url = fileId
-      ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
-      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-    await gdriveFetch(url, { method: fileId ? 'PATCH' : 'POST', body: form });
-    dot.className = 'gdrive-dot connected';
-    status.textContent = 'Googleドライブに保存済み (' + new Date().toLocaleTimeString('ja-JP') + ')';
-    toast('Googleドライブに保存しました');
-  } catch(e) {
-    dot.className = 'gdrive-dot connected';
-    status.textContent = '保存エラー: ' + e.message;
-  } finally {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-  }
-}
-
-async function gdriveLoad() {
-  if (!gdriveToken) { alert('先にGoogleでログインしてください'); return; }
-  const btn = document.getElementById('gdriveLoadBtn');
-  const origText = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '読込中...'; btn.disabled = true; }
-  try {
-    const fileId = await gdriveFindFile();
-    if (!fileId) { alert('Googleドライブにバックアップが見つかりません'); return; }
-    const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
-    const data = await res.json();
-    if (data.logs) {
-      if (!confirm(`Googleドライブから読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
-      // IndexedDB完全クリア→上書き
-      await dbclear('logs'); await dbclear('themes');
-      for(const log of (data.logs||[])) await dbput('logs', log);
-      for(const th of (data.themes||[])) await dbput('themes', th);
-      if(data.vision){ S.vision=data.vision; await dbput('settings',{id:'vision',value:data.vision}); }
-      // syncFromProjectOSをスキップして再描画のみ
-      const priOrd={S:0,A:1,B:2,C:3};
-      S.themes=(await dball('themes')).sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));
-      S.logs=(await dball('logs')).sort((a,b)=>b.date.localeCompare(a.date));
-      renderV26();ra();updateNav();
-      toast('Googleドライブから読み込みました');
-    }
-  } catch(e) {
-    alert('読込エラー: ' + e.message);
-  } finally {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-  }
-}
-
-async function gdriveAutoLoad() {
-  // 接続直後に自動でファイルの存在確認
-  try {
-    const fileId = await gdriveFindFile();
-    if (fileId) {
-      document.getElementById('gdriveStatusText').textContent = 'Googleドライブ接続済み（バックアップあり）';
-    }
-  } catch(e) {}
-}
-
-// 起動時に自動保存（ログインしている場合）
-
-// ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
-document.addEventListener('DOMContentLoaded', function() {
-  gdriveHandleRedirect();
-});
 
 /* ── DB ── */
 /* ── 永続化：localStorage（旧IndexedDB ReflectOS7 から自動移行）── */
@@ -2038,17 +1834,6 @@ document.getElementById('imp').addEventListener('change',e=>{const f=e.target.fi
   alert('インポート完了');ra();rgShowUndo();
 }catch(err){alert('エラー: '+err.message);}};reader.readAsText(f);});
 
-/* ── Default themes ── */
-const DEFAULT_THEMES=[
-  {id:'th_01',title:'2億円プロジェクト',category:'プロジェクト',summary:'新執行体制への移行',purpose:'組織の意思決定構造を変え、2億円規模の事業基盤をつくる',status:'実行中',priority:'S',startDate:'2026-01-01',targetDate:'2026-10-31',milestones:[{id:'m01a',title:'完了スケジュール作成',deadline:'2026-01-31',status:'完了'},{id:'m01b',title:'完了',deadline:'2026-07-21',status:'実行中'},{id:'m01c',title:'新運営開始',deadline:'2026-10-31',status:'未着手'}],metrics:[{id:'k01a',name:'完了期限',target:'7月21日'},{id:'k01b',name:'新運営開始',target:'10月'}],currentState:'7月21日完了に向けて進行中',nextAction:'新運営開始準備',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
-  {id:'th_02',title:'仲間の定義決め・仲間探し',category:'組織',summary:'仲間の定義を文書化し、採用・アサインを進める',purpose:'同じゴールに向かえる仲間を定義し、実際に一緒に仕事できる体制をつくる',status:'実行中',priority:'A',startDate:'2026-01-01',targetDate:'2026-10-31',milestones:[{id:'m02a',title:'仲間の定義文書化',deadline:'2026-03-31',status:'完了'},{id:'m02b',title:'初回アサイン／採用',deadline:'2026-06-30',status:'実行中'},{id:'m02c',title:'パートナーとして一緒に仕事をする',deadline:'2026-10-31',status:'未着手'}],metrics:[],currentState:'初回アサイン・採用を進行中',nextAction:'採用候補者との面談',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
-  {id:'th_03',title:'意思決定するための数字を変える',category:'財務',summary:'経営の主指標を再設計し、月次運用を確立する',purpose:'感覚ではなく数字で意思決定できる経営体制をつくる',status:'実行中',priority:'A',startDate:'2026-04-01',targetDate:'2026-06-30',milestones:[{id:'m03a',title:'指標定義・設計',deadline:'2026-04-30',status:'完了'},{id:'m03b',title:'月次運用開始',deadline:'2026-05-31',status:'実行中'},{id:'m03c',title:'経営会議の主指標化',deadline:'2026-06-30',status:'未着手'}],metrics:[],currentState:'月次運用を開始',nextAction:'経営会議での主指標採用',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
-  {id:'th_04',title:'M&A実行',category:'戦略',summary:'企業価値算定・PMI習得からクロージングまで',purpose:'M&Aを通じて事業規模と可能性を拡大する',status:'実行中',priority:'A',startDate:'2026-01-01',targetDate:'2026-12-31',milestones:[{id:'m04a',title:'企業価値算定・PMI勉強',deadline:'2026-03-31',status:'完了'},{id:'m04b',title:'ロングリスト確定',deadline:'2026-04-30',status:'完了'},{id:'m04c',title:'DD開始',deadline:'2026-07-31',status:'実行中'},{id:'m04d',title:'1件目クロージング',deadline:'2026-09-30',status:'未着手'},{id:'m04e',title:'PMI完了',deadline:'2026-12-31',status:'未着手'}],metrics:[],currentState:'DD開始フェーズ',nextAction:'DD候補先の絞り込み',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
-  {id:'th_05',title:'3AC 2030 VISION発足',category:'VISION',summary:'2億円PJ完了後に2030VISIONを策定・社内運用開始',purpose:'10年先の会社の方向性を仲間と共有し、全員が同じゴールを向ける状態をつくる',status:'構想中',priority:'B',startDate:'2026-05-01',targetDate:'2026-10-31',milestones:[{id:'m05a',title:'中心メンバー選定完了',deadline:'2026-05-31',status:'実行中'},{id:'m05b',title:'合宿／集中セッション',deadline:'2026-07-31',status:'未着手'},{id:'m05c',title:'2030VISION確定→社内運用開始',deadline:'2026-10-31',status:'未着手'}],metrics:[],currentState:'中心メンバー選定中',nextAction:'メンバー選定を5月末までに完了',visionConnection:'守りの総合支援を通して挑戦する人が成長できる社会をつくるための長期指針',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
-  {id:'th_06',title:'社内新規事業創出',category:'新規事業',summary:'2〜3テーマを同時並行で試行、12月に継続/撤退判断',purpose:'既存事業に依存しない新たな収益の柱をつくる',status:'構想中',priority:'B',startDate:'2026-01-01',targetDate:'2026-12-31',milestones:[{id:'m06a',title:'継続／撤退判断',deadline:'2026-12-31',status:'未着手'}],metrics:[{id:'k06a',name:'同時並行テーマ数',target:'2〜3'},{id:'k06b',name:'初期投資上限（各）',target:'3,000万円'},{id:'k06c',name:'年間売上目標',target:'5,000万〜1億円'},{id:'k06d',name:'撤退判断率',target:'50%以上'}],currentState:'テーマ検討中',nextAction:'テーマ候補の洗い出し',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
-];
-async function seedDefaultThemes(){const existing=await dball('themes');if(existing.length>0)return;for(const t of DEFAULT_THEMES)await dbput('themes',t);S.themes=DEFAULT_THEMES;}
-
 /* ── Project OS 同期 ── */
 const POS_STATUS_MAP={'進行中':'実行中','構想中':'構想中','保留':'保留','完了':'完了','中止':'完了'};
 async function syncFromProjectOS(){
@@ -2220,7 +2005,6 @@ document.addEventListener('DOMContentLoaded',function(){
 async function boot(){
   try{const v=await dbget('settings','vision');if(v?.value)S.vision=v.value;}catch(e){}
   try{
-    await seedDefaultThemes();
     await syncFromProjectOS();
     const priOrd={S:0,A:1,B:2,C:3};
     const th=await dball('themes');
