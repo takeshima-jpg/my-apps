@@ -1,3 +1,5 @@
+> ✅ 実装済み 2026-07-10 ・ コミット 4cfc2f6
+
 # Claude Code 実装依頼書：tools/weekly_facts.py（週次「事実の差分」）＋Cowork追補
 
 ## 目的

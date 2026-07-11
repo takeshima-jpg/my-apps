@@ -201,7 +201,7 @@ python tools/sheet_update.py <spreadsheetId> --backup               # 全値をt
 
 ### 運用（Claude Code が自然言語の依頼を解釈して実行）
 
-`docs/claude-code-sheets-integration-spec.md` と `docs/sheets.md` に従う。**書き込み前バックアップ＋差分承認が必須**：
+`docs/specs/claude-code-sheets-integration-spec.md` と `docs/sheets.md` に従う。**書き込み前バックアップ＋差分承認が必須**：
 
 1. `--get` で現状取得 → 変更差分（何行のどの列がどう変わるか）をチャットに提示 → 所有者の「OK」を待つ
 2. 承認後に `--set-status` / `--append-tsv`（書き込み系は実行前に自動で `tools/logs/` へバックアップ）

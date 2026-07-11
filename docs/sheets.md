@@ -29,7 +29,7 @@ spreadsheetId と gid は、Project OS のプロジェクト編集に登録さ�
 
 ## 更新の手順
 
-`docs/claude-code-sheets-integration-spec.md` に従う。要点：
+`docs/specs/claude-code-sheets-integration-spec.md` に従う。要点：
 
 1. `tools/sheet_update.py <spreadsheetId> --get` で現状取得
 2. 変更差分（何行のどの列がどう変わるか）をチャットに提示 → 所有者の「OK」を待つ

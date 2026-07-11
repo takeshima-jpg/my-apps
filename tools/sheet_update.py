@@ -12,7 +12,7 @@ Project OS のスプレッドシートを直接更新する（状態変更・行
 実運用はコマンド直叩きではなく、Claude Codeが自然言語の依頼を解釈して
 「--get → 変更差分を提示 → 承認 → 書き込み」の流れで使う。
 
-書き込みルール【厳守・docs/claude-code-sheets-integration-spec.md】:
+書き込みルール【厳守・docs/specs/claude-code-sheets-integration-spec.md】:
   1. 書き込み前に必ず --backup で退避（本ツールは書き込み系で自動退避もする）→ 差分提示 → 所有者OK
   2. 行削除はしない（状態変更・行追加のみ）
   3. 11列構成と日付形式を崩さない
