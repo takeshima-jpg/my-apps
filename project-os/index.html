@@ -886,6 +886,7 @@ textarea.fc.tall { min-height: 130px; }
       </div>
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
         <button class="btn btn-navy" style="padding:11px 28px;font-size:.9rem;" onclick="siParse()">⬇ 解析して取り込む</button>
+        <button class="btn btn-outline" style="padding:11px 22px;font-size:.9rem;border-color:var(--navy);color:var(--navy);" onclick="sheetImportDirect()" title="選択中プロジェクトのスプレッドシートURLから直接読み込みます（貼り付け不要・読み取り専用）">⟳ シートから直接取り込み</button>
         <button class="btn btn-danger btn-sm" id="si-clear-btn" onclick="siClearImport()" style="display:none;">🗑 取り込みデータをクリア</button>
         <button class="btn btn-outline btn-sm" id="si-undo-btn" onclick="siUndo()" style="display:none;border-color:var(--blue);color:var(--blue);">↩ 元に戻す</button>
         <div id="si-status" style="font-size:.8rem;color:var(--gray3);flex:1;"></div>
@@ -1091,6 +1092,148 @@ async function gdriveFindFile() {
   return data.files && data.files.length > 0 ? data.files[0].id : null;
 }
 
+/* ══════════════════════════════════
+   Sheets 直接取り込み（Part A）
+   既存の貼り付けパーサ（siParse）を "そのまま" 共有する。読み取り専用。
+   トークンは既存 gdrive_token（drive.appdata）と別管理。CLIENT_IDとREDIRECTは共有。
+══════════════════════════════════ */
+const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+const SHEETS_TOKEN_KEY = 'gdrive_token_projectos';   // 他OS/既存gdrive_tokenと衝突させない
+const SHEETS_OAUTH_STATE = 'projectos_sheets';       // リダイレクト時にdrive用と判別する
+let sheetsToken = null;
+
+function sheetsConnect() {
+  const params = new URLSearchParams({
+    client_id: GDRIVE_CLIENT_ID,
+    redirect_uri: GDRIVE_REDIRECT_URI,
+    response_type: 'token',
+    scope: SHEETS_SCOPE,
+    include_granted_scopes: 'true',
+    state: SHEETS_OAUTH_STATE,
+    prompt: 'select_account',
+  });
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+}
+
+// リダイレクト後、state が Sheets 用のときだけトークンを取り込む。
+// 既存 gdriveHandleRedirect より先に呼び、消費したら hash をクリアする（drive用トークンと混ざらない）。
+function sheetsHandleRedirect() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  if (hash.get('access_token') && hash.get('state') === SHEETS_OAUTH_STATE) {
+    sheetsToken = hash.get('access_token');
+    localStorage.setItem(SHEETS_TOKEN_KEY, sheetsToken);
+    history.replaceState(null, '', location.pathname);
+    return;
+  }
+  const saved = localStorage.getItem(SHEETS_TOKEN_KEY);
+  if (saved) sheetsToken = saved;
+}
+
+window.addEventListener('storage', function(e) {
+  if (e.key === SHEETS_TOKEN_KEY) sheetsToken = e.newValue || null;
+});
+
+async function sheetsFetch(url) {
+  const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + sheetsToken } });
+  if (res.status === 401) {
+    sheetsToken = null;
+    localStorage.removeItem(SHEETS_TOKEN_KEY);
+    throw new Error('AUTH');   // 呼び出し側で再接続を促す
+  }
+  return res;
+}
+
+// sheetUrl から spreadsheetId と gid を抽出（gid無しは最初のシート）
+function parseSheetUrl(url) {
+  if (!url) return null;
+  const idM = String(url).match(/\/spreadsheets\/d\/([a-zA-Z0-9\-_]+)/);
+  if (!idM) return null;
+  const gidM = String(url).match(/[#&?]gid=([0-9]+)/);
+  return { spreadsheetId: idM[1], gid: gidM ? gidM[1] : null };
+}
+
+// gid → シート名を解決（metadata: spreadsheets.get）
+async function sheetsResolveTitle(spreadsheetId, gid) {
+  const res = await sheetsFetch(
+    'https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(spreadsheetId) +
+    '?fields=sheets(properties(sheetId,title))');
+  if (!res.ok) throw new Error('META_' + res.status);
+  const data = await res.json();
+  const sheets = data.sheets || [];
+  if (!sheets.length) throw new Error('NO_SHEET');
+  if (gid == null) return sheets[0].properties.title;
+  const hit = sheets.find(s => String(s.properties.sheetId) === String(gid));
+  return hit ? hit.properties.title : sheets[0].properties.title;
+}
+
+// A:K（11列）を取得し、貼り付けと同じTSVテキストに変換する。
+// 各行を11列にそろえてタブ結合＝シート全体をコピペした時と同形にし、パーサを完全共有する。
+async function sheetsFetchAsTsv(spreadsheetId, gid) {
+  const title = await sheetsResolveTitle(spreadsheetId, gid);
+  const range = "'" + title.replace(/'/g, "''") + "'!A:K";
+  const res = await sheetsFetch(
+    'https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(spreadsheetId) +
+    '/values/' + encodeURIComponent(range) + '?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE');
+  if (!res.ok) throw new Error('VALUES_' + res.status);
+  const data = await res.json();
+  const rows = data.values || [];
+  if (!rows.length) throw new Error('EMPTY');
+  return rows.map(r => {
+    const cells = (r || []).slice(0, 11);
+    while (cells.length < 11) cells.push('');
+    return cells.map(c => String(c == null ? '' : c)).join('\t');
+  }).join('\n');
+}
+
+// ⟳ シートから直接取り込み：選択中プロジェクトの sheetUrl から取得→si-pasteに入れ→siParse()を呼ぶ。
+// パース・確認ダイアログ・スナップショット・全上書きは貼り付け経路と完全に同一。
+async function sheetImportDirect() {
+  const pid = siSelPid;
+  if (!pid) { alert('プロジェクトを選択してください'); return; }
+  const p = proj(pid);
+  if (!p) return;
+  if (!p.sheetUrl || !p.sheetUrl.trim()) {
+    alert('このプロジェクトにスプレッドシートURLが未設定です。\n「編集」からURLを登録するか、貼り付け取り込みをお使いください。');
+    return;
+  }
+  const parsed = parseSheetUrl(p.sheetUrl);
+  if (!parsed) {
+    alert('スプレッドシートURLを認識できませんでした。\nURLを確認するか、貼り付け取り込みをお使いください。');
+    return;
+  }
+  if (!sheetsToken) {
+    if (confirm('Googleスプレッドシートの読み取り接続が必要です。\nGoogleでログインしますか？（読み取り専用）')) sheetsConnect();
+    return;
+  }
+
+  const statusEl = $$('si-status');
+  if (statusEl) statusEl.textContent = 'シートを直接読み込み中...';
+  try {
+    const tsv = await sheetsFetchAsTsv(parsed.spreadsheetId, parsed.gid);
+    const box = $$('si-paste');
+    if (box) box.value = tsv;   // ← 貼り付けと同じ入口へ
+    siParse();                  // ← パーサ・確認ダイアログ・スナップショットを完全共有
+  } catch (e) {
+    const m = e && e.message || '';
+    if (m === 'AUTH') {
+      if (statusEl) statusEl.textContent = '';
+      if (confirm('接続の有効期限が切れました。再ログインしますか？')) sheetsConnect();
+      return;
+    }
+    let msg;
+    if (m === 'EMPTY') {
+      msg = 'シートにデータがありませんでした。';
+    } else if (/^(META|VALUES)_40[13]/.test(m)) {
+      msg = 'シートにアクセスできません（非公開/権限不足）。共有設定を確認するか、貼り付け取り込みをお使いください。';
+    } else if (/^(META|VALUES)_404|NO_SHEET/.test(m)) {
+      msg = 'シートが見つかりませんでした。URL（gid）を確認するか、貼り付け取り込みをお使いください。';
+    } else {
+      msg = '直接取り込みに失敗しました（' + m + '）。貼り付け取り込みをお使いください。';
+    }
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--orange);font-weight:600;">⚠ ' + esc(msg) + '</span>';
+  }
+}
+
 function toast(msg) {
   let el = document.querySelector('.toast-msg');
   if (!el) {
@@ -1174,6 +1317,7 @@ async function gdriveAutoLoad() {
 
 // ページ読み込み時にリダイレクト後トークンを処理（DOM準備後に実行）
 document.addEventListener('DOMContentLoaded', function() {
+  sheetsHandleRedirect();   // Sheets用トークンを先に消費（drive用と混ざらない）
   gdriveHandleRedirect();
 });
 

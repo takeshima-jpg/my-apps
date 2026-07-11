@@ -38,7 +38,12 @@ except ImportError:
 
 # ── 設定 ───────────────────────────────────────────────────────
 FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U'   # aix-drafts フォルダ
-SCOPES = ['https://www.googleapis.com/auth/drive']
+# token.json を sheet_update.py と共用するため、スコープはドライブ＋シートの和集合にそろえる
+# （この掃除ツール自体が使うのは drive スコープのみ）
+SCOPES = [
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/spreadsheets',
+]
 
 # 最新1件だけ残し、古い同名はゴミ箱へ入れる対象（完全一致のみ）
 TARGET_NAMES = {
