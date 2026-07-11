@@ -416,6 +416,7 @@ html,body{max-width:100%;overflow-x:hidden;}
     <button data-page="uncat"><span class="nav-icon">≡</span>未分類 <span class="nav-badge" id="uncat-badge" style="display:none">0</span></button>
     <button data-page="discard"><span class="nav-icon">⊘</span>捨てるリスト</button>
     <button data-page="review"><span class="nav-icon">◈</span>振り返り</button>
+    <button data-page="aiimport"><span class="nav-icon">🤖</span>AI取り込み</button>
     <button data-page="settings"><span class="nav-icon">⚙</span>設定</button>
   </nav>
 </div>
@@ -444,6 +445,7 @@ html,body{max-width:100%;overflow-x:hidden;}
     <button data-page="uncat"><span class="nav-icon">≡</span>未分類 <span class="nav-badge" id="sb-uncat-badge" style="display:none">0</span></button>
     <button data-page="discard"><span class="nav-icon">⊘</span>捨てるリスト</button>
     <button data-page="review"><span class="nav-icon">◈</span>振り返り</button>
+    <button data-page="aiimport"><span class="nav-icon">🤖</span>AI取り込み</button>
     <button data-page="settings"><span class="nav-icon">⚙</span>設定</button>
   </nav>
   <div id="sidebar-footer">
@@ -462,6 +464,7 @@ html,body{max-width:100%;overflow-x:hidden;}
   <div id="page-uncat" style="display:none"></div>
   <div id="page-discard" style="display:none"></div>
   <div id="page-review" style="display:none"></div>
+  <div id="page-aiimport" style="display:none"></div>
   <div id="page-settings" style="display:none"></div>
 </div>
 
@@ -802,6 +805,7 @@ function renderPage(page){
   else if(page==='uncat') renderUncat();
   else if(page==='discard') renderDiscard();
   else if(page==='review') renderReview();
+  else if(page==='aiimport') renderAiImport();
   else if(page==='settings'){ renderSettings(); }
 }
 
@@ -2084,6 +2088,114 @@ function importJSON(e){
 }
 
 // ===== RESET =====
+
+// ===== AI IMPORT（貼り付けで項目追加。briefの新願望提案の回収ループを閉じる） =====
+// 正規化タイトル（空白除去・NFKC・小文字化）— 重複スキップ判定用
+function aiNormTitle(s){ return String(s||'').normalize('NFKC').replace(/\s+/g,'').toLowerCase(); }
+
+// 「予定」欄の解析: '2026-08'→{2026,8} / '8月'→今年（過去月なら翌年） / '未定'・不明→{null,null}
+function aiParsePlan(v){
+  const s = String(v||'').trim();
+  if(!s || /未定/.test(s)) return {year:null, month:null};
+  let m = s.match(/^(\d{4})[-\/年]\s*(\d{1,2})月?$/);
+  if(m){ const y=+m[1], mo=+m[2]; return (mo>=1&&mo<=12)?{year:y, month:mo}:{year:y, month:null}; }
+  m = s.match(/^(\d{4})年?$/);
+  if(m) return {year:+m[1], month:null};
+  m = s.match(/^(\d{1,2})月$/);
+  if(m){
+    const mo=+m[1];
+    if(mo<1||mo>12) return {year:null, month:null};
+    const nowD=new Date(); let y=nowD.getFullYear();
+    if(mo < nowD.getMonth()+1) y+=1;
+    return {year:y, month:mo};
+  }
+  return {year:null, month:null};
+}
+
+// 【やりたいこと】ブロックの解析（複数件・ラベル別名許容・---は無視）
+function aiParseWishText(text){
+  const blocks = String(text||'').split(/【やりたいこと】/).slice(1);
+  const out=[];
+  blocks.forEach(b=>{
+    const item={title:'', category:'未分類', plan:'', memo:''};
+    b.split(/\r?\n/).forEach(line=>{
+      line=line.trim();
+      if(!line || /^-{3,}$/.test(line)) return;
+      const m=line.match(/^(タイトル|やりたいこと|カテゴリ|分類|予定月|予定|いつ|メモ|理由)[:：]\s*(.*)$/);
+      if(!m) return;
+      const label=m[1], val=m[2].trim();
+      if(label==='タイトル'||label==='やりたいこと') item.title=val;
+      else if(label==='カテゴリ'||label==='分類') item.category = CATS.includes(val)?val:'未分類';
+      else if(label==='予定'||label==='予定月'||label==='いつ') item.plan=val;
+      else item.memo=val;
+    });
+    if(item.title) out.push(item);
+  });
+  return out;
+}
+// ===== AI IMPORT PARSER END =====
+
+function renderAiImport(){
+  const el = document.getElementById('page-aiimport');
+  el.innerHTML = `
+  <div class="card">
+    <h3 class="mb-12" style="font-size:16px;font-weight:700">🤖 AI取り込み</h3>
+    <p style="font-size:13px;color:#718096;margin-bottom:10px;">
+      briefの「新しい願望の提案」や壁打ちで出た願望を、下のフォーマットで貼り付けると100リストに登録できます。
+      同じタイトル（空白・全角半角の違いは無視）が既にある場合はスキップします。
+    </p>
+    <pre style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.7;overflow-x:auto;margin-bottom:10px;">【やりたいこと】
+タイトル：（必須）
+カテゴリ：（${CATS.join('/')} のいずれか。無ければ「未分類」）
+予定：（YYYY-MM または M月 または 未定）
+メモ：（任意・1行）</pre>
+    <textarea id="ai-import-text" placeholder="ここに貼り付け（【やりたいこと】ブロックの繰り返しで複数件OK）" style="width:100%;min-height:180px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;line-height:1.7;box-sizing:border-box;font-family:inherit;"></textarea>
+    <div style="margin-top:10px;">
+      <button class="btn btn-primary" onclick="aiImportRegister()">登録</button>
+    </div>
+    <div id="ai-import-result" style="margin-top:12px;"></div>
+  </div>`;
+}
+
+function aiImportRegister(){
+  const ta = document.getElementById('ai-import-text');
+  const resultEl = document.getElementById('ai-import-result');
+  const parsed = aiParseWishText(ta.value);
+  if(!parsed.length){
+    toast('【やりたいこと】ブロックが見つかりません','error');
+    resultEl.innerHTML = '<p style="font-size:13px;color:#e53e3e;">解析できませんでした。フォーマット例のとおり「【やりたいこと】」から始まるブロックで貼り付けてください。</p>';
+    return;
+  }
+  const existing = new Set(items.map(i=>aiNormTitle(i.title)));
+  const added=[], skipped=[];
+  parsed.forEach(p=>{
+    const key = aiNormTitle(p.title);
+    if(existing.has(key)){ skipped.push(p.title); return; }
+    existing.add(key);
+    const plan = aiParsePlan(p.plan);
+    addItem({
+      isFocus:false, title:p.title, isCountGoal:false,
+      isRecurringYearly:false, year:plan.year, month:plan.month, scheduledDate:null,
+      completed:false, completedAt:null,
+      category:p.category, priority:'Medium', memo:p.memo||''
+    });
+    added.push({title:p.title, category:p.category, year:plan.year, month:plan.month});
+  });
+  const planLabel = a => a.year ? (a.year + '年' + (a.month ? a.month + '月' : '')) : '未定';
+  let html = '';
+  if(added.length){
+    html += '<div style="font-size:13px;font-weight:700;margin-bottom:6px;">追加した項目（'+added.length+'件）</div>';
+    html += added.map(a=>'<div style="font-size:13px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:4px;">'
+      + esc(a.title) + '　<span style="color:#718096;">' + esc(a.category) + '・' + planLabel(a) + '</span></div>').join('');
+  }
+  if(skipped.length){
+    html += '<div style="font-size:13px;color:#718096;margin-top:8px;">重複スキップ（'+skipped.length+'件）: '
+      + skipped.map(esc).join(' / ') + '</div>';
+  }
+  resultEl.innerHTML = html || '<p style="font-size:13px;color:#718096;">追加はありませんでした。</p>';
+  if(added.length) ta.value = '';
+  toast(added.length + '件追加しました' + (skipped.length ? '（重複スキップ' + skipped.length + '件）' : ''), added.length ? 'success' : 'error');
+}
 
 // ===== RESET =====
 
