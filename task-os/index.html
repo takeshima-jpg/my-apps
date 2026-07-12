@@ -689,26 +689,41 @@ async function collectAllOSDataWithReflect() {
   return { ...base, reflectOS };
 }
 
+// localStorage値の安全パース。1キーのparse失敗がバックアップ全体を止めないための防御。
+// jGet: データ用（JSON配列/オブジェクト前提）。壊れていれば null（生ゴミをバックアップに混ぜない）。
+// bGet: brief/review用。値はJSONオブジェクトのことも markdown文字列のこともある（2026-07に週次もmarkdown化）。
+//       JSON.parse成功ならその値、失敗なら生markdown文字列をそのまま採用（1dayのgetAixDraftと同じ3形式対応）。
+function jGet(key) {
+  const raw = localStorage.getItem(key);
+  if (raw == null || raw === '') return null;
+  try { return JSON.parse(raw); } catch(e) { console.warn('collectAllOSData: ' + key + ' のparse失敗（nullでスキップ）', e); return null; }
+}
+function bGet(key) {
+  const raw = localStorage.getItem(key);
+  if (raw == null || raw === '') return null;
+  try { return JSON.parse(raw); } catch(e) { return raw; }   // 生markdownは文字列のまま
+}
+
 function collectAllOSData() {
   return {
     savedAt:        new Date().toISOString(),
-    shotTaskOS:     JSON.parse(localStorage.getItem('shot-task-os-v1')       || 'null'),
-    routineOS:      { tasks:    JSON.parse(localStorage.getItem('routineOS_tasks')    || 'null'),
-                      logs:     JSON.parse(localStorage.getItem('routineOS_logs')     || 'null'),
-                      holidays: JSON.parse(localStorage.getItem('routineOS_holidays') || 'null') },
-    projectOS:      JSON.parse(localStorage.getItem('pos_v4')                || 'null'),
-    list100:        JSON.parse(localStorage.getItem('yaritai_items_v4')      || 'null'),
-    onedayLogs:     JSON.parse(localStorage.getItem('oneday_logs_v1')        || 'null'),
-    onedayReviews:  JSON.parse(localStorage.getItem('oneday_reviews_v1')     || 'null'),
-    kosoLog:        { items:    JSON.parse(localStorage.getItem('kouso_backlog_v1')   || 'null'),
-                      archives: JSON.parse(localStorage.getItem('kouso_archive_v1')   || 'null') },
-    socialUniverse: JSON.parse(localStorage.getItem('su-v6-persons')         || 'null'),
-    hitomemo:       JSON.parse(localStorage.getItem('hitomemo_profiles_v1')  || 'null'),
-    lecticaExperiments:         JSON.parse(localStorage.getItem('lectica_experiments_master_v1') || 'null'),
-    lecticaExperimentsMarkdown: localStorage.getItem('lectica_experiments_master_markdown_v1')    || null,
-    lecticaLogs:                JSON.parse(localStorage.getItem('lectica_experiment_logs_v1')     || 'null'),
-    aixReviewWeekly:            JSON.parse(localStorage.getItem('aix_review_weekly')              || 'null'),
-    aixReviewMonthly:           JSON.parse(localStorage.getItem('aix_review_monthly')             || 'null'),
+    shotTaskOS:     jGet('shot-task-os-v1'),
+    routineOS:      { tasks:    jGet('routineOS_tasks'),
+                      logs:     jGet('routineOS_logs'),
+                      holidays: jGet('routineOS_holidays') },
+    projectOS:      jGet('pos_v4'),
+    list100:        jGet('yaritai_items_v4'),
+    onedayLogs:     jGet('oneday_logs_v1'),
+    onedayReviews:  jGet('oneday_reviews_v1'),
+    kosoLog:        { items:    jGet('kouso_backlog_v1'),
+                      archives: jGet('kouso_archive_v1') },
+    socialUniverse: jGet('su-v6-persons'),
+    hitomemo:       jGet('hitomemo_profiles_v1'),
+    lecticaExperiments:         jGet('lectica_experiments_master_v1'),
+    lecticaExperimentsMarkdown: localStorage.getItem('lectica_experiments_master_markdown_v1') || null,
+    lecticaLogs:                jGet('lectica_experiment_logs_v1'),
+    aixReviewWeekly:            bGet('aix_review_weekly'),    // markdown文字列 or オブジェクト
+    aixReviewMonthly:           bGet('aix_review_monthly'),   // markdown文字列 or オブジェクト
   };
 }
 
@@ -748,8 +763,10 @@ function restoreAllOSData(data) {
   if (data.lecticaExperiments)         localStorage.setItem('lectica_experiments_master_v1',          JSON.stringify(data.lecticaExperiments));
   if (data.lecticaExperimentsMarkdown) localStorage.setItem('lectica_experiments_master_markdown_v1', data.lecticaExperimentsMarkdown);
   if (data.lecticaLogs)                localStorage.setItem('lectica_experiment_logs_v1',             JSON.stringify(data.lecticaLogs));
-  if (data.aixReviewWeekly)            localStorage.setItem('aix_review_weekly',                      JSON.stringify(data.aixReviewWeekly));
-  if (data.aixReviewMonthly)           localStorage.setItem('aix_review_monthly',                     JSON.stringify(data.aixReviewMonthly));
+  // brief/review は markdown文字列 or オブジェクト。collect(bGet)と対称に：文字列は生のまま、オブジェクトはJSON化。
+  const writeBrief = (val, key) => { if (val == null) return; localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val)); };
+  writeBrief(data.aixReviewWeekly,  'aix_review_weekly');
+  writeBrief(data.aixReviewMonthly, 'aix_review_monthly');
   markSync('復元');
 }
 
