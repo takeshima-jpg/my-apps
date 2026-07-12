@@ -246,17 +246,18 @@ def check_lectica_stale(experiments, logs):
 
 
 def check_mechanism_idle(profiles, su_persons):
-    """socialUniverseでisTop10=trueの人物に限定して判定する。
-    Top10外の過去のnextExperience設定はノイズなので数えない。"""
-    ids, unlinked = top10_ids(profiles, su_persons)
-    if not ids and not unlinked:
-        return True, ['ℹ 仕組みの空転: socialUniverseにTop10設定が無いためスキップ']
+    """関係ステージが「信頼を深める段階」または「経営パートナー」の人物に限定して判定する。
+    （旧: Top10基準。関係ステージ凡例 partner-stage-legend-v1-1 に合わせて母集団を深さ軸へ変更）
+    nextExperience設定済みだが直近30日に経験ログが無い＝仕組みの空転。su_persons は現在未使用。"""
+    TARGET_STAGES = ('信頼を深める段階', '経営パートナー')
+    target = [p for p in profiles
+              if isinstance(p, dict) and field_val(p.get('stage')) in TARGET_STAGES]
+    if not target:
+        return True, ['ℹ 仕組みの空転: 信頼を深める段階／経営パートナーの人物が無いためスキップ']
 
     today = date.today()
     idle = []
-    for p in profiles:
-        if not isinstance(p, dict) or p.get('id') not in ids:
-            continue
+    for p in target:
         nx = field_val(p.get('nextExperience'))
         if not nx or not str(nx).strip():
             continue
@@ -274,16 +275,13 @@ def check_mechanism_idle(profiles, su_persons):
         if not recent:
             idle.append(get_name(p))
 
-    total = len(ids) + len(unlinked)
+    total = len(target)
     if idle:
-        lines = ['⚠ 仕組みの空転: Top10のうち nextExperience設定済みだが直近30日に経験ログ無し {}人（Top10 {}人中）'.format(len(idle), total)]
+        lines = ['⚠ 仕組みの空転: nextExperience設定済みだが直近30日に経験ログ無し {}人（信頼を深める段階/経営パートナー {}人中）'.format(len(idle), total)]
         lines.append('    ' + ' / '.join((n or '(名前空)') for n in idle[:15]))
     else:
-        lines = ['✅ 仕組みの空転: なし（Top10 {}人中）'.format(total)]
-    if unlinked:
-        # 対象から漏れている＝チェックが黙って過少になるので必ず表に出す
-        lines.append('    ⚠ SU Top10のうち {}人はヒトメモに紐づかず対象外: {}'.format(len(unlinked), ' / '.join(unlinked[:10])))
-    return (not idle and not unlinked), lines
+        lines = ['✅ 仕組みの空転: なし（信頼を深める段階/経営パートナー {}人中）'.format(total)]
+    return (not idle), lines
 
 
 def check_oneday_gap(logs):

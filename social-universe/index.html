@@ -732,6 +732,9 @@ function reflectToHitomemo(){
     }
   });
   // Top10フラグをヒトメモへ同期（Top10=true / 外れた人=false）
+  // ※関係ステージ凡例(partner-stage-legend-v1-1)準拠：Top10は「注意配分」の軸で、関係の深さ(stage)や
+  //   稼働(isActive)とは別物。この同期は nextExperience / isTop10 のみを触り、stage・isActive・旧tierには
+  //   一切書き込まない（新規人物の作成もしない）。旧tier復活を防ぐためstage系は絶対に上書きしないこと。
   let flagChanged=0;
   hm.forEach(p=>{
     const want = top10HmIds.has(p.id);
