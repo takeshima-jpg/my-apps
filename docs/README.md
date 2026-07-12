@@ -26,6 +26,8 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-taskos-aiimport-hotfix-spec.md](specs/claude-code-taskos-aiimport-hotfix-spec.md) | Task OS AIタスク読込の緊急修正（genId未定義→共通genUidに統一・GDrive dedupe隔離確認） | ✅実装済み 2026-07-12 `bfec392` |
 | [claude-code-taskos-collect-parse-hotfix.md](specs/claude-code-taskos-collect-parse-hotfix.md) | Task OS 同期の緊急修正（collectAllOSDataが週次/月次briefのmarkdownをJSON.parseして落ちる→安全パース＋restore対称化） | ✅実装済み 2026-07-12 `8bf0153` |
 | [claude-code-taskos-dedupe-403-quiet-spec.md](specs/claude-code-taskos-dedupe-403-quiet-spec.md) | GDrive dedupeの403（所有外trash不可）を静音スキップ・セッション再試行なし・ログ洪水解消 | ✅実装済み 2026-07-12 `ad3bad8` |
+| [claude-code-drive-cleanup-unify-spec.md](specs/claude-code-drive-cleanup-unify-spec.md) | Drive掃除を一本化（ブラウザ側dedupe廃止＋drive_cleanup.py週1手動）。手順=[drive-cleanup-運用](specs/drive-cleanup-運用.md) | ✅実装済み 2026-07-12 `a541b5b` |
+| [drive-cleanup-運用.md](specs/drive-cleanup-運用.md) | drive_cleanup.py の週1手動運用手順書（dry-run→本番・掃除ルール） | 🔧運用中（手順書） |
 | [claude-code-minutes-triage-spec.md](specs/claude-code-minutes-triage-spec.md) | 議事録→OS振り分け（inbox triage）の手順書。「inboxを振り分けて」で発動 | 🔧運用中（手順書） |
 | [claude-code-sheets-integration-spec.md](specs/claude-code-sheets-integration-spec.md) | スプレッドシート連携（Project OS直接取り込み＋シート更新ツール）の設計・手順 | 🔧運用中（手順書） |
 

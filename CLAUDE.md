@@ -14,6 +14,7 @@
 - 設計・実装依頼書は docs/specs、壁打ち・Coworkプロンプトは docs/prompts を参照（一覧は docs/README.md）
 - 「inboxを振り分けて」と言われたら docs/specs/claude-code-minutes-triage-spec.md の手順に従う（inbox/ を読み outputs/triage-YYYY-MM-DD.md を出力。どのOSにも自動書き込みしない）
 - シート更新は docs/specs/claude-code-sheets-integration-spec.md の手順に従う（書き込み前バックアップ＋差分承認必須。台帳は docs/sheets.md / docs/sheets.local.md）
+- Drive重複掃除は tools/drive_cleanup.py（週1・手動）に一本化。ブラウザ側の自動掃除は廃止済み。掃除は日曜の週次レビュー時に dry-run→本番 で実行する（手順は docs/specs/drive-cleanup-運用.md）
 
 ## 検証（コミット前に必須）
 - vanilla JS のOS：<script>（src無し）を連結して `node --check`
