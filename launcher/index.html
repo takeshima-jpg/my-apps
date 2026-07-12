@@ -2,6 +2,10 @@
 <html lang="ja" data-theme="light">
 <head>
 <meta charset="UTF-8">
+<!-- 他OSと同様のキャッシュ抑止。シェルHTMLが古いまま配信されると今日タブの修正が反映されない事故を防ぐ -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ランチャーOS</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -547,10 +551,13 @@ function briefHeadMarkdown(md){
 function toggleBrief(){ briefExpanded = !briefExpanded; renderTodayBrief(); }
 
 // AIタスクの取り込み本体はTask OSに任せる（台帳 aix_imported_keys・lectica_daily_practice処理等の
-// 二重管理を避けるため）。シェルは導線だけ＝Task OSを別タブで開く。読込後この画面を ⟳ で反映。
+// 二重管理を避けるため）。シェルは導線だけ＝Task OSを別タブで開く。
+// aix-tasks.json の正本はGoogle Drive（ローカルファイルではない）。Task OSはログイン済みなら
+// 起動時にGDrive同期(gdAutoSync)でDriveのaix-tasks.jsonを自動取り込みするため、開くだけでよい。
+// ローカルのファイル選択（input type=file）はシェルからは一切使わない。読込後この画面を ⟳ で反映。
 function openTaskImport(){
   window.open('../task-os/index.html', '_blank');
-  toast('Task OSを開きました。読込後この画面を ⟳');
+  toast('Task OSを開きました。GDrive同期後この画面を ⟳');
 }
 
 function renderToday(){
@@ -564,7 +571,7 @@ function renderToday(){
         </div>
         <div class="qa-sub">
           <button class="qa-ai" onclick="openTaskImport()">🤖 AIタスク読込</button>
-          <span class="qa-note">AIタスクの取り込みはTask OSで（読込後この画面を ⟳）</span>
+          <span class="qa-note">Task OSを開いてGDrive同期（読込後この画面を ⟳）</span>
         </div>
       </div>
       <h2>📋 今日のBRIEF（要点）</h2>
