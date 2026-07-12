@@ -2189,6 +2189,34 @@ async function gdFetch(url, opts){
   if(!r.ok){ const e=new Error('http '+r.status); e.code=r.status; throw e; }
   return r;
 }
+
+// ── 静かなtrash（掃除は「消せるものだけ静かに」）──
+// 所有外ファイル（Drive Desktop同期等でこのOAuthアプリの所有でない）はtrashできず403/404になる。実害はないが
+// 毎回同じ複数ファイルで403がコンソールに洪水するため、(1)所有外/権限系は静かにスキップ、
+// (2)一度失敗したfileIdは同一セッションで再試行しない（メモリ内Set・リロードで消えてよい）、
+// (3)まとめて情報レベル1行だけ残す。認証切れ(401)のみ上位へ投げる。
+const gdUntrashable = new Set();   // このセッションでtrash不可だったfileId
+let gdSkipNoted = false;           // 情報1行の重複出力を防ぐ
+async function gdTryTrash(id, name){
+  if(gdUntrashable.has(id)) return false;                       // 同一セッションで再試行しない
+  try{
+    await gdFetch(`https://www.googleapis.com/drive/v3/files/${id}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({trashed:true})
+    });
+    return true;
+  }catch(e){
+    if(e.code===401) throw e;                                   // 認証切れは上位で処理
+    if(e.code===403 || e.code===404){ gdUntrashable.add(id); return false; }  // 所有外/権限：静かにスキップ
+    console.warn('trash失敗', name, e);                         // 想定外エラーのみ最小限に残す
+    return false;
+  }
+}
+function gdFlushSkipInfo(){
+  if(gdUntrashable.size && !gdSkipNoted){
+    gdSkipNoted = true;
+    console.info('dedupe: 掃除できないファイル ' + gdUntrashable.size + '件をスキップ（所有外/権限のためtrash不可）');
+  }
+}
 async function gdFindInFolder(name){
   const q = encodeURIComponent(`'${GD_FOLDER_ID}' in parents and name='${name}' and trashed=false`);
   const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=5`);
@@ -2235,11 +2263,10 @@ async function gdPruneWeekly(){
     for(const f of ordered){
       const key = (f.name||'').replace(/\s*\(\d+\)/,'').replace(/\.json$/i,'');
       if(!seen[key] && kept < GD_WEEKLY_KEEP){ seen[key]=1; kept++; continue; }  // 残す
-      try{ await gdFetch(`https://www.googleapis.com/drive/v3/files/${f.id}`, {
-        method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({trashed:true})
-      }); }catch(e){ console.warn('weekly trash失敗', f.name, e); }
+      await gdTryTrash(f.id, f.name);   // 所有外の週次複製の403も静かにスキップ・再試行しない
     }
-  }catch(e){ console.warn('gdPruneWeekly', e); }
+    gdFlushSkipInfo();
+  }catch(e){ if(e.code===401) throw e; console.warn('gdPruneWeekly', e); }
 }
 
 // ===== 🧹 重複draft掃除（aix-drafts内：種別ごとに最新1つだけ残し、古い重複をゴミ箱へ）=====
@@ -2265,14 +2292,10 @@ async function gdDedupeDrafts(){
     const arr = groups[base].sort((a,b)=> (b.modifiedTime||'').localeCompare(a.modifiedTime||''));
     kept.push(arr[0].name);
     for(let i=1;i<arr.length;i++){
-      try{
-        await gdFetch(`https://www.googleapis.com/drive/v3/files/${arr[i].id}`, {
-          method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({trashed:true})
-        });
-        trashed++;
-      }catch(e){ console.warn('trash失敗', arr[i].name, e); }
+      if(await gdTryTrash(arr[i].id, arr[i].name)) trashed++;   // 403/404は静かにスキップ・再試行しない
     }
   }
+  gdFlushSkipInfo();
   return { trashed, kept };
 }
 async function gdCleanupDrafts(){
