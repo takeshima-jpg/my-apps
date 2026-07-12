@@ -1007,8 +1007,23 @@ const STAGE_HELP = {
 };
 const ROLE_STAGE_OPTS = ['', '知人', '協力者', '管理職', '事業責任者', '経営人材', '経営パートナー'];
 // 関わり方タイプ（関係の質）。「家族」を正式追加。単一選択pill。※未設定は「どのpillも非選択」で表す
-const ENGAGEMENT_OPTS = ['育成（若手）', '共同成長（同世代）', '相互学習（年上・専門家）', '維持（確定パートナー・専門家）', '家族'];
+// 関わり方タイプ（関係の質）。※「家族」はパートナー路線でないため独立カテゴリ personType='family' で扱う（ここには含めない）
+const ENGAGEMENT_OPTS = ['育成（若手）', '共同成長（同世代）', '相互学習（年上・専門家）', '維持（確定パートナー・専門家）'];
 const STAGE_V2_FLAG = 'hitomemo_migrated_stage_v2';
+const FAMILY_FLAG = 'hitomemo_migrated_family_v1';   // 家族カテゴリ移行フラグ（承認つき1回）
+const isFamily = p => p && p.personType === 'family';
+// 一覧の並び替えキー。既定は関係ステージ順（経営パートナー→…→記録のみ）
+const STAGE_RANK = { '経営パートナー': 0, '信頼を深める段階': 1, 'つながり': 2, '記録のみ': 3 };
+const _nm = p => ((p.name && p.name.value) || p.name || '');
+const SORT_FNS = {
+  stage:      (a, b) => (STAGE_RANK[a.stage] ?? 9) - (STAGE_RANK[b.stage] ?? 9) || _nm(a).localeCompare(_nm(b), 'ja'),
+  contactNew: (a, b) => (b.lastContactDate || '').localeCompare(a.lastContactDate || ''),
+  contactOld: (a, b) => (a.lastContactDate || '9999').localeCompare(b.lastContactDate || '9999'),
+  name:       (a, b) => _nm(a).localeCompare(_nm(b), 'ja'),
+  active:     (a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0) || (STAGE_RANK[a.stage] ?? 9) - (STAGE_RANK[b.stage] ?? 9),
+  updated:    (a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''),
+};
+const SORT_LABELS = { stage: '関係ステージ順', contactNew: '最終接触（新しい順）', contactOld: '最終接触（古い順）', name: '名前順', active: '🤝稼働中を上に', updated: '更新日（新しい順）' };
 const stageBadge = (stage, isActive) => {
   const s = STAGE_STYLE[stage] || STAGE_STYLE['記録のみ'];
   return (
@@ -1094,7 +1109,6 @@ const importFromMemo = (text) => {
     if (x.includes('共同成長')) return '共同成長（同世代）';
     if (x.includes('相互学習')) return '相互学習（年上・専門家）';
     if (x.includes('維持')) return '維持（確定パートナー・専門家）';
-    if (x.includes('家族')) return '家族';
     return '未設定';
   };
   return {
@@ -1105,6 +1119,7 @@ const importFromMemo = (text) => {
     meetings: [],
     meetingSummary: '',
     tier: '未登録',
+    personType: 'partner',    // 区分（partner=パートナー形成 / family=家族）。既定partner
     stage: '記録のみ',        // 関係ステージv2の初期値（深さ1軸）
     isActive: false,          // 🤝 稼働中フラグ（別軸）
     roleStage: '',            // 旧「現在地ステージ（仕事役割）」
@@ -1250,9 +1265,10 @@ const FIELDS = ['name','birthday','position','business','history','family','loca
 ---
 
 ### {氏名}さん
+personType: {partner / family}   （家族なら family。familyのときは下のstage等は不要）
 stage: {現在} → {変更後（記録のみ / つながり / 信頼を深める段階 / 経営パートナー のいずれか。変化なければ現在値）}
 isActive: {あり / なし}   （🤝 今この人と仕事が動いているか）
-engagementType: {育成 / 共同成長 / 相互学習 / 維持 / 家族 / 変化なし}
+engagementType: {育成 / 共同成長 / 相互学習 / 維持 / 変化なし}
 roleStage: {仕事役割の段階。変化なければ省略可}
 lastContactDate: {YYYY-MM-DD}
 nextExperience: {次に渡す経験（変化なければ現在値）}
@@ -1282,6 +1298,10 @@ const App = () => {
   const [manualOrder, setManualOrder] = useState(null);   // 全員の手動順
   const [starOrder, setStarOrder] = useState(null);       // ★の手動順
   const [selectedIds, setSelectedIds] = useState([]);     // SU移行用の複数選択
+  const [sortMode, setSortMode]   = useState(() => { try { return localStorage.getItem('hitomemo_sort') || 'stage'; } catch(e) { return 'stage'; } });
+  const [catFilter, setCatFilter] = useState(() => { try { return localStorage.getItem('hitomemo_catfilter') || 'all'; } catch(e) { return 'all'; } });
+  const changeSort = (v) => { setSortMode(v); try { localStorage.setItem('hitomemo_sort', v); } catch(e) {} };
+  const changeCatFilter = (v) => { setCatFilter(v); try { localStorage.setItem('hitomemo_catfilter', v); } catch(e) {} };
 
   useEffect(() => {
     const loaded = loadProfiles();
@@ -1313,6 +1333,31 @@ const App = () => {
           return;
         }
         // 非承認：移行せず今回のデータで表示（フラグは立てない＝次回また尋ねる）
+      }
+    } catch(e) {}
+    // 家族カテゴリ移行（承認つき・1回限り）：旧「家族」判定の人物を personType='family' に寄せる
+    try {
+      if (!localStorage.getItem(FAMILY_FLAG) && loaded.length > 0) {
+        const isFam = p => p && (p.tier === '家族' || p.engagementType === '家族');
+        const targets = loaded.filter(p => isFam(p) && p.personType !== 'family');
+        if (targets.length > 0) {
+          const names = targets.map(p => (p.name && p.name.value) || p.name || '(名前空)');
+          const msg = '「家族」を独立カテゴリに移行します。\n次の ' + targets.length + '件を『家族』区分にします（パートナー形成の進捗・鮮度・昇格の対象外になります）：\n\n'
+            + names.slice(0, 20).join('・') + (names.length > 20 ? ' ほか' : '') + '\n\n実行前に自動でJSONバックアップをDLします。実行しますか？（いいえなら手動で各人を切替できます）';
+          if (window.confirm(msg)) {
+            backupJSON(loaded);
+            const tset = new Set(targets.map(p => p.id));
+            const migrated = loaded.map(p => tset.has(p.id) ? { ...p, personType: 'family', updatedAt: new Date().toISOString() } : p);
+            try { localStorage.setItem(FAMILY_FLAG, new Date().toISOString().slice(0, 10)); } catch(e) {}
+            setProfiles(migrated); saveProfiles(migrated);
+            setTimeout(() => toast(targets.length + '件を家族区分に移行しました'), 300);
+            return;
+          }
+          // 非承認：フラグは立てない（次回また尋ねる／手動切替も可）
+        } else {
+          // 対象なし＝以後尋ねない
+          try { localStorage.setItem(FAMILY_FLAG, new Date().toISOString().slice(0, 10)); } catch(e) {}
+        }
       }
     } catch(e) {}
     setProfiles(loaded);
@@ -1533,14 +1578,17 @@ const App = () => {
       return Math.floor((new Date(today) - new Date(dateStr)) / 86400000);
     };
 
-    // 関係ステージ別分類（深さ1軸）。凡例 docs/partner-stage-legend-v1-1.md
+    // 家族はパートナー路線でないため分離（進捗・鮮度・昇格の対象外）
+    const partnerProfiles = profiles.filter(p => !isFamily(p));
+    const familyProfiles = profiles.filter(isFamily);
+    // 関係ステージ別分類（深さ1軸・パートナーのみ）。凡例 docs/partner-stage-legend-v1-1.md
     const stageOf = p => p.stage || '記録のみ';
-    const byStage = s => profiles.filter(p => stageOf(p) === s);
+    const byStage = s => partnerProfiles.filter(p => stageOf(p) === s);
     const partners = byStage('経営パートナー');      // 進捗バーの分子（最終段階）
     const deepening = byStage('信頼を深める段階');
     const connections = byStage('つながり');
     const recordOnly = byStage('記録のみ');
-    const activeOnes = profiles.filter(p => p.isActive);   // 🤝 稼働中
+    const activeOnes = partnerProfiles.filter(p => p.isActive);   // 🤝 稼働中
 
     // 棚卸しアラート（凡例）：信頼を深める段階で30日以上接点なし ／ 🤝稼働中で30日以上接触なし
     const staleDeepening = deepening.filter(p => daysDiff(p.lastContactDate || p.updatedAt) >= 30);
@@ -1581,13 +1629,16 @@ const App = () => {
             <span style={{fontWeight:700,fontSize:15,color:'#1a1a2e'}}>{(p.name&&p.name.value)||p.name||'名前未設定'}</span>
             {p.isTop10 && <span style={{fontSize:10,fontWeight:700,color:'#b45309',background:'#fef3c7',borderRadius:5,padding:'1px 6px',flexShrink:0}}>★Top10</span>}
           </span>
-          {stageBadge(p.stage||'記録のみ', p.isActive)}
+          {isFamily(p)
+            ? <span className="tier-badge" style={{background:'#fce7f3',color:'#9d174d'}}>❤️ 家族{p.relation ? '・' + p.relation : ''}</span>
+            : stageBadge(p.stage||'記録のみ', p.isActive)}
         </div>
         {(p.position&&p.position.value) && <div style={{fontSize:12,color:'#64748b',marginBottom:4,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{p.position.value}</div>}
+        {!isFamily(p) && (
         <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}} onClick={e=>e.stopPropagation()}>
           {quickSel('stage', p.stage, STAGE_ORDER, '記録のみ')}
-          {quickSel('engagementType', p.engagementType, ['未設定','育成（若手）','共同成長（同世代）','相互学習（年上・専門家）','維持（確定パートナー・専門家）','家族'], '未設定')}
-        </div>
+          {quickSel('engagementType', p.engagementType, ['未設定','育成（若手）','共同成長（同世代）','相互学習（年上・専門家）','維持（確定パートナー・専門家）'], '未設定')}
+        </div>)}
         {!compact && (p.changeLog||[]).length > 0 && (
           <div style={{fontSize:11,color:'#8b5cf6',marginTop:6,padding:'4px 8px',background:'#f5f3ff',borderRadius:6}}>
             ✦ {(p.changeLog[p.changeLog.length-1].type)}：{(p.changeLog[p.changeLog.length-1].text).slice(0,35)}{(p.changeLog[p.changeLog.length-1].text).length>35?'…':''}
@@ -1605,6 +1656,7 @@ const App = () => {
 
     return (
       <div className="app">
+        {catFilter !== 'family' && (<>
         {/* パートナー形成ゴール */}
         <div className="partner-goal">
           <div style={{display:'flex',alignItems:'flex-end',gap:8,marginBottom:6}}>
@@ -1629,6 +1681,7 @@ const App = () => {
         {activeOnes.length > 0 && (
           <div className="funnel-note">🤝 稼働中 {activeOnes.length}人{staleActive.length > 0 ? ` ／ うち30日以上接触なし ${staleActive.length}人（フラグ見直し）` : ''}{staleDeepening.length > 0 ? ` ・ 信頼を深める段階で30日停滞 ${staleDeepening.length}人` : ''}</div>
         )}
+        </>)}
 
         {/* 検索 */}
         <div className="search-wrap">
@@ -1636,6 +1689,36 @@ const App = () => {
           <input className="search-input" placeholder="氏名・所属・価値観で検索..."
             value={query} onChange={e => setQuery(e.target.value)} />
         </div>
+
+        {/* 並び替え・区分フィルタ */}
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:12}}>
+          <select value={sortMode} onChange={e => changeSort(e.target.value)}
+            style={{fontSize:13,padding:'6px 10px',border:'1px solid #e2e8f0',borderRadius:8,background:'#fff',color:'#475569',fontFamily:'inherit'}}>
+            {Object.keys(SORT_LABELS).map(k => <option key={k} value={k}>{SORT_LABELS[k]}</option>)}
+          </select>
+          <div style={{display:'flex',gap:4}}>
+            {[['all','すべて'],['partner','パートナー形成'],['family','家族']].map(([v,l]) => (
+              <button key={v} onClick={() => changeCatFilter(v)}
+                style={{fontSize:12,padding:'6px 12px',borderRadius:999,border:'1px solid '+(catFilter===v?'#a5b4fc':'#e2e8f0'),background:catFilter===v?'#eef2ff':'#fff',color:catFilter===v?'#4338ca':'#64748b',cursor:'pointer',fontFamily:'inherit',fontWeight:catFilter===v?700:400}}>{l}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* 並び替え（ステージ順以外）＝フラット表示 */}
+        {sortMode !== 'stage' && (() => {
+          const list = (catFilter === 'family' ? familyProfiles : catFilter === 'partner' ? partnerProfiles : profiles)
+            .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
+            .slice().sort(SORT_FNS[sortMode] || SORT_FNS.stage);
+          if (!list.length) return <div style={{textAlign:'center',padding:24,color:'#94a3b8',fontSize:13}}>該当なし</div>;
+          return (
+            <>
+              <div className="section-header"><span className="section-title-new">{SORT_LABELS[sortMode]}</span><span className="section-count">{list.length}人</span></div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
+                {list.map(p => ProfileCard({p}))}
+              </div>
+            </>
+          );
+        })()}
 
         {/* 同名重複の検出 */}
         {dupGroups.length > 0 && (
@@ -1685,6 +1768,8 @@ const App = () => {
           </div>
         )}
 
+        {/* 関係ステージ順（既定）＝ステージ別セクション。家族フィルタ時は非表示 */}
+        {sortMode === 'stage' && catFilter !== 'family' && (<>
         {/* 経営パートナー */}
         {partners.length > 0 && (
           <>
@@ -1748,6 +1833,22 @@ const App = () => {
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
             {recordOnly
+              .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
+              .map(p => ProfileCard({p, compact:true}))}
+            </div>
+          </>
+        )}
+        </>)}
+
+        {/* 家族（独立カテゴリ）。ステージ順表示かつ 家族/すべて のとき表示 */}
+        {sortMode === 'stage' && catFilter !== 'partner' && familyProfiles.length > 0 && (
+          <>
+            <div className="section-header">
+              <span className="section-title-new">❤️ 家族</span>
+              <span className="section-count">{familyProfiles.length}人</span>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
+            {familyProfiles
               .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
               .map(p => ProfileCard({p, compact:true}))}
             </div>
@@ -1912,6 +2013,11 @@ const App = () => {
             curField = null; inChangeLog = false;
             const v = line.replace(/^(roleStage:|仕事役割[：:])/, '').trim();
             if (v && v !== '変化なし' && v !== 'なし') changes.roleStage = v;
+          } else if (line.startsWith('personType:') || line.startsWith('区分：') || line.startsWith('区分:')) {
+            curField = null; inChangeLog = false;
+            const v = line.replace(/^(personType:|区分[：:])/, '').trim().toLowerCase();
+            if (v === 'family' || v.includes('家族')) changes.personType = 'family';
+            else if (v === 'partner' || v.includes('パートナー')) changes.personType = 'partner';
           } else if (line.startsWith('lastContactDate:')) {
             curField = null; inChangeLog = false;
             const v = line.slice(16).trim();
@@ -1990,7 +2096,11 @@ const App = () => {
         if (!r.matched || !r.matched.id) continue;
         const idx = updated.findIndex(p => p.id === r.matched.id);
         if (idx < 0) continue;
-        const base = { ...updated[idx], ...r.changes, updatedAt: new Date().toISOString() };
+        // 家族区分の人物は経営パートナー系フィールドを更新しない（personTypeでfamilyになる場合も含む）
+        const willBeFamily = (r.changes.personType === 'family') || (updated[idx].personType === 'family' && r.changes.personType !== 'partner');
+        const chg = { ...r.changes };
+        if (willBeFamily) { ['stage','isActive','roleStage','engagementType','nextExperience'].forEach(k => delete chg[k]); }
+        const base = { ...updated[idx], ...chg, updatedAt: new Date().toISOString() };
         if (r.profileChanges) {
           for (const [k, v] of Object.entries(r.profileChanges)) {
             if (v && String(v).trim()) base[k] = { value: String(v).trim() }; // 上書き方針
@@ -2310,8 +2420,25 @@ const App = () => {
 
         {/* 経営パートナー形成 */}
         <div className="detail-section">
-          <div className="detail-section-title">🌟 経営パートナー形成</div>
+          <div className="detail-section-title">{isFamily(current) ? '❤️ 家族' : '🌟 経営パートナー形成'}</div>
 
+          {/* 区分（パートナー形成 / 家族）。家族はパートナー形成の対象外 */}
+          <div className="fg">
+            <label className="fl">区分</label>
+            <div className="pills">
+              <button className={'pill'+(!isFamily(current)?' on':'')} style={!isFamily(current)?{background:'#eef2ff',color:'#4338ca',borderColor:'#a5b4fc'}:{}} onClick={() => commitField('personType', 'partner')}>パートナー形成</button>
+              <button className={'pill'+(isFamily(current)?' on':'')} style={isFamily(current)?{background:'#fce7f3',color:'#9d174d',borderColor:'#f9a8d4'}:{}} onClick={() => commitField('personType', 'family')}>❤️ 家族</button>
+            </div>
+            {isFamily(current) && <div style={{fontSize:11,color:'#9d174d',marginTop:4}}>家族は関係ステージ・稼働・次に渡す経験・進捗/鮮度の対象外です。</div>}
+          </div>
+
+          {isFamily(current) && (
+          <div className="fg">
+            <label className="fl">続柄</label>
+            <input type="text" className="fi" value={current.relation||''} onChange={e => commitField('relation', e.target.value)} placeholder="妻／子／父／母／兄弟…" />
+          </div>)}
+
+          {!isFamily(current) && (<>
           {/* 関係ステージ（深さ1軸）＝pillボタン単一選択。選択中はステージ色 */}
           <div className="fg">
             <label className="fl">関係ステージ <span title={STAGE_ORDER.map(s => s + '＝' + STAGE_HELP[s]).join('\n')} style={{cursor:'help',color:'#94a3b8',fontWeight:400}}>ⓘ</span></label>
@@ -2360,6 +2487,7 @@ const App = () => {
             </select>
             {(current.tier && current.tier !== '記録のみ') && <div style={{fontSize:11,color:'#cbd5e1',marginTop:4}}>旧分類: {current.tier}</div>}
           </div>
+          </>)}
           <div className="fg">
             <label className="fl">最終接触日</label>
             <div style={{display:'flex',gap:8,alignItems:'center'}}>
@@ -2367,10 +2495,11 @@ const App = () => {
               <button className="today-btn" onClick={() => commitField('lastContactDate', new Date().toISOString().slice(0,10))}>今日</button>
             </div>
           </div>
+          {!isFamily(current) && (
           <div className="fg">
             <label className="fl">次に渡す経験</label>
             <textarea className="ft" defaultValue={current.nextExperience||''} onBlur={e => commitField('nextExperience', e.target.value)} placeholder="この人に次に渡せる経験・機会、または受け取れる学び" />
-          </div>
+          </div>)}
 
           {/* 変化ログ */}
           <div style={{marginBottom:8}}>
