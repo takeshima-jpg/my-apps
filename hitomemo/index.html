@@ -891,23 +891,28 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="rb-k">ステージ</div><div class="rb-v">いま任せられる役割の段階</div>
     <div class="rb-k">関わり方</div><div class="rb-v">相手の立場（若手／同世代／年上・専門家）</div>
 
-    <div class="rb-h" style="margin-top:16px;">📖 凡例</div>
-    <div class="rb-k">階層（tier）</div>
-    <div class="rb-v">🌟 経営パートナー候補 — 10人形成の対象</div>
-    <div class="rb-v">👥 仲間候補 — 価値観を共有する候補</div>
-    <div class="rb-v">❤️ 家族 — 家族・親族</div>
-    <div class="rb-v">🗂 記録のみ — 記録だけ残す人</div>
-    <div class="rb-k" style="margin-top:8px;">現在地ステージ</div>
-    <div class="rb-v" style="color:#94a3b8;">左→右で前進</div>
-    <div class="rb-v">知人 → 協力者 → 管理職 → 事業責任者 → 経営人材 → 経営パートナー</div>
-    <div class="rb-k" style="margin-top:8px;">関わり方タイプ</div>
-    <div class="rb-v">育成（若手）— 次の経験を渡して育てる</div>
-    <div class="rb-v">共同成長（同世代）— 一緒に成長する</div>
-    <div class="rb-v">相互学習（年上・専門家）— 学び合う</div>
-    <div class="rb-v">維持（確定パートナー・専門家）— 関係を保つ</div>
-    <div class="rb-k" style="margin-top:8px;">バッジ</div>
-    <div class="rb-v">★Top10 — SUの重点者（SUで設定し反映）</div>
-    <div class="rb-v" style="color:#94a3b8;">「次に渡す経験」のTop10分はSUで決めて書き戻されます</div>
+    <div class="rb-h" style="margin-top:16px;">📖 関係ステージの凡例</div>
+    <div class="rb-v" style="color:#94a3b8;">深さ1軸の4段階（正本 docs/partner-stage-legend-v1-1.md）</div>
+    <div class="rb-k" style="margin-top:6px;">🗂 記録のみ</div>
+    <div class="rb-v">知っている・出会った。情報保管対象</div>
+    <div class="rb-k">🔗 つながり</div>
+    <div class="rb-v">記録のみより深い関わり。仕事の有無は問わない（🤝が表す）</div>
+    <div class="rb-k">🔥 信頼を深める段階</div>
+    <div class="rb-v">深めたいと決め、修羅場・本音・利害なしの時間で信頼を確認しにいっている</div>
+    <div class="rb-k">🌟 経営パートナー</div>
+    <div class="rb-v">悪い時も共に進めると確信した人（2030目標＝10人）</div>
+    <div class="rb-k" style="margin-top:8px;">🤝 稼働中（別軸）</div>
+    <div class="rb-v">今この人と実際に仕事が動いているか。ステージとは独立</div>
+    <div class="rb-k" style="margin-top:8px;">路線限定</div>
+    <div class="rb-v">はしごはパートナー路線の人のみ。専門家・友人等は「つながり」＋関わり方タイプで表す（例: 福山さん）</div>
+    <div class="rb-k" style="margin-top:8px;">昇格の目安（つながり→信頼を深める段階）</div>
+    <div class="rb-v">役割を超えて人として関わりたくなった瞬間（誘いたい／弱みを話せた／対立しても壊れない 等）。自動昇格はしない</div>
+    <div class="rb-k" style="margin-top:8px;">棚卸し</div>
+    <div class="rb-v">信頼を深める段階で30日停滞／🤝稼働中で30日接触なしをアラート（自動降格はしない）</div>
+    <div class="rb-k" style="margin-top:8px;">★Top10（別軸）</div>
+    <div class="rb-v">SUの「注意配分」対象。深さとは別物（SUで設定し反映）</div>
+    <div class="rb-k" style="margin-top:8px;">関わり方タイプ（関係の質）</div>
+    <div class="rb-v">育成（若手）／共同成長（同世代）／相互学習（年上・専門家）／維持（確定パートナー・専門家）</div>
   </div>
 </aside>
 </div><!-- /.layout -->
@@ -970,6 +975,51 @@ const backupJSON = (list) => {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
+
+// ── 関係ステージ v2（正本 docs/partner-stage-legend-v1-1.md）──
+// 深さ1軸の4段階。稼働(isActive)は別軸フラグ。旧stage(仕事役割)はroleStageへ退避、旧tierは保持のみ。
+const STAGE_ORDER = ['記録のみ', 'つながり', '信頼を深める段階', '経営パートナー'];
+const STAGE_STYLE = {
+  '記録のみ':         { bg:'#f1f5f9', color:'#64748b', icon:'🗂' },  // グレー
+  'つながり':         { bg:'#dbeafe', color:'#1d4ed8', icon:'🔗' },  // 青
+  '信頼を深める段階': { bg:'#fef3c7', color:'#92400e', icon:'🔥' },  // amber
+  '経営パートナー':   { bg:'#dcfce7', color:'#166534', icon:'🌟' },  // 緑
+};
+const STAGE_HELP = {
+  '記録のみ':         '知っている・出会った。情報保管対象',
+  'つながり':         '記録のみより深い関わり。仕事の有無は問わない（🤝が表す）',
+  '信頼を深める段階': 'この人と深めたいと決め、修羅場・本音・利害なしの時間で信頼を確認しにいっている',
+  '経営パートナー':   '悪い時も共に進めると確信した人',
+};
+const ROLE_STAGE_OPTS = ['', '知人', '協力者', '管理職', '事業責任者', '経営人材', '経営パートナー'];
+const STAGE_V2_FLAG = 'hitomemo_migrated_stage_v2';
+const stageBadge = (stage, isActive) => {
+  const s = STAGE_STYLE[stage] || STAGE_STYLE['記録のみ'];
+  return (
+    <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
+      <span className="tier-badge" style={{background:s.bg,color:s.color}} title={STAGE_HELP[stage]||''}>{s.icon} {stage||'記録のみ'}</span>
+      {isActive && <span title="🤝 今この人と仕事が動いている（稼働中）" style={{fontSize:12,lineHeight:1}}>🤝</span>}
+    </span>
+  );
+};
+// 旧 tier/stage → 新 stage/isActive/roleStage を計算する純関数（プレビューと適用で共用）。norm=lxNormName
+function planStageMigration(list, norm) {
+  return list.map(p => {
+    const oldTier = p.tier || '記録のみ';
+    const oldRole = p.stage;                    // 旧stage＝仕事役割（知人/協力者/…）
+    const eng = p.engagementType || '';
+    const nm = norm(p.name);
+    let stage = '記録のみ', isActive = false;
+    if (oldTier === '仲間候補') stage = 'つながり';
+    else if (oldTier === '経営パートナー候補') { stage = 'つながり'; isActive = true; }  // 実態は稼働中が多い
+    else if (oldTier === '家族') stage = 'つながり';                                     // 路線外の深い関わり
+    else stage = '記録のみ';                                                             // 記録のみ / 未登録 / 想定外
+    // 特例（凡例・恒久ルール）
+    if (/維持/.test(eng) && nm.includes('前田')) stage = '経営パートナー';               // 確定パートナー
+    if (nm.includes('福山')) { stage = 'つながり'; isActive = false; }                   // 相互学習のまま・路線外
+    return { ...p, stage, isActive, roleStage: (p.roleStage !== undefined ? p.roleStage : (oldRole || '')), _stageV2: true };
+  });
+}
 
 const restoreJSON = (onDone) => {
   const input = document.createElement('input');
@@ -1038,13 +1088,16 @@ const importFromMemo = (text) => {
     meetings: [],
     meetingSummary: '',
     tier: '未登録',
-    stage: '知人',
+    stage: '記録のみ',        // 関係ステージv2の初期値（深さ1軸）
+    isActive: false,          // 🤝 稼働中フラグ（別軸）
+    roleStage: '',            // 旧「現在地ステージ（仕事役割）」
     changeLog: [],
     nextExperience: extract('次に渡す経験'),
     engagementType: normEng(extract('関わり方タイプ')),
     lastContactDate: null,
     myRole: '見守る',
     _fieldsV2: true,
+    _stageV2: true,
     name:        { value: extract('氏名（ふりがな）') },
     position:    { value: extract('所属・役職・事業') },
     values:      { value: extract('価値観・大切にしていること') },
@@ -1180,9 +1233,10 @@ const FIELDS = ['name','birthday','position','business','history','family','loca
 ---
 
 ### {氏名}さん
-tier: {経営パートナー候補 / 仲間候補 / 家族 / 記録のみ}
-stage: {現在のステージ} → {変更後（変化なければ現在値）}
+stage: {現在} → {変更後（記録のみ / つながり / 信頼を深める段階 / 経営パートナー のいずれか。変化なければ現在値）}
+isActive: {あり / なし}   （🤝 今この人と仕事が動いているか）
 engagementType: {育成 / 共同成長 / 相互学習 / 維持 / 変化なし}
+roleStage: {仕事役割の段階。変化なければ省略可}
 lastContactDate: {YYYY-MM-DD}
 nextExperience: {次に渡す経験（変化なければ現在値）}
 changeLog:
@@ -1212,7 +1266,40 @@ const App = () => {
   const [starOrder, setStarOrder] = useState(null);       // ★の手動順
   const [selectedIds, setSelectedIds] = useState([]);     // SU移行用の複数選択
 
-  useEffect(() => { setProfiles(loadProfiles()); }, []);
+  useEffect(() => {
+    const loaded = loadProfiles();
+    // 関係ステージ v2 マイグレーション（承認つき・1回限り）。凡例 docs/partner-stage-legend-v1-1.md 準拠。
+    try {
+      const need = !localStorage.getItem(STAGE_V2_FLAG) && loaded.length > 0 && loaded.some(p => p && p._stageV2 !== true);
+      if (need) {
+        const plan = planStageMigration(loaded, lxNormName);
+        const cnt = {}; STAGE_ORDER.forEach(s => cnt[s] = 0);
+        let activeN = 0; const partnerNames = [];
+        plan.forEach(p => {
+          cnt[p.stage] = (cnt[p.stage] || 0) + 1;
+          if (p.isActive) activeN++;
+          if (p.stage === '経営パートナー') partnerNames.push((p.name && p.name.value) || p.name || '(名前空)');
+        });
+        const msg = '関係ステージへ移行します（全' + plan.length + '件）。\n実行前に自動でJSONバックアップをダウンロードします。\n\n'
+          + '【移行後の内訳】\n'
+          + '・記録のみ：' + cnt['記録のみ'] + '件\n'
+          + '・つながり：' + cnt['つながり'] + '件（うち🤝稼働中 ' + activeN + '件）\n'
+          + '・信頼を深める段階：' + cnt['信頼を深める段階'] + '件\n'
+          + '・経営パートナー：' + cnt['経営パートナー'] + '件' + (partnerNames.length ? '（' + partnerNames.join('・') + '）' : '') + '\n\n'
+          + '※旧「階層(tier)」は保持、旧「現在地ステージ(仕事役割)」は roleStage へ退避します。\n'
+          + '移行後は各人を詳細画面で確認・調整してください。\n\n実行しますか？';
+        if (window.confirm(msg)) {
+          backupJSON(loaded);   // マイグレーション前の自動バックアップDL
+          setProfiles(plan); saveProfiles(plan);
+          try { localStorage.setItem(STAGE_V2_FLAG, new Date().toISOString().slice(0, 10)); } catch(e) {}
+          setTimeout(() => toast('関係ステージを移行しました（' + plan.length + '件）。各人の段階を詳細画面で確認・調整してください'), 300);
+          return;
+        }
+        // 非承認：移行せず今回のデータで表示（フラグは立てない＝次回また尋ねる）
+      }
+    } catch(e) {}
+    setProfiles(loaded);
+  }, []);
   // refを常に最新stateに同期
   currentRef.current = current;
   profilesRef.current = profiles;
@@ -1429,22 +1516,26 @@ const App = () => {
       return Math.floor((new Date(today) - new Date(dateStr)) / 86400000);
     };
 
-    // 階層別分類
-    const unregistered = profiles.filter(p => (p.tier||'') === '未登録');
-    const partners = profiles.filter(p => (p.tier||'記録のみ') === '経営パートナー候補');
-    const candidates = profiles.filter(p => (p.tier||'記録のみ') === '仲間候補');
+    // 関係ステージ別分類（深さ1軸）。凡例 docs/partner-stage-legend-v1-1.md
+    const stageOf = p => p.stage || '記録のみ';
+    const byStage = s => profiles.filter(p => stageOf(p) === s);
+    const partners = byStage('経営パートナー');      // 進捗バーの分子（最終段階）
+    const deepening = byStage('信頼を深める段階');
+    const connections = byStage('つながり');
+    const recordOnly = byStage('記録のみ');
+    const activeOnes = profiles.filter(p => p.isActive);   // 🤝 稼働中
 
-    // 停滞アラート（経営パートナー候補で90日以上接触なし）
-    const staleThr = 90;
-    const staleProfiles = partners.filter(p => daysDiff(p.lastContactDate || p.updatedAt) >= staleThr);
+    // 棚卸しアラート（凡例）：信頼を深める段階で30日以上接点なし ／ 🤝稼働中で30日以上接触なし
+    const staleDeepening = deepening.filter(p => daysDiff(p.lastContactDate || p.updatedAt) >= 30);
+    const staleActive = activeOnes.filter(p => daysDiff(p.lastContactDate || p.updatedAt) >= 30);
 
-    // 変化ありの人（直近30日以内にchangeLog追加）
-    const recentChanged = [...partners, ...candidates].filter(p =>
+    // 変化ありの人（直近30日以内にchangeLog追加）＝つながり以上
+    const changeWatch = [...partners, ...deepening, ...connections];
+    const recentChanged = changeWatch.filter(p =>
       (p.changeLog||[]).some(l => daysDiff(l.date) <= 30)
     );
-
-    // 次の経験あり
-    const hasNextExp = [...partners, ...candidates].filter(p => p.nextExperience && p.nextExperience.trim());
+    // 次の経験あり（つながり以上）
+    const hasNextExp = changeWatch.filter(p => p.nextExperience && p.nextExperience.trim());
 
     // 同名重複の検出（正規化名で2件以上）
     const dupMap = {};
@@ -1454,20 +1545,6 @@ const App = () => {
       (dupMap[k] = dupMap[k] || []).push(p);
     });
     const dupGroups = Object.values(dupMap).filter(g => g.length > 1);
-
-    // パートナー形成ファネル（経営パートナー候補tier内：候補（未着手）→育成中→確定）
-    const isConfirmed = p => p.stage === '経営パートナー' || /維持/.test(p.engagementType || '');
-    const confirmed = partners.filter(isConfirmed);
-    const developing = partners.filter(p => !isConfirmed(p) && p.nextExperience && p.nextExperience.trim());
-    const prospects = partners.filter(p => !isConfirmed(p) && !(p.nextExperience && p.nextExperience.trim()));
-
-    const tierBadge = (tier) => {
-      if (tier === '未登録') return <span className="tier-badge" style={{background:'#fef3c7',color:'#92400e'}}>📥 未登録</span>;
-      if (tier === '経営パートナー候補') return <span className="tier-badge tier-partner">🌟 パートナー候補</span>;
-      if (tier === '仲間候補') return <span className="tier-badge tier-candidate">👥 仲間候補</span>;
-      if (tier === '家族') return <span className="tier-badge" style={{background:'#fce7f3',color:'#9d174d'}}>❤️ 家族</span>;
-      return null;
-    };
 
     const ProfileCard = ({p, compact}) => {
       const quickSel = (field, value, opts, fallback) => (
@@ -1487,12 +1564,11 @@ const App = () => {
             <span style={{fontWeight:700,fontSize:15,color:'#1a1a2e'}}>{(p.name&&p.name.value)||p.name||'名前未設定'}</span>
             {p.isTop10 && <span style={{fontSize:10,fontWeight:700,color:'#b45309',background:'#fef3c7',borderRadius:5,padding:'1px 6px',flexShrink:0}}>★Top10</span>}
           </span>
-          {tierBadge(p.tier||'記録のみ')}
+          {stageBadge(p.stage||'記録のみ', p.isActive)}
         </div>
         {(p.position&&p.position.value) && <div style={{fontSize:12,color:'#64748b',marginBottom:4,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{p.position.value}</div>}
         <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}} onClick={e=>e.stopPropagation()}>
-          {quickSel('tier', p.tier, ['未登録','経営パートナー候補','仲間候補','家族','記録のみ'], '記録のみ')}
-          {quickSel('stage', p.stage, ['知人','協力者','管理職','事業責任者','経営人材','経営パートナー'], '知人')}
+          {quickSel('stage', p.stage, STAGE_ORDER, '記録のみ')}
           {quickSel('engagementType', p.engagementType, ['未設定','育成（若手）','共同成長（同世代）','相互学習（年上・専門家）','維持（確定パートナー・専門家）'], '未設定')}
         </div>
         {!compact && (p.changeLog||[]).length > 0 && (
@@ -1517,7 +1593,7 @@ const App = () => {
           <div style={{display:'flex',alignItems:'flex-end',gap:8,marginBottom:6}}>
             <span className="partner-goal-count">{partners.length}</span>
             <span style={{fontSize:14,color:'rgba(255,255,255,0.8)',marginBottom:4}}>/ 10人</span>
-            <span className="partner-goal-label" style={{marginBottom:4}}>経営パートナー候補</span>
+            <span className="partner-goal-label" style={{marginBottom:4}}>経営パートナー</span>
           </div>
           <div className="partner-goal-bar">
             <div className="partner-goal-fill" style={{width:`${Math.min(100,partners.length*10)}%`}}></div>
@@ -1525,16 +1601,16 @@ const App = () => {
           <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:6}}>2030年までに10人形成</div>
         </div>
 
-        {/* パートナー形成ファネル */}
+        {/* 関係ステージの階段（つながり → 信頼を深める段階 → 経営パートナー。パートナー路線のはしご）*/}
         <div className="funnel">
-          <div className="funnel-seg"><div className="funnel-n">{prospects.length}</div><div className="funnel-l">候補（未着手）</div></div>
+          <div className="funnel-seg"><div className="funnel-n">{connections.length}</div><div className="funnel-l">つながり</div></div>
           <span className="funnel-ar">→</span>
-          <div className="funnel-seg"><div className="funnel-n">{developing.length}</div><div className="funnel-l">育成中</div></div>
+          <div className="funnel-seg"><div className="funnel-n">{deepening.length}</div><div className="funnel-l">信頼を深める段階</div></div>
           <span className="funnel-ar">→</span>
-          <div className="funnel-seg funnel-done"><div className="funnel-n">{confirmed.length}</div><div className="funnel-l">確定</div></div>
+          <div className="funnel-seg funnel-done"><div className="funnel-n">{partners.length}</div><div className="funnel-l">経営パートナー</div></div>
         </div>
-        {prospects.length > 0 && (
-          <div className="funnel-note">⚠ nextExperience未設定が {prospects.length}人 — 1人ずつ「次に渡す経験」を設定して育成中へ動かしましょう</div>
+        {activeOnes.length > 0 && (
+          <div className="funnel-note">🤝 稼働中 {activeOnes.length}人{staleActive.length > 0 ? ` ／ うち30日以上接触なし ${staleActive.length}人（フラグ見直し）` : ''}{staleDeepening.length > 0 ? ` ・ 信頼を深める段階で30日停滞 ${staleDeepening.length}人` : ''}</div>
         )}
 
         {/* 検索 */}
@@ -1555,7 +1631,7 @@ const App = () => {
                 {g.map(p => (
                   <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'3px 0',cursor:'pointer'}}
                     onClick={() => { setCurrent(p); setView('detail'); }}>
-                    <span style={{fontSize:12,color:'#374151'}}>{p.tier||'記録のみ'}・{(p.changeLog||[]).length}ログ・接触{daysDiff(p.lastContactDate||p.updatedAt)}日前</span>
+                    <span style={{fontSize:12,color:'#374151'}}>{stageOf(p)}・{(p.changeLog||[]).length}ログ・接触{daysDiff(p.lastContactDate||p.updatedAt)}日前</span>
                     <span style={{fontSize:11,color:'#9ca3af'}}>開く ›</span>
                   </div>
                 ))}
@@ -1564,11 +1640,11 @@ const App = () => {
           </div>
         )}
 
-        {/* 停滞アラート */}
-        {staleProfiles.length > 0 && (
+        {/* 棚卸しアラート：信頼を深める段階で30日以上停滞（凡例・自動降格はしない） */}
+        {staleDeepening.length > 0 && (
           <div className="alert-card">
-            <div className="alert-label">⚠ 要接触（{staleThr}日以上）</div>
-            {staleProfiles.map(p => (
+            <div className="alert-label">⚠ 信頼を深める段階で30日以上接点なし</div>
+            {staleDeepening.map(p => (
               <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #fed7aa',cursor:'pointer'}}
                 onClick={() => { setCurrent(p); setView('detail'); }}>
                 <span style={{fontSize:14,fontWeight:600}}>{(p.name&&p.name.value)||p.name}</span>
@@ -1592,96 +1668,76 @@ const App = () => {
           </div>
         )}
 
-        {/* 未登録（取り込み直後・階層を決める） */}
-        {unregistered.length > 0 && (
-          <>
-            <div className="section-header">
-              <span className="section-title-new">📥 未登録 — 階層を決めてください</span>
-              <span className="section-count">{unregistered.length}人</span>
-            </div>
-            <div style={{fontSize:12,color:'#92400e',background:'#fffbeb',border:'1px solid #fde68a',borderRadius:8,padding:'8px 12px',marginBottom:10}}>取り込んだ人物です。各カードの「未登録」を経営パートナー候補／仲間候補／家族／記録のみのいずれかに変えると、本登録されます。</div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {unregistered
-              .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
-              .map(p => ProfileCard({p, compact:true}))}
-            </div>
-          </>
-        )}
-
-        {/* 経営パートナー候補 */}
+        {/* 経営パートナー */}
         {partners.length > 0 && (
           <>
             <div className="section-header">
-              <span className="section-title-new">🌟 経営パートナー候補</span>
+              <span className="section-title-new">🌟 経営パートナー</span>
               <span className="section-count">{partners.length}人</span>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {(query ? partners.filter(p => {
-              const n = ((p.name&&p.name.value)||p.name||'').toLowerCase();
-              return n.includes(query.toLowerCase());
-            }) : partners).map(p => ProfileCard({p}))}
+            {partners.filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase())).map(p => ProfileCard({p}))}
             </div>
           </>
         )}
 
-        {/* 変化が起きている人 */}
-        {recentChanged.filter(p => (p.tier||'記録のみ') !== '経営パートナー候補').length > 0 && (
+        {/* 信頼を深める段階 */}
+        {deepening.length > 0 && (
+          <>
+            <div className="section-header">
+              <span className="section-title-new">🔥 信頼を深める段階</span>
+              <span className="section-count">{deepening.length}人</span>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
+            {deepening.filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase())).map(p => ProfileCard({p}))}
+            </div>
+          </>
+        )}
+
+        {/* 変化が起きている人（つながり以下から拾う） */}
+        {recentChanged.filter(p => stageOf(p) !== '経営パートナー' && stageOf(p) !== '信頼を深める段階').length > 0 && (
           <>
             <div className="section-header">
               <span className="section-title-new">✦ 最近変化あり</span>
               <span className="section-count">直近30日</span>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {recentChanged.filter(p => (p.tier||'記録のみ') !== '経営パートナー候補').map(p => ProfileCard({p}))}
+            {recentChanged.filter(p => stageOf(p) !== '経営パートナー' && stageOf(p) !== '信頼を深める段階').map(p => ProfileCard({p}))}
             </div>
           </>
         )}
 
-        {/* 仲間候補 */}
-        {candidates.filter(p => !recentChanged.includes(p)).length > 0 && (
+        {/* つながり */}
+        {connections.filter(p => !recentChanged.includes(p)).length > 0 && (
           <>
             <div className="section-header">
-              <span className="section-title-new">👥 仲間候補</span>
-              <span className="section-count">{candidates.length}人</span>
+              <span className="section-title-new">🔗 つながり</span>
+              <span className="section-count">{connections.length}人</span>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {(query ? candidates : candidates).filter(p => !recentChanged.includes(p))
+            {connections.filter(p => !recentChanged.includes(p))
               .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
               .map(p => ProfileCard({p, compact:true}))}
             </div>
           </>
         )}
 
-        {/* 家族 */}
-        {profiles.filter(p => (p.tier||'') === '家族').length > 0 && (
-          <>
-            <div className="section-header">
-              <span className="section-title-new">❤️ 家族</span>
-              <span className="section-count">{profiles.filter(p => (p.tier||'') === '家族').length}人</span>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {profiles.filter(p => (p.tier||'') === '家族')
-              .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
-              .map(p => ProfileCard({p, compact:true}))}
-            </div>
-          </>
-        )}
-
-        {profiles.filter(p => { const t=p.tier||'記録のみ'; return t!=='経営パートナー候補'&&t!=='仲間候補'&&t!=='家族'&&t!=='未登録'; }).length > 0 && (
+        {/* 記録のみ */}
+        {recordOnly.length > 0 && (
           <>
             <div className="section-header">
               <span className="section-title-new">🗂 記録のみ</span>
-              <span className="section-count">{profiles.filter(p => { const t=p.tier||'記録のみ'; return t!=='経営パートナー候補'&&t!=='仲間候補'&&t!=='家族'&&t!=='未登録'; }).length}人</span>
+              <span className="section-count">{recordOnly.length}人</span>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {profiles.filter(p => { const t=p.tier||'記録のみ'; return t!=='経営パートナー候補'&&t!=='仲間候補'&&t!=='家族'&&t!=='未登録'; })
+            {recordOnly
               .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
               .map(p => ProfileCard({p, compact:true}))}
             </div>
           </>
         )}
 
-        {partners.length === 0 && candidates.length === 0 && profiles.length === 0 && (
+        {profiles.length === 0 && (
           <div style={{textAlign:'center',padding:40,color:'#94a3b8'}}>
             <div style={{fontSize:48,marginBottom:12}}>👤</div>
             <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>まだ人物が登録されていません</div>
@@ -1801,6 +1857,7 @@ const App = () => {
           else ambiguous = true;
         }
         const changes = {};
+        const warns = [];          // 想定外値（旧6段階stage等）の警告
         const profileChanges = {}; // プロフィール欄（複数行対応・上書き）
         const PROFILE_LABELS = {
           '所属・役職・事業':'position', '価値観・大切にしていること':'values', '核となる一言':'coreMessage',
@@ -1819,14 +1876,25 @@ const App = () => {
             curField = null; inChangeLog = false;
             const v = line.slice(6).trim();
             const arrowIdx = v.indexOf(ARROW);
-            if (arrowIdx >= 0) {
-              const from = v.slice(0, arrowIdx).trim();
-              const to = v.slice(arrowIdx + 1).trim();
-              changes.stage = to;
-              newChangeLogs.push({ type: 'ステージ変化', text: from + ' → ' + to });
-            } else if (v) {
-              changes.stage = v;
+            const to = (arrowIdx >= 0 ? v.slice(arrowIdx + 1) : v).trim();
+            const from = arrowIdx >= 0 ? v.slice(0, arrowIdx).trim() : '';
+            if (to && to !== '変化なし' && to !== 'なし') {
+              if (STAGE_ORDER.includes(to)) {   // 4段階のみ受付。旧6値・想定外は無視して警告
+                changes.stage = to;
+                if (from && from !== to) newChangeLogs.push({ type: 'ステージ変化', text: from + ' → ' + to });
+              } else {
+                warns.push('stage「' + to + '」は無効（有効値: ' + STAGE_ORDER.join('/') + '）→ 無視');
+              }
             }
+          } else if (line.startsWith('isActive:') || line.startsWith('稼働中：') || line.startsWith('稼働中:')) {
+            curField = null; inChangeLog = false;
+            const v = line.replace(/^(isActive:|稼働中[：:])/, '').trim().toLowerCase();
+            if (v === 'true' || v === 'あり' || v === 'yes' || v === '1') changes.isActive = true;
+            else if (v === 'false' || v === 'なし' || v === 'no' || v === '0') changes.isActive = false;
+          } else if (line.startsWith('roleStage:') || line.startsWith('仕事役割：') || line.startsWith('仕事役割:')) {
+            curField = null; inChangeLog = false;
+            const v = line.replace(/^(roleStage:|仕事役割[：:])/, '').trim();
+            if (v && v !== '変化なし' && v !== 'なし') changes.roleStage = v;
           } else if (line.startsWith('lastContactDate:')) {
             curField = null; inChangeLog = false;
             const v = line.slice(16).trim();
@@ -1887,6 +1955,7 @@ const App = () => {
           ambiguous,
           candidates: cands.map(c => ({ id: c.id, name: (c.name && c.name.value) || c.name || '名前未設定' })),
           changes,
+          warns,
           profileChanges,
           newChangeLogs,
         });
@@ -1984,8 +2053,11 @@ const App = () => {
                     )}
                     {Object.entries(r.changes).map(([k, v]) => (
                       <div key={k} style={{fontSize:12,color:'#374151',marginBottom:2}}>
-                        <span style={{color:'#6b7280',marginRight:8}}>{k}:</span>{v}
+                        <span style={{color:'#6b7280',marginRight:8}}>{k}:</span>{typeof v === 'boolean' ? (v ? 'あり' : 'なし') : v}
                       </div>
+                    ))}
+                    {(r.warns || []).map((w, j) => (
+                      <div key={'w'+j} style={{fontSize:12,color:'#b91c1c',marginBottom:2}}>⚠ {w}</div>
                     ))}
                     {Object.entries(r.profileChanges || {}).map(([k, v]) => {
                       const JP = {position:'所属・役職・事業', values:'価値観', coreMessage:'核となる一言', birthday:'誕生日', history:'経歴・背景', behavior:'個性・傾向', impression:'印象・洞察', other:'メモ'};
@@ -2213,26 +2285,28 @@ const App = () => {
         <div className="detail-section">
           <div className="detail-section-title">🌟 経営パートナー形成</div>
 
-          {/* 階層・ステージ */}
+          {/* 関係ステージ（深さ1軸）＋ヘルプ */}
           <div className="fg" style={{marginBottom:12}}>
-            <label className="fl">階層</label>
-            <select className="fi" value={current.tier||'記録のみ'} onChange={e => { updDirect('tier', e.target.value); saveCurrentBlur(); }}>
-              <option>経営パートナー候補</option>
-              <option>仲間候補</option>
-              <option>家族</option>
-              <option>記録のみ</option>
+            <label className="fl">関係ステージ <span title={STAGE_ORDER.map(s => s + '＝' + STAGE_HELP[s]).join('\n')} style={{cursor:'help',color:'#94a3b8'}}>ⓘ</span></label>
+            <select className="fi" value={current.stage||'記録のみ'} onChange={e => { updDirect('stage', e.target.value); saveCurrentBlur(); }}>
+              {STAGE_ORDER.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
+            <div style={{fontSize:11,color:'#64748b',marginTop:4}}>{STAGE_HELP[current.stage||'記録のみ']}</div>
           </div>
+          {/* 🤝 稼働中（別軸フラグ） */}
           <div className="fg" style={{marginBottom:12}}>
-            <label className="fl">現在地ステージ</label>
-            <select className="fi" value={current.stage||'知人'} onChange={e => { updDirect('stage', e.target.value); saveCurrentBlur(); }}>
-              <option>知人</option>
-              <option>協力者</option>
-              <option>管理職</option>
-              <option>事業責任者</option>
-              <option>経営人材</option>
-              <option>経営パートナー</option>
+            <label className="fl" style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer'}}>
+              <input type="checkbox" checked={!!current.isActive} onChange={e => { updDirect('isActive', e.target.checked); saveCurrentBlur(); }} style={{width:16,height:16,cursor:'pointer'}} />
+              🤝 稼働中（今この人と実際に仕事が動いている）
+            </label>
+          </div>
+          {/* （参考）仕事役割＝旧ステージ。関係の深さとは別。小さく残す */}
+          <div className="fg" style={{marginBottom:12}}>
+            <label className="fl" style={{color:'#94a3b8'}}>（参考）仕事役割</label>
+            <select className="fi" style={{color:'#64748b'}} value={current.roleStage||''} onChange={e => { updDirect('roleStage', e.target.value); saveCurrentBlur(); }}>
+              {ROLE_STAGE_OPTS.map(s => <option key={s} value={s}>{s || '（未設定）'}</option>)}
             </select>
+            {(current.tier && current.tier !== '記録のみ') && <div style={{fontSize:11,color:'#cbd5e1',marginTop:4}}>旧分類: {current.tier}</div>}
           </div>
           <div className="fg" style={{marginBottom:12}}>
             <label className="fl">関わり方タイプ</label>
