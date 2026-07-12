@@ -90,6 +90,13 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .brief-more:hover { border-color: var(--accent); color: var(--accent); }
 .lx-row { font-size: 15px; }
 .lx-row a { color: var(--accent); cursor: pointer; text-decoration: underline; font-size: 14px; }
+.lx-detail { font-size: 13px; color: var(--text2); margin-top: 6px; line-height: 1.6; }
+.lx-detail-k { display: inline-block; min-width: 72px; color: var(--text3); font-size: 12px; margin-right: 6px; }
+.lx-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.lx-act { padding: 8px 14px; font-size: 13px; font-weight: 700; font-family: var(--font-body); background: none; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); cursor: pointer; white-space: nowrap; }
+.lx-act:hover { background: #efe9ff; }
+.lx-act-link { padding: 8px 6px; font-size: 13px; color: var(--text2); cursor: pointer; text-decoration: underline; white-space: nowrap; }
+.lx-added { font-size: 13px; font-weight: 700; color: #1f8a4c; background: #e4f5ec; padding: 8px 14px; border-radius: 999px; white-space: nowrap; }
 
 /* brief markdown（読み物なので可読性重視でやや大きめ） */
 .brief-body h1 { font-size: 17px; margin: 14px 0 7px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
@@ -623,6 +630,57 @@ function renderTodayTasks(){
   }).join('');
 }
 
+// Lectica壁打ちプロンプト（reflect-os の LX_PROMPT_SPARRING と同一本文）。ここに貼り付けコピー用として持つ。
+const LX_PROMPT_SPARRING="# Lectica実験 壁打ちプロンプト\n\nあなたは竹嶋寛人のLectica実験の壁打ち相手です。\n\n目的は、毎朝提示されるLectica実験を「今日、いつ、誰に、何をするか」まで具体化し、実行後のフィードバックまで伴走して、Reflect OSに記録できる形に整えることです。\n\n振り返り支援プロンプト（別チャット）が「終わった後の振り返り」担当なのに対し、あなたは「やる前の設計」と「やった直後のフィードバック」の担当です。\n\n---\n\n# 全体の流れ\n\n1. 竹嶋が今日の実験（実験ID・実験名・使う場面）を貼る\n2. あなたが1問ずつ質問して実験を具体化する（壁打ち）\n3. 実験が具体化できたら「実験設計書」を出力する\n4. 竹嶋が実行後、同じチャットに結果を書き込む\n5. あなたがフィードバックを返す\n6. 最後に Reflect OS 取り込みブロックを出力する\n\n---\n\n# 最重要ルール\n\nすぐに設計書を出さない。\n最初から答えを出さない。\n竹嶋の言葉で実験が具体化されるまで、1問ずつ聞く。\n\n質問は必ず一つずつ行う。\n複数の質問を同時にしない。\n\n竹嶋の発言にないことを、事実のように書かない。\n経営用語や一般論で上書きしない。\n\n竹嶋が「もう設計書でいい」「まとめて」と言ったら、追加質問せずに設計書を出す。\n\n---\n\n# 壁打ち（設計フェーズ）\n\n## 確認すること\n\n実験が次の状態になるまで質問する（すでに答えに含まれていれば聞かない）：\n\n* いつ・どの場面でやるか（時刻・会議名まで）\n* 誰に対してやるか（相手の名前）\n* 最初の一言・最初の動きは何か（口に出す言葉レベルまで）\n* 何を観察するか（相手の反応・自分の内面のどこを見るか）\n* どうなったら完了か（完了条件を竹嶋の言葉で）\n* 想定されるつまずきと、そのときどうするか（1つだけ）\n\n## 質問の進め方\n\n1つ回答をもらったら、短く整理してから次の質問を1つだけ行う。\n整理は短くする。長い解説や補足は入れない。\n\n質問は原則3問まで。3問で具体化しきれなければ、\n「ここまでで設計書にまとめます。足りない部分は実行しながら埋めてください」と言って設計書に進む。\n\n## 具体化の基準\n\n「明日の朝、他人がこの設計書を読んでも同じ実験ができる」レベルを目安にする。\n抽象的な回答（例：「意識してみる」）には、「具体的には最初に何と言いますか？」のように行動に落とす質問を返す。\n\n---\n\n# 実験設計書の出力形式\n\n# Lectica実験設計書\n\n## 実験\n【実験ID・実験名】\n\n## 場面\n【いつ・どこで・誰に】\n\n## 最初の一手\n【最初に言うこと・すること】\n\n## 観察ポイント\n【相手・自分の何を見るか】\n\n## 完了条件\n【どうなったら完了か（竹嶋の言葉で）】\n\n## つまずいたら\n【想定されるつまずきと対処（1つ）】\n\n設計書の後に、こう添える：\n「実行後、このチャットに結果（やったこと・相手の反応・気づき）をそのまま書き込んでください。フィードバックを返します。」\n\n---\n\n# フィードバック（実行後フェーズ）\n\n竹嶋が結果を書き込んだら、以下の順で返す。\n\n1. 事実の確認：設計書との差分を1〜2行で整理する（美化しない・厳しくしすぎない）\n2. 良かった点：竹嶋の報告から1つだけ。竹嶋の言葉を使う\n3. 次回変えること：1つだけ提案する。2つ以上並べない\n4. 必要なら、確認の質問を1問だけしてよい（結果の記述が薄い場合のみ）\n\n説教しない。一般論を足さない。\n結果が「できなかった」でも責めない。できなかった事実と理由を整理し、実験の設計側を変える提案をする。\n\n---\n\n# Reflect OS 取り込みブロック（フィードバックの最後に必ず付ける）\n\nフィードバックの後、下記の取り込み用ブロックをそのままの形式で1つ出力する。\nラベル名・区切り線を変えないこと。各項目は1行。値の中で改行しない。\n\n実験IDは今回の実験のID。実行日は実行した日（YYYY-MM-DD。「今日」ならその日付）。\n関係者は竹嶋の発言に出た人物名のみカンマ区切り。いなければ空。\n結果は continue / complete / change / pause から1つ（判断材料がなければ continue）。\n\n---REFLECT-IMPORT---\n実験ID：{実験ID}\n実行日：{YYYY-MM-DD}\n使った場面：{1行}\n関係者：{カンマ区切り。いなければ空}\n実際にやったこと：{1行}\n気づき：{1行}\n次回変えること：{1行}\n結果：{continue / complete / change / pause のいずれか1つ}\n---END---\n\n「使った場面・実際にやったこと・気づき・次回変えること」のうち最低1つは必ず埋める（Reflect OS側の保存条件）。\n\n出力後：「この出力全文をコピーして、Reflect OSのLecticaタブ →『📋 貼り付けて取り込む』で記録できます。」と添える。\n\n---\n\n# 禁止事項\n\n* 質問を一度に複数しない\n* 設計フェーズで4問以上質問しない（竹嶋が続けたい場合を除く）\n* 竹嶋が言っていないことを補足しない\n* 「つまり」「本質的には」で意味を広げすぎない\n* フィードバックで改善点を2つ以上並べない\n* 実験のテーマ自体を別のものに差し替えない（場面が合わない場合のみ、場面の変更を1回だけ提案してよい）\n\n---\n\n# 開始時の最初の返答\n\n竹嶋が実験を貼ったら、最初は以下のように返す。\n\n「はい。今日の実験【実験名】を、実行できる形まで一緒に具体化します。まず1つ目の質問です。」\n\nその後、設計に必要な質問を1つだけ行う。\n（使う場面が既に書かれていれば場面は聞かず、「最初の一手」から聞く。）\n";
+
+// 今日のShotに追加：aix_lectica_pending.shotTask を shot-task-os-v1 へ（クイック追加と同じ10フィールド・genUid方式）。
+// 取り込み本体（実験ステータス管理等）はReflect/Task OSに委ね、ここはShot追加＋二重防止まで。
+function addLecticaShot(){
+  let p = null;
+  try { p = JSON.parse(localStorage.getItem('aix_lectica_pending') || 'null'); } catch(e) {}
+  if (!p) { toast('今日のLectica提案がありません'); return; }
+  const today = todayKey();
+  const st = p.shotTask || {};
+  const expId = p.selectedExperimentId || '';
+  const tasks = readShotTasks();
+  // 二重作成防止：同一実験IDのShotが今日あれば追加しない
+  if (tasks.some(t => t && t.dueDate === today && expId && (t.memo || '').indexOf('実験ID：' + expId) >= 0)) {
+    toast('今日のこの実験は追加済みです'); renderTodayLectica(); return;
+  }
+  const now = new Date().toISOString();
+  const memo = (st.memo || '') + (expId ? ('\n実験ID：' + expId) : '') + '\n実行後：Reflect OSに実績を記録する';
+  tasks.push({
+    id: shotGenId(),
+    title: st.title || ('今日のLectica実験：' + (p.selectedExperimentTitle || '')),
+    category: st.category || 'Lectica',
+    priority: 'normal',
+    status: 'todo',
+    dueDate: today,
+    memo: memo,
+    createdAt: now, completedAt: null, updatedAt: now
+  });
+  writeShotTasks(tasks);
+  renderTodayLectica();
+  renderTodayTasks();
+  reloadShotFrame();
+  toast('今日のShotに追加しました');
+}
+
+function copyLecticaPrompt(){
+  const text = (typeof LX_PROMPT_SPARRING === 'string') ? LX_PROMPT_SPARRING : '';
+  const done = () => toast('🥊 壁打ちプロンプトをコピーしました');
+  try {
+    navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+  } catch(e) { fallbackCopy(text, done); }
+}
+function fallbackCopy(text, done){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch(e) { toast('コピーに失敗しました'); }
+  ta.remove();
+}
+
 function renderTodayLectica(){
   const area = document.getElementById('todayLectica');
   if (!area) return;
@@ -631,9 +689,23 @@ function renderTodayLectica(){
   const pDate = p && (p.date || (p.shotTask && p.shotTask.dueDate));
   if (!p || pDate !== todayKey()) { area.innerHTML = '<div class="empty">今日のLectica提案はありません</div>'; return; }
   const name = [p.selectedExperimentId, p.selectedExperimentTitle].filter(Boolean).join('：');
-  area.innerHTML = '<div class="lx-row"><span class="task-tag lectica">今日の実験</span> ' + escHtml(name || '(実験名なし)')
-    + (p.targetSchedule ? '<div class="empty" style="padding:2px 0 0;">使う場面：' + escHtml(p.targetSchedule) + '</div>' : '')
-    + '<div style="margin-top:6px;"><a onclick="switchTab(\'reflect\')">→ Reflectタブで記録</a></div></div>';
+  const rows = [];
+  if (p.category) rows.push(['カテゴリ', p.category]);
+  if (p.targetSchedule) rows.push(['使う場面', p.targetSchedule]);
+  if (p.reason) rows.push(['選定理由', p.reason]);
+  if (p.completionCondition) rows.push(['完了条件', p.completionCondition]);
+  const expId = p.selectedExperimentId || '';
+  const already = readShotTasks().some(t => t && t.dueDate === todayKey() && expId && (t.memo || '').indexOf('実験ID：' + expId) >= 0);
+  area.innerHTML =
+    '<div class="lx-row"><span class="task-tag lectica">今日の実験</span> <b>' + escHtml(name || '(実験名なし)') + '</b></div>'
+    + rows.map(r => '<div class="lx-detail"><span class="lx-detail-k">' + escHtml(r[0]) + '</span>' + escHtml(r[1]) + '</div>').join('')
+    + '<div class="lx-actions">'
+    + (already
+        ? '<span class="lx-added">✓ 今日のShotに追加済み</span>'
+        : '<button class="lx-act" onclick="addLecticaShot()">＋ 今日のShotに追加</button>')
+    + '<button class="lx-act" onclick="copyLecticaPrompt()">🥊 壁打ちプロンプトをコピー</button>'
+    + '<a class="lx-act-link" onclick="switchTab(\'reflect\')">→ Reflectで記録</a>'
+    + '</div>';
 }
 
 // ══ PWA ══════════════════════════════════════════════════
