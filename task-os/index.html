@@ -728,7 +728,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-07-12';
+const BUILD_VER = '2026-07-13';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -1133,12 +1133,6 @@ function fmtDate(s){
 
 // ── UNIFIED TASKS ──
 
-function get100ListItems(){
-  try{
-    const raw = localStorage.getItem('yaritai_items_v4');
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ return []; }
-}
 function allTasks(){
   const tasks = [];
 
@@ -1423,20 +1417,11 @@ function toggleWeek(){
 }
 
 let homeShotOpen = false;
-let home100ListOpen = false;
-let homePjOpen = false;
 function toggleShot(){
   homeShotOpen = !homeShotOpen;
   renderHome();
 }
-function toggle100List(){
-  home100ListOpen = !home100ListOpen;
-  renderHome();
-}
-function togglePj(){
-  homePjOpen = !homePjOpen;
-  renderHome();
-}
+// toggle100List / togglePj（＋home100ListOpen/homePjOpen）は撤去した100リスト・PROJECTセクション専用のため削除
 
 const now = () => new Date().toISOString();
 const refresh = () => { if(curView==='home') renderHome(); else if(curView==='today') renderToday(); };
@@ -1530,140 +1515,8 @@ function homeShot(noDue) {
   return h;
 }
 
-function home100List() {
-  let h = '';
-// 100リスト（期限切れ・当月、折りたたみ）
-  const allList = get100ListItems().filter(function(i){ return !i.completed; });
-  const yrL = new Date().getFullYear();
-  const moL = new Date().getMonth() + 1;
-  const listOv = allList.filter(function(i){
-    if(!i.year) return false;
-    if(i.year < yrL) return true;
-    if(i.year === yrL && i.month && i.month < moL) return true;
-    return false;
-  });
-  const listThisMonth = allList.filter(function(i){ return i.year === yrL && i.month === moL; });
-  const listItems = Array.from(new Map([...listOv, ...listThisMonth].map(function(i){ return [i.id,i]; })).values());
-  if(listItems.length){
-    const lOpen = !!home100ListOpen;
-    let rowsHtml = '';
-    listItems.slice(0,10).forEach(function(i){
-      const isOvItem = i.year < yrL || (i.year === yrL && i.month && i.month < moL);
-      const dateStr = (i.year||'') + (i.month ? '/' + String(i.month).padStart(2,'0') : '');
-      const dateColor = isOvItem ? 'var(--r)' : 'var(--text3)';
-      rowsHtml += '<div class="trow">';
-      rowsHtml += '<div class="trow-title">' + esc(i.title) + '</div>';
-      rowsHtml += '<div class="trow-meta"><span style="font-size:11px;color:' + dateColor + ';">' + dateStr + '</span></div>';
-      rowsHtml += '<button class="btn-open" data-nav="100list" onclick="nav(this.dataset.nav)">開く</button>';
-      rowsHtml += '</div>';
-    });
-    const moreRow = listItems.length > 10 ? '<div style="font-size:13px;color:var(--text3);padding:6px 6px 2px;">他 ' + (listItems.length-10) + '件</div>' : '';
-    const body = lOpen ? '<div class="week-body">' + rowsHtml + moreRow + '</div>' : '';
-    const arrowCls = 'week-hd-arrow' + (lOpen ? ' open' : '');
-    h += '<div class="week-wrap">';
-    h += '<div class="week-hd" onclick="toggle100List()">';
-    h += '<span class="week-hd-label">≡ 100リスト — 期限切れ・当月</span>';
-    h += '<span class="week-hd-count">' + listItems.length + '</span>';
-    h += '<span class="' + arrowCls + '" id="list100-arrow">▶</span>';
-    h += '</div>' + body + '</div>';
-  }
-  return h;
-}
-
-function homeProjects(activePj) {
-  let h = '';
-// ─ Project 進行（直近30日イベント、折りたたみ）
-  if(activePj.length){
-    const d30 = new Date(); d30.setDate(d30.getDate()-30);
-    const from30 = d30.toLocaleDateString('sv');
-
-    const pjOpen = !!homePjOpen;
-    const pjArrowCls = 'week-hd-arrow' + (pjOpen ? ' open' : '');
-    h += '<div class="week-wrap"><div class="week-hd" onclick="togglePj()">'
-      +'<span class="week-hd-label">◈ Project — 直近30日</span>'
-      +'<span class="week-hd-count">'+activePj.length+'</span>'
-      +'<span class="'+pjArrowCls+'">▶</span>'
-      +'</div>';
-    if(pjOpen){
-      h += '<div class="week-body">';
-      activePj.forEach(p => {
-        const evts = (p.events||[])
-          .filter(e => e.date && e.date >= from30)
-          .sort((a,b) => (a.date||'').localeCompare(b.date||''))
-          .slice(0,3);
-        let evtRows = '';
-        if(evts.length){
-          evtRows = evts.map(e => {
-            const d = e.date ? e.date.replace(/^\d{4}-/,'').replace('-','/') : '';
-            const isOver = e.date && e.date < TODAY;
-            const overStyle = isOver ? 'background:rgba(220,50,50,0.08);border-left:3px solid var(--r);' : '';
-            const dateColor = isOver ? 'var(--r)' : 'var(--text3)';
-            return '<div class="trow" style="'+overStyle+'">'
-              +'<div class="trow-title">'+esc(e.title||'')+'</div>'
-              +'<div class="trow-date" style="color:'+dateColor+';">'+d+'</div>'
-              +'<button class="btn-open" data-nav="project" onclick="nav(this.dataset.nav)">開く</button>'
-              +'</div>';
-          }).join('');
-        } else {
-          evtRows = '<div style="font-size:12px;color:var(--text3);padding:4px 8px;">直近イベントなし</div>';
-        }
-        h += '<div style="margin-bottom:6px;">'
-          +'<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;font-weight:600;font-size:15px;border-bottom:1px solid var(--border);color:var(--text1);">'
-          +esc(p.name||p.title||'')
-          +'<button class="btn-open" style="margin-left:auto;" data-nav="project" onclick="nav(this.dataset.nav)">開く</button>'
-          +'</div>'
-          +evtRows
-          +'</div>';
-      });
-      h += '</div>';
-    }
-    h += '</div>';
-  }
-  return h;
-}
-
-function homeLectica(){
-  let master=[],shot=[],pending=null;
-  try{master=JSON.parse(localStorage.getItem('lectica_experiments_master_v1')||'[]')||[];}catch(e){}
-  try{shot=JSON.parse(localStorage.getItem('shot-task-os-v1')||'[]')||[];}catch(e){}
-  try{const p=localStorage.getItem('aix_lectica_pending');if(p)pending=JSON.parse(p);}catch(e){}
-  const today=TODAY;
-  const todayShot=shot.filter(t=>t&&t.category==='Lectica'&&t.dueDate===today);
-  const active=master.filter(e=>e&&e.status==='active');
-  let rows='',count=0;const seen={};
-  todayShot.forEach(t=>{if(count>=3)return;const m=(t.memo||'').match(/実験ID：(L\d+)/);if(m)seen[m[1]]=1;const done=t.status==='done';rows+='<div class="lx-home-row'+(done?' done':'')+'"><div><span class="lx-home-tag">'+(done?'実施済':'今日のShot')+'</span>'+esc(String(t.title||'').replace(/^今日のLectica実験：/,''))+'</div></div>';count++;});
-  active.forEach(e=>{if(count>=3)return;if(seen[e.id])return;seen[e.id]=1;rows+='<div class="lx-home-row"><div><span class="lx-home-tag">実験中</span>'+esc(e.id+'：'+e.title)+'</div></div>';count++;});
-  let pendingHtml='';
-  const pendingDate=pending&&(pending.date||(pending.shotTask&&pending.shotTask.dueDate));
-  if(pending&&(pending.selectedExperimentId||pending.shotTask)&&pendingDate===today){
-    const ptitle=pending.selectedExperimentTitle||(pending.shotTask&&pending.shotTask.title)||'';
-    const pid=pending.selectedExperimentId||'';
-    const already=todayShot.some(t=>pid&&(t.memo||'').indexOf('実験ID：'+pid)>=0);
-    pendingHtml='<div class="lx-home-pending"><div class="lx-home-sub">参謀の本日の提案：'+esc(ptitle)+(pending.reason?'（'+esc(pending.reason)+'）':'')+'</div>'+(already?'<span class="lx-home-done-tag">追加済</span>':'<button class="btn-open" onclick="lecticaAddPending()">＋ Shotに追加</button>')+'</div>';
-  }
-  const inner=(rows||pendingHtml)?(rows+pendingHtml):'<div class="empty" style="font-size:13px">Reflect OSで今日の実験を1つ選んでください。</div>';
-  const note='<div class="lx-home-note">毎日1件を会議・1on1・意思決定・育成で実践（最大3件表示）。</div>';
-  const btns='<div class="lx-home-btns"><button class="btn-open" onclick="nav(\'reflect\')">Reflect OSを開く</button><button class="btn-open" onclick="nav(\'shot\')">Shot Taskを開く</button></div>';
-  return secLabel('\u25b6 \u4eca\u65e5\u306eLectica\u5b9f\u9a13','')+'<div class="lx-home">'+inner+note+btns+'</div></div>';
-}
-function lecticaAddPending(){
-  try{
-    const p=JSON.parse(localStorage.getItem('aix_lectica_pending')||'null'); if(!p){alert('\u63d0\u6848\u304c\u3042\u308a\u307e\u305b\u3093');return;}
-    const pDate=p.date||(p.shotTask&&p.shotTask.dueDate);
-    if(pDate!==TODAY){alert('本日の提案がありません（表示は過去の提案です）');return;}
-    const st=p.shotTask||{};
-    const today=(st.dueDate||p.date||TODAY);
-    const expId=p.selectedExperimentId||'';
-    const arr=JSON.parse(localStorage.getItem('shot-task-os-v1')||'[]');
-    if(arr.some(t=>t&&t.dueDate===today&&expId&&t.memo&&t.memo.indexOf('\u5b9f\u9a13ID\uff1a'+expId)>=0)){ alert('\u4eca\u65e5\u306e\u3053\u306e\u5b9f\u9a13\u306eShot\u30bf\u30b9\u30af\u306f\u65e2\u306b\u3042\u308a\u307e\u3059'); return; }
-    const memo=(st.memo||'')+(expId?('\n\u5b9f\u9a13ID\uff1a'+expId):'')+'\n\u5b9f\u884c\u5f8c\uff1aReflect OS\u306b\u5b9f\u7e3e\u3092\u8a18\u9332\u3059\u308b';
-    const now=new Date().toISOString();
-    arr.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title:(st.title||('\u4eca\u65e5\u306eLectica\u5b9f\u9a13\uff1a'+(p.selectedExperimentTitle||''))),category:(st.category||'Lectica'),priority:'normal',status:'todo',dueDate:today,memo:memo,createdAt:now,completedAt:null,updatedAt:now});
-    localStorage.setItem('shot-task-os-v1',JSON.stringify(arr));
-    if(expId){ try{const m=JSON.parse(localStorage.getItem('lectica_experiments_master_v1')||'[]'); const e=m.find(x=>x&&x.id===expId); if(e&&e.status==='not_started'){e.status='active';localStorage.setItem('lectica_experiments_master_v1',JSON.stringify(m));}}catch(e){} }
-    renderHome();
-  }catch(e){ alert('\u8ffd\u52a0\u30a8\u30e9\u30fc: '+e.message); }
-}
+// homeLectica / home100List / homeProjects / lecticaAddPending は撤去
+// （ランチャー今日タブ・Morning Briefへ移行。Lectica自動生成 autoGenLecticaShot は同期で使うため存続）
 
 // Lectica実験のShotを自動生成（毎朝・冪等）。
 // ・今日のLectica Shotが既にあれば何もしない
@@ -1747,9 +1600,6 @@ function renderHome(){
     const diff=(new Date(t.due+'T00:00:00')-new Date(TODAY+'T00:00:00'))/86400000;
     return diff>=1&&diff<=7;
   }).sort((a,b)=>a.due.localeCompare(b.due));
-  const pd    = getPj();
-  const activePj = (pd.projects||[]).filter(p=>p.status!=='完了'&&p.status!=='保留');
-
   // 今日の一手（スコア最上位）
   const top = [...tasks].sort((a,b)=>score(b)-score(a))[0];
 
@@ -1761,9 +1611,7 @@ function renderHome(){
   h += homeUrgent(ov, td);
   h += homeThisWeek(thisWeek);
   h += homeShot(noDue);
-  h += homeLectica();
-  h += home100List();
-  h += homeProjects(activePj);
+  // ▶今日のLECTICA実験・≡100リスト・◈PROJECTの3セクションは撤去（ランチャー今日タブ／Morning Briefへ移行）
 /* TIMELINE-DISABLED (将来復活可)
   h += secLabel('📅 直近2週間', '');
   h += `<div class="tl-scroll"><div class="tl-grid" id="tlGrid"></div></div>`;
