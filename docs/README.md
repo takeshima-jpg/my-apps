@@ -24,6 +24,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-cockpit-brief-colors-spec.md](specs/claude-code-cockpit-brief-colors-spec.md) | 今日タブのBrief見出しをbrief-viewerと同じカテゴリ色分けに | ✅実装済み 2026-07-12 `90d5303` |
 | [claude-code-hitomemo-stage-spec-v2.md](specs/claude-code-hitomemo-stage-spec-v2.md) | ヒトメモ関係ステージ4段階＋🤝稼働フラグ改修（承認付き移行・SU/health追従）。正本=[partner-stage-legend-v1-1](partner-stage-legend-v1-1.md) | ✅実装済み 2026-07-12 `05cffb7`/`1b78a64` |
 | [claude-code-taskos-aiimport-hotfix-spec.md](specs/claude-code-taskos-aiimport-hotfix-spec.md) | Task OS AIタスク読込の緊急修正（genId未定義→共通genUidに統一・GDrive dedupe隔離確認） | ✅実装済み 2026-07-12 `bfec392` |
+| [claude-code-taskos-collect-parse-hotfix.md](specs/claude-code-taskos-collect-parse-hotfix.md) | Task OS 同期の緊急修正（collectAllOSDataが週次/月次briefのmarkdownをJSON.parseして落ちる→安全パース＋restore対称化） | ✅実装済み 2026-07-12 `8bf0153` |
 | [claude-code-minutes-triage-spec.md](specs/claude-code-minutes-triage-spec.md) | 議事録→OS振り分け（inbox triage）の手順書。「inboxを振り分けて」で発動 | 🔧運用中（手順書） |
 | [claude-code-sheets-integration-spec.md](specs/claude-code-sheets-integration-spec.md) | スプレッドシート連携（Project OS直接取り込み＋シート更新ツール）の設計・手順 | 🔧運用中（手順書） |
 
