@@ -713,7 +713,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-07-11';
+const BUILD_VER = '2026-07-12';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -808,6 +808,12 @@ function importAllJSON() {
   document.getElementById('jsonImportInput').click();
 }
 
+// 共通ID生成（CLAUDE.md: id生成はgenUid()／Date.now()単独禁止）。
+// applyAixTasks（トップレベル）とShotクイック追加（下部IIFE）で共用するため、ここでグローバル宣言する。
+// ※以前は genId が Shotクイック追加IIFE内にのみ存在し、トップレベルの applyAixTasks から不可視で
+//   ReferenceError となり、id衝突/欠落時にAIタスク取込が丸ごとスキップされていた（今回の緊急修正）。
+function genUid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
 // パース済みオブジェクト/配列を取り込む共通ロジック（ファイル取込・GDrive自動取込で共用）
 // 冪等：ID重複スキップ／ドラフトは日付キー上書き／briefは上書き。全消しはしない。
 function applyAixTasks(parsed){
@@ -822,7 +828,7 @@ function applyAixTasks(parsed){
   const existing = JSON.parse(localStorage.getItem('shot-task-os-v1') || '[]');
   const seenIds = new Set();
   for (const t of existing) {                         // 既存の重複idを正規化（先頭を残し以降は新id）
-    if (!t.id || seenIds.has(t.id)) t.id = genId();
+    if (!t.id || seenIds.has(t.id)) t.id = genUid();
     seenIds.add(t.id);
   }
   const keyOfTask = t => t && t.dueDate
@@ -840,7 +846,7 @@ function applyAixTasks(parsed){
     const k = keyOfTask(task);
     if (existingKeys.has(k) || importedKeys.has(k)) continue;   // 既存 or 過去に取り込み済みは再追加しない
     const t = Object.assign({}, task);
-    if (!t.id || seenIds.has(t.id)) t.id = genId();   // id衝突は新idで回避
+    if (!t.id || seenIds.has(t.id)) t.id = genUid();   // id衝突は新idで回避
     existing.push(t);
     seenIds.add(t.id);
     existingKeys.add(k);
@@ -2057,7 +2063,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   function getShotCats(){
     try{ var r=JSON.parse(localStorage.getItem(CAT_KEY)); return(Array.isArray(r)&&r.length)?r:DEFAULT_CATS; }catch(e){return DEFAULT_CATS;}
   }
-  function genId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+  // id生成はトップレベルの共通 genUid() を使う（重複定義を排し1つに統一。CLAUDE.md方針）
 
   window.openShotAdd = function(){
     var cats = getShotCats();
@@ -2081,7 +2087,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     var now   = new Date().toISOString();
     var tasks = [];
     try{ tasks = JSON.parse(localStorage.getItem(SHOT_KEY))||[]; }catch(e){}
-    tasks.push({ id:genId(), title:title, category:cat, priority:'normal',
+    tasks.push({ id:genUid(), title:title, category:cat, priority:'normal',
       status:'todo', dueDate:null, memo:memo, createdAt:now, completedAt:null, updatedAt:now });
     localStorage.setItem(SHOT_KEY, JSON.stringify(tasks));
     closeShotAdd();
