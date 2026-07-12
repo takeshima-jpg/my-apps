@@ -49,6 +49,7 @@ hitomemo_aix_imported / taskos_last_sync
 ## 人物データ
 - id生成は genUid()（Date.now()単独禁止：ID衝突で削除事故の前科あり）
 - 名前照合は lxNormName()（括弧注記・空白・NFKC正規化）を必ず使う
+- 経営パートナーの関係ステージは docs/partner-stage-legend-v1-1.md を参照（正本）
 
 ## build版番号
 - task-os の BUILD_VER をUI変更時に当日日付へ更新する
