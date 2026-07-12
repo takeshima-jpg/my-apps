@@ -341,7 +341,7 @@ select.fi{cursor:pointer;}
     <label class="sb-backup-btn" style="cursor:pointer;">🤖 AIタスク読込<input type="file" id="aixTaskInput" accept=".json" style="display:none" onchange="handleAixTaskImport(event)"></label>
     <div style="border-top:1px solid rgba(255,255,255,0.08);margin:4px 0;"></div>
     <button class="sb-backup-btn" id="gdriveBtn" onclick="gdToggle()">☁️ GDrive接続</button>
-    <button class="sb-backup-btn" onclick="gdCleanupDrafts()">🧹 重複draft掃除</button>
+    <!-- 🧹 重複draft掃除ボタンは撤去。Drive掃除は tools/drive_cleanup.py（週1手動・dry-run→本番）に一本化 -->
   </div>
   <div class="sb-ft" id="sbDate"></div>
   <div class="sb-ft" id="sbSync" style="opacity:.55;font-size:10px;"></div>
@@ -2269,48 +2269,10 @@ async function gdPruneWeekly(){
   }catch(e){ if(e.code===401) throw e; console.warn('gdPruneWeekly', e); }
 }
 
-// ===== 🧹 重複draft掃除（aix-drafts内：種別ごとに最新1つだけ残し、古い重複をゴミ箱へ）=====
-// Drive Desktop同期で aix_draft_latest (5).json 等の重複が溜まるのを定期的に整理する。
-// 中間生成物（draft）は使い捨て前提。myapps-all-backup.json は対象外。ゴミ箱なので30日は復元可。
-const GD_CLEANUP_BASES = ['aix_draft_latest','aix-tasks','aix-hitomemo','aix_review_weekly','aix_review_monthly'];
-function gdCanonBase(name){
-  return name.replace(/\.json$/i,'').replace(/\s*\(\d+\)\s*$/,'').trim();
-}
-async function gdDedupeDrafts(){
-  // 対象baseごとに最新1つだけ残し、古い重複をゴミ箱へ移動。{trashed, kept}を返す。
-  const q = encodeURIComponent(`'${GD_FOLDER_ID}' in parents and trashed=false`);
-  const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=200`);
-  const files = (await r.json()).files || [];
-  const groups = {};
-  files.forEach(f=>{
-    const base = gdCanonBase(f.name);
-    if(!GD_CLEANUP_BASES.includes(base)) return;   // 対象baseのみ（backup等は除外）
-    (groups[base] = groups[base] || []).push(f);
-  });
-  let trashed = 0; const kept = [];
-  for(const base of Object.keys(groups)){
-    const arr = groups[base].sort((a,b)=> (b.modifiedTime||'').localeCompare(a.modifiedTime||''));
-    kept.push(arr[0].name);
-    for(let i=1;i<arr.length;i++){
-      if(await gdTryTrash(arr[i].id, arr[i].name)) trashed++;   // 403/404は静かにスキップ・再試行しない
-    }
-  }
-  gdFlushSkipInfo();
-  return { trashed, kept };
-}
-async function gdCleanupDrafts(){
-  if(!gdToken){ gdConnect(); return; }
-  if(!confirm('aix-drafts内の重複draftを整理します。\n各種別（aix-tasks / aix_draft_latest / aix-hitomemo / 週次・月次レビュー）について最新1つだけ残し、古い重複をゴミ箱へ移動します。\nmyapps-all-backup.json は対象外です。実行しますか？')) return;
-  gdSetStatus('syncing');
-  try{
-    const {trashed, kept} = await gdDedupeDrafts();
-    gdSetStatus('ok');
-    alert(`整理完了：${trashed}件をゴミ箱へ移動しました。\n残した最新ファイル：\n`+ (kept.length?kept.map(n=>'・'+n).join('\n'):'（なし）'));
-  }catch(e){
-    if(e.code===401){ gdClear(); gdSetStatus('ok'); alert('GDriveの認証が切れました。再接続してください。'); gdConnect(); return; }
-    gdSetStatus('err'); alert('整理中にエラーが発生しました：'+(e.message||e));
-  }
-}
+// ===== 🧹 重複draft掃除は廃止（Drive掃除は tools/drive_cleanup.py に一本化・週1手動）=====
+// ブラウザ側の自動dedupe（gdDedupeDrafts/gdCleanupDrafts）は撤去。所有外ファイルのtrashで403が
+// 発生する原因だったため。固定名ファイルの重複整理は drive_cleanup.py（dry-run→本番）で行う。
+// 手順は docs/specs/drive-cleanup-運用.md。週次スナップショットの保持(gdPruneWeekly)は自前ファイルなので存続。
 
 // ===== ヒトメモ自動取り込み（aix-hitomemo.json → localStorage hitomemo_profiles_v1 / 未登録）=====
 // ヒトメモがGDrive未ログインでも、Task OSを開くだけで未登録に入る。冪等キーはヒトメモと共有。
@@ -2425,11 +2387,7 @@ async function gdAutoSync(manual){
       await gdPruneWeekly();
     } catch(e){ if(e.code===401) throw e; console.warn('週次スナップショット保存スキップ', e); }
 
-    // 同期のたびに重複draftを自動整理（実行後のドライブを常にきれいに保つ）
-    try {
-      const dd = await gdDedupeDrafts();
-      if(dd.trashed > 0) importMsg = (importMsg ? importMsg + ' / ' : '') + `重複${dd.trashed}件を整理`;
-    } catch(e){ if(e.code===401) throw e; console.warn('dedupe自動実行スキップ', e); }
+    // 重複draftの掃除は廃止（Drive掃除は drive_cleanup.py=週1手動 に一本化。403の発生源を除去）
 
     gdSetStatus('ok');
     markSync('GDrive');
