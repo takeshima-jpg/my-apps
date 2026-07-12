@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>竹嶋OS — コックピット</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f5f5f7">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
 :root {
   --bg: #f5f5f7; --bg2: #ffffff; --bg3: #ebebee;
@@ -20,7 +27,10 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .shell { display: flex; height: 100vh; overflow: hidden; }
 
 /* ── 左タブバー ── */
-.tabbar { width: 96px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; padding: 8px 0; }
+.tabbar { width: 96px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; padding: 0 0 8px; }
+.tab-logo { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 4px 10px; margin-bottom: 6px; border-bottom: 1px solid var(--border); }
+.tab-logo img { width: 26px; height: 26px; }
+.tab-logo span { font-size: 10px; font-weight: 700; color: var(--text2); letter-spacing: .08em; }
 .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding: 9px 4px; background: none; border: none; border-left: 3px solid transparent; color: var(--text2); font-family: var(--font-body); font-size: 11px; cursor: pointer; }
 .tab .ico { font-size: 17px; line-height: 22px; }
 .tab .tab-ico { width: 22px; height: 22px; border-radius: 6px; object-fit: cover; display: block; }
@@ -53,7 +63,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .today-inner { max-width: 900px; margin: 0 auto; padding: 0 20px 60px; }
 .today h2 { font-size: 13px; color: var(--text3); letter-spacing: .1em; margin: 22px 0 8px; font-weight: 700; }
 /* クイック追加バーはスクロールしても上部に固定 */
-.qa-wrap { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 16px 0 10px; }
+.qa-wrap { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 16px 0 10px; box-shadow: 0 1px 0 var(--border); }
 .qa-sub { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
 .qa-ai { padding: 6px 14px; font-size: 13px; font-weight: 700; background: none; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); cursor: pointer; font-family: var(--font-body); }
 .qa-ai:hover { background: #efe9ff; }
@@ -94,13 +104,15 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #1a1a22; color: #fff; padding: 9px 18px; border-radius: 999px; font-size: 13px; z-index: 9999; opacity: 0; transition: opacity .25s; pointer-events: none; }
 .toast.show { opacity: 1; }
 
+.ios-hint { margin-top: 26px; font-size: 11px; color: var(--text3); text-align: center; }
+
 /* ── モバイル：サイドバーを上部横スクロールタブに ── */
 @media (max-width: 768px) {
   .shell { flex-direction: column; }
   .tabbar { width: 100%; flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: none; border-bottom: 1px solid var(--border); padding: 0 4px; }
   .tab { flex-direction: row; gap: 5px; width: auto; padding: 9px 10px; border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
   .tab.active { border-bottom-color: var(--accent); background: none; }
-  .tab-others, .tab-vision { display: none; }
+  .tab-logo, .tab-others, .tab-vision { display: none; }
   .mh-help { display: none; }
   .today-inner { padding: 0 12px 60px; }
 }
@@ -117,6 +129,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
       </span>
       <span class="mh-help" id="mhHelp"></span>
       <span class="mh-actions">
+        <button id="btnInstall" onclick="installApp()" style="display:none" title="ホーム画面／デスクトップにアプリとして追加">📲 アプリ追加</button>
         <button id="btnReload" onclick="reloadCurrent()">⟳ 再読込</button>
         <button id="btnLogin" onclick="openCurrent()" title="OAuthはiframe内で実行できないため、Googleログインは別タブで行います">🔑 ログイン（別タブ）</button>
       </span>
@@ -166,7 +179,8 @@ function tabIconHtml(t, cls){
 
 function buildTabbar(){
   const bar = document.getElementById('tabbar');
-  bar.innerHTML = TABS.map(t =>
+  bar.innerHTML = '<div class="tab-logo"><img src="favicon.svg" alt=""><span>コックピット</span></div>'
+  + TABS.map(t =>
     '<button class="tab" data-id="' + t.id + '" onclick="switchTab(\'' + t.id + '\')">'
     + tabIconHtml(t, 'tab-ico') + '<span>' + t.label + '</span></button>'
   ).join('')
@@ -539,6 +553,7 @@ function renderToday(){
       <div class="card"><div id="todayTasks"></div></div>
       <h2>✦ 今日のLECTICA</h2>
       <div class="card"><div id="todayLectica"></div></div>
+      ${iosInstallHint()}
     </div>
   `;
   document.getElementById('qaInput').addEventListener('keydown', e => { if (e.key === 'Enter') quickAdd(); });
@@ -592,6 +607,41 @@ function renderTodayLectica(){
   area.innerHTML = '<div class="lx-row"><span class="task-tag lectica">今日の実験</span> ' + escHtml(name || '(実験名なし)')
     + (p.targetSchedule ? '<div class="empty" style="padding:2px 0 0;">使う場面：' + escHtml(p.targetSchedule) + '</div>' : '')
     + '<div style="margin-top:6px;"><a onclick="switchTab(\'reflect\')">→ Reflectタブで記録</a></div></div>';
+}
+
+// ══ PWA ══════════════════════════════════════════════════
+// SWは launcher/ 配下スコープのパススルー型（sw.js参照）。iframeの各OSはスコープ外＝キャッシュ事故を構造的に回避
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+
+// インストール導線（beforeinstallprompt対応ブラウザのみボタン表示）
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('btnInstall').style.display = '';
+});
+function installApp(){
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  deferredInstall.userChoice.finally(() => {
+    deferredInstall = null;
+    document.getElementById('btnInstall').style.display = 'none';
+  });
+}
+window.addEventListener('appinstalled', () => {
+  const b = document.getElementById('btnInstall');
+  if (b) b.style.display = 'none';
+  toast('アプリとして追加しました 📲');
+});
+
+// iOSはbeforeinstallprompt非対応のため、未インストール時だけ今日タブ下部に1行案内
+function iosInstallHint(){
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if (!isIOS || standalone) return '';
+  return '<div class="ios-hint">📲 アプリとして使う：Safariの共有 → ホーム画面に追加</div>';
 }
 
 // ── 起動 ──
