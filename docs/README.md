@@ -23,7 +23,8 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |
 | [claude-code-cockpit-brief-colors-spec.md](specs/claude-code-cockpit-brief-colors-spec.md) | 今日タブのBrief見出しをbrief-viewerと同じカテゴリ色分けに | ✅実装済み 2026-07-12 `90d5303` |
 | [claude-code-hitomemo-stage-spec-v2.md](specs/claude-code-hitomemo-stage-spec-v2.md) | ヒトメモ関係ステージ4段階＋🤝稼働フラグ改修（承認付き移行・SU/health追従）。正本=[partner-stage-legend-v1-1](partner-stage-legend-v1-1.md) | ✅実装済み 2026-07-12 `05cffb7`/`1b78a64` |
-| [claude-code-hitomemo-form-ui-spec-v2.md](specs/claude-code-hitomemo-form-ui-spec-v2.md) | ヒトメモ編集フォームUI改善（長文欄拡大・pillボタン化・関わり方タイプに「家族」追加・旧値保持） | ✅実装済み 2026-07-12 `fd5c7d0` |
+| [claude-code-hitomemo-form-ui-spec-v2.md](specs/claude-code-hitomemo-form-ui-spec-v2.md) | ヒトメモ編集フォームUI改善（長文欄拡大・pillボタン化・関わり方タイプに「家族」追加・旧値保持） | ✅実装済み 2026-07-12 `fd5c7d0`（家族選択肢は後続で撤回） |
+| [claude-code-hitomemo-family-sort-spec.md](specs/claude-code-hitomemo-family-sort-spec.md) | 家族を独立カテゴリ(personType=family)に分離しパートナー形成ロジックから除外＋一覧の並び替え/区分フィルタ | ✅実装済み 2026-07-13 `4276cef` |
 | [claude-code-1day-slim-spec.md](specs/claude-code-1day-slim-spec.md) | 1dayのタグ8種・ブログ/VISION/エネ高フラグを撤去、満足度を◎〇△×の4段階に（違和感/深掘りは存続） | ✅実装済み 2026-07-12 `062b887` |
 | [claude-code-taskos-home-cleanup-spec.md](specs/claude-code-taskos-home-cleanup-spec.md) | Task OS HOMEの重複3セクション（今日のLectica・100リスト・PROJECT）を撤去（ランチャー今日タブへ移行） | ✅実装済み 2026-07-13 `b8df725` |
 | [claude-code-taskos-aiimport-hotfix-spec.md](specs/claude-code-taskos-aiimport-hotfix-spec.md) | Task OS AIタスク読込の緊急修正（genId未定義→共通genUidに統一・GDrive dedupe隔離確認） | ✅実装済み 2026-07-12 `bfec392` |
