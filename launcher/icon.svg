@@ -1,17 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- コックピットアイコン（B案 集約グリッド・白背景版）
-       OSタイル群の中心に濃紺の1枚＝統合コックピット。差し色は既存ソース色。
-       maskable安全領域（中心r205）内に主要素を収める -->
-  <rect x="16" y="16" width="480" height="480" rx="112" fill="#FFFFFF" stroke="#E4E8F0" stroke-width="6"/>
-  <g fill="none" stroke="#9AA6C2" stroke-width="7" opacity="0.9">
-    <rect x="228" y="144" width="56" height="56" rx="14"/>
-    <rect x="144" y="228" width="56" height="56" rx="14"/>
-    <rect x="312" y="228" width="56" height="56" rx="14"/>
-    <rect x="228" y="312" width="56" height="56" rx="14"/>
-    <rect x="144" y="312" width="56" height="56" rx="14"/>
-  </g>
-  <rect x="144" y="144" width="56" height="56" rx="14" fill="#8DC63F"/>
-  <rect x="312" y="144" width="56" height="56" rx="14" fill="#7C5CD6"/>
-  <rect x="312" y="312" width="56" height="56" rx="14" fill="#3AA655"/>
-  <rect x="222" y="222" width="68" height="68" rx="17" fill="#1E2A44"/>
+  <!-- ランチャーOSアイコン（案2 濃紺ウィンドウ・4ペイン）
+       濃紺地に1枚のダッシュボード窓を4ペインに分割＝複数OSを1画面に集約。
+       Task OS（白背景・放射ドット）と背景色・図柄の両方で差別化。maskable安全領域内に窓を収める -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="#1E2A44"/>
+  <rect x="128" y="128" width="256" height="256" rx="36" fill="#E8ECF4"/>
+  <rect x="146" y="146" width="98" height="98" rx="12" fill="#8DC63F"/>
+  <rect x="268" y="146" width="98" height="98" rx="12" fill="#C7D0E0"/>
+  <rect x="146" y="268" width="98" height="98" rx="12" fill="#C7D0E0"/>
+  <rect x="268" y="268" width="98" height="98" rx="12" fill="#C7D0E0"/>
 </svg>

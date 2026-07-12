@@ -1,6 +1,6 @@
 {
-  "name": "my-apps コックピット",
-  "short_name": "コックピット",
+  "name": "ランチャーOS",
+  "short_name": "ランチャーOS",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
