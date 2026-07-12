@@ -417,8 +417,22 @@
       transition: border-color 0.2s;
       background: var(--surface);
     }
-    .field-textarea { min-height: 80px; resize: vertical; }
+    .field-textarea { min-height: 108px; resize: vertical; line-height: 1.7; }
     .field-input:focus, .field-textarea:focus { outline: none; border-color: var(--accent); }
+    /* 経営パートナー形成セクションのフォーム（従来クラス名 fg/fl/fi/ft をここで定義。入力しやすく） */
+    .fg { margin-bottom: 16px; }
+    .fl { display: block; font-size: 12.5px; font-weight: 700; color: #475569; margin-bottom: 7px; }
+    .fi { width: 100%; padding: 9px 12px; font-size: 15px; font-family: inherit; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface); box-sizing: border-box; }
+    .fi:focus { outline: none; border-color: var(--accent); }
+    .ft { width: 100%; min-height: 120px; padding: 11px 13px; font-size: 15px; line-height: 1.7; font-family: inherit; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface); resize: vertical; box-sizing: border-box; }
+    .ft:focus { outline: none; border-color: var(--accent); }
+    /* pillボタン（単一選択）。タップ領域を十分に・モバイル折り返しOK */
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill { min-height: 38px; padding: 8px 15px; font-size: 13px; font-family: inherit; color: #475569; background: #fff; border: 1.5px solid var(--border); border-radius: 999px; cursor: pointer; transition: border-color .12s, background .12s; white-space: nowrap; }
+    .pill:hover { border-color: #94a3b8; }
+    .pill.on { font-weight: 700; }
+    .today-btn { padding: 9px 14px; font-size: 13px; font-family: inherit; color: #475569; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; cursor: pointer; white-space: nowrap; }
+    .today-btn:hover { border-color: var(--accent); color: var(--accent); }
 
     /* ── MEETINGS ── */
     .meeting-item {
@@ -992,6 +1006,8 @@ const STAGE_HELP = {
   '経営パートナー':   '悪い時も共に進めると確信した人',
 };
 const ROLE_STAGE_OPTS = ['', '知人', '協力者', '管理職', '事業責任者', '経営人材', '経営パートナー'];
+// 関わり方タイプ（関係の質）。「家族」を正式追加。単一選択pill。※未設定は「どのpillも非選択」で表す
+const ENGAGEMENT_OPTS = ['育成（若手）', '共同成長（同世代）', '相互学習（年上・専門家）', '維持（確定パートナー・専門家）', '家族'];
 const STAGE_V2_FLAG = 'hitomemo_migrated_stage_v2';
 const stageBadge = (stage, isActive) => {
   const s = STAGE_STYLE[stage] || STAGE_STYLE['記録のみ'];
@@ -1078,6 +1094,7 @@ const importFromMemo = (text) => {
     if (x.includes('共同成長')) return '共同成長（同世代）';
     if (x.includes('相互学習')) return '相互学習（年上・専門家）';
     if (x.includes('維持')) return '維持（確定パートナー・専門家）';
+    if (x.includes('家族')) return '家族';
     return '未設定';
   };
   return {
@@ -1235,7 +1252,7 @@ const FIELDS = ['name','birthday','position','business','history','family','loca
 ### {氏名}さん
 stage: {現在} → {変更後（記録のみ / つながり / 信頼を深める段階 / 経営パートナー のいずれか。変化なければ現在値）}
 isActive: {あり / なし}   （🤝 今この人と仕事が動いているか）
-engagementType: {育成 / 共同成長 / 相互学習 / 維持 / 変化なし}
+engagementType: {育成 / 共同成長 / 相互学習 / 維持 / 家族 / 変化なし}
 roleStage: {仕事役割の段階。変化なければ省略可}
 lastContactDate: {YYYY-MM-DD}
 nextExperience: {次に渡す経験（変化なければ現在値）}
@@ -1569,7 +1586,7 @@ const App = () => {
         {(p.position&&p.position.value) && <div style={{fontSize:12,color:'#64748b',marginBottom:4,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{p.position.value}</div>}
         <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}} onClick={e=>e.stopPropagation()}>
           {quickSel('stage', p.stage, STAGE_ORDER, '記録のみ')}
-          {quickSel('engagementType', p.engagementType, ['未設定','育成（若手）','共同成長（同世代）','相互学習（年上・専門家）','維持（確定パートナー・専門家）'], '未設定')}
+          {quickSel('engagementType', p.engagementType, ['未設定','育成（若手）','共同成長（同世代）','相互学習（年上・専門家）','維持（確定パートナー・専門家）','家族'], '未設定')}
         </div>
         {!compact && (p.changeLog||[]).length > 0 && (
           <div style={{fontSize:11,color:'#8b5cf6',marginTop:6,padding:'4px 8px',background:'#f5f3ff',borderRadius:6}}>
@@ -1911,6 +1928,7 @@ const App = () => {
                 : v.includes('共同成長') ? '共同成長（同世代）'
                 : v.includes('相互学習') ? '相互学習（年上・専門家）'
                 : v.includes('維持') ? '維持（確定パートナー・専門家）'
+                : v.includes('家族') ? '家族'
                 : v;
             }
           } else if (/^氏名（ふりがな）[：:]/.test(line)) {
@@ -2147,6 +2165,15 @@ const App = () => {
       if (!latest) return;
       updateList(profilesRef.current.map(p => p.id === latest.id ? latest : p));
     };
+    // 1フィールドを更新して即保存（pill/トグル/日付など、setCurrent直後にsaveすると
+    // currentRefが未同期で旧値を保存してしまう競合を回避：refを即同期してから保存）
+    const commitField = (field, val) => {
+      const base = currentRef.current || current;
+      const updated = { ...base, [field]: val, updatedAt: new Date().toISOString() };
+      currentRef.current = updated;
+      setCurrent(updated);
+      updateList(profilesRef.current.map(p => p.id === updated.id ? updated : p));
+    };
     const toggleStar = () => {
       const flag = current.relationFlag === 'star' ? 'normal' : 'star';
       updDirect('relationFlag', flag);
@@ -2285,46 +2312,64 @@ const App = () => {
         <div className="detail-section">
           <div className="detail-section-title">🌟 経営パートナー形成</div>
 
-          {/* 関係ステージ（深さ1軸）＋ヘルプ */}
-          <div className="fg" style={{marginBottom:12}}>
-            <label className="fl">関係ステージ <span title={STAGE_ORDER.map(s => s + '＝' + STAGE_HELP[s]).join('\n')} style={{cursor:'help',color:'#94a3b8'}}>ⓘ</span></label>
-            <select className="fi" value={current.stage||'記録のみ'} onChange={e => { updDirect('stage', e.target.value); saveCurrentBlur(); }}>
-              {STAGE_ORDER.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <div style={{fontSize:11,color:'#64748b',marginTop:4}}>{STAGE_HELP[current.stage||'記録のみ']}</div>
+          {/* 関係ステージ（深さ1軸）＝pillボタン単一選択。選択中はステージ色 */}
+          <div className="fg">
+            <label className="fl">関係ステージ <span title={STAGE_ORDER.map(s => s + '＝' + STAGE_HELP[s]).join('\n')} style={{cursor:'help',color:'#94a3b8',fontWeight:400}}>ⓘ</span></label>
+            <div className="pills">
+              {STAGE_ORDER.map(s => {
+                const on = (current.stage||'記録のみ') === s; const st = STAGE_STYLE[s];
+                return <button key={s} className={'pill'+(on?' on':'')}
+                  style={on ? {background:st.bg, color:st.color, borderColor:st.color} : {}}
+                  onClick={() => commitField('stage', s)}>{st.icon} {s}</button>;
+              })}
+              {/* 選択肢に無い旧値は消さず保持表示（未設定に飛ばさない） */}
+              {current.stage && !STAGE_ORDER.includes(current.stage) &&
+                <button className="pill on" style={{background:'#fee2e2',color:'#b91c1c',borderColor:'#fca5a5'}} title="旧値（保持中）">{current.stage}</button>}
+            </div>
+            <div style={{fontSize:12,color:'#64748b',marginTop:6}}>{STAGE_HELP[current.stage] || ''}</div>
           </div>
-          {/* 🤝 稼働中（別軸フラグ） */}
-          <div className="fg" style={{marginBottom:12}}>
-            <label className="fl" style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer'}}>
-              <input type="checkbox" checked={!!current.isActive} onChange={e => { updDirect('isActive', e.target.checked); saveCurrentBlur(); }} style={{width:16,height:16,cursor:'pointer'}} />
-              🤝 稼働中（今この人と実際に仕事が動いている）
+          {/* 🤝 稼働中（別軸フラグ）。ラベル全体クリックで切替・タップ領域拡大 */}
+          <div className="fg">
+            <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',padding:'10px 12px',border:'1.5px solid var(--border)',borderRadius:8,background:current.isActive?'#ecfdf5':'var(--surface)'}}>
+              <input type="checkbox" checked={!!current.isActive} onChange={e => commitField('isActive', e.target.checked)} style={{width:18,height:18,cursor:'pointer',flexShrink:0}} />
+              <span style={{fontSize:14}}>🤝 稼働中（今この人と実際に仕事が動いている）</span>
             </label>
           </div>
-          {/* （参考）仕事役割＝旧ステージ。関係の深さとは別。小さく残す */}
-          <div className="fg" style={{marginBottom:12}}>
+          {/* 関わり方タイプ＝pillボタン。「家族」を追加。旧値は保持 */}
+          <div className="fg">
+            <label className="fl">関わり方タイプ</label>
+            <div className="pills">
+              {ENGAGEMENT_OPTS.map(s => {
+                const on = current.engagementType === s;
+                return <button key={s} className={'pill'+(on?' on':'')}
+                  style={on ? {background:'#eef2ff',color:'#4338ca',borderColor:'#a5b4fc'} : {}}
+                  onClick={() => commitField('engagementType', on ? '未設定' : s)}>{s}</button>;
+              })}
+              {/* 選択肢・未設定に無い旧値は消さず保持表示 */}
+              {current.engagementType && current.engagementType !== '未設定' && !ENGAGEMENT_OPTS.includes(current.engagementType) &&
+                <button className="pill on" style={{background:'#fee2e2',color:'#b91c1c',borderColor:'#fca5a5'}} title="旧値（保持中）">{current.engagementType}</button>}
+            </div>
+          </div>
+          {/* （参考）仕事役割＝旧ステージ。関係の深さとは別。ドロップダウンのまま小さく畳んで表示 */}
+          <div className="fg">
             <label className="fl" style={{color:'#94a3b8'}}>（参考）仕事役割</label>
-            <select className="fi" style={{color:'#64748b'}} value={current.roleStage||''} onChange={e => { updDirect('roleStage', e.target.value); saveCurrentBlur(); }}>
+            <select className="fi" style={{color:'#64748b',maxWidth:220}} value={current.roleStage||''} onChange={e => commitField('roleStage', e.target.value)}>
               {ROLE_STAGE_OPTS.map(s => <option key={s} value={s}>{s || '（未設定）'}</option>)}
+              {/* roleStageの旧値が選択肢に無くても保持 */}
+              {current.roleStage && !ROLE_STAGE_OPTS.includes(current.roleStage) && <option value={current.roleStage}>{current.roleStage}</option>}
             </select>
             {(current.tier && current.tier !== '記録のみ') && <div style={{fontSize:11,color:'#cbd5e1',marginTop:4}}>旧分類: {current.tier}</div>}
           </div>
-          <div className="fg" style={{marginBottom:12}}>
-            <label className="fl">関わり方タイプ</label>
-            <select className="fi" value={current.engagementType||'未設定'} onChange={e => { updDirect('engagementType', e.target.value); saveCurrentBlur(); }}>
-              <option>未設定</option>
-              <option>育成（若手）</option>
-              <option>共同成長（同世代）</option>
-              <option>相互学習（年上・専門家）</option>
-              <option>維持（確定パートナー・専門家）</option>
-            </select>
-          </div>
-          <div className="fg" style={{marginBottom:12}}>
+          <div className="fg">
             <label className="fl">最終接触日</label>
-            <input type="date" className="fi" value={current.lastContactDate||''} onChange={e => { updDirect('lastContactDate', e.target.value); saveCurrentBlur(); }} />
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              <input type="date" className="fi" style={{maxWidth:220}} value={current.lastContactDate||''} onChange={e => commitField('lastContactDate', e.target.value)} />
+              <button className="today-btn" onClick={() => commitField('lastContactDate', new Date().toISOString().slice(0,10))}>今日</button>
+            </div>
           </div>
-          <div className="fg" style={{marginBottom:16}}>
+          <div className="fg">
             <label className="fl">次に渡す経験</label>
-            <textarea className="ft" rows="2" defaultValue={current.nextExperience||''} onBlur={e => { updDirect('nextExperience', e.target.value); saveCurrentBlur(); }} />
+            <textarea className="ft" defaultValue={current.nextExperience||''} onBlur={e => commitField('nextExperience', e.target.value)} placeholder="この人に次に渡せる経験・機会、または受け取れる学び" />
           </div>
 
           {/* 変化ログ */}
