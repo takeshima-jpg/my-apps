@@ -169,6 +169,13 @@ python tools/drive_cleanup.py             # 実際にゴミ箱へ移動
 > スコープは `drive` ＋ `spreadsheets` の和集合。`drive_cleanup.py` と `sheet_update.py` が
 > 同じ `credentials.json` / `token.json` を共用する（どちらで初回認可しても両方使える）。
 
+> **⚠️ 認可アカウントは `takeshima@3a-c.com`（ブラウザ側アプリの書き込み主体＝ファイル所有者）で行う。**
+> Driveの仕様上、マイドライブのファイルは**所有者本人しかゴミ箱に入れられない**（編集者権限では403）。
+> 2026-07-13、token.json が誤って個人Gmail `h.takeshima727@gmail.com`（フォルダの編集者だが非所有者）で
+> 認可されていたため、本番実行で対象42件が全て403スキップ＝0件しか掃除できない事故が起きた。
+> 再認可時は OAuth 画面で**必ず `takeshima@3a-c.com` を選ぶ**こと。誤アカウントの token を作ってしまったら
+> `tools/token.json` を削除（退避）してから `--dry-run` を実行し、正しいアカウントで認可し直す。
+
 ### スケジュール（Windows タスクスケジューラ）
 
 毎日 23:30 実行、PC がスリープ中なら次回起動時に実行する例:

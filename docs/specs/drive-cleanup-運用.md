@@ -8,6 +8,10 @@ Drive上の「固定名ファイルの古い重複」を掃除する運用。ブ
 
 - `tools/credentials.json`（OAuthデスクトップクライアント）が設置済み。作成手順は `tools/README.md`。
 - 初回実行時にブラウザ認可が走り、`tools/token.json`（refresh_token）が生成される。以降は自動更新。
+- **⚠️ 認可アカウントは必ず `takeshima@3a-c.com`（ファイル所有者）で行う。** マイドライブのファイルは
+  所有者しかゴミ箱に入れられない（編集者権限では trash が403になる）。誤って別アカウント（個人Gmail等）で
+  認可すると、対象が全て403スキップされ0件しか掃除できない（2026-07-13 に実際に発生）。誤認可時は
+  `tools/token.json` を退避 → `--dry-run` を再実行 → OAuth画面で `takeshima@3a-c.com` を選び直す。
 - Python 実行パス：`C:\Users\竹嶋寛人\AppData\Local\Programs\Python\Python312\python.exe`
   （`python` 単体はストアのスタブなので使わない）。
 - 依存：google-api-python-client / google-auth / google-auth-oauthlib（未導入なら pip install）。
