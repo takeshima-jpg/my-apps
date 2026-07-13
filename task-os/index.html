@@ -562,7 +562,22 @@ const LAUNCHER_OVERLAY_MAP = {
   kosolog:   { src: '../koso-log/index.html',        title: 'KOSOLog',        newTab: true },
 };
 
+// スマホ用サイドバー開閉（CSS: .sidebar.open で左からスライドイン／#sbOverlay.open で暗幕。680px以下でのみ効く）
+function toggleSidebar(){
+  const sb = document.querySelector('.sidebar');
+  const ov = document.getElementById('sbOverlay');
+  if(sb) sb.classList.toggle('open');
+  if(ov) ov.classList.toggle('open');
+}
+function closeSidebar(){
+  const sb = document.querySelector('.sidebar');
+  const ov = document.getElementById('sbOverlay');
+  if(sb) sb.classList.remove('open');
+  if(ov) ov.classList.remove('open');
+}
+
 function nav(v){
+  closeSidebar();   // OSリンクをタップしたらスマホのサイドバーを閉じる
   // 全OS新タブで開く
   if(v === 'reflect'){ window.open('../reflect-os/index.html', '_blank'); return; }
   if(v === 'project'){ window.open('../project-os/index.html', '_blank'); return; }
