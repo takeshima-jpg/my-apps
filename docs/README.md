@@ -28,6 +28,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-1day-slim-spec.md](specs/claude-code-1day-slim-spec.md) | 1dayのタグ8種・ブログ/VISION/エネ高フラグを撤去、満足度を◎〇△×の4段階に（違和感/深掘りは存続） | ✅実装済み 2026-07-12 `062b887` |
 | [claude-code-taskos-home-cleanup-spec.md](specs/claude-code-taskos-home-cleanup-spec.md) | Task OS HOMEの重複3セクション（今日のLectica・100リスト・PROJECT）を撤去（ランチャー今日タブへ移行） | ✅実装済み 2026-07-13 `b8df725` |
 | [claude-code-launcher-lectica-spec.md](specs/claude-code-launcher-lectica-spec.md) | ランチャー今日タブのLectica全文表示＋Shot追加・壁打ちコピー・Reflect記録の動線 | ✅実装済み 2026-07-13 `3217981` |
+| [hitomemo-contact-autoupdate-spec.md](specs/hitomemo-contact-autoupdate-spec.md) | ヒトメモ接点の自動更新（aix-hitomemo.json contacts配列→最終接触日/接点ログ。鮮度ガード・冪等・14日窓） | ✅Part B実装済み 2026-07-16 `dccd83c`／🕒Part A Cowork適用待ち |
 | [claude-code-taskos-mobile-menu-fix-spec.md](specs/claude-code-taskos-mobile-menu-fix-spec.md) | Task OSスマホのハンバーガーメニューが開かない緊急修正（toggleSidebar/closeSidebar未定義を実装） | ✅実装済み 2026-07-13 `ed3f6b6` |
 | [claude-code-taskos-aiimport-hotfix-spec.md](specs/claude-code-taskos-aiimport-hotfix-spec.md) | Task OS AIタスク読込の緊急修正（genId未定義→共通genUidに統一・GDrive dedupe隔離確認） | ✅実装済み 2026-07-12 `bfec392` |
 | [claude-code-taskos-collect-parse-hotfix.md](specs/claude-code-taskos-collect-parse-hotfix.md) | Task OS 同期の緊急修正（collectAllOSDataが週次/月次briefのmarkdownをJSON.parseして落ちる→安全パース＋restore対称化） | ✅実装済み 2026-07-12 `8bf0153` |
