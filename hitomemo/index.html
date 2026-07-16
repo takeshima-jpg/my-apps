@@ -765,11 +765,18 @@ async function gdriveAutoImportHitomemo(retry, manual) {
     const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
     const data = await res.json();
     const people = (data && Array.isArray(data.people)) ? data.people : [];
+    const contacts = (data && Array.isArray(data.contacts)) ? data.contacts : [];
     let added = 0;
     if (people.length) added = window.__hitomemoImportPeople(people) || 0;
+    // 接点の自動更新（contacts → 既存人物の lastContactDate / changeLog のみ。冪等なので毎回全件流してよい）
+    let touched = { updated: 0, names: [] };
+    if (contacts.length && window.__hitomemoApplyContacts) touched = window.__hitomemoApplyContacts(contacts) || touched;
     localStorage.setItem(AIX_LAST_KEY, file.modifiedTime);
-    if (added > 0) toast(`📥 ${added}人を未登録に取り込みました`);
-    else if (manual) toast('新規の取り込みはありません（全員登録済み）');
+    const msgs = [];
+    if (added > 0) msgs.push(`📥 ${added}人を未登録に取り込みました`);
+    if (touched.updated > 0) msgs.push(`🤝 接点を自動更新：${touched.updated}人（${touched.names[0]}さん${touched.updated > 1 ? ' 他' : ''}）`);
+    if (msgs.length) toast(msgs.join(' ／ '));
+    else if (manual) toast('新規の取り込みはありません（全員登録済み・接点なし）');
   } catch(e) { if (manual) alert('取り込みに失敗しました。接続/権限を確認してください。'); /* 自動時は静かに無視（手動の📋メモからインポートにフォールバック） */ }
 }
 
@@ -867,7 +874,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:4px 2px 2px;letter-spacing:0.5px;">新規登録</div>
       <button id="sbNewPersonBtn" class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;" onclick="window.__hitomemoNewPerson?.()">＋ 新しい人物を記録</button>
       <button id="sbImportMemoBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoImportMemo?.()">📋 メモからインポート</button>
-      <button id="sbAixImportBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;background:rgba(245,158,11,0.22);border:1px solid rgba(245,158,11,0.4);" onclick="gdriveAutoImportHitomemo(0,true)">📥 AIから取り込み（未登録へ）</button>
+      <button id="sbAixImportBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;background:rgba(245,158,11,0.22);border:1px solid rgba(245,158,11,0.4);" onclick="gdriveAutoImportHitomemo(0,true)">📥 AIから取り込み（未登録・接点）</button>
 
       <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:6px 2px 2px;letter-spacing:0.5px;">プロンプト</div>
       <button class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoShowPrompt?.('survey')">🔍 ① WEB調査</button>
@@ -1398,9 +1405,59 @@ const App = () => {
           added.push(p);
         } catch(e){}
       });
-      if (added.length) updateList([...(profilesRef.current||[]), ...added]);
+      if (added.length) {
+        const merged = [...(profilesRef.current||[]), ...added];
+        updateList(merged);
+        profilesRef.current = merged;   // 直後に接点更新が同じフローで走るため、再レンダー前にrefを同期
+      }
       try { localStorage.setItem('hitomemo_aix_imported', JSON.stringify([...ledgerSet].slice(-500))); } catch(e){}
       return added.length;
+    };
+
+    // 接点の自動更新（aix-hitomemo.json の contacts → 既存人物の lastContactDate / changeLog のみ）。
+    // name / date / type / note の4キーしか読まないため、stage等の混入は構造的に更新不可能。
+    // 冪等：lastContactDate は既存より新しい日付のみ更新（鮮度ガード）。
+    //       changeLog は同一エントリ（自動検知＋同日付＋同本文）が既にあれば追記しない（changeLog自体が台帳）。
+    window.__hitomemoApplyContacts = (contacts) => {
+      if (!Array.isArray(contacts) || contacts.length === 0) return { updated: 0, names: [] };
+      const list = [...(profilesRef.current || [])];
+      const today = new Date().toISOString().slice(0, 10);
+      const touchedNames = new Map();   // id → 表示名（同一人物の複数接点を1人と数える）
+      contacts.forEach(c => {
+        if (!c || typeof c !== 'object') return;
+        const date = String(c.date || '').trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today) return;   // 形式不正・未来日は無視
+        const key = lxNormName(String(c.name || ''));
+        if (!key) return;
+        // 一意照合（手動AI更新と同じ規則：部分一致→複数候補なら完全一致1件のみ）。曖昧・未登録はスキップ
+        const cands = list.filter(p => {
+          const pn = lxNormName((p.name && p.name.value) || p.name || '');
+          return pn && (pn.includes(key) || key.includes(pn));
+        });
+        let matched = null;
+        if (cands.length === 1) matched = cands[0];
+        else if (cands.length > 1) {
+          const exact = cands.filter(p => lxNormName((p.name && p.name.value) || p.name || '') === key);
+          if (exact.length === 1) matched = exact[0];
+        }
+        if (!matched) return;
+        const idx = list.findIndex(p => p.id === matched.id);
+        if (idx < 0) return;
+        const p = list[idx];
+        const logText = (String(c.type || '').trim() || '接点') + '：' + String(c.note || '').trim();
+        const dupLog = (p.changeLog || []).some(l => l && l.source === '自動検知' && l.date === date && l.text === logText);
+        const newer = date > (p.lastContactDate || '');
+        if (!newer && dupLog) return;   // 既知の接点＝何もしない（冪等スキップ）
+        const next = { ...p, updatedAt: new Date().toISOString() };
+        if (newer) next.lastContactDate = date;   // 鮮度ガード：古い日付で上書きしない
+        if (!dupLog) next.changeLog = [...(p.changeLog || []), { date, type: '接点', text: logText, source: '自動検知' }];
+        list[idx] = next;
+        touchedNames.set(p.id, (p.name && p.name.value) || p.name || '名前未設定');
+      });
+      if (touchedNames.size === 0) return { updated: 0, names: [] };
+      updateList(list);
+      profilesRef.current = list;
+      return { updated: touchedNames.size, names: [...touchedNames.values()] };
     };
 
     // Cowork用CRUD API
