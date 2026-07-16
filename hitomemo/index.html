@@ -1031,6 +1031,9 @@ const SORT_FNS = {
   updated:    (a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''),
 };
 const SORT_LABELS = { stage: '関係ステージ順', contactNew: '最終接触（新しい順）', contactOld: '最終接触（古い順）', name: '名前順', active: '🤝稼働中を上に', updated: '更新日（新しい順）' };
+// 一覧セクション（ステージ別グルーピング）の開閉状態。既定で「記録のみ」「家族」は閉じる（数が多いため）
+const SEC_OPEN_KEY = 'hitomemo_sec_open_v1';
+const SEC_DEFAULT_CLOSED = ['記録のみ', '家族'];
 const stageBadge = (stage, isActive) => {
   const s = STAGE_STYLE[stage] || STAGE_STYLE['記録のみ'];
   return (
@@ -1309,6 +1312,10 @@ const App = () => {
   const [catFilter, setCatFilter] = useState(() => { try { return localStorage.getItem('hitomemo_catfilter') || 'all'; } catch(e) { return 'all'; } });
   const changeSort = (v) => { setSortMode(v); try { localStorage.setItem('hitomemo_sort', v); } catch(e) {} };
   const changeCatFilter = (v) => { setCatFilter(v); try { localStorage.setItem('hitomemo_catfilter', v); } catch(e) {} };
+  // セクション開閉（未操作のセクションは SEC_DEFAULT_CLOSED 以外は開）。開閉のたびlocalStorageへ保存
+  const [secOpen, setSecOpen] = useState(() => { try { return JSON.parse(localStorage.getItem(SEC_OPEN_KEY) || '{}'); } catch(e) { return {}; } });
+  const secIsOpen = (k) => (k in secOpen) ? !!secOpen[k] : !SEC_DEFAULT_CLOSED.includes(k);
+  const toggleSec = (k) => { const next = { ...secOpen, [k]: !secIsOpen(k) }; setSecOpen(next); try { localStorage.setItem(SEC_OPEN_KEY, JSON.stringify(next)); } catch(e) {} };
 
   useEffect(() => {
     const loaded = loadProfiles();
@@ -1645,6 +1652,7 @@ const App = () => {
     const deepening = byStage('信頼を深める段階');
     const connections = byStage('つながり');
     const recordOnly = byStage('記録のみ');
+    const unclassified = partnerProfiles.filter(p => !(stageOf(p) in STAGE_RANK));   // 旧値・想定外stage＝未分類（消さず表示）
     const activeOnes = partnerProfiles.filter(p => p.isActive);   // 🤝 稼働中
 
     // 棚卸しアラート（凡例）：信頼を深める段階で30日以上接点なし ／ 🤝稼働中で30日以上接触なし
@@ -1761,22 +1769,6 @@ const App = () => {
           </div>
         </div>
 
-        {/* 並び替え（ステージ順以外）＝フラット表示 */}
-        {sortMode !== 'stage' && (() => {
-          const list = (catFilter === 'family' ? familyProfiles : catFilter === 'partner' ? partnerProfiles : profiles)
-            .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
-            .slice().sort(SORT_FNS[sortMode] || SORT_FNS.stage);
-          if (!list.length) return <div style={{textAlign:'center',padding:24,color:'#94a3b8',fontSize:13}}>該当なし</div>;
-          return (
-            <>
-              <div className="section-header"><span className="section-title-new">{SORT_LABELS[sortMode]}</span><span className="section-count">{list.length}人</span></div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-                {list.map(p => ProfileCard({p}))}
-              </div>
-            </>
-          );
-        })()}
-
         {/* 同名重複の検出 */}
         {dupGroups.length > 0 && (
           <div className="alert-card" style={{background:'#fef2f2',borderColor:'#fecaca'}}>
@@ -1825,92 +1817,40 @@ const App = () => {
           </div>
         )}
 
-        {/* 関係ステージ順（既定）＝ステージ別セクション。家族フィルタ時は非表示 */}
-        {sortMode === 'stage' && catFilter !== 'family' && (<>
-        {/* 経営パートナー */}
-        {partners.length > 0 && (
-          <>
-            <div className="section-header">
-              <span className="section-title-new">🌟 経営パートナー</span>
-              <span className="section-count">{partners.length}人</span>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {partners.filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase())).map(p => ProfileCard({p}))}
-            </div>
-          </>
-        )}
-
-        {/* 信頼を深める段階 */}
-        {deepening.length > 0 && (
-          <>
-            <div className="section-header">
-              <span className="section-title-new">🔥 信頼を深める段階</span>
-              <span className="section-count">{deepening.length}人</span>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {deepening.filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase())).map(p => ProfileCard({p}))}
-            </div>
-          </>
-        )}
-
-        {/* 変化が起きている人（つながり以下から拾う） */}
-        {recentChanged.filter(p => stageOf(p) !== '経営パートナー' && stageOf(p) !== '信頼を深める段階').length > 0 && (
-          <>
-            <div className="section-header">
-              <span className="section-title-new">✦ 最近変化あり</span>
-              <span className="section-count">直近30日</span>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {recentChanged.filter(p => stageOf(p) !== '経営パートナー' && stageOf(p) !== '信頼を深める段階').map(p => ProfileCard({p}))}
-            </div>
-          </>
-        )}
-
-        {/* つながり */}
-        {connections.filter(p => !recentChanged.includes(p)).length > 0 && (
-          <>
-            <div className="section-header">
-              <span className="section-title-new">🔗 つながり</span>
-              <span className="section-count">{connections.length}人</span>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {connections.filter(p => !recentChanged.includes(p))
-              .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
-              .map(p => ProfileCard({p, compact:true}))}
-            </div>
-          </>
-        )}
-
-        {/* 記録のみ */}
-        {recordOnly.length > 0 && (
-          <>
-            <div className="section-header">
-              <span className="section-title-new">🗂 記録のみ</span>
-              <span className="section-count">{recordOnly.length}人</span>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {recordOnly
-              .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
-              .map(p => ProfileCard({p, compact:true}))}
-            </div>
-          </>
-        )}
-        </>)}
-
-        {/* 家族（独立カテゴリ）。ステージ順表示かつ 家族/すべて のとき表示 */}
-        {sortMode === 'stage' && catFilter !== 'partner' && familyProfiles.length > 0 && (
-          <>
-            <div className="section-header">
-              <span className="section-title-new">❤️ 家族</span>
-              <span className="section-count">{familyProfiles.length}人</span>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
-            {familyProfiles
-              .filter(p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase()))
-              .map(p => ProfileCard({p, compact:true}))}
-            </div>
-          </>
-        )}
+        {/* ステージ別セクション（常時グルーピング）。並べ替えはグループ内に適用。見出しクリックで開閉（状態はlocalStorageに保存） */}
+        {(() => {
+          const qf = p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase());
+          const sortFn = SORT_FNS[sortMode] || SORT_FNS.stage;
+          const Section = ({sk, title, people, compact}) => {
+            if (!people.length) return null;
+            const shown = people.filter(qf).slice().sort(sortFn);
+            if (query && !shown.length) return null;          // 検索中：ヒットなしセクションは隠す
+            const open = query ? true : secIsOpen(sk);        // 検索中：折りたたみを無視して開く
+            return (<>
+              <div className="section-header" onClick={() => toggleSec(sk)} style={{cursor:'pointer',userSelect:'none'}} title="クリックで開閉">
+                <span className="section-title-new">{open ? '▾' : '▸'} {title}</span>
+                <span className="section-count">{people.length}人</span>
+              </div>
+              {open && (
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
+                  {shown.map(p => ProfileCard({p, compact}))}
+                </div>
+              )}
+            </>);
+          };
+          const recentSub = recentChanged.filter(p => stageOf(p) !== '経営パートナー' && stageOf(p) !== '信頼を深める段階');
+          return (<>
+            {catFilter !== 'family' && (<>
+              <Section sk="経営パートナー" title="🌟 経営パートナー" people={partners} />
+              <Section sk="信頼を深める段階" title="🔥 信頼を深める段階" people={deepening} />
+              <Section sk="最近変化あり" title="✦ 最近変化あり（直近30日）" people={recentSub} />
+              <Section sk="つながり" title="🔗 つながり" people={connections.filter(p => !recentSub.includes(p))} compact={true} />
+              <Section sk="記録のみ" title="🗂 記録のみ" people={recordOnly} compact={true} />
+              <Section sk="未分類" title="❓ 未分類（旧ステージ値）" people={unclassified} compact={true} />
+            </>)}
+            {catFilter !== 'partner' && <Section sk="家族" title="❤️ 家族" people={familyProfiles} compact={true} />}
+          </>);
+        })()}
 
         {profiles.length === 0 && (
           <div style={{textAlign:'center',padding:40,color:'#94a3b8'}}>
