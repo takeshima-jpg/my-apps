@@ -3,7 +3,10 @@
 作成日：2026-07-17
 本書は元依頼書に修正・追記を織り込んだ統合版であり、これ1本が正本。
 
-> 進捗：✅ Phase 1 実装済み 2026-07-18 ・ `6b62cdd`（🕒 Phase 2・Phase 3 未実装）
+> 進捗：✅ Phase 1 `6b62cdd` ／ ✅ Phase 2 実装済み 2026-07-18 ・ `c194db4`（🕒 Phase 3 未実装）
+> Phase 2 メモ：実験の統合は問いと同型の merged 履歴方式（実験statusに merged を追加、
+> 完了タブに「統合された実験」フィルタ増設）。振り返りは既存ログにも1件保存し
+> sourceLogIds で相互参照。「原則化」は status 変更のみ先行（作成モーダルは Phase 3 で接続）。
 > 実装メモ：実コードの永続化はlocalStorage（reflectOS_v1）一本だったため、「実際のコードを確認して
 > 正とする」前提に従い、新データ questions/experiments/principles はIndexedDB新ストアではなく
 > reflectOS_v1 内の新配列として追加（Task OS統合バックアップに自動で乗る）。
