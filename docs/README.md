@@ -4,7 +4,8 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 
 - **specs/** … 実装依頼書・手順書（設計はここを参照）
 - **prompts/** … 壁打ち・Coworkプロンプト類（プロンプトはここを参照）
-- **archive/** … 上位版に統合された・内容が古くなったファイル（削除ではなくここへ退避）。現時点で該当なし
+- **archive/** … 上位版に統合された・内容が古くなったファイル（削除ではなくここへ退避）
+  - [claude-code-hitomemo-manual-sort-spec.md](archive/claude-code-hitomemo-manual-sort-spec.md) … sort-collapse-specと同一内容の重複（実装済み `fd0ebe9`。正本はspecs側）
 - 直下の `sheets.md` / `sheets.local.md` は台帳（specs/promptsではない運用データ）
 
 状態の凡例：✅実装済み（コミット済み）／🕒未実装（依頼書のみ）／🔧運用中（手順書・繰り返し使う）
