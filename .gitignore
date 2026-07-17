@@ -17,6 +17,7 @@ myapps-all-backup-*.json
 myapps-weekly-*.json
 
 # weekly_facts.py の生成物（Coworkの作業フォルダへコピーして使う）
+weekly_facts.json
 aix_weekly_facts.json
 
 # シート台帳の実データ（プロジェクト名・spreadsheetIdは個人情報。公開リポジトリに載せない）

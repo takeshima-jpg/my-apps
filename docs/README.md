@@ -18,7 +18,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-cockpit-improve-v1-spec.md](specs/claude-code-cockpit-improve-v1-spec.md) | コックピット改善v1（OSアイコン統一・右余白解消・追加バーsticky・ログイン導線・AIタスク読込導線） | ✅実装済み 2026-07-12 `737f06b` |
 | [claude-code-100list-import-spec.md](specs/claude-code-100list-import-spec.md) | 100listにAI取り込みページ（【やりたいこと】ブロック貼り付けで登録） | ✅実装済み 2026-07-12 `5ddc74f` |
 | [claude-code-sparring-buttons-spec.md](specs/claude-code-sparring-buttons-spec.md) | reflect-osに壁打ちプロンプトのコピーボタンを追加 | ✅実装済み 2026-07-11 `b6e6574` |
-| [claude-code-weekly-facts-spec.md](specs/claude-code-weekly-facts-spec.md) | tools/weekly_facts.py（週次「事実の差分」）＋Cowork追補 | ✅実装済み 2026-07-10 `4cfc2f6` |
+| [claude-code-weekly-facts-spec.md](specs/claude-code-weekly-facts-spec.md) | tools/weekly_facts.py（週次「事実の差分」）＋Cowork追補 | ✅実装済み 2026-07-10 `4cfc2f6`／2026-07-17 に単一バックアップ＋週窓方式の新版へ差し替え（旧版は tools/archive/、運用は tools/README.md §2） |
 | [claude-code-cockpit-autoimport-spec.md](specs/claude-code-cockpit-autoimport-spec.md) | コックピット起動時にAIタスクを1日1回自動取り込み（非表示iframe＋postMessage） | 🕒未実装 |
 | [claude-code-launcher-pwa-spec.md](specs/claude-code-launcher-pwa-spec.md) | コックピットのPWA化＋自作SVGアイコン（ホーム追加・standalone表示） | ✅実装済み 2026-07-12 `89f825e` |
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |
