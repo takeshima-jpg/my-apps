@@ -1601,7 +1601,7 @@ function renderLectica(){
    Phase 1 = 移行前スナップショット／冪等移行／重点・候補・完了タブ／3件制限＋入れ替えモーダル。
    編集・統合・実験追加・振り返りは Phase 2、実践原則タブ・ホーム変更・新規動線接続は Phase 3。 */
 const TK_QST={candidate:'候補',focus:'重点',resolved:'解消',discarded:'破棄',merged:'統合済み'};
-const TK_EST={candidate:'候補',active:'実験中',review:'振り返り待ち',complete:'完了',changed:'変更',paused:'保留',discarded:'やらない',principled:'原則化'};
+const TK_EST={candidate:'候補',active:'実験中',review:'振り返り待ち',complete:'完了',changed:'変更',paused:'保留',discarded:'やらない',principled:'原則化',merged:'統合済み'};
 const TK_ST_CSS={focus:'background:var(--go-lt);color:var(--go)',active:'background:var(--go-lt);color:var(--go)',candidate:'background:#f0f0f0;color:#707070',review:'background:#fdf8e8;color:#8a7020',complete:'background:#eef2f8;color:#4a6a9a',resolved:'background:#eef2f8;color:#4a6a9a',changed:'background:#eef2f8;color:#4a6a9a',paused:'background:#f0f0f0;color:#909090',discarded:'background:#faf0f0;color:#b05050',merged:'background:#f0f0f0;color:#909090',principled:'background:#f4f1fa;color:#5a4a8a'};
 const tkStBadge=(st,dict)=>Sp({cls:'tk-st',css:TK_ST_CSS[st]||'background:#f0f0f0;color:#707070'},dict[st]||st);
 const tkFocusQs=()=>S.questions.filter(q=>q.status==='focus');
@@ -1643,6 +1643,176 @@ function tkSwapModal(kind,onSwap){
   btns.appendChild(cancel);btns.appendChild(okB);box.appendChild(btns);
   ov.appendChild(box);document.body.appendChild(ov);
 }
+
+/* ══ Phase 2：統合（merged履歴）・整理モード・実験の追加/振り返り ══ */
+/* 汎用モーダル */
+function tkModal(title,desc){
+  const ov=D({css:'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px'});
+  const box=D({css:'background:#fff;color:var(--tx);border-radius:10px;max-width:520px;width:100%;padding:20px;font-size:14px;line-height:1.7;box-shadow:0 8px 30px rgba(0,0,0,.25);max-height:88vh;overflow-y:auto'});
+  box.appendChild(D({css:'font-weight:700;margin-bottom:8px'},title));
+  if(desc)box.appendChild(D({css:'font-size:13px;color:var(--mu);margin-bottom:12px'},desc));
+  ov.appendChild(box);document.body.appendChild(ov);
+  return {box,close:()=>ov.remove(),
+    btns(okLabel,onOk){const b=D({css:'display:flex;gap:8px;justify-content:flex-end;margin-top:14px'});const c=Bt({cls:'btn-s'},'キャンセル');c.addEventListener('click',()=>ov.remove());const o=Bt({cls:'btn-g'},okLabel);o.addEventListener('click',onOk);b.appendChild(c);b.appendChild(o);box.appendChild(b);}};
+}
+const tkTa=(ph,mh)=>Ta({placeholder:ph||'',css:'width:100%;min-height:'+(mh||56)+'px;box-sizing:border-box;font-family:inherit;font-size:14px;padding:8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);resize:vertical'});
+function tkFld(box,label,el,req){const w=D({css:'margin-bottom:10px'});w.appendChild(D({css:'font-size:12px;color:var(--mu);margin-bottom:3px'},label+(req?'（必須）':'')));w.appendChild(el);box.appendChild(w);return el;}
+function tkRadioRow(opts,def,onSel){const rw=D({css:'display:flex;gap:12px;flex-wrap:wrap;margin-top:2px'});const nm='tkr'+uid();opts.forEach(([v,l])=>{const lb=h('label',{css:'display:flex;gap:4px;align-items:center;cursor:pointer;font-size:13px'});const rd=In({type:'radio',name:nm});if(v===def)rd.checked=true;rd.addEventListener('change',()=>onSel(v));lb.appendChild(rd);lb.appendChild(Sp({},l));rw.appendChild(lb);});return rw;}
+
+/* 問いの編集（タイトル・仮説） */
+function tkQEditModal(q){
+  const m=tkModal('問いを編集','');
+  const ti=tkFld(m.box,'問い',tkTa('',50),true);ti.value=q.title;
+  const hy=tkFld(m.box,'現在の仮説',tkTa('仮説があれば',60));hy.value=q.hypothesis||'';
+  m.btns('更新',async()=>{const t=ti.value.trim();if(!t){alert('問いを入力してください');return;}q.title=t;q.hypothesis=hy.value.trim();await tkSave('questions',q);m.close();ra();});
+}
+
+/* 実験の追加（qあり＝その問いに紐づけ）／編集（existingあり） */
+function tkExpForm(q,existing){
+  const m=tkModal(existing?'実験を編集':'実験を追加',q?('問い：'+q.title):(existing&&existing.questionId?('問い：'+(S.questions.find(x=>x.id===existing.questionId)?.title||'')):''));
+  const ti=tkFld(m.box,'実験内容',tkTa('「〜してみる」で書く',56),true);ti.value=existing?existing.title:'';
+  const sc=tkFld(m.box,'使う場面（実験中にする場合は必須）',tkTa('どの場面で試すか',44));sc.value=existing?.scene||'';
+  const ob=tkFld(m.box,'観察すること（実験中にする場合は必須）',tkTa('何を観察するか',44));ob.value=existing?.observation||'';
+  const dl=tkFld(m.box,'期限（実験中にする場合は必須）',In({type:'date',css:'padding:7px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);font-family:inherit'}));dl.value=existing?.deadline||'';
+  const nt=tkFld(m.box,'補足・完了条件',tkTa('任意',40));nt.value=existing?.note||'';
+  let asActive=false;
+  if(!existing)tkFld(m.box,'登録先',tkRadioRow([['candidate','候補として保存'],['active','実験中にする']],'candidate',v=>asActive=(v==='active')));
+  m.btns(existing?'更新':'保存',async()=>{
+    const title=ti.value.trim();if(!title){alert('実験内容を入力してください');return;}
+    if(asActive&&(!sc.value.trim()||!ob.value.trim()||!dl.value)){alert('実験中にするには「使う場面」「観察すること」「期限」の入力が必要です');return;}
+    if(existing){
+      existing.title=title;existing.scene=sc.value.trim();existing.observation=ob.value.trim();existing.deadline=dl.value;existing.note=nt.value.trim();
+      await tkSave('experiments',existing);m.close();ra();return;
+    }
+    const x={id:uid(),questionId:q?q.id:null,title,themeIds:q?(q.themeIds||[]).slice():[],status:'candidate',scene:sc.value.trim(),observation:ob.value.trim(),deadline:dl.value,note:nt.value.trim(),result:'',learning:'',sourceLogIds:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
+    await tkSave('experiments',x);m.close();
+    if(asActive)await tkSetEStatus(x,'active');else ra();   /* 3件制限は tkSetEStatus が担保 */
+  });
+}
+
+/* 実験の振り返り。内容は既存ログにも1件残す（相互参照：ログidをsourceLogIdsへ追加） */
+function tkReviewModal(x){
+  const m=tkModal('実験の振り返り','▶ '+x.title);
+  const did=tkFld(m.box,'実際にやったこと',tkTa('',50));did.value='';
+  const res=tkFld(m.box,'結果',tkTa('',50));res.value='';
+  const lrn=tkFld(m.box,'気づき・学び',tkTa('',50));lrn.value='';
+  const nxt=tkFld(m.box,'次回変えること',tkTa('「変更」を選ぶと新実験の候補として作成',44));nxt.value='';
+  let sel='active';
+  tkFld(m.box,'状態',tkRadioRow([['active','継続'],['complete','完了'],['changed','変更'],['paused','保留'],['principled','原則化']],'active',v=>sel=v));
+  m.btns('保存',async()=>{
+    if(did.value.trim())x.did=did.value.trim();
+    if(res.value.trim())x.result=res.value.trim();
+    if(lrn.value.trim())x.learning=lrn.value.trim();
+    if(nxt.value.trim())x.nextChange=nxt.value.trim();
+    x.status=sel;x.completedAt=(sel==='active')?null:tod();
+    /* 振り返りをログにも1件保存（探求サイクルを既存ログ列にも残す） */
+    if(did.value.trim()||res.value.trim()||lrn.value.trim()||nxt.value.trim()){
+      const parts=[];
+      if(did.value.trim())parts.push('やったこと：'+did.value.trim());
+      if(res.value.trim())parts.push('結果：'+res.value.trim());
+      if(lrn.value.trim())parts.push('学び：'+lrn.value.trim());
+      if(nxt.value.trim())parts.push('次回変える：'+nxt.value.trim());
+      const entry={id:uid(),type:'note',date:tod(),status:'published',title:('振り返り：'+x.title).slice(0,40),themes:(x.themeIds||[]).slice(),lesson:parts.join('\n')};
+      await dbput('logs',entry);S.logs.unshift(entry);S.logs.sort((a,b)=>b.date.localeCompare(a.date));
+      x.sourceLogIds=[...new Set([...(x.sourceLogIds||[]),entry.id])];
+    }
+    await tkSave('experiments',x);
+    /* 「変更」＋次回変えること → 変更後の新実験を候補として作成 */
+    if(sel==='changed'&&nxt.value.trim()){
+      const nx={id:uid(),questionId:x.questionId,title:nxt.value.trim(),themeIds:(x.themeIds||[]).slice(),status:'candidate',scene:x.scene||'',observation:x.observation||'',deadline:'',note:'',result:'',learning:'',sourceLogIds:(x.sourceLogIds||[]).slice(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
+      await tkSave('experiments',nx);
+      toast('変更後の新実験を候補に作成しました');
+    }
+    /* 原則化：Phase 3 で実践原則の作成モーダルに接続予定（statusのみ先行） */
+    m.close();ra();
+  });
+}
+
+/* 実験を問いへ紐づける（単体・一括共用） */
+function tkLinkModal(expIds){
+  const cand=S.questions.filter(q=>q.status==='focus'||q.status==='candidate')
+    .slice().sort((a,b)=>(a.status==='focus'?0:1)-(b.status==='focus'?0:1));
+  if(!cand.length){alert('紐づけ先にできる問い（重点・候補）がありません');return;}
+  const m=tkModal('問いへ紐づける','紐づけ先の問いを選択（実験 '+expIds.length+'件）');
+  let sel=null;const rows=D({});
+  cand.forEach(q=>{const lb=h('label',{css:'display:flex;gap:8px;align-items:flex-start;padding:6px 4px;cursor:pointer'});const rd=In({type:'radio',name:'tklink',css:'margin-top:4px'});rd.addEventListener('change',()=>sel=q.id);lb.appendChild(rd);lb.appendChild(Sp({css:'font-size:14px'},(q.status==='focus'?'【重点】':'')+q.title));rows.appendChild(lb);});
+  m.box.appendChild(rows);
+  m.btns('紐づける',async()=>{if(!sel)return;for(const id of expIds){const x=S.experiments.find(b=>b.id===id);if(x){x.questionId=sel;await tkSave('experiments',x);}}m.close();tkOrgClear();ra();});
+}
+
+/* 問いの統合：新しい問いを作成し、元の問いは status='merged'＋mergedIntoId で履歴に残す。
+   元の問いに紐づく実験・ログ・テーマは統合先へ引き継ぐ */
+function tkMergeQModal(ids){
+  const qs=ids.map(id=>S.questions.find(q=>q.id===id)).filter(Boolean);
+  if(qs.length<2){alert('統合する問いを2件以上選択してください');return;}
+  const m=tkModal('問いを統合','選択した '+qs.length+'件を1つに束ねます。元の問いは「統合済み」として履歴に残ります。');
+  const lst=D({css:'font-size:13px;color:var(--mu);line-height:1.8'});qs.forEach(q=>lst.appendChild(D({},'・'+q.title)));
+  tkFld(m.box,'元の問い',lst);
+  const ti=tkFld(m.box,'統合後の問い',tkTa('',50),true);ti.value=qs[0].title;
+  const hy=tkFld(m.box,'現在の仮説',tkTa('',56));hy.value=qs.map(q=>q.hypothesis).filter(Boolean).join('\n');
+  const themeIds=[...new Set(qs.flatMap(q=>q.themeIds||[]))];
+  const thN=tkThemeNames(themeIds);
+  if(thN.length)tkFld(m.box,'テーマ（引き継ぎ）',D({css:'font-size:13px'},thN.join('・')));
+  let dst='candidate';
+  tkFld(m.box,'統合後の扱い',tkRadioRow([['candidate','候補にする'],['focus','重点にする']],'candidate',v=>dst=v));
+  m.btns('統合する',async()=>{
+    const title=ti.value.trim();if(!title){alert('統合後の問いを入力してください');return;}
+    const nq={id:uid(),title,themeIds,status:'candidate',hypothesis:hy.value.trim(),sourceLogIds:[...new Set(qs.flatMap(q=>q.sourceLogIds||[]))],mergedIntoId:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
+    await tkSave('questions',nq);
+    for(const q of qs){q.status='merged';q.mergedIntoId=nq.id;q.completedAt=tod();await tkSave('questions',q);}
+    for(const x of S.experiments.filter(x=>ids.includes(x.questionId))){x.questionId=nq.id;await tkSave('experiments',x);}
+    m.close();tkOrgClear();
+    if(dst==='focus')await tkSetQStatus(nq,'focus');else ra();   /* 重点は3件制限を通す */
+  });
+}
+
+/* 実験の統合（問いの統合と同型。元は merged で履歴保持） */
+function tkMergeEModal(ids){
+  const es=ids.map(id=>S.experiments.find(x=>x.id===id)).filter(Boolean);
+  if(es.length<2){alert('統合する実験を2件以上選択してください');return;}
+  const m=tkModal('実験を統合','選択した '+es.length+'件を1つに束ねます。元の実験は「統合済み」として履歴に残ります。');
+  const lst=D({css:'font-size:13px;color:var(--mu);line-height:1.8'});es.forEach(x=>lst.appendChild(D({},'・'+x.title)));
+  tkFld(m.box,'元の実験',lst);
+  const ti=tkFld(m.box,'統合後の実験',tkTa('',50),true);ti.value=es[0].title;
+  m.btns('統合する',async()=>{
+    const title=ti.value.trim();if(!title){alert('統合後の実験内容を入力してください');return;}
+    const qid=(es.find(x=>x.questionId)||{}).questionId||null;
+    const nx={id:uid(),questionId:qid,title,themeIds:[...new Set(es.flatMap(x=>x.themeIds||[]))],status:'candidate',scene:es[0].scene||'',observation:es[0].observation||'',deadline:es[0].deadline||'',note:'',result:'',learning:'',sourceLogIds:[...new Set(es.flatMap(x=>x.sourceLogIds||[]))],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
+    await tkSave('experiments',nx);
+    for(const x of es){x.status='merged';x.mergedIntoId=nx.id;x.completedAt=tod();await tkSave('experiments',x);}
+    m.close();tkOrgClear();ra();
+  });
+}
+
+/* 整理モード：複数選択の状態と一括操作 */
+function tkOrgClear(){S._tkSelQ=[];S._tkSelE=[];}
+function tkToggleSel(arr,id){const i=arr.indexOf(id);if(i>=0)arr.splice(i,1);else arr.push(id);ra();}
+async function tkBulkQ(st){for(const id of S._tkSelQ){const q=S.questions.find(x=>x.id===id);if(!q)continue;q.status=st;q.completedAt=(st==='resolved'||st==='discarded')?tod():null;await tkSave('questions',q);}tkOrgClear();ra();}
+async function tkBulkE(st){for(const id of S._tkSelE){const x=S.experiments.find(b=>b.id===id);if(!x)continue;x.status=st;x.completedAt=(st==='candidate')?null:tod();await tkSave('experiments',x);}tkOrgClear();ra();}
+function tkOrgBar(){
+  const nq=S._tkSelQ.length,ne=S._tkSelE.length;
+  if(!nq&&!ne)return null;
+  const bar=D({css:'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#2a2a30;color:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:9000;max-width:92vw'});
+  const mk=(lbl,fn)=>{const b=Bt({css:'font-size:12px;padding:5px 10px;border:1px solid rgba(255,255,255,.35);border-radius:7px;background:transparent;color:#fff;cursor:pointer;font-family:inherit'},lbl);b.addEventListener('click',fn);return b;};
+  if(nq){
+    bar.appendChild(Sp({css:'font-size:12px;font-weight:600'},'問い '+nq+'件'));
+    bar.appendChild(mk('統合',()=>tkMergeQModal(S._tkSelQ.slice())));
+    bar.appendChild(mk('候補へ戻す',()=>tkBulkQ('candidate')));
+    bar.appendChild(mk('解消',()=>tkBulkQ('resolved')));
+    bar.appendChild(mk('破棄',()=>tkBulkQ('discarded')));
+  }
+  if(ne){
+    bar.appendChild(Sp({css:'font-size:12px;font-weight:600;margin-left:'+(nq?'10px':'0')},'実験 '+ne+'件'));
+    bar.appendChild(mk('統合',()=>tkMergeEModal(S._tkSelE.slice())));
+    bar.appendChild(mk('問いへ紐づける',()=>tkLinkModal(S._tkSelE.slice())));
+    bar.appendChild(mk('候補へ戻す',()=>tkBulkE('candidate')));
+    bar.appendChild(mk('完了',()=>tkBulkE('complete')));
+    bar.appendChild(mk('やらない',()=>tkBulkE('discarded')));
+  }
+  bar.appendChild(mk('選択解除',()=>{tkOrgClear();ra();}));
+  return bar;
+}
+function tkSelBox(arr,id){const cb=In({type:'checkbox',css:'width:15px;height:15px;margin-top:3px;flex-shrink:0;cursor:pointer'});cb.checked=arr.includes(id);cb.addEventListener('click',e=>e.stopPropagation());cb.addEventListener('change',()=>tkToggleSel(arr,id));return cb;}
 
 /* ── 移行前スナップショット（初回移行の書き込み前に必ず1回・JSON自動DL）── */
 function tkSnapshot(){
@@ -1700,9 +1870,10 @@ function tkOps(...btns){const w=D({cls:'tk-ops'});btns.forEach(([lbl,fn,danger])
 function tkQCard(q,expandedDefault){
   const open=(q.id in S._tkOpen)?S._tkOpen[q.id]:expandedDefault;
   const card=D({cls:'tk-qcard'+(q.status==='focus'?' focus':'')});
-  const tt=D({cls:'tk-qtitle'});
+  const tt=D({cls:'tk-qtitle',css:'display:flex;gap:6px;align-items:flex-start'});
+  if(S._tkOrg)tt.appendChild(tkSelBox(S._tkSelQ,q.id));
   tt.appendChild(tkStBadge(q.status,TK_QST));
-  tt.appendChild(Sp({},q.title));
+  tt.appendChild(Sp({css:'flex:1'},q.title));
   tt.addEventListener('click',()=>{S._tkOpen[q.id]=!open;ra();});
   card.appendChild(tt);
   if(open){
@@ -1713,13 +1884,20 @@ function tkQCard(q,expandedDefault){
     const exps=S.experiments.filter(x=>x.questionId===q.id&&x.status!=='discarded');
     const act=exps.filter(x=>x.status==='active');
     card.appendChild(D({cls:'tk-meta',css:'margin-top:8px'},'実験中 '+act.length+'件'+(exps.length>act.length?'（他 '+(exps.length-act.length)+'件）':'')));
-    exps.forEach(x=>{const ec=D({cls:'tk-ecard'});ec.appendChild(tkStBadge(x.status,TK_EST));ec.appendChild(Sp({},'▶ '+x.title));card.appendChild(ec);});
+    exps.forEach(x=>{
+      const ec=D({cls:'tk-ecard',css:'display:flex;gap:6px;align-items:flex-start'});
+      if(S._tkOrg)ec.appendChild(tkSelBox(S._tkSelE,x.id));
+      ec.appendChild(tkStBadge(x.status,TK_EST));
+      ec.appendChild(Sp({css:'flex:1'},'▶ '+x.title));
+      if(x.status==='active'){const rb=Bt({cls:'btn-s',css:'font-size:11px;padding:2px 8px;flex-shrink:0'},'振り返る');rb.addEventListener('click',e=>{e.stopPropagation();tkReviewModal(x);});ec.appendChild(rb);}
+      card.appendChild(ec);
+    });
     const learn=exps.map(x=>x.learning).filter(Boolean);
     if(learn.length)card.appendChild(D({css:'font-size:13px;color:var(--go);margin-top:6px'},'直近の学び：'+learn[learn.length-1]));
     const src=tkSrcLog(q);
     card.appendChild(D({cls:'tk-meta',css:'margin-top:6px'},(src?'元ログ：'+src+' ／ ':'')+'更新：'+String(q.updatedAt||'').slice(0,10)));
-    if(q.status==='focus')card.appendChild(tkOps(['候補へ戻す',()=>tkSetQStatus(q,'candidate')],['解消した',()=>tkSetQStatus(q,'resolved')],['破棄',()=>tkSetQStatus(q,'discarded'),true]));
-    else if(q.status==='candidate')card.appendChild(tkOps(['重点にする',()=>tkSetQStatus(q,'focus')],['解消した',()=>tkSetQStatus(q,'resolved')],['破棄',()=>tkSetQStatus(q,'discarded'),true]));
+    if(q.status==='focus')card.appendChild(tkOps(['＋実験を追加',()=>tkExpForm(q)],['編集',()=>tkQEditModal(q)],['候補へ戻す',()=>tkSetQStatus(q,'candidate')],['解消した',()=>tkSetQStatus(q,'resolved')],['破棄',()=>tkSetQStatus(q,'discarded'),true]));
+    else if(q.status==='candidate')card.appendChild(tkOps(['重点にする',()=>tkSetQStatus(q,'focus')],['＋実験を追加',()=>tkExpForm(q)],['編集',()=>tkQEditModal(q)],['解消した',()=>tkSetQStatus(q,'resolved')],['破棄',()=>tkSetQStatus(q,'discarded'),true]));
     else card.appendChild(tkOps(['候補へ戻す',()=>tkSetQStatus(q,'candidate')]));
   }
   return card;
@@ -1727,15 +1905,19 @@ function tkQCard(q,expandedDefault){
 
 function tkECard(x){
   const card=D({cls:'tk-qcard'});
-  const tt=D({cls:'tk-qtitle',css:'cursor:default'});
+  const tt=D({cls:'tk-qtitle',css:'cursor:default;display:flex;gap:6px;align-items:flex-start'});
+  if(S._tkOrg)tt.appendChild(tkSelBox(S._tkSelE,x.id));
   tt.appendChild(tkStBadge(x.status,TK_EST));
-  tt.appendChild(Sp({},'▶ '+x.title));
+  tt.appendChild(Sp({css:'flex:1'},'▶ '+x.title));
   if(!x.questionId)tt.appendChild(Sp({cls:'tk-warn'},'問い未設定'));
   card.appendChild(tt);
+  if(x.questionId){const lq=S.questions.find(q=>q.id===x.questionId);if(lq)card.appendChild(D({cls:'tk-meta'},'問い：'+lq.title));}
   const thN=tkThemeNames(x.themeIds);const src=tkSrcLog(x);
   if(thN.length||src)card.appendChild(D({cls:'tk-meta'},(thN.length?'テーマ：'+thN.join('・'):'')+(thN.length&&src?' ／ ':'')+(src?'元ログ：'+src:'')));
-  if(x.status==='candidate')card.appendChild(tkOps(['実験中にする',()=>tkSetEStatus(x,'active')],['完了',()=>tkSetEStatus(x,'complete')],['やらない',()=>tkSetEStatus(x,'discarded'),true]));
-  else if(x.status==='active')card.appendChild(tkOps(['候補へ戻す',()=>tkSetEStatus(x,'candidate')],['完了',()=>tkSetEStatus(x,'complete')],['やらない',()=>tkSetEStatus(x,'discarded'),true]));
+  if(x.status==='active'&&(x.scene||x.observation||x.deadline))card.appendChild(D({cls:'tk-meta'},[x.scene?'場面：'+x.scene:'',x.observation?'観察：'+x.observation:'',x.deadline?'期限：'+x.deadline:''].filter(Boolean).join(' ／ ')));
+  if(x.learning)card.appendChild(D({css:'font-size:13px;color:var(--go);margin-top:4px'},'学び：'+x.learning));
+  if(x.status==='candidate')card.appendChild(tkOps(['実験中にする',()=>tkSetEStatus(x,'active')],['問いへ紐づける',()=>tkLinkModal([x.id])],['編集',()=>tkExpForm(null,x)],['完了',()=>tkSetEStatus(x,'complete')],['やらない',()=>tkSetEStatus(x,'discarded'),true]));
+  else if(x.status==='active')card.appendChild(tkOps(['振り返る',()=>tkReviewModal(x)],['問いへ紐づける',()=>tkLinkModal([x.id])],['編集',()=>tkExpForm(null,x)],['候補へ戻す',()=>tkSetEStatus(x,'candidate')],['やらない',()=>tkSetEStatus(x,'discarded'),true]));
   else card.appendChild(tkOps(['候補へ戻す',()=>tkSetEStatus(x,'candidate')]));
   return card;
 }
@@ -1772,19 +1954,19 @@ function tkCandView(){
 function tkDoneView(){
   const w=D({});
   if(!S._tkDoneF)S._tkDoneF='all';
-  const F=[['all','すべて'],['resolved','解消した問い'],['discardedQ','破棄した問い'],['merged','統合された問い'],['complete','完了した実験'],['changed','変更した実験'],['paused','保留した実験'],['discardedE','やらない実験']];
+  const F=[['all','すべて'],['resolved','解消した問い'],['discardedQ','破棄した問い'],['merged','統合された問い'],['complete','完了した実験'],['changed','変更した実験'],['paused','保留した実験'],['discardedE','やらない実験'],['mergedE','統合された実験']];
   const fw=D({cls:'tk-tabs'});
   F.forEach(([k,l])=>{const b=Bt({cls:'chip'+(S._tkDoneF===k?' on':'')},l);b.addEventListener('click',()=>{S._tkDoneF=k;ra();});fw.appendChild(b);});
   w.appendChild(fw);
   const f=S._tkDoneF;
   const dq=S.questions.filter(q=>['resolved','discarded','merged'].includes(q.status)).filter(q=>f==='all'||(f==='resolved'&&q.status==='resolved')||(f==='discardedQ'&&q.status==='discarded')||(f==='merged'&&q.status==='merged'));
-  const de=S.experiments.filter(x=>['complete','changed','paused','discarded','principled'].includes(x.status)).filter(x=>f==='all'||(f==='complete'&&x.status==='complete')||(f==='changed'&&x.status==='changed')||(f==='paused'&&x.status==='paused')||(f==='discardedE'&&x.status==='discarded'));
+  const de=S.experiments.filter(x=>['complete','changed','paused','discarded','principled','merged'].includes(x.status)).filter(x=>f==='all'||(f==='complete'&&x.status==='complete')||(f==='changed'&&x.status==='changed')||(f==='paused'&&x.status==='paused')||(f==='discardedE'&&x.status==='discarded')||(f==='mergedE'&&x.status==='merged'));
   if(['all','resolved','discardedQ','merged'].includes(f)){
     w.appendChild(D({cls:'sec-lbl'},'問い（'+dq.length+'件）'));
     if(!dq.length)w.appendChild(D({cls:'empty'},'該当する問いはありません'));
     dq.forEach(q=>w.appendChild(tkQCard(q,false)));
   }
-  if(['all','complete','changed','paused','discardedE'].includes(f)){
+  if(['all','complete','changed','paused','discardedE','mergedE'].includes(f)){
     w.appendChild(D({cls:'sec-lbl',css:'margin-top:24px'},'実験（'+de.length+'件）'));
     if(!de.length)w.appendChild(D({cls:'empty'},'該当する実験はありません'));
     de.forEach(x=>w.appendChild(tkECard(x)));
@@ -1793,11 +1975,19 @@ function tkDoneView(){
 }
 
 function renderTankyu(){
+  if(!S._tkSelQ){S._tkSelQ=[];S._tkSelE=[];}
   const f=document.createDocumentFragment();
   const hd=D({cls:'tk-hd'});
   hd.appendChild(D({},'重点の問い ',h('b',{},String(tkFocusQs().length)),' / 3'));
   hd.appendChild(D({},'実験中 ',h('b',{},String(tkActiveEs().length)),' / 3'));
+  const orgBtn=Bt({cls:'btn-s',css:'margin-left:auto;font-size:12px;padding:4px 12px'+(S._tkOrg?';background:var(--go-lt);border-color:var(--go-bd);color:var(--go)':'')},S._tkOrg?'✓ 整理を終了':'☑ 整理する');
+  orgBtn.addEventListener('click',()=>{S._tkOrg=!S._tkOrg;if(!S._tkOrg)tkOrgClear();ra();});
+  hd.appendChild(orgBtn);
   f.appendChild(hd);
+  if(S._tkOrg){
+    f.appendChild(D({css:'font-size:12px;color:var(--mu);margin:-6px 0 12px'},'整理モード：問い・実験を複数選択して、下のバーから統合・紐づけ・一括変更できます'));
+    const bar=tkOrgBar();if(bar)f.appendChild(bar);
+  }
   const tabs=[['focus','重点'],['candidate','候補'],['done','完了']];
   const tw=D({cls:'tk-tabs'});
   tabs.forEach(([k,l])=>{const b=Bt({cls:'chip'+(S._tkTab===k?' on':'')},l);b.addEventListener('click',()=>{S._tkTab=k;ra();});tw.appendChild(b);});
