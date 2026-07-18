@@ -782,6 +782,51 @@ textarea.fc.tall { min-height: 130px; }
   margin-right: 8px;
   font-weight: 600;
 }
+
+/* ══ v2：PJカードホーム ══ */
+.home-card{background:#fff;border:1px solid var(--gray1,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:12px;cursor:pointer;max-width:760px;box-shadow:0 1px 3px rgba(0,0,0,.05);transition:box-shadow .15s}
+.home-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.09)}
+.hc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.hc-name{font-size:1rem;font-weight:700;color:var(--navy)}
+.hc-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hc-fork{font-size:.68rem;color:var(--orange);background:var(--ora-s,#fff7ed);border:1px solid var(--orange);border-radius:6px;padding:2px 8px;white-space:nowrap}
+.hc-ago{font-size:.68rem;color:var(--gray3);white-space:nowrap}
+.hc-line{display:flex;gap:8px;font-size:.82rem;line-height:1.6;margin-bottom:2px}
+.hc-l{flex-shrink:0;width:44px;font-size:.68rem;color:var(--gray3);font-weight:600;padding-top:2px}
+.hc-v{color:var(--gray5,#333)}
+.hc-empty{color:var(--gray3);font-size:.75rem}
+.home-new{margin:16px 0}
+.hn-input{font-size:.9rem;padding:9px 12px;border:1px solid var(--gray2,#d1d5db);border-radius:8px;width:min(340px,70vw);font-family:inherit}
+/* ══ v2：詳細1画面 ══ */
+.det-one{max-width:760px;padding:22px 32px 60px}
+.core-wrap{margin-bottom:6px}
+.core-row{padding:10px 12px;border:1px solid transparent;border-radius:10px;cursor:pointer}
+.core-row:hover{border-color:var(--gray1,#e5e7eb);background:#fafafa}
+.core-lbl{font-size:.68rem;color:var(--gray3);font-weight:700;letter-spacing:.06em;margin-bottom:2px}
+.core-val{font-size:1.02rem;line-height:1.65;color:var(--gray5,#222);white-space:pre-wrap}
+.core-empty{color:var(--gray3);font-size:.85rem}
+.core-ta{width:100%;min-height:56px;font-size:1rem;font-family:inherit;line-height:1.6;padding:8px;border:1px solid var(--navy);border-radius:8px;box-sizing:border-box;resize:vertical}
+.fork-notice{font-size:.8rem;color:var(--orange);background:var(--ora-s,#fff7ed);border:1px solid var(--orange);border-radius:8px;padding:7px 12px;margin:4px 0 10px;max-width:max-content}
+.qa-wrap{margin:14px 0 20px;padding:12px;border:1px solid var(--gray1,#e5e7eb);border-radius:12px;background:#fbfbfa}
+.qa-ta{width:100%;min-height:44px;font-size:.92rem;font-family:inherit;line-height:1.6;padding:8px 10px;border:1px solid var(--gray2,#d1d5db);border-radius:8px;box-sizing:border-box;resize:vertical;margin-bottom:8px}
+.qa-btns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.qa-btn{font-size:.78rem;padding:7px 14px;border:1px solid var(--gray2,#d1d5db);border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;font-weight:600;color:var(--gray5,#333)}
+.qa-btn:hover{border-color:var(--navy);color:var(--navy)}
+.qa-fork-date{font-size:.72rem;padding:5px;border:1px solid var(--gray2,#d1d5db);border-radius:7px;color:var(--gray4);font-family:inherit}
+.mv-lbl{font-size:.68rem;color:var(--gray3);font-weight:700;letter-spacing:.06em;margin:4px 0 8px}
+.mv-row{display:flex;gap:8px;align-items:flex-start;padding:7px 4px;border-bottom:1px solid var(--gray1,#f0f0ef);font-size:.85rem;line-height:1.6}
+.mv-date{flex-shrink:0;font-size:.7rem;color:var(--gray3);padding-top:3px;width:78px}
+.mv-text{flex:1;white-space:pre-wrap}
+.mv-fork{font-size:.72rem;color:var(--orange)}
+.mv-del{flex-shrink:0;border:none;background:none;color:var(--gray2,#ccc);cursor:pointer;font-size:.9rem;padding:0 4px}
+.mv-del:hover{color:var(--red)}
+.mv-empty{font-size:.8rem;color:var(--gray3);padding:10px 4px}
+.det-fold{margin-top:14px;border:1px solid var(--gray1,#e5e7eb);border-radius:10px;background:#fff;max-width:760px}
+.det-fold summary{cursor:pointer;font-size:.8rem;color:var(--gray4);padding:10px 14px;user-select:none}
+.det-fold-b{padding:4px 14px 14px}
+.fold-sec{margin-bottom:10px}
+.fold-lbl{font-size:.68rem;color:var(--gray3);font-weight:700;margin-bottom:2px}
+.fold-val{font-size:.83rem;line-height:1.65;white-space:pre-wrap}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -809,7 +854,7 @@ textarea.fc.tall { min-height: 130px; }
   <div class="pg" id="pg-dash">
     <div class="pt">
       <div>
-        <div class="pt-title">コックピット</div>
+        <div class="pt-title">ホーム</div>
         <div class="pt-sub" id="dash-date"></div>
       </div>
       <div class="pt-actions">
@@ -818,10 +863,7 @@ textarea.fc.tall { min-height: 130px; }
     </div>
     <div class="vision-area" id="visionArea"></div>
     <div class="pb">
-      <div id="dash-pjs"></div>
-      <div id="dash-top3"></div>
-      <div class="signals" id="dash-signals"></div>
-      <div id="dash-exec"></div>
+      <div id="home-cards"></div>
     </div>
   </div>
 
@@ -918,7 +960,7 @@ textarea.fc.tall { min-height: 130px; }
   <!-- 3. DETAIL -->
   <div class="pg" id="pg-detail">
     <div class="det-top">
-      <button class="det-back" onclick="nav('projs')">← プロジェクト一覧へ</button>
+      <button class="det-back" onclick="nav('dash')">← ホームへ</button>
       <div id="det-name" class="det-name"></div>
       <div id="det-meta" class="det-meta"></div>
     </div>
@@ -1174,11 +1216,11 @@ function badge(t,c){ return '<span class="bd '+esc(c)+'">'+esc(t)+'</span>'; }
    NAV
 ══════════════════════════════════ */
 const PAGES = [
-  { id:'dash',   label:'コックピット', ic:'◉' },
-  { id:'projs',  label:'プロジェクト',  ic:'◫' },
-  { id:'import', label:'取り込む',       ic:'⬇' },
-  { id:'set',    label:'設定',           ic:'⚙' }
+  { id:'dash',   label:'ホーム',   ic:'◉' },
+  { id:'import', label:'取り込む', ic:'⬇' },
+  { id:'set',    label:'設定',     ic:'⚙' }
 ];
+/* v2: 「プロジェクト」一覧ページはホームのPJカードに吸収（renderProjsはレガシー残置） */
 
 function nav(p, id) {
   page = p;
@@ -1433,31 +1475,72 @@ function renderDashPjs(todayStr) {
     </div>` : '';
 }
 
+/* ══ v2：ホーム＝PJカード一覧（旧ダッシュボード3ゾーンを吸収。旧render関数はレガシー残置） ══ */
+function lastMoveInfo(p){
+  let latest='';
+  (p.moves||[]).forEach(m=>{const d=(m.createdAt||'').slice(0,10)||m.date||'';if(d>latest)latest=d;});
+  if(!latest){
+    /* ムーブ未使用PJは旧記録（シート由来）の直近過去日で代用 */
+    const t=today();
+    ['events','decisions','learnings','forks'].forEach(k=>(p[k]||[]).forEach(x=>{const d=x.date||'';if(d&&d<=t&&d>latest)latest=d;}));
+  }
+  if(!latest)return {label:'記録なし',days:null};
+  const days=Math.floor((new Date(today())-new Date(latest))/864e5);
+  return {label:days<7?'今週':(Math.floor(days/7)+'週前'),days};
+}
+function nearFork(p){
+  const t=today();
+  const fs=(p.forks||[]).filter(f=>f.status==='future'&&f.date&&f.date>=t).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!fs.length)return null;
+  const f=fs[0];
+  const days=Math.round((new Date(f.date)-new Date(t))/864e5);
+  return days<=14?{title:f.title,days,date:f.date}:null;
+}
+function homeCard(p,todayStr){
+  const lm=lastMoveInfo(p);
+  const nf=nearFork(p);
+  const danger=(p.events||[]).some(e=>e.sentiment==='危険');
+  const overdue=p.deadline&&p.deadline<todayStr;
+  return `<div class="home-card" onclick="nav('detail','${p.id}')">
+    <div class="hc-head">
+      <span class="hc-name">${esc(p.name)}</span>
+      <span class="hc-badges">
+        ${nf?`<span class="hc-fork">⚡ ${esc(nf.title)} あと${nf.days}日</span>`:''}
+        ${danger?'<span class="bd bd-red">危険</span>':''}
+        ${overdue?'<span class="bd bd-orange">期限超過</span>':''}
+        <span class="hc-ago">${esc(lm.label)}</span>
+      </span>
+    </div>
+    <div class="hc-line"><span class="hc-l">ゴール</span><span class="hc-v${p.goal?'':' hc-empty'}">${esc(p.goal)||'未設定'}</span></div>
+    <div class="hc-line"><span class="hc-l">問い</span><span class="hc-v${p.question?'':' hc-empty'}">${esc(p.question)||'未設定'}</span></div>
+    <div class="hc-line"><span class="hc-l">一手</span><span class="hc-v${p.nextMove?'':' hc-empty'}">${esc(p.nextMove)||'未設定'}</span></div>
+  </div>`;
+}
+function homeNewInput(){
+  const w=$$('home-new');if(!w)return;
+  w.innerHTML=`<input id="home-new-name" class="hn-input" placeholder="プロジェクト名だけで作成" onkeydown="if(event.key==='Enter')homeNewCreate()">
+    <button class="btn btn-navy btn-sm" onclick="homeNewCreate()">作成</button>
+    <button class="btn btn-outline btn-sm" onclick="render()">キャンセル</button>`;
+  $$('home-new-name').focus();
+}
+function homeNewCreate(){
+  const name=($$('home-new-name').value||'').trim();
+  if(!name){$$('home-new-name').focus();return;}
+  const p={id:uid(),name,status:'進行中',priority:'中',goal:'',question:'',nextMove:'',moves:[],forks:[],decisions:[],learnings:[],events:[],updatedAt:today()};
+  S.projects.push(p);save();nav('detail',p.id);
+}
 function renderDash() {
   const d = new Date();
   const WD = ['日','月','火','水','木','金','土'];
   $$('dash-date').textContent =
     `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）`;
-
-  const ps    = S.projects.filter(p => p.status !== '完了');
-  const now   = new Date();
   const todayStr = today();
-  const twoWeeksAgo = new Date(now); twoWeeksAgo.setDate(now.getDate() - 14);
-  const twoWeeksFwd = new Date(now); twoWeeksFwd.setDate(now.getDate() + 14);
-
-  /* ─────────────────────────────────────
-     共通: PJ横断の全実行候補を収集
-     種別: 制約 / 分岐 / 通常(≠完了・≠記録)
-  ───────────────────────────────────── */
-  const KIND_BD = { '分岐':'bd-yellow','制約':'bd-blue','記録':'bd-purple','通常':'bd-gray' };
-  const KIND_PRI = { '制約':1,'分岐':2,'通常':3 };
-  const ST_CL   = { '進行中':'bd-green','保留':'bd-yellow' };
-
-  const allExecItems = collectExecItems(ps, twoWeeksAgo, twoWeeksFwd);
-  renderDashTop3(allExecItems, KIND_BD, ST_CL);
-  renderDashSignals(ps, now, todayStr);
-  renderDashExec(ps, twoWeeksAgo, twoWeeksFwd, KIND_PRI, KIND_BD, ST_CL);
-  renderDashPjs(todayStr);
+  const ps = S.projects.filter(p => p.status !== '完了');
+  const done = S.projects.filter(p => p.status === '完了');
+  $$('home-cards').innerHTML =
+    ps.map(p=>homeCard(p,todayStr)).join('') +
+    `<div class="home-new" id="home-new"><button class="btn btn-outline btn-sm" onclick="homeNewInput()">＋ 新しいプロジェクト（PJ名だけで作成）</button></div>` +
+    (done.length?`<details class="det-fold"><summary>完了したPJ（${done.length}件）</summary><div class="det-fold-b">${done.map(p=>`<div class="fold-val" style="cursor:pointer;padding:4px 0;" onclick="nav('detail','${p.id}')">${esc(p.name)}</div>`).join('')}</div></details>`:'');
 }
 
 /* ══════════════════════════════════
@@ -1556,31 +1639,134 @@ function initProjDrag() {
 /* ══════════════════════════════════
    DETAIL
 ══════════════════════════════════ */
+/* ══ v2：PJ詳細＝1画面スクロール（タブ廃止。核3行→クイック追加→タイムライン→折りたたみ） ══ */
+const CORE_DEFS=[['goal','ゴール'],['question','現在の問い'],['nextMove','次の一手']];
+const MOVE_BD={'決定':'bd-gray','学び':'bd-teal','分岐':'bd-yellow','次の一手':'bd-blue','問い':'bd-purple'};
+
+function pushMove(p,kind,text,forkDate){
+  if(!p.moves)p.moves=[];
+  const m={id:uid(),kind,text,date:today(),createdAt:new Date().toISOString()};
+  if(kind==='分岐'&&forkDate)m.forkDate=forkDate;
+  p.moves.push(m);
+  return m;
+}
+/* 核3行のインライン編集（モーダルなし）。問い・次の一手の更新はムーブとして履歴化 */
+function coreEdit(pid,field,el){
+  if(el.dataset.editing)return;
+  el.dataset.editing='1';
+  const p=proj(pid);if(!p)return;
+  const cur=p[field]||'';
+  const valEl=el.querySelector('.core-val');
+  valEl.innerHTML='';
+  const ta=document.createElement('textarea');
+  ta.className='core-ta';ta.value=cur;
+  valEl.appendChild(ta);ta.focus();
+  const done=()=>{
+    const v=ta.value.trim();
+    if(v!==cur.trim()){
+      p[field]=v;
+      if(field==='question'&&v)pushMove(p,'問い',v);       /* 旧い問いはタイムラインに残る＝履歴化 */
+      if(field==='nextMove'&&v)pushMove(p,'次の一手',v);
+      touchProj(pid);save();
+    }
+    renderDetail();
+  };
+  ta.addEventListener('blur',done);
+  ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')ta.blur();});
+}
+/* クイック追加：本文→種類ボタンの2操作で即保存 */
+function quickAdd(pid,kind){
+  const p=proj(pid);if(!p)return;
+  const taEl=$$('qa-text');const text=(taEl.value||'').trim();
+  if(!text){taEl.focus();return;}
+  const fd=kind==='分岐'?(($$('qa-fork-date')||{}).value||''):'';
+  const m=pushMove(p,kind,text,fd);
+  if(kind==='次の一手')p.nextMove=text;   /* 前の一手は既にタイムライン上＝自動履歴化 */
+  if(kind==='分岐'){
+    if(!p.forks)p.forks=[];               /* 既存の分岐データ（接近バッジ・シート互換）にも同IDで反映 */
+    p.forks.push({id:m.id,date:fd||today(),status:(fd&&fd>today())?'future':'past',title:text,what:'',why:'',nextAction:'',stakeholders:''});
+  }
+  touchProj(pid);save();renderDetail();
+  toast(kind+'を記録しました');
+}
+function delMove(pid,mid){
+  if(!confirm('このムーブを削除しますか？'))return;
+  const p=proj(pid);if(!p)return;
+  p.moves=(p.moves||[]).filter(m=>m.id!==mid);
+  p.forks=(p.forks||[]).filter(f=>f.id!==mid);   /* 分岐ムーブ連動分のみ一致（旧分岐は別ID） */
+  touchProj(pid);save();renderDetail();
+}
+function coreHtml(p){
+  return `<div class="core-wrap">`+CORE_DEFS.map(([f,lbl])=>`
+    <div class="core-row" onclick="coreEdit('${p.id}','${f}',this)" title="クリックで編集">
+      <div class="core-lbl">${lbl}</div>
+      <div class="core-val${p[f]?'':' core-empty'}">${esc(p[f])||'クリックで入力'}</div>
+    </div>`).join('')+`</div>`;
+}
+function quickAddHtml(p){
+  return `<div class="qa-wrap">
+    <textarea class="qa-ta" id="qa-text" placeholder="いま考えたこと・決めたことを1行で（ボタンを押すと即保存）"></textarea>
+    <div class="qa-btns">
+      <button class="qa-btn" onclick="quickAdd('${p.id}','決定')">決定</button>
+      <button class="qa-btn" onclick="quickAdd('${p.id}','学び')">学び</button>
+      <button class="qa-btn" onclick="quickAdd('${p.id}','次の一手')">次の一手</button>
+      <button class="qa-btn" onclick="quickAdd('${p.id}','分岐')">分岐</button>
+      <input type="date" class="qa-fork-date" id="qa-fork-date" title="分岐の予定日（任意・分岐ボタン用）">
+    </div>
+  </div>`;
+}
+function movesHtml(p){
+  const ms=[...(p.moves||[])].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  return `<div class="mv-wrap"><div class="mv-lbl">ムーブ</div>`+(ms.length?ms.map(m=>`
+    <div class="mv-row">
+      <span class="mv-date">${esc(m.date)}</span>
+      ${badge(m.kind,MOVE_BD[m.kind]||'bd-gray')}
+      <span class="mv-text">${esc(m.text)}${m.forkDate?` <span class="mv-fork">@${esc(m.forkDate)}</span>`:''}</span>
+      <button class="mv-del" onclick="delMove('${p.id}','${m.id}')" title="削除">×</button>
+    </div>`).join(''):'<div class="mv-empty">まだムーブがありません。上の欄に1行書いて種類ボタンを押すだけ。</div>')+`</div>`;
+}
+function collapsesHtml(p){
+  const meta=[['成功条件',p.successConditions],['注意論点',p.attentionIssue],['悪い未来',p.badFuture],['センターピン',p.centerPin]].filter(x=>x[1]);
+  const phases=(p.phases||[]);
+  return `
+  <details class="det-fold"><summary>詳細メタ（成功条件・注意論点・論点メモ）</summary>
+    <div class="det-fold-b">
+      ${meta.length?meta.map(([l,v])=>`<div class="fold-sec"><div class="fold-lbl">${esc(l)}</div><div class="fold-val">${esc(v)}</div></div>`).join(''):'<div style="font-size:.8rem;color:var(--gray3);margin-bottom:8px;">未入力</div>'}
+      ${phases.length?`<div class="fold-sec"><div class="fold-lbl">重点テーマ</div>${phases.map(ph=>`<div class="fold-val">・${esc(ph.phase)} ${esc(ph.theme)}${ph.goal?' — '+esc(ph.goal):''}</div>`).join('')}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button class="btn btn-outline btn-xs" onclick="openProjModal('${p.id}')">✏ メタを編集</button>
+        <button class="btn btn-danger btn-xs" onclick="delProj('${p.id}')">PJを削除</button>
+      </div>
+    </div>
+  </details>
+  <details class="det-fold"><summary>旧イベント・記録一覧（シート由来）</summary>
+    <div class="det-fold-b">${paneRecords(p)}</div>
+  </details>
+  <details class="det-fold"><summary>旧分岐点一覧</summary>
+    <div class="det-fold-b">${paneForks(p)}</div>
+  </details>
+  ${p.sheetUrl?`<details class="det-fold"><summary>シートURL</summary><div class="det-fold-b"><a href="${esc(p.sheetUrl)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="text-decoration:none;">📊 シートを閲覧</a></div></details>`:''}`;
+}
+function forkNoticeHtml(p){
+  const nf=nearFork(p);
+  return nf?`<div class="fork-notice">⚡ ${esc(nf.title)} あと${nf.days}日（${esc(nf.date)}）</div>`:'';
+}
 function renderDetail() {
-  const p = proj(detId); if(!p){nav('projs');return;}
+  const p = proj(detId); if(!p){nav('dash');return;}
   $$('det-name').textContent = p.name;
   $$('det-meta').innerHTML =
     badge(p.status,ST[p.status]||'bd-gray') +
     badge(p.priority,PRI[p.priority]||'bd-gray') +
     (p.deadline?`<span class="muted" style="font-size:.7rem;">期限 ${esc(p.deadline)}</span>`:'') +
-    (p.owner?`<span class="muted" style="font-size:.7rem;">👤 ${esc(p.owner)}</span>`:'') +
-    (p.sheetUrl?`<a href="${esc(p.sheetUrl)}" target="_blank" rel="noopener" style="font-size:.72rem;color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border:1px solid var(--blu-b);border-radius:5px;background:var(--blu-s);">📊 Spreadsheet</a>`:'<button class="btn btn-outline btn-xs" onclick="openProjModal(\''+detId+'\')" style="font-size:.68rem;">+ シートURL設定</button>');
-
-  // タブ：概要 / 分岐点 / 記録
-  const TABS = [
-    {id:'overview', lbl:'概要'},
-    {id:'forks',    lbl:'分岐点'},
-    {id:'records',  lbl:'記録'},
-  ];
-  // detTabが廃止タブなら overview にリセット
-  if (!TABS.find(t=>t.id===detTab)) detTab='overview';
-
-  $$('tab-bar').innerHTML = TABS.map(t=>
-    `<button class="tab-btn${detTab===t.id?' on':''}" onclick="switchTab('${t.id}')">${t.lbl}</button>`
-  ).join('');
-  $$('tab-panes').innerHTML = TABS.map(t=>
-    `<div class="tab-pane${detTab===t.id?' on':''}" id="pane-${t.id}">${buildPane(p,t.id)}</div>`
-  ).join('');
+    (p.owner?`<span class="muted" style="font-size:.7rem;">👤 ${esc(p.owner)}</span>`:'');
+  $$('tab-bar').innerHTML = '';
+  $$('tab-panes').innerHTML = `<div class="det-one">
+    ${coreHtml(p)}
+    ${forkNoticeHtml(p)}
+    ${quickAddHtml(p)}
+    ${movesHtml(p)}
+    ${collapsesHtml(p)}
+  </div>`;
 }
 
 function switchTab(id){
@@ -1861,7 +2047,7 @@ function openProjModal(pid){
 function delProj(pid){
   if(!confirm('このプロジェクトを削除しますか？取り消せません。')) return;
   S.projects=S.projects.filter(p=>p.id!==pid);
-  save(); nav('projs');
+  save(); nav('dash');
 }
 
 /* ══════════════════════════════════
