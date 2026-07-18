@@ -833,6 +833,12 @@ textarea.fc.tall { min-height: 130px; }
 .push-band.calm{border-color:var(--gray1,#e5e7eb);color:var(--gray4);cursor:default;background:#fafafa}
 .hc-spark{border:1px solid var(--gray2,#d1d5db);background:#fff;border-radius:7px;font-size:.72rem;padding:2px 8px;cursor:pointer;color:var(--gray4);font-family:inherit;white-space:nowrap}
 .hc-spark:hover{border-color:var(--navy);color:var(--navy)}
+/* ══ v2 Phase 3：モバイル最終調整（長文の折り返し安全化） ══ */
+.hc-v,.core-val,.mv-text,.push-band,.fold-val,.hc-fork{word-break:break-word;overflow-wrap:anywhere}
+@media (max-width:640px){
+  .det-one{padding:16px 14px 60px}
+  .qa-btns .qa-btn{flex:1;min-width:72px}
+}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -865,7 +871,7 @@ textarea.fc.tall { min-height: 130px; }
       </div>
       <div class="pt-actions">
         <button class="btn btn-outline btn-sm" onclick="sparkCopyAll()" style="gap:6px;">🗣 全PJを壁打ちへ</button>
-        <button class="btn btn-navy btn-sm" onclick="nav('import')" style="gap:6px;">&#11015; シートを取り込む</button>
+        <button class="btn btn-navy btn-sm" onclick="nav('import')" style="gap:6px;">&#11015; 取り込む</button>
       </div>
     </div>
     <div class="vision-area" id="visionArea"></div>
@@ -878,8 +884,8 @@ textarea.fc.tall { min-height: 130px; }
   <div class="pg" id="pg-import">
     <div class="pt">
       <div>
-        <div class="pt-title">Spreadsheet Import</div>
-        <div class="pt-sub">シート全体をコピー &#x2192; 貼り付けるだけ。種別ごとに自動分類・差分更新。</div>
+        <div class="pt-title">取り込む</div>
+        <div class="pt-sub">壁打ちAIの出力（PROJECT-IMPORT）を貼り付けて取り込みます。</div>
       </div>
     </div>
     <div class="pb" style="max-width:900px;">
@@ -897,6 +903,8 @@ textarea.fc.tall { min-height: 130px; }
         </div>
       </div>
 
+      <!-- v2 Phase 3: シート取り込みUIはメニュー撤去（コード・要素はレガシー残置＝display:none） -->
+      <div id="legacy-sheet-import" style="display:none">
       <!-- ① プロジェクト選択 -->
       <div class="import-panel" style="margin-bottom:14px;">
         <div class="import-panel-h">
@@ -962,6 +970,7 @@ textarea.fc.tall { min-height: 130px; }
           </div>
         </div>
       </div>
+      </div><!-- /legacy-sheet-import -->
     </div>
   </div>
 
@@ -1689,6 +1698,50 @@ function piApply(pid,items){
   toast(p.name+' に '+n+'件取り込みました');
 }
 
+/* ══ v2 Phase 3：共有用エクスポート（前田さんPJ等・読み取り専用の共有）══
+   モーダルは仕様上の例外（削除確認・共有エクスポートの項目選択のみ許可）。
+   内輪メモ（現在の問い・詳細メタ）は既定でオフ。 */
+function shareModal(pid){
+  const p=proj(pid);if(!p)return;
+  showModal('共有用に書き出す',`
+    <div style="font-size:.8rem;color:var(--gray4);margin-bottom:10px;">含める項目を選んで、下のボタンでコピーしてください。内輪メモ（問い・詳細メタ）は既定でオフです。</div>
+    ${[['sh-goal','ゴール',1],['sh-q','現在の問い（内輪メモ）',0],['sh-next','次の一手',1],['sh-fork','分岐予定（未来）',1],['sh-moves','ムーブ履歴',1],['sh-meta','詳細メタ（内輪メモ：成功条件・注意論点・悪い未来・センターピン）',0]].map(([id,lbl,on])=>`
+      <label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:.85rem;cursor:pointer;"><input type="checkbox" id="${id}"${on?' checked':''} style="margin-top:2px;flex-shrink:0;">${lbl}</label>`).join('')}
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+      <button class="btn btn-navy btn-sm" onclick="shareCopy('${pid}','text')">📋 整形テキストをコピー</button>
+      <button class="btn btn-outline btn-sm" onclick="shareCopy('${pid}','tsv')">📋 TSVをコピー（シート貼り付け用）</button>
+    </div>`,null);
+  $$('m-ok').style.display='none';   /* コピーで完結するため保存ボタンは隠す（closeModalで復元） */
+}
+function shareBuild(p,fmt){
+  const ck=id=>!!($$(id)&&$$(id).checked);
+  const ms=[...(p.moves||[])].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  const futureForks=(p.forks||[]).filter(f=>f.status==='future'&&f.date).sort((a,b)=>a.date.localeCompare(b.date));
+  const meta=[['成功条件',p.successConditions],['注意論点',p.attentionIssue],['悪い未来',p.badFuture],['センターピン',p.centerPin]].filter(x=>x[1]);
+  if(fmt==='tsv'){
+    const rows=[['PJ',p.name]];
+    if(ck('sh-goal'))rows.push(['ゴール',p.goal||'']);
+    if(ck('sh-q'))rows.push(['現在の問い',p.question||'']);
+    if(ck('sh-next'))rows.push(['次の一手',p.nextMove||'']);
+    if(ck('sh-meta'))meta.forEach(([l,v])=>rows.push([l,v]));
+    if(ck('sh-fork')&&futureForks.length){rows.push(['']);rows.push(['日付','分岐予定']);futureForks.forEach(f=>rows.push([f.date,f.title]));}
+    if(ck('sh-moves')&&ms.length){rows.push(['']);rows.push(['日付','種類','内容']);ms.forEach(m=>rows.push([m.date,m.kind,m.text]));}
+    return rows.map(r=>r.join('\t')).join('\n');
+  }
+  const L=['【'+p.name+'】共有メモ（'+today()+'時点）'];
+  if(ck('sh-goal'))L.push('ゴール：'+(p.goal||'未設定'));
+  if(ck('sh-q'))L.push('現在の問い：'+(p.question||'未設定'));
+  if(ck('sh-next'))L.push('次の一手：'+(p.nextMove||'未設定'));
+  if(ck('sh-meta'))meta.forEach(([l,v])=>L.push(l+'：'+v));
+  if(ck('sh-fork')&&futureForks.length){L.push('');L.push('分岐予定：');futureForks.forEach(f=>L.push('- '+f.date+' '+f.title));}
+  if(ck('sh-moves')&&ms.length){L.push('');L.push('これまでの動き：');ms.forEach(m=>L.push('- '+m.date+' '+m.kind+'：'+m.text));}
+  return L.join('\n');
+}
+function shareCopy(pid,fmt){
+  const p=proj(pid);if(!p)return;
+  copyText(shareBuild(p,fmt),fmt==='tsv'?'共有用TSV':'共有用テキスト');
+}
+
 /* ══════════════════════════════════
    PROJECTS LIST
 ══════════════════════════════════ */
@@ -1905,7 +1958,8 @@ function renderDetail() {
     badge(p.priority,PRI[p.priority]||'bd-gray') +
     (p.deadline?`<span class="muted" style="font-size:.7rem;">期限 ${esc(p.deadline)}</span>`:'') +
     (p.owner?`<span class="muted" style="font-size:.7rem;">👤 ${esc(p.owner)}</span>`:'') +
-    `<button class="hc-spark" onclick="sparkCopy('${p.id}')" title="このPJの核とムーブをコピーして壁打ちへ">🗣 壁打ちへ持っていく</button>`;
+    `<button class="hc-spark" onclick="sparkCopy('${p.id}')" title="このPJの核とムーブをコピーして壁打ちへ">🗣 壁打ちへ持っていく</button>` +
+    `<button class="hc-spark" onclick="shareModal('${p.id}')" title="共有相手向けに項目を選んで書き出す">⇪ 共有用に書き出す</button>`;
   $$('tab-bar').innerHTML = '';
   $$('tab-panes').innerHTML = `<div class="det-one">
     ${coreHtml(p)}
@@ -2144,7 +2198,7 @@ function showModal(title, body, onOk){
   $$('m-ok').onclick=onOk;
   $$('overlay').classList.add('on');
 }
-function closeModal(){ $$('overlay').classList.remove('on'); }
+function closeModal(){ $$('overlay').classList.remove('on'); $$('m-ok').style.display=''; /* 共有モーダルで隠した保存ボタンを復元 */ }
 
 function sel(id,opts,cur){
   return `<select class="fc" id="${id}">${opts.map(v=>`<option${cur===v?' selected':''}>${esc(v)}</option>`).join('')}</select>`;
