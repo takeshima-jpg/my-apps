@@ -120,6 +120,14 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
 .snum.td .snum-v{color:#C97A00;}
 .snum.wk .snum-v{color:var(--s);}
 
+/* ── HOME v2: 期限超過バナー（ある時だけ・細い1行） ── */
+.ov-banner{
+  display:flex;align-items:center;gap:6px;
+  font-size:13px;font-weight:600;color:var(--r);
+  background:transparent;border:1px solid var(--r);border-left-width:3px;border-radius:8px;
+  padding:7px 12px;margin-bottom:14px;cursor:pointer;user-select:none;
+}
+.ov-banner:hover{background:rgba(200,60,60,.05);}
 /* ── HOME: TOP CARD (今日の一手) ── */
 .top-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
   padding:18px 20px;margin-bottom:22px;position:relative;}
@@ -743,7 +751,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-07-13';
+const BUILD_VER = '2026-07-18';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -1451,45 +1459,62 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden) _
 window.addEventListener('focus', function(){ _scheduleRefresh(); });
 
 // ── HOME ──
-function homeTopCard(top) {
-  let h = '';
-// ─ 今日の一手
-  if(top){
-    const links=renderLinks(top);
-    h += `<div class="top-card">
-      <div class="top-card-label">⚡ 今日の一手</div>
-      <div class="top-card-title">${esc(top.title)}</div>
-      <div class="top-card-meta">
-        ${osTag(top.src)}
-        ${top.due ? `<span style="font-size:13px;color:${isOv(top.due)?'var(--r)':isTd(top.due)?'#C97A00':'var(--text3)'};font-weight:${isOv(top.due)||isTd(top.due)?700:400};">${fmtDate(top.due)}</span>` : ''}
-        ${links}
-      </div>
-      <div class="top-card-actions">${topActions(top)}</div>
-    </div>`;
-  }
-  return h;
+/* ══ HOME v2：今日の一手＝Project OS v2.1 の「次の一手」（pos_v4・核3行と同期しているもの）══
+   選定は「今どこを押すか」と同じ優先度：分岐が近い → 次の一手が古い。1件だけ。
+   シートリンク・期日は出さない（例外＝接近分岐⚡のみ・事実表示） */
+function pickNextMove(){
+  const pd=getPj();
+  const ps=(pd.projects||[]).filter(p=>p.status!=='完了'&&p.nextMove);
+  if(!ps.length)return null;
+  const near=p=>{
+    const fs=(p.forks||[]).filter(f=>f.status==='future'&&f.date&&f.date>=TODAY).sort((a,b)=>a.date.localeCompare(b.date));
+    if(!fs.length)return null;
+    const days=Math.round((new Date(fs[0].date)-new Date(TODAY))/864e5);
+    return days<=14?{title:fs[0].title,days}:null;
+  };
+  const lastNext=p=>{
+    const l=[...(p.moves||[])].filter(m=>m.kind==='次の一手').sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))[0];
+    return l?(l.createdAt||''):'';
+  };
+  const cand=ps.map(p=>({p,nf:near(p),age:lastNext(p)}));
+  cand.sort((a,b)=>{
+    if(a.nf&&b.nf)return a.nf.days-b.nf.days;   /* 分岐が近い順 */
+    if(a.nf)return -1;
+    if(b.nf)return 1;
+    return (a.age||'').localeCompare(b.age||''); /* 次の一手が古い順（記録なしは最古扱い） */
+  });
+  return cand[0];
 }
-
-function homeStatusRow(ov, td, noDue) {
-  let h = '';
-// ─ 数字サマリ（3つだけ）
-  h += `<div class="status-row">
-    <div class="snum ov"><div class="snum-v">${ov.length}</div><div class="snum-l">期限超過</div></div>
-    <div class="snum td"><div class="snum-v">${td.length}</div><div class="snum-l">今日期限</div></div>
-    <div class="snum wk"><div class="snum-v">${noDue.length}</div><div class="snum-l">Shot未設定</div></div>
+function homeTopCard() {
+  const c=pickNextMove();
+  if(!c) return '';   /* 次の一手が無い日は静かに出さない */
+  return `<div class="top-card">
+    <div class="top-card-label">⚡ 今日の一手</div>
+    <div class="top-card-title">${esc(c.p.nextMove)}</div>
+    <div class="top-card-meta"><span style="font-size:13px;color:var(--text3);">◈ ${esc(c.p.name)}</span></div>
+    ${c.nf?`<div style="font-size:13px;color:#C97A00;margin-top:2px;">⚡ ${esc(c.nf.title)} あと${c.nf.days}日</div>`:''}
+    <div class="top-card-actions"><button class="btn-open" onclick="nav('project')">Project で開く</button></div>
   </div>`;
-  return h;
 }
 
-function homeUrgent(ov, td) {
-  let h = '';
-// ─ 今やる（期限超過 + 今日）
-  const urgentAll = [...new Map([...ov,...td].map(t=>[t.id,t])).values()];
-  if(urgentAll.length){
-    h += secLabel('🔥 今やる', urgentAll.length);
-    urgentAll.slice(0,8).forEach(t => h += trowHtml(t));
-    h += '</div>';
-  }
+/* ══ HOME v2：統計3カード（期限超過/今日期限/SHOT未設定）は撤去。
+   期限超過が1件以上ある時だけ細い1行バナー（クリックで該当一覧をその場に展開） ══ */
+let homeOvOpen = false;
+function toggleOv(){ homeOvOpen = !homeOvOpen; renderHome(); }
+function homeOvBanner(ov) {
+  if(!ov.length) return '';   /* ゼロの日は何も出さない */
+  return `<div class="ov-banner" onclick="toggleOv()">⚠ 期限超過 ${ov.length}件 <span style="margin-left:auto;">${homeOvOpen?'▼':'→'}</span></div>`
+    + (homeOvOpen?`<div class="week-body" style="margin-bottom:14px;">${ov.map(t=>trowHtml(t)).join('')}</div>`:'');
+}
+
+/* ══ HOME v2：「今日やること」＝今日期限＋実行中(doing)のShot。既定で展開 ══ */
+function homeTodayList(tasks, td) {
+  const doing = tasks.filter(t=>t.src==='shot'&&t.status==='doing');
+  const items = [...new Map([...td,...doing].map(t=>[t.id,t])).values()];
+  let h = secLabel('☀ 今日やること', items.length);
+  if(items.length) items.forEach(t => h += trowHtml(t));
+  else h += `<div style="font-size:13px;color:var(--text3);padding:6px 6px 2px;">今日期限・実行中のタスクはありません</div>`;
+  h += '</div>';
   return h;
 }
 
@@ -1615,15 +1640,12 @@ function renderHome(){
     const diff=(new Date(t.due+'T00:00:00')-new Date(TODAY+'T00:00:00'))/86400000;
     return diff>=1&&diff<=7;
   }).sort((a,b)=>a.due.localeCompare(b.due));
-  // 今日の一手（スコア最上位）
-  const top = [...tasks].sort((a,b)=>score(b)-score(a))[0];
-
+  /* HOME v2の表示順：VISION → 今日の一手 → 期限超過バナー（ある時のみ）→
+     今日やること（既定展開）→ 今週（折りたたみ）→ Shot期限未設定（折りたたみ） */
   let h = '';
-
-  
-  h += homeTopCard(top);
-  h += homeStatusRow(ov, td, noDue);
-  h += homeUrgent(ov, td);
+  h += homeTopCard();
+  h += homeOvBanner(ov);
+  h += homeTodayList(tasks, td);
   h += homeThisWeek(thisWeek);
   h += homeShot(noDue);
   // ▶今日のLECTICA実験・≡100リスト・◈PROJECTの3セクションは撤去（ランチャー今日タブ／Morning Briefへ移行）
@@ -1821,7 +1843,15 @@ function updateClock(){
   const n=new Date(), hh=String(n.getHours()).padStart(2,'0'), mm=String(n.getMinutes()).padStart(2,'0');
   const el=document.getElementById('home-clock'); if(el) el.textContent=`${hh}:${mm}`;
   const sb=document.getElementById('sbDate');
-  if(sb){ const dow=['日','月','火','水','木','金','土'][n.getDay()]; sb.textContent=`${TODAY}(${dow})`; }
+  /* 日付・曜日は表示のたびに現在日時から計算（旧: 読込時固定のTODAYを表示していたため、
+     日をまたぐと「前日の日付＋当日の曜日」のずれが出ていた） */
+  const ds=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+  if(sb){ const dow=['日','月','火','水','木','金','土'][n.getDay()]; sb.textContent=`${ds}(${dow})`; }
+  /* 日をまたいだらロジック基準(TODAY)も新しくするためリロード（モーダル入力中は避ける） */
+  if(ds!==TODAY){
+    const modalOpen=['shotModal','pjModal','linkModal'].some(id=>{const m=document.getElementById(id);return m&&!m.classList.contains('hid');});
+    if(!modalOpen){ location.reload(); return; }
+  }
   updateSyncFooter();
 }
 
