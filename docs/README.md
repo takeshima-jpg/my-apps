@@ -6,6 +6,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 - **prompts/** … 壁打ち・Coworkプロンプト類（プロンプトはここを参照）
 - **archive/** … 上位版に統合された・内容が古くなったファイル（削除ではなくここへ退避）
   - [claude-code-hitomemo-manual-sort-spec.md](archive/claude-code-hitomemo-manual-sort-spec.md) … sort-collapse-specと同一内容の重複（実装済み `fd0ebe9`。正本はspecs側）
+  - [reflect-sparring-instructions-v2.md](archive/reflect-sparring-instructions-v2.md) … Reflect壁打ちv2の持ち込み原稿（prompts/reflect-sparring-prompt.md へ反映済み。正本はprompts側）
 - 直下の `sheets.md` / `sheets.local.md` は台帳（specs/promptsではない運用データ）
 
 状態の凡例：✅実装済み（コミット済み）／🕒未実装（依頼書のみ）／🔧運用中（手順書・繰り返し使う）
