@@ -332,14 +332,13 @@ nav{display:flex;flex-direction:column;gap:0;}
         <span class="nav-icon" style="font-size:11px;">△</span> テーマ未紐づけ <span id="unthemed-badge" class="sb-badge" style="background:#fdf8e8;color:#b09040;border:1px solid #e8d880;"></span>
       </button>
 
+      <!-- Phase 3: 旧「問い」「実験」タブは探求ボードへ統合しナビから撤去（renderQuestions等のコードはレガシー残置） -->
       <button class="nb" data-tab="tankyu"><span class="nav-icon">◇</span> 探求ボード</button>
-      <button class="nb" data-tab="search"><span class="nav-icon">⌕</span> 検索</button>
-      <button class="nb" data-tab="ai-import"><span class="nav-icon">⬇</span> 取り込む</button>
-      <button class="nb" data-tab="questions"><span class="nav-icon">？</span> 問い <span id="q-badge" class="sb-badge"></span></button>
-      <button class="nb" data-tab="experiments"><span class="nav-icon">▶</span> 実験 <span id="e-badge" class="sb-badge"></span></button>
       <button class="nb" data-tab="lectica"><span class="nav-icon">✦</span> Lectica</button>
+      <button class="nb" data-tab="search"><span class="nav-icon">⌕</span> 検索</button>
       <button class="nb" data-tab="archive"><span class="nav-icon">□</span> アーカイブ</button>
       <button class="nb" data-tab="vision-edit"><span class="nav-icon">◎</span> VISION設定</button>
+      <button class="nb" data-tab="ai-import"><span class="nav-icon">⬇</span> 取り込む</button>
     </nav>
   </div>
 
@@ -569,6 +568,8 @@ async function saveLog(status){
   await dbput('logs',r);
   const i=S.logs.findIndex(x=>x.id===r.id);if(i>=0)S.logs[i]=r;else S.logs.unshift(r);
   S.logs.sort((a,b)=>b.date.localeCompare(a.date));
+  /* 新規動線：ログのquestion/nextExpを探求ボードへ即時反映（sourceCk単位の増分＝同一保存内でも重複しない） */
+  try{ await tkMigrate(); }catch(e){}
   S.forming=null;S.editing=null;S.fd={};ra();
 }
 
@@ -761,6 +762,31 @@ function renderHome(){
     return card;
   }
 
+  /* ══ Phase 3：現在の重点（VISIONの直後・重点テーマの前）══
+     重点の問いカード（中に実験中の実験）＋問い未設定の実験中の警告。
+     ホームから 問いの編集・実験の追加・振り返り・探求ボードを開く が可能 */
+  (function(){
+    const w=D({});
+    const hd=D({css:'display:flex;align-items:center;gap:10px;margin-bottom:10px'});
+    hd.appendChild(D({cls:'sec-lbl',css:'margin:0'},'現在の重点'));
+    const open=Bt({cls:'btn-s',css:'font-size:12px;padding:3px 10px'},'→ 探求ボードを開く');
+    open.addEventListener('click',()=>{S.tab='tankyu';ra();updateNav();});
+    hd.appendChild(open);
+    w.appendChild(hd);
+    const fq=tkFocusQs();
+    if(!fq.length)w.appendChild(D({css:'font-size:13px;color:var(--di);margin-bottom:8px'},'重点の問いはまだ選ばれていません（探求ボードの候補から重点化できます）'));
+    fq.forEach(q=>w.appendChild(tkQCard(q,true)));
+    const act=tkActiveEs();
+    const shown=new Set();fq.forEach(q=>S.experiments.filter(x=>x.questionId===q.id).forEach(x=>shown.add(x.id)));
+    const rest=act.filter(x=>!shown.has(x.id));
+    if(rest.length){
+      w.appendChild(D({cls:'sec-lbl',css:'margin-top:10px'},'⚠ 問い未設定の実験'));
+      rest.forEach(x=>w.appendChild(tkECard(x)));
+    }
+    w.appendChild(D({css:'margin-bottom:26px'}));
+    f.appendChild(w);
+  })();
+
   // ── 探求テーマ（手動追加のみ） ──
   const myThemes=themes.filter(t=>!t._fromProjectOS);
   const pjThemes=themes.filter(t=>t._fromProjectOS);
@@ -915,7 +941,14 @@ function renderHome(){
     }
     return sec;
   }
-  f.appendChild(buildClSection(pub));
+  /* Phase 3：旧checksベースの「重要な問い／実験中」セクションは撤去（現在の重点・探求ボードへ移行済み。
+     buildClSection関数はテーマクリックハンドラが参照するためレガシー残置＝cl-section不在時は何もしない）。
+     代わりに「最近の振り返り」を表示 */
+  const recent=pub.slice(0,5);
+  if(recent.length){
+    f.appendChild(D({cls:'sec-lbl',css:'margin-top:32px;margin-bottom:14px'},'最近の振り返り'));
+    recent.forEach(r=>f.appendChild(logCard(r)));
+  }
 
   return f;
 }
@@ -1131,6 +1164,8 @@ async function registerAiInput(){
     // 未紐づきチェック
     const unlinked=entries.filter(e=>!(e.themes&&e.themes.length));
     if(unlinked.length) S._unlinkedNotice=unlinked.length;
+    /* 新規動線：取り込んだ問い・次の実験を探求ボードの候補へ即時反映（冪等・旧checks方式にだけ残らない） */
+    try{ await tkMigrate(); }catch(e){}
   }
 
   // Lectica実績の登録（Lecticaタブの lxParseImport / lxImportSave を共有。複製しない）
@@ -1723,8 +1758,9 @@ function tkReviewModal(x){
       await tkSave('experiments',nx);
       toast('変更後の新実験を候補に作成しました');
     }
-    /* 原則化：Phase 3 で実践原則の作成モーダルに接続予定（statusのみ先行） */
     m.close();ra();
+    /* 原則化を選んだら実践原則の作成モーダルへ接続（原則名・説明・元実験/問いをプリフィル） */
+    if(sel==='principled')tkPrincipleForm(null,{exp:x});
   });
 }
 
@@ -1782,6 +1818,69 @@ function tkMergeEModal(ids){
     for(const x of es){x.status='merged';x.mergedIntoId=nx.id;x.completedAt=tod();await tkSave('experiments',x);}
     m.close();tkOrgClear();ra();
   });
+}
+
+/* ══ Phase 3：実践原則（カテゴリ5分類・作成/編集/アーカイブ・振り返り「原則化」から接続） ══ */
+const TK_PCAT={dialogue:'対話',decision:'判断',organization:'組織',self:'自分',other:'その他'};
+function tkPrincipleForm(existing,ctx){
+  const m=tkModal(existing?'実践原則を編集':'実践原則をつくる',ctx&&ctx.exp?'実験の振り返りから原則化します':'');
+  const ti=tkFld(m.box,'原則名',tkTa('例：答えを渡す前に、問いを一つ置く',44),true);
+  ti.value=existing?existing.title:((ctx&&ctx.exp&&(ctx.exp.learning||'').split('\n')[0])||'');
+  let cat=existing?(existing.category||'other'):'other';
+  tkFld(m.box,'カテゴリ',tkRadioRow(Object.entries(TK_PCAT),cat,v=>cat=v));
+  const ds=tkFld(m.box,'説明',tkTa('どう実践するか・なぜ効くか',56));ds.value=existing?(existing.description||''):((ctx&&ctx.exp&&ctx.exp.learning)||'');
+  const srcE=existing?(existing.sourceExperimentIds||[]):(ctx&&ctx.exp?[ctx.exp.id]:[]);
+  const srcQ=existing?(existing.sourceQuestionIds||[]):(ctx&&ctx.exp&&ctx.exp.questionId?[ctx.exp.questionId]:[]);
+  const eT=srcE.map(id=>S.experiments.find(x=>x.id===id)?.title).filter(Boolean);
+  const qT=srcQ.map(id=>S.questions.find(q=>q.id===id)?.title).filter(Boolean);
+  if(eT.length)tkFld(m.box,'元になった実験',D({css:'font-size:13px;color:var(--mu);line-height:1.6'},eT.join(' / ')));
+  if(qT.length)tkFld(m.box,'元になった問い',D({css:'font-size:13px;color:var(--mu);line-height:1.6'},qT.join(' / ')));
+  m.btns(existing?'更新':'作成',async()=>{
+    const t=ti.value.trim();if(!t){alert('原則名を入力してください');return;}
+    if(existing){existing.title=t;existing.category=cat;existing.description=ds.value.trim();await tkSave('principles',existing);}
+    else await tkSave('principles',{id:uid(),title:t,category:cat,description:ds.value.trim(),sourceExperimentIds:srcE,sourceQuestionIds:srcQ,status:'active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+    m.close();ra();
+  });
+}
+function tkPCard(p){
+  const card=D({cls:'tk-qcard'});
+  const tt=D({cls:'tk-qtitle',css:'cursor:default;display:flex;gap:6px;align-items:flex-start'});
+  tt.appendChild(Sp({cls:'tk-st',css:TK_ST_CSS.principled},TK_PCAT[p.category]||'その他'));
+  tt.appendChild(Sp({css:'flex:1'},p.title));
+  card.appendChild(tt);
+  if(p.description)card.appendChild(D({css:'font-size:13px;color:var(--mu);margin-top:4px;line-height:1.65;white-space:pre-wrap'},p.description));
+  const eSrc=(p.sourceExperimentIds||[]).map(id=>S.experiments.find(x=>x.id===id)).filter(Boolean);
+  const qT=(p.sourceQuestionIds||[]).map(id=>S.questions.find(q=>q.id===id)?.title).filter(Boolean);
+  const eT=eSrc.map(x=>x.title);
+  if(eT.length||qT.length)card.appendChild(D({cls:'tk-meta'},(eT.length?'元実験：'+eT.join(' / '):'')+(eT.length&&qT.length?' ／ ':'')+(qT.length?'元問い：'+qT.join(' / '):'')));
+  /* 関連ログ参照：元実験のsourceLogIdsからログを引く */
+  const relLogs=[...new Set(eSrc.flatMap(x=>x.sourceLogIds||[]))].map(id=>S.logs.find(l=>l.id===id)).filter(Boolean).slice(0,3);
+  if(relLogs.length)card.appendChild(D({cls:'tk-meta'},'関連ログ：'+relLogs.map(l=>l.date+' '+(l.title||'')).join(' ／ ')));
+  if(p.status==='archived')card.appendChild(tkOps(['復帰',async()=>{p.status='active';await tkSave('principles',p);ra();}],['編集',()=>tkPrincipleForm(p)]));
+  else card.appendChild(tkOps(['編集',()=>tkPrincipleForm(p)],['アーカイブ',async()=>{p.status='archived';await tkSave('principles',p);ra();}]));
+  return card;
+}
+function tkPrincipleView(){
+  const w=D({});
+  const addB=Bt({cls:'btn-g',css:'font-size:13px;margin-bottom:12px'},'＋ 原則を追加');
+  addB.addEventListener('click',()=>tkPrincipleForm(null,null));
+  w.appendChild(addB);
+  const act=S.principles.filter(p=>p.status!=='archived');
+  if(!act.length)w.appendChild(D({cls:'empty'},'実践原則はまだありません。実験の振り返りで「原則化」を選ぶとここに増えていきます'));
+  Object.entries(TK_PCAT).forEach(([k,l])=>{
+    const ps=act.filter(p=>(p.category||'other')===k);
+    if(!ps.length)return;
+    w.appendChild(D({cls:'sec-lbl',css:'margin-top:14px'},l+'（'+ps.length+'）'));
+    ps.forEach(p=>w.appendChild(tkPCard(p)));
+  });
+  const arch=S.principles.filter(p=>p.status==='archived');
+  if(arch.length){
+    const dt=h('details',{css:'margin-top:20px'});
+    dt.appendChild(h('summary',{css:'cursor:pointer;font-size:13px;color:var(--mu)'},'アーカイブ（'+arch.length+'）'));
+    arch.forEach(p=>dt.appendChild(tkPCard(p)));
+    w.appendChild(dt);
+  }
+  return w;
 }
 
 /* 整理モード：複数選択の状態と一括操作 */
@@ -1988,12 +2087,13 @@ function renderTankyu(){
     f.appendChild(D({css:'font-size:12px;color:var(--mu);margin:-6px 0 12px'},'整理モード：問い・実験を複数選択して、下のバーから統合・紐づけ・一括変更できます'));
     const bar=tkOrgBar();if(bar)f.appendChild(bar);
   }
-  const tabs=[['focus','重点'],['candidate','候補'],['done','完了']];
+  const tabs=[['focus','重点'],['candidate','候補'],['principle','実践原則'],['done','完了']];
   const tw=D({cls:'tk-tabs'});
   tabs.forEach(([k,l])=>{const b=Bt({cls:'chip'+(S._tkTab===k?' on':'')},l);b.addEventListener('click',()=>{S._tkTab=k;ra();});tw.appendChild(b);});
   f.appendChild(tw);
   if(S._tkTab==='focus')f.appendChild(tkFocusView());
   else if(S._tkTab==='candidate')f.appendChild(tkCandView());
+  else if(S._tkTab==='principle')f.appendChild(tkPrincipleView());
   else f.appendChild(tkDoneView());
   return f;
 }
@@ -2255,6 +2355,8 @@ document.getElementById('imp').addEventListener('change',e=>{const f=e.target.fi
   for(const p of(d.principles||[]))await dbput('principles',p);
   S.questions=await dball('questions');S.experiments=await dball('experiments');S.principles=await dball('principles');
   S.themes=d.themes||[];S.logs=allL.sort((a,b)=>b.date.localeCompare(a.date));
+  /* 旧形式JSON（questions等なし）は読込後に自動移行（冪等。新形式なら追加分のみ） */
+  try{ await tkMigrate(); }catch(e){}
   e.target.value='';
   alert('インポート完了');ra();rgShowUndo();
 }catch(err){alert('エラー: '+err.message);}};reader.readAsText(f);});

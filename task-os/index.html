@@ -700,6 +700,21 @@ function readReflectOSFromIDB() {
         if ((checkMap['e_'+r.id+'_'+i] || 'todo') === 'doing') activeExperiments.push({ text: line.trim(), date: r.date || '' });
       });
     });
+    // 探求ボード（reflect-os新構造）の実験中も従来互換の {text, date} 形式で含める（受入20・textで重複除去）
+    try {
+      const seenTxt = new Set(activeExperiments.map(x => x.text));
+      (o.experiments || []).forEach(x => {
+        if (x && x.status === 'active' && x.title && !seenTxt.has(x.title)) {
+          seenTxt.add(x.title);
+          activeExperiments.push({ text: x.title, date: (x.createdAt || '').slice(0, 10) });
+        }
+      });
+      (o.questions || []).forEach(q => {
+        if (q && q.status === 'focus' && q.title && !importantQuestions.some(iq => iq.text === q.title)) {
+          importantQuestions.push({ text: q.title, date: (q.createdAt || '').slice(0, 10) });
+        }
+      });
+    } catch(e) {}
     const themes = (o.themes || []).filter(t => t && t.status !== '完了')
       .map(t => ({ title: t.title || '', status: t.status || '', priority: t.priority || '', question: t.question || '', hypothesis: t.hypothesis || '' }));
     return Promise.resolve({ themes, importantQuestions, activeExperiments });
