@@ -3,7 +3,10 @@
 作成日：2026-07-17
 本書は元依頼書に修正・追記を織り込んだ統合版であり、これ1本が正本。
 
-> 進捗：✅ Phase 1 `6b62cdd` ／ ✅ Phase 2 実装済み 2026-07-18 ・ `c194db4`（🕒 Phase 3 未実装）
+> ✅ 全3フェーズ実装済み：Phase 1 `6b62cdd` ／ Phase 2 `c194db4` ／ Phase 3 `9743082`（2026-07-19）
+> Phase 3 メモ：新規動線はログ保存/AI取り込み/JSON読込の直後に tkMigrate（sourceCk増分・冪等）を
+> 呼ぶ方式＝同一保存内でも重複しない。activeExperiments互換は task-os 側 readReflectOSFromIDB を拡張
+> （新構造の active実験→activeExperiments・focus問い→importantQuestions を従来形式で追加）。
 > Phase 2 メモ：実験の統合は問いと同型の merged 履歴方式（実験statusに merged を追加、
 > 完了タブに「統合された実験」フィルタ増設）。振り返りは既存ログにも1件保存し
 > sourceLogIds で相互参照。「原則化」は status 変更のみ先行（作成モーダルは Phase 3 で接続）。
