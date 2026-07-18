@@ -827,6 +827,12 @@ textarea.fc.tall { min-height: 130px; }
 .fold-sec{margin-bottom:10px}
 .fold-lbl{font-size:.68rem;color:var(--gray3);font-weight:700;margin-bottom:2px}
 .fold-val{font-size:.83rem;line-height:1.65;white-space:pre-wrap}
+/* ══ v2 Phase 2：今どこを押すか帯・壁打ちボタン ══ */
+.push-band{max-width:760px;margin-bottom:14px;padding:10px 14px;border:1px solid var(--navy);border-radius:10px;background:#f6f7fb;font-size:.85rem;color:var(--navy);cursor:pointer;line-height:1.6}
+.push-band:hover{background:#eef0f8}
+.push-band.calm{border-color:var(--gray1,#e5e7eb);color:var(--gray4);cursor:default;background:#fafafa}
+.hc-spark{border:1px solid var(--gray2,#d1d5db);background:#fff;border-radius:7px;font-size:.72rem;padding:2px 8px;cursor:pointer;color:var(--gray4);font-family:inherit;white-space:nowrap}
+.hc-spark:hover{border-color:var(--navy);color:var(--navy)}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -858,6 +864,7 @@ textarea.fc.tall { min-height: 130px; }
         <div class="pt-sub" id="dash-date"></div>
       </div>
       <div class="pt-actions">
+        <button class="btn btn-outline btn-sm" onclick="sparkCopyAll()" style="gap:6px;">🗣 全PJを壁打ちへ</button>
         <button class="btn btn-navy btn-sm" onclick="nav('import')" style="gap:6px;">&#11015; シートを取り込む</button>
       </div>
     </div>
@@ -876,6 +883,20 @@ textarea.fc.tall { min-height: 130px; }
       </div>
     </div>
     <div class="pb" style="max-width:900px;">
+      <!-- v2: PROJECT-IMPORT（壁打ちからの取り込み） -->
+      <div class="import-panel" style="margin-bottom:14px;">
+        <div class="import-panel-h">🗣 PROJECT-IMPORT 貼り付け（壁打ちから取り込み）</div>
+        <div class="import-panel-b">
+          <div class="si-format-hint">壁打ちAIの出力をそのまま貼り付け。ラベル行（PJ: / 決定: / 学び: / 分岐: / 次の一手: / 問い:）だけを読みます。分岐は末尾に @YYYY-MM-DD で予定日を指定可。「問い:」「次の一手:」は核3行に同期し、旧値はムーブ履歴に残ります。</div>
+          <textarea class="import-textarea" id="pi-paste" style="min-height:150px;"
+            placeholder="---PROJECT-IMPORT---&#10;PJ: 事業承継&#10;決定: 持株会社方式を軸に進める&#10;学び: 感情面の整理が先&#10;分岐: 銀行への説明会 @2026-08-01&#10;次の一手: 税理士に株価算定を依頼&#10;問い: 先代の納得と税務合理性をどう両立するか&#10;---END---"></textarea>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+            <button class="btn btn-navy btn-sm" onclick="piParse()">⬇ 取り込む</button>
+            <div id="pi-status" style="font-size:.8rem;color:var(--gray4);flex:1;"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ① プロジェクト選択 -->
       <div class="import-panel" style="margin-bottom:14px;">
         <div class="import-panel-h">
@@ -1253,7 +1274,7 @@ function renderSb() {
   });
   const urgent = urgentItems.length;
   const urgentTip = urgentItems.join('\n');
-  const cur = page==='detail'?'projs':page;
+  const cur = page==='detail'?'dash':page;   /* v2: 詳細はホーム配下 */
   $$('sb-nav').innerHTML = PAGES.map(p=>
     `<div class="sb-link${p.id===cur?' on':''}" onclick="nav('${p.id}')">
        <span class="sb-link-ic">${p.ic}</span>${p.label}
@@ -1509,6 +1530,7 @@ function homeCard(p,todayStr){
         ${danger?'<span class="bd bd-red">危険</span>':''}
         ${overdue?'<span class="bd bd-orange">期限超過</span>':''}
         <span class="hc-ago">${esc(lm.label)}</span>
+        <button class="hc-spark" onclick="event.stopPropagation();sparkCopy('${p.id}')" title="このPJの核とムーブをコピーして壁打ちへ">🗣 壁打ち</button>
       </span>
     </div>
     <div class="hc-line"><span class="hc-l">ゴール</span><span class="hc-v${p.goal?'':' hc-empty'}">${esc(p.goal)||'未設定'}</span></div>
@@ -1538,9 +1560,133 @@ function renderDash() {
   const ps = S.projects.filter(p => p.status !== '完了');
   const done = S.projects.filter(p => p.status === '完了');
   $$('home-cards').innerHTML =
+    pushNowBand(ps,todayStr) +
     ps.map(p=>homeCard(p,todayStr)).join('') +
     `<div class="home-new" id="home-new"><button class="btn btn-outline btn-sm" onclick="homeNewInput()">＋ 新しいプロジェクト（PJ名だけで作成）</button></div>` +
     (done.length?`<details class="det-fold"><summary>完了したPJ（${done.length}件）</summary><div class="det-fold-b">${done.map(p=>`<div class="fold-val" style="cursor:pointer;padding:4px 0;" onclick="nav('detail','${p.id}')">${esc(p.name)}</div>`).join('')}</div></details>`:'');
+}
+
+/* ══ v2 Phase 2：「今どこを押すか」1行帯（優先度：分岐が近い→次の一手が古い→問いが長期停滞。1件だけ・事実提示） ══ */
+function pushNowBand(ps,todayStr){
+  if(!ps.length)return '';
+  /* 1) 分岐が近い */
+  let bf=null;
+  ps.forEach(p=>{const nf=nearFork(p);if(nf&&(!bf||nf.days<bf.days))bf={p,days:nf.days,title:nf.title};});
+  if(bf)return `<div class="push-band" onclick="nav('detail','${bf.p.id}')">▶ 今どこを押すか：<b>${esc(bf.p.name)}</b> — ⚡${esc(bf.title)} まであと${bf.days}日</div>`;
+  /* 2) 次の一手が古い（設定済みの中で最も古いもの） */
+  let om=null;
+  ps.forEach(p=>{
+    if(!p.nextMove)return;
+    const last=[...(p.moves||[])].filter(m=>m.kind==='次の一手').sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))[0];
+    const d=last?(last.createdAt||'').slice(0,10):'';
+    if(!om||d<om.d)om={p,d};
+  });
+  if(om){
+    const days=om.d?Math.floor((new Date(todayStr)-new Date(om.d))/864e5):null;
+    return `<div class="push-band" onclick="nav('detail','${om.p.id}')">▶ 今どこを押すか：<b>${esc(om.p.name)}</b> — 次の一手「${esc(om.p.nextMove.slice(0,24))}」が${days!==null&&days>0?days+'日前のまま':'置かれたところ'}</div>`;
+  }
+  /* 3) 問いが長期停滞（設定済みの中で最も古いもの） */
+  let oq=null;
+  ps.forEach(p=>{
+    if(!p.question)return;
+    const last=[...(p.moves||[])].filter(m=>m.kind==='問い').sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))[0];
+    const d=last?(last.createdAt||'').slice(0,10):'';
+    if(!oq||d<oq.d)oq={p,d};
+  });
+  if(oq)return `<div class="push-band" onclick="nav('detail','${oq.p.id}')">▶ 今どこを押すか：<b>${esc(oq.p.name)}</b> — 問い「${esc(oq.p.question.slice(0,24))}」を考える時間をとる</div>`;
+  return `<div class="push-band calm">▶ まずどれか1つのPJに核3行（ゴール・問い・次の一手）を書く</div>`;
+}
+
+/* ══ v2 Phase 2：壁打ちコンテキスト出力（読む量の削減） ══ */
+function sparkContextPJ(p){
+  const head=['【PJ】'+p.name,
+    'ゴール：'+(p.goal||'未設定'),
+    '現在の問い：'+(p.question||'未設定'),
+    '次の一手：'+(p.nextMove||'未設定')];
+  const nf=nearFork(p);
+  if(nf)head.push('接近分岐：'+nf.title+' あと'+nf.days+'日（'+nf.date+'）');
+  const ms=[...(p.moves||[])].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  let n=Math.min(5,ms.length);
+  const build=k=>head.concat(k?['直近の動き：'].concat(ms.slice(0,k).map(m=>'- '+m.date+' '+m.kind+'：'+m.text)):[]).join('\n');
+  let out=build(n);
+  while(out.length>400&&n>0){n--;out=build(n);}   /* 目安400字以内。超えたらムーブを削る */
+  return out;
+}
+function sparkContextAll(){
+  const cut=(s,n)=>{s=s||'未設定';return s.length>n?s.slice(0,n)+'…':s;};
+  const blocks=S.projects.filter(p=>p.status!=='完了').map(p=>{
+    const nf=nearFork(p);const lm=lastMoveInfo(p);
+    const l=['■ '+p.name+'（最終ムーブ：'+lm.label+'）',
+      'ゴール：'+cut(p.goal,60),'問い：'+cut(p.question,60),'一手：'+cut(p.nextMove,60)];
+    if(nf)l.push('接近分岐：'+cut(nf.title,40)+' あと'+nf.days+'日');
+    return l.join('\n');
+  });
+  let out='【全PJ横断】\n'+blocks.join('\n\n');
+  return out;
+}
+function copyText(text,label){
+  const done=()=>toast(label+'をコピーしました（'+text.length+'字）');
+  const fallback=t=>{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done).catch(()=>{fallback(text);done();});
+  else{fallback(text);done();}
+}
+function sparkCopy(pid){const p=proj(pid);if(!p)return;copyText(sparkContextPJ(p),'壁打ちコンテキスト');}
+function sparkCopyAll(){copyText(sparkContextAll(),'全PJ横断コンテキスト');}
+
+/* ══ v2 Phase 2：PROJECT-IMPORT（壁打ちからの取り込み。表記ゆれ・空行に寛容） ══ */
+function piParse(){
+  const raw=($$('pi-paste').value||'');
+  const st=$$('pi-status');
+  const m=raw.match(/-{2,}\s*PROJECT-IMPORT\s*-{2,}([\s\S]*?)(?:-{2,}\s*END\s*-{2,}|$)/i);
+  const body=(m?m[1]:raw).trim();
+  if(!body){st.textContent='貼り付け内容が空です';return;}
+  let pjName=null;const items=[];
+  body.split(/\n/).map(l=>l.trim()).filter(Boolean).forEach(l=>{
+    const mm=l.match(/^(PJ|プロジェクト|決定|学び|分岐|次の一手|問い)\s*[:：]\s*(.*)$/i);
+    if(!mm)return;   /* ラベル行以外は無視（寛容） */
+    const isPj=/^pj$/i.test(mm[1])||mm[1]==='プロジェクト';
+    const val=mm[2].trim();
+    if(isPj){if(val)pjName=val;return;}
+    if(!val)return;
+    const it={kind:mm[1],text:val};
+    if(it.kind==='分岐'){
+      const dm=it.text.match(/@\s*(\d{4}-\d{2}-\d{2})\s*$/);
+      if(dm){it.forkDate=dm[1];it.text=it.text.replace(/@\s*\d{4}-\d{2}-\d{2}\s*$/,'').trim();}
+    }
+    items.push(it);
+  });
+  if(!pjName){st.textContent='「PJ: プロジェクト名」の行が見つかりません';return;}
+  if(!items.length){st.textContent='取り込むラベル行（決定/学び/分岐/次の一手/問い）がありません';return;}
+  const key=pjName.toLowerCase();
+  const cands=S.projects.filter(p=>p.name.toLowerCase().includes(key)||key.includes(p.name.toLowerCase()));
+  if(!cands.length){st.textContent='該当するPJが見つかりません：'+pjName;return;}
+  if(cands.length>1){
+    /* 曖昧：選択UI（モーダルなし・その場でボタン提示） */
+    window.__piPending=items;
+    st.innerHTML='複数のPJに一致しました。取り込み先を選択：'+cands.map(p=>
+      `<button class="btn btn-outline btn-xs" style="margin-left:6px;" onclick="piApply('${p.id}',window.__piPending)">${esc(p.name)}</button>`).join('');
+    return;
+  }
+  piApply(cands[0].id,items);
+}
+function piApply(pid,items){
+  const p=proj(pid);if(!p||!items)return;
+  let n=0;
+  items.forEach(it=>{
+    const mv=pushMove(p,it.kind,it.text,it.forkDate);
+    if(it.kind==='次の一手')p.nextMove=it.text;   /* 核3行に同期（旧値はムーブ履歴に残存） */
+    if(it.kind==='問い')p.question=it.text;
+    if(it.kind==='分岐'){
+      if(!p.forks)p.forks=[];
+      p.forks.push({id:mv.id,date:it.forkDate||today(),status:(it.forkDate&&it.forkDate>today())?'future':'past',title:it.text,what:'',why:'',nextAction:'',stakeholders:''});
+    }
+    n++;
+  });
+  touchProj(pid);save();
+  window.__piPending=null;
+  const st=$$('pi-status');if(st)st.textContent='✓ '+p.name+' に '+n+'件取り込みました（問い・次の一手は核に同期）';
+  const ta=$$('pi-paste');if(ta)ta.value='';
+  toast(p.name+' に '+n+'件取り込みました');
 }
 
 /* ══════════════════════════════════
@@ -1758,7 +1904,8 @@ function renderDetail() {
     badge(p.status,ST[p.status]||'bd-gray') +
     badge(p.priority,PRI[p.priority]||'bd-gray') +
     (p.deadline?`<span class="muted" style="font-size:.7rem;">期限 ${esc(p.deadline)}</span>`:'') +
-    (p.owner?`<span class="muted" style="font-size:.7rem;">👤 ${esc(p.owner)}</span>`:'');
+    (p.owner?`<span class="muted" style="font-size:.7rem;">👤 ${esc(p.owner)}</span>`:'') +
+    `<button class="hc-spark" onclick="sparkCopy('${p.id}')" title="このPJの核とムーブをコピーして壁打ちへ">🗣 壁打ちへ持っていく</button>`;
   $$('tab-bar').innerHTML = '';
   $$('tab-panes').innerHTML = `<div class="det-one">
     ${coreHtml(p)}
