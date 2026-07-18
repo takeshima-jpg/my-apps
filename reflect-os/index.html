@@ -1059,6 +1059,11 @@ function renderAiImport(){
       promptRow('📄 Lecticaまとめ をコピー','LX_PROMPT_SUMMARY','振り返りチャットの最後に貼って取り込みブロック生成') +
     '</div>' +
     '<div style="font-size:13px;font-weight:700;margin:0 0 6px;">貼り付けて登録</div>' +
+    '<div id="ai-prompt-text" style="font-size:12px;color:var(--mu);line-height:1.7;margin-bottom:8px;border:1px dashed var(--bd);border-radius:5px;padding:8px 12px;">' +
+      '【ルール】探求ボードに入れるのは問いと検証実験だけ。<br>' +
+      '・毎日/毎週続ける習慣は「次の実験」に含めない（習慣はRoutine OSで管理するため出力しない）<br>' +
+      '・思考法・原則めいた内容は「気づき・学び」に書く（実験にしない）' +
+    '</div>' +
     '<textarea class="ai-textarea" id="ai-input" placeholder="壁打ち・振り返りの出力をそのまま貼り付けてください（【振り返り】ブロック / ---REFLECT-IMPORT--- ブロックのどちらでも自動判別します）"></textarea>' +
     '<div class="ai-btn-row">' +
       '<button class="btn-p" onclick="registerAiInput()">登録する</button>' +
@@ -1702,10 +1707,24 @@ function tkQEditModal(q){
   m.btns('更新',async()=>{const t=ti.value.trim();if(!t){alert('問いを入力してください');return;}q.title=t;q.hypothesis=hy.value.trim();await tkSave('questions',q);m.close();ra();});
 }
 
-/* 実験の追加（qあり＝その問いに紐づけ）／編集（existingあり） */
+/* 実験の追加（qあり＝その問いに紐づけ／q無し新規＝フリー追加：問い選択・テーマ選択が出る）／編集（existingあり） */
 function tkExpForm(q,existing){
   const m=tkModal(existing?'実験を編集':'実験を追加',q?('問い：'+q.title):(existing&&existing.questionId?('問い：'+(S.questions.find(x=>x.id===existing.questionId)?.title||'')):''));
   const ti=tkFld(m.box,'実験内容',tkTa('「〜してみる」で書く',56),true);ti.value=existing?existing.title:'';
+  /* フリー追加（問い未指定の新規）のみ：紐づける問い・テーマの選択（どちらも任意） */
+  let qSel=null,thSel=null;
+  if(!existing&&!q){
+    qSel=Sel({css:'width:100%;font-size:13px;padding:7px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx)'});
+    qSel.appendChild(Opt('','（問い未設定のまま追加）'));
+    S.questions.filter(x=>x.status==='focus'||x.status==='candidate')
+      .sort((a,b)=>(a.status==='focus'?0:1)-(b.status==='focus'?0:1))
+      .forEach(x=>qSel.appendChild(Opt(x.id,(x.status==='focus'?'【重点】':'')+x.title)));
+    tkFld(m.box,'紐づける問い（任意）',qSel);
+    thSel=Sel({css:'width:100%;font-size:13px;padding:7px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx)'});
+    thSel.appendChild(Opt('','テーマなし'));
+    S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了').forEach(t=>thSel.appendChild(Opt(t.id,t.title)));
+    tkFld(m.box,'探求テーマ（任意）',thSel);
+  }
   const sc=tkFld(m.box,'使う場面（実験中にする場合は必須）',tkTa('どの場面で試すか',44));sc.value=existing?.scene||'';
   const ob=tkFld(m.box,'観察すること（実験中にする場合は必須）',tkTa('何を観察するか',44));ob.value=existing?.observation||'';
   const dl=tkFld(m.box,'期限（実験中にする場合は必須）',In({type:'date',css:'padding:7px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);font-family:inherit'}));dl.value=existing?.deadline||'';
@@ -1719,9 +1738,27 @@ function tkExpForm(q,existing){
       existing.title=title;existing.scene=sc.value.trim();existing.observation=ob.value.trim();existing.deadline=dl.value;existing.note=nt.value.trim();
       await tkSave('experiments',existing);m.close();ra();return;
     }
-    const x={id:uid(),questionId:q?q.id:null,title,themeIds:q?(q.themeIds||[]).slice():[],status:'candidate',scene:sc.value.trim(),observation:ob.value.trim(),deadline:dl.value,note:nt.value.trim(),result:'',learning:'',sourceLogIds:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
+    const linkedQ=(qSel&&qSel.value)?S.questions.find(z=>z.id===qSel.value):q;
+    const themeIds=(thSel&&thSel.value)?[thSel.value]:(linkedQ?(linkedQ.themeIds||[]).slice():[]);
+    const x={id:uid(),questionId:linkedQ?linkedQ.id:null,title,themeIds,status:'candidate',scene:sc.value.trim(),observation:ob.value.trim(),deadline:dl.value,note:nt.value.trim(),result:'',learning:'',sourceLogIds:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
     await tkSave('experiments',x);m.close();
-    if(asActive)await tkSetEStatus(x,'active');else ra();   /* 3件制限は tkSetEStatus が担保 */
+    if(asActive)await tkSetEStatus(x,'active');else{S._tkTab='candidate';ra();updateNav();}   /* 3件制限は tkSetEStatus が担保 */
+  });
+}
+
+/* フリー追加：問い（本文＋仮説・テーマは任意）→ candidate で作成 */
+function tkQuickQForm(){
+  const m=tkModal('問いを追加','新しい問いは候補として保存されます（重点化は候補タブから）');
+  const ti=tkFld(m.box,'問い',tkTa('まだ答えが出ていない問い',50),true);ti.value='';
+  const hy=tkFld(m.box,'現在の仮説（任意）',tkTa('',44));hy.value='';
+  const sel=Sel({css:'width:100%;font-size:13px;padding:7px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx)'});
+  sel.appendChild(Opt('','テーマなし'));
+  S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了').forEach(t=>sel.appendChild(Opt(t.id,t.title)));
+  tkFld(m.box,'探求テーマ（任意）',sel);
+  m.btns('候補に追加',async()=>{
+    const t=ti.value.trim();if(!t){alert('問いを入力してください');return;}
+    await tkSave('questions',{id:uid(),title:t,themeIds:sel.value?[sel.value]:[],status:'candidate',hypothesis:hy.value.trim(),sourceLogIds:[],mergedIntoId:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null});
+    m.close();S._tkTab='candidate';ra();updateNav();toast('問いを候補に追加しました');
   });
 }
 
@@ -2039,6 +2076,12 @@ function tkFocusView(){
 
 function tkCandView(){
   const w=D({});
+  /* フリー追加（ログ・取り込みを経由せず直接作る動線） */
+  const addRow=D({css:'display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap'});
+  const qB=Bt({cls:'btn-g',css:'font-size:13px'},'＋ 問いを追加');qB.addEventListener('click',()=>tkQuickQForm());
+  const eB=Bt({cls:'btn-g',css:'font-size:13px'},'＋ 実験を追加');eB.addEventListener('click',()=>tkExpForm(null));
+  addRow.appendChild(qB);addRow.appendChild(eB);
+  w.appendChild(addRow);
   const cq=S.questions.filter(q=>q.status==='candidate');
   w.appendChild(D({cls:'sec-lbl'},'問いの候補（'+cq.length+'件）'));
   if(!cq.length)w.appendChild(D({cls:'empty'},'問いの候補はありません'));
