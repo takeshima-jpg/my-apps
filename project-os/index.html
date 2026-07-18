@@ -45,7 +45,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
 body { font-family: var(--f0); background: var(--off); color: var(--ink);
-       font-size: 16px; line-height: 1.6; display: flex; }
+       font-size: 17px; line-height: 1.6; display: flex; } /* v2.2: 基本+1px */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--gray2); border-radius: 4px; }
@@ -86,9 +86,9 @@ input, select, textarea { font-family: var(--f0); }
 .sb-link.on { color: #fff; font-weight: 600; border-left-color: #fff; border-left-width: 3px; background: rgba(255,255,255,0.12); }
 .sb-link-ic { font-size: .85rem; width: 16px; text-align: center; }
 .sb-badge {
-  margin-left: auto; background: var(--red);
+  margin-left: auto; background: #d7dbe2;   /* v2.2: 警告色→中立グレー（内容は危険温度感＋分岐接近のみで不変） */
   font-size: .6rem; font-weight: 700;
-  padding: 1px 5px; border-radius: 10px; color: #fff;
+  padding: 1px 5px; border-radius: 10px; color: #4a5058;
 }
 .sb-foot {
   padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.07);
@@ -112,7 +112,8 @@ input, select, textarea { font-family: var(--f0); }
 /* ── PAGE TOP ────────────────────────────── */
 .pt {
   background: var(--white); border-bottom: 1px solid var(--gray1);
-  padding: 20px 32px; display: flex; align-items: center;
+  padding: 20px calc(max(32px, (100% - 920px) / 2)); /* v2.2: 中身を中央幅に */
+  display: flex; align-items: center;
   justify-content: space-between; gap: 16px;
   flex-shrink: 0; position: sticky; top: 0; z-index: 20;
 }
@@ -121,7 +122,7 @@ input, select, textarea { font-family: var(--f0); }
 .pt-actions { display: flex; gap: 8px; align-items: center; }
 
 /* ── PAGE BODY ───────────────────────────── */
-.pb { padding: 28px 32px; flex: 1; }
+.pb { padding: 28px 32px; flex: 1; max-width: 920px; margin: 0 auto; width: 100%; box-sizing: border-box; } /* v2.2: 中央寄せ */
 
 /* ── BTNS ────────────────────────────────── */
 .btn {
@@ -297,7 +298,8 @@ input, select, textarea { font-family: var(--f0); }
 ═══════════════════════════════════════════ */
 .det-top {
   background: var(--white); border-bottom: 1px solid var(--gray1);
-  padding: 16px 32px; flex-shrink: 0;
+  padding: 16px calc(max(32px, (100% - 920px) / 2)); /* v2.2: 中身を中央幅に */
+  flex-shrink: 0;
   position: sticky; top: 0; z-index: 20;
 }
 .det-back {
@@ -308,7 +310,7 @@ input, select, textarea { font-family: var(--f0); }
   cursor: pointer; margin-bottom: 12px; transition: all .14s;
 }
 .det-back:hover { background: var(--gray1); border-color: var(--gray3); }
-.det-name { font-family: var(--f1); font-size: 1.475rem; color: var(--navy); margin-bottom: 7px; }
+.det-name { font-family: var(--f1); font-size: 1.65rem; color: var(--navy); margin-bottom: 7px; } /* v2.2: PJ名を主役に */
 .det-meta { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
 
 .tab-bar {
@@ -784,28 +786,36 @@ textarea.fc.tall { min-height: 130px; }
 }
 
 /* ══ v2：PJカードホーム ══ */
-.home-card{background:#fff;border:1px solid var(--gray1,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:12px;cursor:pointer;max-width:760px;box-shadow:0 1px 3px rgba(0,0,0,.05);transition:box-shadow .15s}
+.home-card{background:#fff;border:1px solid var(--gray1,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:12px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.05);transition:box-shadow .15s} /* v2.2: 幅は.pb(920px中央)に従う */
 .home-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.09)}
 .hc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-.hc-name{font-size:1rem;font-weight:700;color:var(--navy)}
+.hc-name{font-size:1.12rem;font-weight:700;color:var(--navy)} /* v2.2: 拡大 */
 .hc-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .hc-fork{font-size:.68rem;color:var(--orange);background:var(--ora-s,#fff7ed);border:1px solid var(--orange);border-radius:6px;padding:2px 8px;white-space:nowrap}
 .hc-ago{font-size:.68rem;color:var(--gray3);white-space:nowrap}
-.hc-line{display:flex;gap:8px;font-size:.82rem;line-height:1.6;margin-bottom:2px}
+.hc-line{display:flex;gap:8px;font-size:.9rem;line-height:1.6;margin-bottom:2px} /* v2.2: 拡大 */
 .hc-l{flex-shrink:0;width:44px;font-size:.68rem;color:var(--gray3);font-weight:600;padding-top:2px}
 .hc-v{color:var(--gray5,#333)}
 .hc-empty{color:var(--gray3);font-size:.75rem}
 .home-new{margin:16px 0}
 .hn-input{font-size:.9rem;padding:9px 12px;border:1px solid var(--gray2,#d1d5db);border-radius:8px;width:min(340px,70vw);font-family:inherit}
 /* ══ v2：詳細1画面 ══ */
-.det-one{max-width:760px;padding:22px 32px 60px}
+.det-one{max-width:920px;margin:0 auto;width:100%;box-sizing:border-box;padding:22px 32px 60px} /* v2.2: 中央寄せ */
 .core-wrap{margin-bottom:6px}
 .core-row{padding:10px 12px;border:1px solid transparent;border-radius:10px;cursor:pointer}
 .core-row:hover{border-color:var(--gray1,#e5e7eb);background:#fafafa}
 .core-lbl{font-size:.68rem;color:var(--gray3);font-weight:700;letter-spacing:.06em;margin-bottom:2px}
-.core-val{font-size:1.02rem;line-height:1.65;color:var(--gray5,#222);white-space:pre-wrap}
+.core-val{font-size:1.18rem;line-height:1.65;color:var(--gray5,#222);white-space:pre-wrap} /* v2.2: 核を主役に */
 .core-empty{color:var(--gray3);font-size:.85rem}
 .core-ta{width:100%;min-height:56px;font-size:1rem;font-family:inherit;line-height:1.6;padding:8px;border:1px solid var(--navy);border-radius:8px;box-sizing:border-box;resize:vertical}
+/* ── v2.2: 見立て4項目（各1行・インライン編集・任意） ── */
+.mt-wrap{margin:2px 0 10px;padding:4px 0;border-top:1px dashed var(--gray1,#e5e7eb)}
+.mt-row{display:flex;gap:10px;align-items:baseline;padding:5px 12px;border:1px solid transparent;border-radius:8px;cursor:pointer}
+.mt-row:hover{border-color:var(--gray1,#e5e7eb);background:#fafafa}
+.mt-lbl{flex-shrink:0;width:80px;font-size:.68rem;color:var(--gray3);font-weight:700;letter-spacing:.04em}
+.mt-val{font-size:.92rem;color:var(--gray5,#333);line-height:1.6;word-break:break-word;overflow-wrap:anywhere}
+.mt-empty{color:var(--gray3);font-size:.78rem}
+.mt-input{flex:1;font-size:.92rem;font-family:inherit;padding:5px 8px;border:1px solid var(--navy);border-radius:6px;box-sizing:border-box;width:100%}
 .fork-notice{font-size:.8rem;color:var(--orange);background:var(--ora-s,#fff7ed);border:1px solid var(--orange);border-radius:8px;padding:7px 12px;margin:4px 0 10px;max-width:max-content}
 .qa-wrap{margin:14px 0 20px;padding:12px;border:1px solid var(--gray1,#e5e7eb);border-radius:12px;background:#fbfbfa}
 .qa-ta{width:100%;min-height:44px;font-size:.92rem;font-family:inherit;line-height:1.6;padding:8px 10px;border:1px solid var(--gray2,#d1d5db);border-radius:8px;box-sizing:border-box;resize:vertical;margin-bottom:8px}
@@ -821,14 +831,14 @@ textarea.fc.tall { min-height: 130px; }
 .mv-del{flex-shrink:0;border:none;background:none;color:var(--gray2,#ccc);cursor:pointer;font-size:.9rem;padding:0 4px}
 .mv-del:hover{color:var(--red)}
 .mv-empty{font-size:.8rem;color:var(--gray3);padding:10px 4px}
-.det-fold{margin-top:14px;border:1px solid var(--gray1,#e5e7eb);border-radius:10px;background:#fff;max-width:760px}
+.det-fold{margin-top:14px;border:1px solid var(--gray1,#e5e7eb);border-radius:10px;background:#fff}
 .det-fold summary{cursor:pointer;font-size:.8rem;color:var(--gray4);padding:10px 14px;user-select:none}
 .det-fold-b{padding:4px 14px 14px}
 .fold-sec{margin-bottom:10px}
 .fold-lbl{font-size:.68rem;color:var(--gray3);font-weight:700;margin-bottom:2px}
 .fold-val{font-size:.83rem;line-height:1.65;white-space:pre-wrap}
 /* ══ v2 Phase 2：今どこを押すか帯・壁打ちボタン ══ */
-.push-band{max-width:760px;margin-bottom:14px;padding:10px 14px;border:1px solid var(--navy);border-radius:10px;background:#f6f7fb;font-size:.85rem;color:var(--navy);cursor:pointer;line-height:1.6}
+.push-band{margin-bottom:14px;padding:10px 14px;border:1px solid var(--navy);border-radius:10px;background:#f6f7fb;font-size:.85rem;color:var(--navy);cursor:pointer;line-height:1.6}
 .push-band:hover{background:#eef0f8}
 .push-band.calm{border-color:var(--gray1,#e5e7eb);color:var(--gray4);cursor:default;background:#fafafa}
 .hc-spark{border:1px solid var(--gray2,#d1d5db);background:#fff;border-radius:7px;font-size:.72rem;padding:2px 8px;cursor:pointer;color:var(--gray4);font-family:inherit;white-space:nowrap}
@@ -1545,6 +1555,7 @@ function homeCard(p,todayStr){
     <div class="hc-line"><span class="hc-l">ゴール</span><span class="hc-v${p.goal?'':' hc-empty'}">${esc(p.goal)||'未設定'}</span></div>
     <div class="hc-line"><span class="hc-l">問い</span><span class="hc-v${p.question?'':' hc-empty'}">${esc(p.question)||'未設定'}</span></div>
     <div class="hc-line"><span class="hc-l">一手</span><span class="hc-v${p.nextMove?'':' hc-empty'}">${esc(p.nextMove)||'未設定'}</span></div>
+    ${p.centerPin?`<div class="hc-line"><span class="hc-l">🎯</span><span class="hc-v">${esc(p.centerPin)}</span></div>`:''}
   </div>`;
 }
 function homeNewInput(){
@@ -1608,17 +1619,24 @@ function pushNowBand(ps,todayStr){
 
 /* ══ v2 Phase 2：壁打ちコンテキスト出力（読む量の削減） ══ */
 function sparkContextPJ(p){
-  const head=['【PJ】'+p.name,
-    'ゴール：'+(p.goal||'未設定'),
-    '現在の問い：'+(p.question||'未設定'),
-    '次の一手：'+(p.nextMove||'未設定')];
+  /* v2.2: 設定済みの見立てを1行ずつ含める。400字超はムーブ削減→それでも超えるならセンターピンのみ残す */
+  const mitAll=[['成功条件',p.successConditions],['悪い未来',p.badFuture],['センターピン',p.centerPin],['注意点',p.attentionIssue]].filter(x=>x[1]);
   const nf=nearFork(p);
-  if(nf)head.push('接近分岐：'+nf.title+' あと'+nf.days+'日（'+nf.date+'）');
   const ms=[...(p.moves||[])].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  const build=(mit,k)=>{
+    const head=['【PJ】'+p.name,'ゴール：'+(p.goal||'未設定'),'現在の問い：'+(p.question||'未設定'),'次の一手：'+(p.nextMove||'未設定')]
+      .concat(mit.map(x=>x[0]+'：'+x[1]));
+    if(nf)head.push('接近分岐：'+nf.title+' あと'+nf.days+'日（'+nf.date+'）');
+    return head.concat(k?['直近の動き：'].concat(ms.slice(0,k).map(m=>'- '+m.date+' '+m.kind+'：'+m.text)):[]).join('\n');
+  };
   let n=Math.min(5,ms.length);
-  const build=k=>head.concat(k?['直近の動き：'].concat(ms.slice(0,k).map(m=>'- '+m.date+' '+m.kind+'：'+m.text)):[]).join('\n');
-  let out=build(n);
-  while(out.length>400&&n>0){n--;out=build(n);}   /* 目安400字以内。超えたらムーブを削る */
+  let out=build(mitAll,n);
+  while(out.length>400&&n>0){n--;out=build(mitAll,n);}
+  if(out.length>400&&mitAll.length>1){
+    const pin=mitAll.filter(x=>x[0]==='センターピン');
+    n=Math.min(5,ms.length);out=build(pin,n);
+    while(out.length>400&&n>0){n--;out=build(pin,n);}
+  }
   return out;
 }
 function sparkContextAll(){
@@ -1902,6 +1920,37 @@ function coreHtml(p){
       <div class="core-val${p[f]?'':' core-empty'}">${esc(p[f])||'クリックで入力'}</div>
     </div>`).join('')+`</div>`;
 }
+
+/* ══ v2.2：見立て4項目（各1行・インライン編集・全項目任意・催促なし）══
+   成功条件=successConditions／注意点=attentionIssue は既存メタを昇格再利用、
+   悪い未来=badFuture／センターピン=centerPin も実コードでは既存フィールド（旧モーダル/シート由来）。
+   見立ては上書き運用（ムーブ履歴化しない。履歴が要るのは核の問い・一手のみ） */
+const MITATE_DEFS=[['successConditions','成功条件'],['badFuture','悪い未来'],['centerPin','センターピン'],['attentionIssue','注意点']];
+function mitateHtml(p){
+  return `<div class="mt-wrap">`+MITATE_DEFS.map(([f,lbl])=>`
+    <div class="mt-row" onclick="mitateEdit('${p.id}','${f}',this)" title="クリックで編集">
+      <span class="mt-lbl">${lbl}</span>
+      <span class="mt-val${p[f]?'':' mt-empty'}">${esc(p[f])||'未設定'}</span>
+    </div>`).join('')+`</div>`;
+}
+function mitateEdit(pid,field,el){
+  if(el.dataset.editing)return;
+  el.dataset.editing='1';
+  const p=proj(pid);if(!p)return;
+  const cur=p[field]||'';
+  const valEl=el.querySelector('.mt-val');
+  valEl.innerHTML='';
+  const inp=document.createElement('input');
+  inp.type='text';inp.className='mt-input';inp.value=cur;
+  valEl.appendChild(inp);inp.focus();
+  const done=()=>{
+    const v=inp.value.trim();
+    if(v!==cur.trim()){p[field]=v;touchProj(pid);save();}
+    renderDetail();
+  };
+  inp.addEventListener('blur',done);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();});
+}
 function quickAddHtml(p){
   return `<div class="qa-wrap">
     <textarea class="qa-ta" id="qa-text" placeholder="いま考えたこと・決めたことを1行で（ボタンを押すと即保存）"></textarea>
@@ -1925,13 +1974,12 @@ function movesHtml(p){
     </div>`).join(''):'<div class="mv-empty">まだムーブがありません。上の欄に1行書いて種類ボタンを押すだけ。</div>')+`</div>`;
 }
 function collapsesHtml(p){
-  const meta=[['成功条件',p.successConditions],['注意論点',p.attentionIssue],['悪い未来',p.badFuture],['センターピン',p.centerPin]].filter(x=>x[1]);
+  /* v2.2: 成功条件・注意論点・悪い未来・センターピンは「見立て」ブロックへ昇格＝ここでは重複表示しない */
   const phases=(p.phases||[]);
   return `
-  <details class="det-fold"><summary>詳細メタ（成功条件・注意論点・論点メモ）</summary>
+  <details class="det-fold"><summary>詳細メタ（重点テーマ・PJ設定）</summary>
     <div class="det-fold-b">
-      ${meta.length?meta.map(([l,v])=>`<div class="fold-sec"><div class="fold-lbl">${esc(l)}</div><div class="fold-val">${esc(v)}</div></div>`).join(''):'<div style="font-size:.8rem;color:var(--gray3);margin-bottom:8px;">未入力</div>'}
-      ${phases.length?`<div class="fold-sec"><div class="fold-lbl">重点テーマ</div>${phases.map(ph=>`<div class="fold-val">・${esc(ph.phase)} ${esc(ph.theme)}${ph.goal?' — '+esc(ph.goal):''}</div>`).join('')}</div>`:''}
+      ${phases.length?`<div class="fold-sec"><div class="fold-lbl">重点テーマ</div>${phases.map(ph=>`<div class="fold-val">・${esc(ph.phase)} ${esc(ph.theme)}${ph.goal?' — '+esc(ph.goal):''}</div>`).join('')}</div>`:'<div style="font-size:.8rem;color:var(--gray3);margin-bottom:8px;">重点テーマは未設定</div>'}
       <div style="display:flex;gap:8px;margin-top:6px;">
         <button class="btn btn-outline btn-xs" onclick="openProjModal('${p.id}')">✏ メタを編集</button>
         <button class="btn btn-danger btn-xs" onclick="delProj('${p.id}')">PJを削除</button>
@@ -1964,6 +2012,7 @@ function renderDetail() {
   $$('tab-panes').innerHTML = `<div class="det-one">
     ${coreHtml(p)}
     ${forkNoticeHtml(p)}
+    ${mitateHtml(p)}
     ${quickAddHtml(p)}
     ${movesHtml(p)}
     ${collapsesHtml(p)}
