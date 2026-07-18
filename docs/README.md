@@ -36,6 +36,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-task-os-home-v2-spec.md](specs/claude-code-task-os-home-v2-spec.md) | Task OS HOME見直し（統計3カード撤去・今日の一手をpos_v4の次の一手に刷新・今日やること既定展開・日付表示修正） | ✅実装済み 2026-07-18 `a2b6c84` |
 | [claude-code-reflect-tankyu-board-spec.md](specs/claude-code-reflect-tankyu-board-spec.md) | Reflect OS 探求ボード（問い/実験/原則の独立データ化・冪等移行・統合/整理モード・振り返り・実践原則・ホーム刷新・新規動線接続） | ✅実装済み 2026-07-19 `6b62cdd`/`c194db4`/`9743082` |
 | [claude-code-task-os-home-viewpoints-spec.md](specs/claude-code-task-os-home-viewpoints-spec.md) | Task OS HOME視点追加（🧭PJの現在地ミニ＋💡最近の気づき1件。読み取り専用・該当なし非表示・催促なし） | ✅実装済み 2026-07-19 `53b9585` |
+| [claude-code-project-os-v2-2-spec.md](specs/claude-code-project-os-v2-2-spec.md) | Project OS v2.2（中央寄せmax-width 920px・文字拡大・見立て4項目＝成功条件/悪い未来/センターピン/注意点のインライン編集・壁打ち出力へ反映） | ✅実装済み 2026-07-19 `b4404b1` |
 | [claude-code-taskos-mobile-menu-fix-spec.md](specs/claude-code-taskos-mobile-menu-fix-spec.md) | Task OSスマホのハンバーガーメニューが開かない緊急修正（toggleSidebar/closeSidebar未定義を実装） | ✅実装済み 2026-07-13 `ed3f6b6` |
 | [claude-code-taskos-aiimport-hotfix-spec.md](specs/claude-code-taskos-aiimport-hotfix-spec.md) | Task OS AIタスク読込の緊急修正（genId未定義→共通genUidに統一・GDrive dedupe隔離確認） | ✅実装済み 2026-07-12 `bfec392` |
 | [claude-code-taskos-collect-parse-hotfix.md](specs/claude-code-taskos-collect-parse-hotfix.md) | Task OS 同期の緊急修正（collectAllOSDataが週次/月次briefのmarkdownをJSON.parseして落ちる→安全パース＋restore対称化） | ✅実装済み 2026-07-12 `8bf0153` |
