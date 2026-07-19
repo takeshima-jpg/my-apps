@@ -334,6 +334,7 @@ nav{display:flex;flex-direction:column;gap:0;}
 
       <!-- Phase 3: 旧「問い」「実験」タブは探求ボードへ統合しナビから撤去（renderQuestions等のコードはレガシー残置） -->
       <button class="nb" data-tab="tankyu"><span class="nav-icon">◇</span> 探求ボード</button>
+      <button class="nb" data-tab="decision"><span class="nav-icon">🔍</span> 意思決定検証 <span id="d-badge" class="sb-badge"></span></button>
       <button class="nb" data-tab="lectica"><span class="nav-icon">✦</span> Lectica</button>
       <button class="nb" data-tab="search"><span class="nav-icon">⌕</span> 検索</button>
       <button class="nb" data-tab="archive"><span class="nav-icon">□</span> アーカイブ</button>
@@ -786,10 +787,18 @@ function renderHome(){
     fq.forEach(q=>w.appendChild(tkQCard(q,true)));
     const act=tkActiveEs();
     const shown=new Set();fq.forEach(q=>S.experiments.filter(x=>x.questionId===q.id).forEach(x=>shown.add(x.id)));
-    const rest=act.filter(x=>!shown.has(x.id));
+    const rest=act.filter(x=>!shown.has(x.id));   /* actはtkActiveEs()＝explore限定。決定検証は専用メニューへ */
     if(rest.length){
       w.appendChild(D({cls:'sec-lbl',css:'margin-top:10px'},'⚠ 問い未設定の実験'));
       rest.forEach(x=>w.appendChild(tkECard(x)));
+    }
+    /* 検証日が近い決定検証は、ホームからも入口だけ示す（一覧は専用メニュー） */
+    const soonRv=tkReviewEs().filter(x=>x.status==='active'&&tkDueSoon(x)).sort((a,b)=>(a.deadline||'').localeCompare(b.deadline||''));
+    if(soonRv.length){
+      const lnk=D({css:'font-size:13px;color:var(--mu);margin-top:12px;cursor:pointer'},
+        '🔍 検証日が近い意思決定 '+soonRv.length+'件（'+soonRv.map(x=>x.title).join('・').slice(0,40)+'） → 意思決定検証を開く');
+      lnk.addEventListener('click',()=>{S.tab='decision';ra();updateNav();});
+      w.appendChild(lnk);
     }
     w.appendChild(D({css:'margin-bottom:26px'}));
     f.appendChild(w);
@@ -1059,7 +1068,7 @@ function renderAiImport(){
     '<div class="ai-import-sub">claude.aiでの壁打ち・振り返りの出力を、ここに貼り付けて登録します</div>' +
     '<div style="font-size:13px;font-weight:700;margin:14px 0 6px;">貼り付けて登録</div>' +
     '<div id="ai-prompt-text" style="font-size:12px;color:var(--mu);line-height:1.7;margin-bottom:8px;border:1px dashed var(--bd);border-radius:5px;padding:8px 12px;">' +
-      '【ルール】探求ボードに入れるのは問いと検証実験だけ。<br>' +
+      '【ルール】探求ボードに入れるのは問いと実験だけ（【意思決定ログ】は意思決定検証へ入ります）。<br>' +
       '・毎日/毎週続ける習慣は「次の実験」に含めない（習慣はRoutine OSで管理するため出力しない）<br>' +
       '・思考法・原則めいた内容は「気づき・学び」に書く（実験にしない）' +
     '</div>' +
@@ -1096,6 +1105,28 @@ function extractField(block, keys, multiline=false){
 // 番号付きリスト・箇条書きを含む複数行フィールド用
 function extractMultiField(block, keys){
   return extractField(block, keys, true);
+}
+
+/* 【意思決定ログ】ブロック → 決定検証（expType='review'）実験へマップ。
+   決定→title／理由・背景→scene／成功条件・成否の見方→observation／検証日→deadline／原則・メモ→note */
+function parseDecisionBlocks(text){
+  const out=[];
+  String(text||'').split(/(?=【[^】]+】)/).forEach(block=>{
+    const hm=block.match(/^【([^】]+)】/);
+    if(!hm)return;
+    const t=hm[1].trim();
+    if(!/意思決定ログ|意思決定|決定ログ|決定検証/.test(t))return;
+    const title=extractField(block,['決定','決定内容','決めたこと'])||'';
+    if(!title)return;
+    out.push({
+      title,
+      scene:extractField(block,['理由','決めた理由','背景','判断軸'])||'',
+      observation:extractField(block,['成功条件','成否の見方','何を見れば成否が分かるか','検証観点'])||'',
+      deadline:(extractField(block,['検証日','検証予定日','振り返り日'])||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'',
+      note:extractField(block,['原則','メモ','補足'])||'',
+    });
+  });
+  return out;
 }
 
 function parseAiReflect(text){
@@ -1146,14 +1177,18 @@ async function registerAiInput(){
   // Lecticaブロック内の「気づき：」等の行を汎用パーサが誤認識しないよう、除いた残りで判定する
   const genericText = text.replace(/---REFLECT-IMPORT---[\s\S]*?(?:---END---|$)/g,'').trim();
 
+  /* 【意思決定ログ】は決定検証（review実験）として意思決定検証ページへ。探求ボードの候補には出さない */
+  let decisions = [];
+  try { decisions = parseDecisionBlocks(genericText); } catch(err){}
+
   let entries = [];
   if(genericText){
     try { entries = parseAiReflect(genericText); }
     catch(err){
-      if(!hasLectica){ statusEl.textContent='解析エラー: '+err.message; statusEl.className='ai-status err'; return; }
+      if(!hasLectica && !decisions.length){ statusEl.textContent='解析エラー: '+err.message; statusEl.className='ai-status err'; return; }
     }
   }
-  if(!entries.length && !hasLectica){
+  if(!entries.length && !hasLectica && !decisions.length){
     statusEl.textContent='【振り返り】などのタイプ行も ---REFLECT-IMPORT--- ブロックも見つかりません'; statusEl.className='ai-status err'; return;
   }
 
@@ -1172,6 +1207,16 @@ async function registerAiInput(){
     try{ await tkMigrate(); }catch(e){}
   }
 
+  // 決定検証の登録（expType='review'・active で保管。同一タイトル＋同一検証日は二重取り込みしない）
+  let dcAdded=0;
+  for(const d of decisions){
+    if(S.experiments.some(x=>tkIsReview(x)&&x.title===d.title&&(x.deadline||'')===(d.deadline||'')))continue;
+    await tkSave('experiments',{id:uid(),questionId:null,title:d.title,themeIds:[],expType:'review',
+      status:'active',scene:d.scene,observation:d.observation,deadline:d.deadline,note:d.note,
+      result:'',learning:'',sourceLogIds:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null});
+    dcAdded++;
+  }
+
   // Lectica実績の登録（Lecticaタブの lxParseImport / lxImportSave を共有。複製しない）
   let lecticaOk=false;
   if(hasLectica){
@@ -1185,9 +1230,16 @@ async function registerAiInput(){
   const input = document.getElementById('ai-input');
   const parts=[];
   if(entries.length) parts.push('振り返り'+entries.length+'件');
+  if(dcAdded) parts.push('意思決定検証'+dcAdded+'件');
   if(lecticaOk) parts.push('Lectica実績1件');
   if(!parts.length){
-    if(statusEl){ statusEl.textContent='登録できませんでした（内容を確認してください）'; statusEl.className='ai-status err'; }
+    if(statusEl){
+      /* 決定検証がすべて重複スキップだった場合はエラーでなく既取り込みとして伝える */
+      const dup = decisions.length && !dcAdded;
+      statusEl.textContent = dup ? '既に取り込み済みです（同じ決定・同じ検証日）' : '登録できませんでした（内容を確認してください）';
+      statusEl.className = dup ? 'ai-status ok' : 'ai-status err';
+      if(dup && input) input.value='';
+    }
     return;
   }
   if(statusEl){ statusEl.textContent = parts.join('＋')+'を登録しました ✓'; statusEl.className='ai-status ok'; }
@@ -1654,7 +1706,11 @@ function tkDueSoon(x){
   return (d>=0&&d<=14)?{days:d,date:x.deadline}:null;
 }
 const tkFocusQs=()=>S.questions.filter(q=>q.status==='focus');
-const tkActiveEs=()=>S.experiments.filter(x=>x.status==='active');
+/* 探求ボードは expType='explore'（＝未設定含む）のみを扱う。決定検証は「意思決定検証」メニューへ分離し、
+   実験中3枠も explore のみで数える（決定検証は別枠・独立管理） */
+const tkExploreEs=()=>S.experiments.filter(x=>!tkIsReview(x));
+const tkReviewEs=()=>S.experiments.filter(x=>tkIsReview(x));
+const tkActiveEs=()=>S.experiments.filter(x=>x.status==='active'&&!tkIsReview(x));
 const tkThemeNames=ids=>(ids||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
 const tkSrcLog=o=>{const r=S.logs.find(l=>(o.sourceLogIds||[]).includes(l.id));return r?(r.date+' / '+(r.title||'')):'';};
 
@@ -1669,7 +1725,8 @@ async function tkSetQStatus(q,st){
   q.status=st;q.completedAt=(st==='resolved'||st==='discarded')?tod():null;await tkSave('questions',q);ra();
 }
 async function tkSetEStatus(x,st){
-  if(st==='active'&&x.status!=='active'&&tkActiveEs().length>=3){
+  /* 3枠制限は探求実験（explore）のみ。決定検証は別枠管理＝制限を受けない */
+  if(st==='active'&&x.status!=='active'&&!tkIsReview(x)&&tkActiveEs().length>=3){
     tkSwapModal('e',async backId=>{const back=S.experiments.find(b=>b.id===backId);if(back){back.status='candidate';back.completedAt=null;await tkSave('experiments',back);}x.status='active';x.completedAt=null;await tkSave('experiments',x);ra();});
     return;
   }
@@ -1719,21 +1776,24 @@ function tkQEditModal(q){
 /* 実験の追加（qあり＝その問いに紐づけ／q無し新規＝フリー追加：問い選択・テーマ選択が出る）／編集（existingあり）。
    種別 expType：'explore'＝行動実験（既定・未設定も同義）／'review'＝決定検証（PJ外の重要な意思決定の検証）。
    検証は deadline を「検証日」、observation を「何を見れば成否が分かるか」として流用する。 */
-function tkExpForm(q,existing){
-  const m=tkModal(existing?'実験を編集':'実験を追加',q?('問い：'+q.title):(existing&&existing.questionId?('問い：'+(S.questions.find(x=>x.id===existing.questionId)?.title||'')):''));
-  let expType=tkTypeOf(existing);
+function tkExpForm(q,existing,forceType){
+  const isRv=(existing?tkIsReview(existing):forceType==='review');
+  const m=tkModal(existing?(isRv?'決定検証を編集':'実験を編集'):(isRv?'🔍 決定検証を追加':'実験を追加'),
+    isRv?'PJに紐づかない重要な意思決定を、検証日を決めて記録します'
+        :(q?('問い：'+q.title):(existing&&existing.questionId?('問い：'+(S.questions.find(x=>x.id===existing.questionId)?.title||'')):'')));
+  let expType=existing?tkTypeOf(existing):(forceType==='review'?'review':'explore');
   /* 種別トグル（新規のみ。編集時は既存種別のフォームで開く） */
   const labelsOf=()=>expType==='review'
     ?{title:'検証する決定',ph:'例：講演の依頼を受ける',scene:'決めた背景・場面',obs:'何を見れば成否が分かるか',dl:'検証日'}
     :{title:'実験内容',ph:'「〜してみる」で書く',scene:'使う場面',obs:'観察すること',dl:'期限'};
-  if(!existing){
-    tkFld(m.box,'種別',tkRadioRow([['explore','行動実験（〜してみる）'],['review','🔍 決定検証（PJ外の意思決定）']],'explore',v=>{expType=v;applyLabels();}));
-  }
+  /* 種別トグルは撤去（決定検証の追加は「意思決定検証」メニューに集約）。
+     決定検証フォームは tkExpForm(null,null,'review') で開く */
+  if(!existing&&forceType==='review')expType='review';
   const L=labelsOf();
   const ti=tkFld(m.box,L.title,tkTa(L.ph,56),true);ti.value=existing?existing.title:'';
   /* フリー追加（問い未指定の新規）のみ：紐づける問い・テーマの選択（どちらも任意） */
   let qSel=null,thSel=null;
-  if(!existing&&!q){
+  if(!existing&&!q&&!isRv){   /* 決定検証はPJ外＝問い紐づけを出さない（データ上は questionId=null） */
     qSel=Sel({css:'width:100%;font-size:13px;padding:7px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx)'});
     qSel.appendChild(Opt('','（問い未設定のまま追加）'));
     S.questions.filter(x=>x.status==='focus'||x.status==='candidate')
@@ -2050,7 +2110,7 @@ function tkQCard(q,expandedDefault){
     if(thN.length)card.appendChild(D({cls:'tk-meta'},'テーマ：'+thN.join('・')));
     if(q.hypothesis)card.appendChild(D({css:'font-size:13px;margin-top:6px;line-height:1.6'},'仮説：'+q.hypothesis));
     /* 問いカード内の関連実験 */
-    const exps=S.experiments.filter(x=>x.questionId===q.id&&x.status!=='discarded');
+    const exps=S.experiments.filter(x=>x.questionId===q.id&&x.status!=='discarded'&&!tkIsReview(x));
     const act=exps.filter(x=>x.status==='active');
     card.appendChild(D({cls:'tk-meta',css:'margin-top:8px'},'実験中 '+act.length+'件'+(exps.length>act.length?'（他 '+(exps.length-act.length)+'件）':'')));
     exps.forEach(x=>{
@@ -2124,7 +2184,7 @@ function tkCandView(){
   w.appendChild(D({cls:'sec-lbl'},'問いの候補（'+cq.length+'件）'));
   if(!cq.length)w.appendChild(D({cls:'empty'},'問いの候補はありません'));
   cq.forEach(q=>w.appendChild(tkQCard(q,false)));
-  const ce=S.experiments.filter(x=>x.status==='candidate');
+  const ce=S.experiments.filter(x=>x.status==='candidate'&&!tkIsReview(x));
   w.appendChild(D({cls:'sec-lbl',css:'margin-top:24px'},'実験の候補（'+ce.length+'件）'));
   if(!ce.length)w.appendChild(D({cls:'empty'},'実験の候補はありません'));
   ce.forEach(x=>w.appendChild(tkECard(x)));
@@ -2140,7 +2200,7 @@ function tkDoneView(){
   w.appendChild(fw);
   const f=S._tkDoneF;
   const dq=S.questions.filter(q=>['resolved','discarded','merged'].includes(q.status)).filter(q=>f==='all'||(f==='resolved'&&q.status==='resolved')||(f==='discardedQ'&&q.status==='discarded')||(f==='merged'&&q.status==='merged'));
-  const de=S.experiments.filter(x=>['complete','changed','paused','discarded','principled','merged'].includes(x.status)).filter(x=>f==='all'||(f==='complete'&&x.status==='complete')||(f==='changed'&&x.status==='changed')||(f==='paused'&&x.status==='paused')||(f==='discardedE'&&x.status==='discarded')||(f==='mergedE'&&x.status==='merged'));
+  const de=S.experiments.filter(x=>['complete','changed','paused','discarded','principled','merged'].includes(x.status)&&!tkIsReview(x)).filter(x=>f==='all'||(f==='complete'&&x.status==='complete')||(f==='changed'&&x.status==='changed')||(f==='paused'&&x.status==='paused')||(f==='discardedE'&&x.status==='discarded')||(f==='mergedE'&&x.status==='merged'));
   if(['all','resolved','discardedQ','merged'].includes(f)){
     w.appendChild(D({cls:'sec-lbl'},'問い（'+dq.length+'件）'));
     if(!dq.length)w.appendChild(D({cls:'empty'},'該当する問いはありません'));
@@ -2152,6 +2212,64 @@ function tkDoneView(){
     de.forEach(x=>w.appendChild(tkECard(x)));
   }
   return w;
+}
+
+/* ══ 意思決定検証（expType='review'）＝保管・一覧の器。探求ボードから分離した独立メニュー ══
+   状態区分：検証待ち（active・検証日前）／要検証（active・検証日到来）／検証済み（learningあり or 終了状態） */
+function dcStage(x){
+  if(x.learning||['complete','changed','paused','principled','discarded'].includes(x.status))return 'done';
+  if(x.deadline&&x.deadline<=tod())return 'due';
+  return 'waiting';
+}
+function dcCard(x){
+  const card=D({cls:'tk-qcard'});
+  const tt=D({cls:'tk-qtitle',css:'cursor:default;display:flex;gap:6px;align-items:flex-start'});
+  const stg=dcStage(x);
+  const lbl=stg==='done'?'検証済み':stg==='due'?'要検証':'検証待ち';
+  const css=stg==='done'?'background:#eef2f8;color:#4a6a9a':stg==='due'?'background:#fdf8e8;color:#8a7020':'background:#f0f0f0;color:#707070';
+  tt.appendChild(Sp({cls:'tk-st',css},lbl));
+  tt.appendChild(Sp({css:'flex:1'},'🔍 '+x.title));
+  card.appendChild(tt);
+  const ds=tkDueSoon(x);
+  const meta=[];
+  if(x.deadline)meta.push('検証日：'+x.deadline+(stg==='waiting'&&ds?'（あと'+ds.days+'日）':''));
+  if(x.scene)meta.push('背景：'+x.scene);
+  if(meta.length)card.appendChild(D({cls:'tk-meta'},meta.join(' ／ ')));
+  if(x.observation)card.appendChild(D({cls:'tk-meta'},'成否の見方：'+x.observation));
+  if(x.note)card.appendChild(D({cls:'tk-meta'},'メモ：'+x.note));
+  if(x.learning)card.appendChild(D({css:'font-size:13px;color:var(--go);margin-top:4px'},'検証結果：'+x.learning));
+  if(stg==='done')card.appendChild(tkOps(['もう一度検証',()=>tkSetEStatus(x,'active')],['編集',()=>tkExpForm(null,x)]));
+  else card.appendChild(tkOps(['検証する',()=>tkReviewModal(x)],['編集',()=>tkExpForm(null,x)],['取りやめ',()=>tkSetEStatus(x,'discarded'),true]));
+  return card;
+}
+function renderDecision(){
+  const f=document.createDocumentFragment();
+  const all=tkReviewEs();
+  const hd=D({css:'display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap'});
+  hd.appendChild(D({cls:'sec-lbl',css:'margin:0'},'意思決定検証'));
+  const addB=Bt({cls:'btn-g',css:'font-size:13px'},'＋ 決定検証');
+  addB.addEventListener('click',()=>tkExpForm(null,null,'review'));
+  hd.appendChild(addB);
+  f.appendChild(hd);
+  f.appendChild(D({css:'font-size:12px;color:var(--di);margin-bottom:16px;line-height:1.7'},
+    'PJに紐づかない重要な意思決定を、検証日を決めて保管します（壁打ちはclaude.aiのプロジェクトで行い、出力を「⬇取り込む」から登録できます）'));
+  if(!all.length){
+    f.appendChild(D({cls:'empty'},'まだ記録がありません。「＋ 決定検証」か、取り込みの【意思決定ログ】から追加できます'));
+    return f;
+  }
+  const byDate=(a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999');
+  const due=all.filter(x=>dcStage(x)==='due').sort(byDate);
+  const waiting=all.filter(x=>dcStage(x)==='waiting').sort(byDate);
+  const done=all.filter(x=>dcStage(x)==='done').sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+  const sec=(title,list)=>{
+    if(!list.length)return;
+    f.appendChild(D({cls:'sec-lbl',css:'margin-top:18px'},title+'（'+list.length+'）'));
+    list.forEach(x=>f.appendChild(dcCard(x)));
+  };
+  sec('要検証（検証日が来ています）',due);
+  sec('検証待ち',waiting);
+  sec('検証済み',done);
+  return f;
 }
 
 function renderTankyu(){
@@ -2302,6 +2420,7 @@ function renderExperiments(){
   if(S.tab==='home')wrap.appendChild(renderHome());
   else if(S.tab==='log')wrap.appendChild(renderLog());
   else if(S.tab==='tankyu')wrap.appendChild(renderTankyu());
+  else if(S.tab==='decision')wrap.appendChild(renderDecision());
 
   else if(S.tab==='search')wrap.appendChild(renderSearch());
   else if(S.tab==='questions')wrap.appendChild(renderQuestions());
@@ -2321,6 +2440,9 @@ function updateNav(){
   const eCount=pub.filter(r=>r.nextExp?.trim()).reduce((n,r)=>n+r.nextExp.split(/\n/).filter((l,i)=>{const st=S.checks['e_'+r.id+'_'+i]||'todo';return l.trim()&&st!=='done'&&st!=='skip';}).length,0);
   const qb=document.getElementById('q-badge');if(qb)qb.textContent=qCount||'';
   const eb=document.getElementById('e-badge');if(eb)eb.textContent=eCount||'';
+  /* 意思決定検証：要検証（検証日到来・未検証）の件数のみ出す（事実表示・催促色にしない） */
+  const dCount=(S.experiments||[]).filter(x=>tkIsReview(x)&&dcStage(x)==='due').length;
+  const db=document.getElementById('d-badge');if(db)db.textContent=dCount||'';
   const unthemed=pub.filter(r=>!r.themes||r.themes.length===0).length;
   const ub=document.getElementById('unthemed-badge');if(ub)ub.textContent=unthemed||'';
   const ubtn=document.getElementById('unthemed-btn');if(ubtn)ubtn.classList.toggle('on',!!S.unthemedOnly);
