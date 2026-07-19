@@ -1051,22 +1051,13 @@ const VD={vision:['守りの総合支援を通して、挑戦する人が成長�
 function renderAiImport(){
   const wrap = document.createElement('div');
   wrap.className = 'ai-import-wrap fu';
-  const promptRow = function(label, constName, usage){
-    return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
-      '<button class="btn-s" style="min-width:225px;text-align:left;" onclick="lxCopyText(' + constName + ',this)">' + label + '</button>' +
-      '<span style="font-size:12px;color:var(--mu);">' + usage + '</span></div>';
-  };
+  /* 壁打ちプロンプトのコピーボタン4種は撤去（壁打ちは claude.ai のプロジェクト機能で運用するため）。
+     生成元定数（RF_PROMPT_SPARRING / LX_PROMPT_SPARRING / LX_PROMPT_START / LX_PROMPT_SUMMARY）と
+     lxCopyText() は他用途・将来の再掲に備えて残置し、ここではUIのみ描画しない。 */
   wrap.innerHTML =
     '<div class="ai-import-title">⬇ 取り込む</div>' +
-    '<div class="ai-import-sub">AIとの壁打ち・振り返りの起点と、結果の登録をここに集約</div>' +
-    '<div style="font-size:13px;font-weight:700;margin:14px 0 6px;">プロンプト</div>' +
-    '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px;">' +
-      promptRow('🥊 Reflect壁打ち をコピー','RF_PROMPT_SPARRING','モヤモヤ・進捗の引っかかりを掘る（内省→記録→行動）') +
-      promptRow('✦ Lectica壁打ち をコピー','LX_PROMPT_SPARRING','今日の実験を設計→実行後フィードバック') +
-      promptRow('💬 Lectica振り返り をコピー','LX_PROMPT_START','実験を深掘りして振り返る（従来の新規チャット用）') +
-      promptRow('📄 Lecticaまとめ をコピー','LX_PROMPT_SUMMARY','振り返りチャットの最後に貼って取り込みブロック生成') +
-    '</div>' +
-    '<div style="font-size:13px;font-weight:700;margin:0 0 6px;">貼り付けて登録</div>' +
+    '<div class="ai-import-sub">claude.aiでの壁打ち・振り返りの出力を、ここに貼り付けて登録します</div>' +
+    '<div style="font-size:13px;font-weight:700;margin:14px 0 6px;">貼り付けて登録</div>' +
     '<div id="ai-prompt-text" style="font-size:12px;color:var(--mu);line-height:1.7;margin-bottom:8px;border:1px dashed var(--bd);border-radius:5px;padding:8px 12px;">' +
       '【ルール】探求ボードに入れるのは問いと検証実験だけ。<br>' +
       '・毎日/毎週続ける習慣は「次の実験」に含めない（習慣はRoutine OSで管理するため出力しない）<br>' +
