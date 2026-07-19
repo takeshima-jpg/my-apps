@@ -1652,6 +1652,16 @@ const TK_QST={candidate:'候補',focus:'重点',resolved:'解消',discarded:'破
 const TK_EST={candidate:'候補',active:'実験中',review:'振り返り待ち',complete:'完了',changed:'変更',paused:'保留',discarded:'やらない',principled:'原則化',merged:'統合済み'};
 const TK_ST_CSS={focus:'background:var(--go-lt);color:var(--go)',active:'background:var(--go-lt);color:var(--go)',candidate:'background:#f0f0f0;color:#707070',review:'background:#fdf8e8;color:#8a7020',complete:'background:#eef2f8;color:#4a6a9a',resolved:'background:#eef2f8;color:#4a6a9a',changed:'background:#eef2f8;color:#4a6a9a',paused:'background:#f0f0f0;color:#909090',discarded:'background:#faf0f0;color:#b05050',merged:'background:#f0f0f0;color:#909090',principled:'background:#f4f1fa;color:#5a4a8a'};
 const tkStBadge=(st,dict)=>Sp({cls:'tk-st',css:TK_ST_CSS[st]||'background:#f0f0f0;color:#707070'},dict[st]||st);
+/* 実験の種別：未設定は 'explore'（行動実験）とみなす＝既存データはマイグレーション不要 */
+const tkTypeOf=x=>(x&&x.expType==='review')?'review':'explore';
+const tkIsReview=x=>tkTypeOf(x)==='review';
+const tkTypeBadge=x=>tkIsReview(x)?Sp({cls:'tk-st',css:'background:#eef2f8;color:#4a6a9a'},'🔍 決定検証'):null;
+/* 検証日/期限が14日以内なら「あと N日」を事実表示（催促トーンにしない） */
+function tkDueSoon(x){
+  if(!x||!x.deadline)return null;
+  const d=Math.round((new Date(x.deadline)-new Date(tod()))/864e5);
+  return (d>=0&&d<=14)?{days:d,date:x.deadline}:null;
+}
 const tkFocusQs=()=>S.questions.filter(q=>q.status==='focus');
 const tkActiveEs=()=>S.experiments.filter(x=>x.status==='active');
 const tkThemeNames=ids=>(ids||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
@@ -1715,10 +1725,21 @@ function tkQEditModal(q){
   m.btns('更新',async()=>{const t=ti.value.trim();if(!t){alert('問いを入力してください');return;}q.title=t;q.hypothesis=hy.value.trim();await tkSave('questions',q);m.close();ra();});
 }
 
-/* 実験の追加（qあり＝その問いに紐づけ／q無し新規＝フリー追加：問い選択・テーマ選択が出る）／編集（existingあり） */
+/* 実験の追加（qあり＝その問いに紐づけ／q無し新規＝フリー追加：問い選択・テーマ選択が出る）／編集（existingあり）。
+   種別 expType：'explore'＝行動実験（既定・未設定も同義）／'review'＝決定検証（PJ外の重要な意思決定の検証）。
+   検証は deadline を「検証日」、observation を「何を見れば成否が分かるか」として流用する。 */
 function tkExpForm(q,existing){
   const m=tkModal(existing?'実験を編集':'実験を追加',q?('問い：'+q.title):(existing&&existing.questionId?('問い：'+(S.questions.find(x=>x.id===existing.questionId)?.title||'')):''));
-  const ti=tkFld(m.box,'実験内容',tkTa('「〜してみる」で書く',56),true);ti.value=existing?existing.title:'';
+  let expType=tkTypeOf(existing);
+  /* 種別トグル（新規のみ。編集時は既存種別のフォームで開く） */
+  const labelsOf=()=>expType==='review'
+    ?{title:'検証する決定',ph:'例：講演の依頼を受ける',scene:'決めた背景・場面',obs:'何を見れば成否が分かるか',dl:'検証日'}
+    :{title:'実験内容',ph:'「〜してみる」で書く',scene:'使う場面',obs:'観察すること',dl:'期限'};
+  if(!existing){
+    tkFld(m.box,'種別',tkRadioRow([['explore','行動実験（〜してみる）'],['review','🔍 決定検証（PJ外の意思決定）']],'explore',v=>{expType=v;applyLabels();}));
+  }
+  const L=labelsOf();
+  const ti=tkFld(m.box,L.title,tkTa(L.ph,56),true);ti.value=existing?existing.title:'';
   /* フリー追加（問い未指定の新規）のみ：紐づける問い・テーマの選択（どちらも任意） */
   let qSel=null,thSel=null;
   if(!existing&&!q){
@@ -1733,24 +1754,36 @@ function tkExpForm(q,existing){
     S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了').forEach(t=>thSel.appendChild(Opt(t.id,t.title)));
     tkFld(m.box,'探求テーマ（任意）',thSel);
   }
-  const sc=tkFld(m.box,'使う場面（実験中にする場合は必須）',tkTa('どの場面で試すか',44));sc.value=existing?.scene||'';
-  const ob=tkFld(m.box,'観察すること（実験中にする場合は必須）',tkTa('何を観察するか',44));ob.value=existing?.observation||'';
-  const dl=tkFld(m.box,'期限（実験中にする場合は必須）',In({type:'date',css:'padding:7px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);font-family:inherit'}));dl.value=existing?.deadline||'';
+  const sc=tkFld(m.box,L.scene+'（実験中にする場合は必須）',tkTa('',44));sc.value=existing?.scene||'';
+  const ob=tkFld(m.box,L.obs+'（実験中にする場合は必須）',tkTa('',44));ob.value=existing?.observation||'';
+  const dl=tkFld(m.box,L.dl+'（実験中にする場合は必須）',In({type:'date',css:'padding:7px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);font-family:inherit'}));dl.value=existing?.deadline||'';
   const nt=tkFld(m.box,'補足・完了条件',tkTa('任意',40));nt.value=existing?.note||'';
+  /* 種別トグルでラベルだけ差し替える（入力値は保持） */
+  function applyLabels(){
+    const n=labelsOf();
+    const set=(el,txt)=>{const w=el.parentElement;if(w&&w.firstChild)w.firstChild.textContent=txt;};
+    set(ti,n.title+'（必須）');set(sc,n.scene+'（実験中にする場合は必須）');
+    set(ob,n.obs+'（実験中にする場合は必須）');set(dl,n.dl+'（実験中にする場合は必須）');
+    ti.placeholder=n.ph;
+  }
   let asActive=false;
   if(!existing)tkFld(m.box,'登録先',tkRadioRow([['candidate','候補として保存'],['active','実験中にする']],'candidate',v=>asActive=(v==='active')));
   m.btns(existing?'更新':'保存',async()=>{
-    const title=ti.value.trim();if(!title){alert('実験内容を入力してください');return;}
-    if(asActive&&(!sc.value.trim()||!ob.value.trim()||!dl.value)){alert('実験中にするには「使う場面」「観察すること」「期限」の入力が必要です');return;}
+    const title=ti.value.trim();
+    if(!title){alert(expType==='review'?'検証する決定を入力してください':'実験内容を入力してください');return;}
+    if(asActive&&(!sc.value.trim()||!ob.value.trim()||!dl.value)){
+      const n=labelsOf();
+      alert('実験中にするには「'+n.scene+'」「'+n.obs+'」「'+n.dl+'」の入力が必要です');return;
+    }
     if(existing){
       existing.title=title;existing.scene=sc.value.trim();existing.observation=ob.value.trim();existing.deadline=dl.value;existing.note=nt.value.trim();
       await tkSave('experiments',existing);m.close();ra();return;
     }
     const linkedQ=(qSel&&qSel.value)?S.questions.find(z=>z.id===qSel.value):q;
     const themeIds=(thSel&&thSel.value)?[thSel.value]:(linkedQ?(linkedQ.themeIds||[]).slice():[]);
-    const x={id:uid(),questionId:linkedQ?linkedQ.id:null,title,themeIds,status:'candidate',scene:sc.value.trim(),observation:ob.value.trim(),deadline:dl.value,note:nt.value.trim(),result:'',learning:'',sourceLogIds:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
+    const x={id:uid(),questionId:linkedQ?linkedQ.id:null,title,themeIds,expType,status:'candidate',scene:sc.value.trim(),observation:ob.value.trim(),deadline:dl.value,note:nt.value.trim(),result:'',learning:'',sourceLogIds:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
     await tkSave('experiments',x);m.close();
-    if(asActive)await tkSetEStatus(x,'active');else{S._tkTab='candidate';ra();updateNav();}   /* 3件制限は tkSetEStatus が担保 */
+    if(asActive)await tkSetEStatus(x,'active');else{S._tkTab='candidate';ra();updateNav();}   /* 3件制限は tkSetEStatus が担保（探求と共有） */
   });
 }
 
@@ -1772,8 +1805,9 @@ function tkQuickQForm(){
 
 /* 実験の振り返り。内容は既存ログにも1件残す（相互参照：ログidをsourceLogIdsへ追加） */
 function tkReviewModal(x){
-  const m=tkModal('実験の振り返り','▶ '+x.title);
-  const did=tkFld(m.box,'実際にやったこと',tkTa('',50));did.value='';
+  const rv=tkIsReview(x);
+  const m=tkModal(rv?'決定の検証':'実験の振り返り',(rv?'🔍 ':'▶ ')+x.title+(rv&&x.observation?'\n成否の見方：'+x.observation:''));
+  const did=tkFld(m.box,rv?'実際に起きたこと':'実際にやったこと',tkTa('',50));did.value='';
   const res=tkFld(m.box,'結果',tkTa('',50));res.value='';
   const lrn=tkFld(m.box,'気づき・学び',tkTa('',50));lrn.value='';
   const nxt=tkFld(m.box,'次回変えること',tkTa('「変更」を選ぶと新実験の候補として作成',44));nxt.value='';
@@ -2032,7 +2066,9 @@ function tkQCard(q,expandedDefault){
       const ec=D({cls:'tk-ecard',css:'display:flex;gap:6px;align-items:flex-start'});
       if(S._tkOrg)ec.appendChild(tkSelBox(S._tkSelE,x.id));
       ec.appendChild(tkStBadge(x.status,TK_EST));
-      ec.appendChild(Sp({css:'flex:1'},'▶ '+x.title));
+      const etb=tkTypeBadge(x);if(etb)ec.appendChild(etb);
+      const eds=tkDueSoon(x);
+      ec.appendChild(Sp({css:'flex:1'},(tkIsReview(x)?'🔍 ':'▶ ')+x.title+(eds?'（あと'+eds.days+'日）':'')));
       if(x.status==='active'){const rb=Bt({cls:'btn-s',css:'font-size:11px;padding:2px 8px;flex-shrink:0'},'振り返る');rb.addEventListener('click',e=>{e.stopPropagation();tkReviewModal(x);});ec.appendChild(rb);}
       card.appendChild(ec);
     });
@@ -2052,13 +2088,16 @@ function tkECard(x){
   const tt=D({cls:'tk-qtitle',css:'cursor:default;display:flex;gap:6px;align-items:flex-start'});
   if(S._tkOrg)tt.appendChild(tkSelBox(S._tkSelE,x.id));
   tt.appendChild(tkStBadge(x.status,TK_EST));
-  tt.appendChild(Sp({css:'flex:1'},'▶ '+x.title));
-  if(!x.questionId)tt.appendChild(Sp({cls:'tk-warn'},'問い未設定'));
+  const tb=tkTypeBadge(x);if(tb)tt.appendChild(tb);
+  tt.appendChild(Sp({css:'flex:1'},(tkIsReview(x)?'🔍 ':'▶ ')+x.title));
+  if(!x.questionId&&!tkIsReview(x))tt.appendChild(Sp({cls:'tk-warn'},'問い未設定'));   /* 検証はPJ外＝未設定が通常 */
   card.appendChild(tt);
+  const ds=tkDueSoon(x);
+  if(ds&&(x.status==='active'||x.status==='candidate'))card.appendChild(D({cls:'tk-meta'},(tkIsReview(x)?'検証日':'期限')+'：'+ds.date+'（あと'+ds.days+'日）'));
   if(x.questionId){const lq=S.questions.find(q=>q.id===x.questionId);if(lq)card.appendChild(D({cls:'tk-meta'},'問い：'+lq.title));}
   const thN=tkThemeNames(x.themeIds);const src=tkSrcLog(x);
   if(thN.length||src)card.appendChild(D({cls:'tk-meta'},(thN.length?'テーマ：'+thN.join('・'):'')+(thN.length&&src?' ／ ':'')+(src?'元ログ：'+src:'')));
-  if(x.status==='active'&&(x.scene||x.observation||x.deadline))card.appendChild(D({cls:'tk-meta'},[x.scene?'場面：'+x.scene:'',x.observation?'観察：'+x.observation:'',x.deadline?'期限：'+x.deadline:''].filter(Boolean).join(' ／ ')));
+  if(x.status==='active'&&(x.scene||x.observation||x.deadline))card.appendChild(D({cls:'tk-meta'},[x.scene?(tkIsReview(x)?'背景：':'場面：')+x.scene:'',x.observation?(tkIsReview(x)?'成否の見方：':'観察：')+x.observation:'',x.deadline?(tkIsReview(x)?'検証日：':'期限：')+x.deadline:''].filter(Boolean).join(' ／ ')));
   if(x.learning)card.appendChild(D({css:'font-size:13px;color:var(--go);margin-top:4px'},'学び：'+x.learning));
   if(x.status==='candidate')card.appendChild(tkOps(['実験中にする',()=>tkSetEStatus(x,'active')],['問いへ紐づける',()=>tkLinkModal([x.id])],['編集',()=>tkExpForm(null,x)],['完了',()=>tkSetEStatus(x,'complete')],['やらない',()=>tkSetEStatus(x,'discarded'),true]));
   else if(x.status==='active')card.appendChild(tkOps(['振り返る',()=>tkReviewModal(x)],['問いへ紐づける',()=>tkLinkModal([x.id])],['編集',()=>tkExpForm(null,x)],['候補へ戻す',()=>tkSetEStatus(x,'candidate')],['やらない',()=>tkSetEStatus(x,'discarded'),true]));
