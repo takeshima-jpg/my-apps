@@ -40,6 +40,8 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-reflect-board-quick-add-spec.md](specs/claude-code-reflect-board-quick-add-spec.md) | 探求ボードのフリー追加（＋問い/＋実験＝candidate作成・問い未設定可）＋取り込み画面に習慣/思考法の混在防止ルール表示 | ✅実装済み 2026-07-19 `3d4495a` |
 | [claude-code-reflect-project-sync-spec.md](specs/claude-code-reflect-project-sync-spec.md) | Reflect のProject同期をv2.2追従（centerPin/badFuture/successConditions等をテーマへ空欄補完・手入力は上書きしない・PJ削除時は手動テーマ化） | ✅実装済み 2026-07-19 `99dfb66` |
 | [claude-code-reflect-decision-review-spec.md](specs/claude-code-reflect-decision-review-spec.md) | 実験に決定検証種別（expType='review'）を追加。PJ外の意思決定検証を🔍で区別し検証日=deadlineで既存の振り返り→原則化フローに接続 | ✅実装済み 2026-07-19 `bcf2ab1` |
+| [claude-code-reflect-import-cleanup-spec.md](specs/claude-code-reflect-import-cleanup-spec.md) | 取り込み画面の壁打ちプロンプトコピーボタン4種を撤去（壁打ちはclaude.aiプロジェクトで運用）。定数は残置 | ✅実装済み 2026-07-19 `7239441` |
+| [claude-code-reflect-decision-menu-spec.md](specs/claude-code-reflect-decision-menu-spec.md) | 意思決定検証を左メニューに独立（探求ボードから分離・要検証/検証待ち/検証済みの区分・3枠別管理・【意思決定ログ】取り込み） | ✅実装済み 2026-07-19 `2da4c91` |
 | [claude-code-taskos-mobile-menu-fix-spec.md](specs/claude-code-taskos-mobile-menu-fix-spec.md) | Task OSスマホのハンバーガーメニューが開かない緊急修正（toggleSidebar/closeSidebar未定義を実装） | ✅実装済み 2026-07-13 `ed3f6b6` |
 | [claude-code-taskos-aiimport-hotfix-spec.md](specs/claude-code-taskos-aiimport-hotfix-spec.md) | Task OS AIタスク読込の緊急修正（genId未定義→共通genUidに統一・GDrive dedupe隔離確認） | ✅実装済み 2026-07-12 `bfec392` |
 | [claude-code-taskos-collect-parse-hotfix.md](specs/claude-code-taskos-collect-parse-hotfix.md) | Task OS 同期の緊急修正（collectAllOSDataが週次/月次briefのmarkdownをJSON.parseして落ちる→安全パース＋restore対称化） | ✅実装済み 2026-07-12 `8bf0153` |
