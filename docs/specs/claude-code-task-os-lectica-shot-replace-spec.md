@@ -1,5 +1,10 @@
 # Claude Code 実装依頼書：autoGenLecticaShot() — 参謀提案による差し替え対応
 
+> ✅ 実装済み 2026-07-20 ・ `857c826`（＋ `8a67a0e` でNULバイト混入とCRLF化を修復）
+> 実装メモ：由来判定に使える既存フラグは無かったため `lecticaSource`（'sanbo'／'random'）を新設。
+> 未設定（旧データ・手動追加）は差し替え対象にしない＝安全側。差し替え判定では連続回避(recent)を
+> 課さず明示的な提案を優先する（新規生成時は従来どおり14日の連続回避を維持）。
+
 作成日：2026-07-19
 対象：repoの `task-os/index.html` の autoGenLecticaShot() および参謀提案の取り込み処理。
 作業前に `git pull`。本仕様書は docs/specs/ に置いてから実装する。

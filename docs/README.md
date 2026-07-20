@@ -43,6 +43,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-reflect-import-cleanup-spec.md](specs/claude-code-reflect-import-cleanup-spec.md) | 取り込み画面の壁打ちプロンプトコピーボタン4種を撤去（壁打ちはclaude.aiプロジェクトで運用）。定数は残置 | ✅実装済み 2026-07-19 `7239441` |
 | [claude-code-reflect-decision-menu-spec.md](specs/claude-code-reflect-decision-menu-spec.md) | 意思決定検証を左メニューに独立（探求ボードから分離・要検証/検証待ち/検証済みの区分・3枠別管理・【意思決定ログ】取り込み） | ✅実装済み 2026-07-19 `2da4c91` |
 | [claude-code-project-os-bulk-edit-spec.md](specs/claude-code-project-os-bulk-edit-spec.md) | 旧イベント・旧分岐一覧の複数選択→一括削除/完了（確認1回・すべて選択・forks削除時はmoves同ID連動削除） | ✅実装済み 2026-07-19 `730498b` |
+| [claude-code-task-os-lectica-shot-replace-spec.md](specs/claude-code-task-os-lectica-shot-replace-spec.md) | autoGenLecticaShot：ランダム生成由来かつ未完了の当日Lectica Shotを後着の参謀提案で差し替え（lecticaSource由来フラグ・冪等） | ✅実装済み 2026-07-20 `857c826` |
 | [claude-code-taskos-mobile-menu-fix-spec.md](specs/claude-code-taskos-mobile-menu-fix-spec.md) | Task OSスマホのハンバーガーメニューが開かない緊急修正（toggleSidebar/closeSidebar未定義を実装） | ✅実装済み 2026-07-13 `ed3f6b6` |
 | [claude-code-taskos-aiimport-hotfix-spec.md](specs/claude-code-taskos-aiimport-hotfix-spec.md) | Task OS AIタスク読込の緊急修正（genId未定義→共通genUidに統一・GDrive dedupe隔離確認） | ✅実装済み 2026-07-12 `bfec392` |
 | [claude-code-taskos-collect-parse-hotfix.md](specs/claude-code-taskos-collect-parse-hotfix.md) | Task OS 同期の緊急修正（collectAllOSDataが週次/月次briefのmarkdownをJSON.parseして落ちる→安全パース＋restore対称化） | ✅実装済み 2026-07-12 `8bf0153` |
