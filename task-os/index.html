@@ -1681,7 +1681,7 @@ function autoGenLecticaShot(){
       const cur=shot[curIdx];
       const isRandom=cur.lecticaSource==='random';            // 手動追加・参謀由来・由来不明は対象外
       const isOpen=cur.status==='todo'||cur.status==='doing'; // 完了済み(done)・保留・不採用は上書きしない
-      const sameExp=(cur.memo||'').indexOf('実験ID：'+(sanboExp?sanboExp.id:' '))>=0;
+      const sameExp=!!sanboExp&&(cur.memo||'').indexOf('実験ID：'+sanboExp.id)>=0;
       if(sanboExp && isRandom && isOpen && !sameExp){
         const nowIso=new Date().toISOString();
         cur.title=(sanboShot&&sanboShot.title)||('今日のLectica実験：'+(pending.selectedExperimentTitle||sanboExp.title||sanboExp.id));
