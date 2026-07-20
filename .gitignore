@@ -4,6 +4,11 @@
 # Google Drive API の秘密情報（drive_cleanup.py）— 絶対にコミットしない
 credentials.json
 token.json
+# 退避・世代違いのトークン/認証情報も一括で除外（例: token.json.bak-個人Gmail誤認可）
+token.json.*
+credentials.json.*
+*.token.json
+token-*.json
 
 # drive_cleanup.py の実行ログ
 tools/logs/
