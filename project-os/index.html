@@ -841,6 +841,12 @@ textarea.fc.tall { min-height: 130px; }
 .push-band{margin-bottom:14px;padding:10px 14px;border:1px solid var(--navy);border-radius:10px;background:#f6f7fb;font-size:.85rem;color:var(--navy);cursor:pointer;line-height:1.6}
 .push-band:hover{background:#eef0f8}
 .push-band.calm{border-color:var(--gray1,#e5e7eb);color:var(--gray4);cursor:default;background:#fafafa}
+/* ── v2.2: 旧イベント・旧分岐の一括操作バー ── */
+.bulk-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;margin-bottom:10px;border:1px solid var(--gray1,#e5e7eb);border-radius:8px;background:#fafafa}
+.bulk-all{display:flex;align-items:center;gap:5px;font-size:.75rem;color:var(--gray4);cursor:pointer;white-space:nowrap}
+.bulk-count{font-size:.75rem;color:var(--gray3);margin-right:auto;white-space:nowrap}
+.bulk-cb{width:15px;height:15px;flex-shrink:0;cursor:pointer;margin-top:3px}
+.bulk-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 .hc-spark{border:1px solid var(--gray2,#d1d5db);background:#fff;border-radius:7px;font-size:.72rem;padding:2px 8px;cursor:pointer;color:var(--gray4);font-family:inherit;white-space:nowrap}
 .hc-spark:hover{border-color:var(--navy);color:var(--navy)}
 /* ══ v2 Phase 3：モバイル最終調整（長文の折り返し安全化） ══ */
@@ -1973,11 +1979,15 @@ function movesHtml(p){
       <button class="mv-del" onclick="delMove('${p.id}','${m.id}')" title="削除">×</button>
     </div>`).join(''):'<div class="mv-empty">まだムーブがありません。上の欄に1行書いて種類ボタンを押すだけ。</div>')+`</div>`;
 }
+/* 折りたたみの開閉状態を保持（一括操作でrenderDetailしても閉じないように） */
+let foldOpen={};
+function foldTgl(k,el){ foldOpen[k]=el.open; }
 function collapsesHtml(p){
   /* v2.2: 成功条件・注意論点・悪い未来・センターピンは「見立て」ブロックへ昇格＝ここでは重複表示しない */
   const phases=(p.phases||[]);
+  const op=k=>foldOpen[k]?' open':'';
   return `
-  <details class="det-fold"><summary>詳細メタ（重点テーマ・PJ設定）</summary>
+  <details class="det-fold"${op('meta')} ontoggle="foldTgl('meta',this)"><summary>詳細メタ（重点テーマ・PJ設定）</summary>
     <div class="det-fold-b">
       ${phases.length?`<div class="fold-sec"><div class="fold-lbl">重点テーマ</div>${phases.map(ph=>`<div class="fold-val">・${esc(ph.phase)} ${esc(ph.theme)}${ph.goal?' — '+esc(ph.goal):''}</div>`).join('')}</div>`:'<div style="font-size:.8rem;color:var(--gray3);margin-bottom:8px;">重点テーマは未設定</div>'}
       <div style="display:flex;gap:8px;margin-top:6px;">
@@ -1986,13 +1996,13 @@ function collapsesHtml(p){
       </div>
     </div>
   </details>
-  <details class="det-fold"><summary>旧イベント・記録一覧（シート由来）</summary>
+  <details class="det-fold"${op('records')} ontoggle="foldTgl('records',this)"><summary>旧イベント・記録一覧（シート由来）</summary>
     <div class="det-fold-b">${paneRecords(p)}</div>
   </details>
-  <details class="det-fold"><summary>旧分岐点一覧</summary>
+  <details class="det-fold"${op('forks')} ontoggle="foldTgl('forks',this)"><summary>旧分岐点一覧</summary>
     <div class="det-fold-b">${paneForks(p)}</div>
   </details>
-  ${p.sheetUrl?`<details class="det-fold"><summary>シートURL</summary><div class="det-fold-b"><a href="${esc(p.sheetUrl)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="text-decoration:none;">📊 シートを閲覧</a></div></details>`:''}`;
+  ${p.sheetUrl?`<details class="det-fold"${op('sheet')} ontoggle="foldTgl('sheet',this)"><summary>シートURL</summary><div class="det-fold-b"><a href="${esc(p.sheetUrl)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="text-decoration:none;">📊 シートを閲覧</a></div></details>`:''}`;
 }
 function forkNoticeHtml(p){
   const nf=nearFork(p);
@@ -2112,31 +2122,43 @@ function paneOv(p){
 /* ── FORKS ── */
 function paneForks(p){
   const items = [...(p.forks||[])].sort((a,b)=>(a.date||'').localeCompare(b.date||''));  // 昇順（期日が近い順）
+  const sel = bulkMode.fork;
+  const keys = items.map(f => 'forks:' + f.id);
   return `
     <div class="forks-wrap">
       <div class="forks-intro">
         「未来が変わった瞬間」を記録するタイムラインです。<br>
         スプレッドシートの種別=<strong>分岐</strong>の行がここに取り込まれます。
       </div>
+      ${items.length ? `<div class="bulk-head">
+        <span style="font-size:.75rem;color:var(--gray3);">${items.length}件</span>
+        <button class="btn btn-outline btn-xs" onclick="bulkToggle('fork')">${sel ? '✕ 選択をやめる' : '☑ 選択'}</button>
+      </div>` : ''}
+      ${sel ? bulkBar('fork', p.id, keys, true) : ''}
       <div class="timeline">
         ${items.map(f=>`
           <div class="tl-item">
             <div class="tl-dot ${f.status||'past'}" style="${f.status==='future'?'border-color:var(--orange);box-shadow:0 0 0 3px var(--ora-s);':'border-color:var(--navy);background:var(--navy);'}"></div>
             <div class="tl-card ${f.status==='future'?'future-card':''}">
-              <div class="tl-date">${esc(f.date)}${f.status==='future'?' <span style="color:var(--orange);font-size:.68rem;">（予定）</span>':''}</div>
-              <div class="tl-title">${esc(f.title)}</div>
+              <div style="display:flex;gap:8px;align-items:flex-start;">
+                ${sel ? `<input type="checkbox" class="bulk-cb" ${bulkSel.fork.includes('forks:'+f.id)?'checked':''} onchange="bulkPick('fork','forks:${f.id}')">` : ''}
+                <div style="flex:1;">
+                  <div class="tl-date">${esc(f.date)}${f.status==='future'?' <span style="color:var(--orange);font-size:.68rem;">（予定）</span>':''}${f.status==='完了'?' <span style="color:var(--gray3);font-size:.68rem;">（完了）</span>':''}</div>
+                  <div class="tl-title">${esc(f.title)}</div>
+                </div>
+              </div>
               ${f.what ?`<div class="tl-what">${esc(f.what)}</div>`:''}
               ${f.why  ?`<div class="tl-why">${esc(f.why)}</div>`:''}
               ${f.nextAction?`<div class="tl-next"><div class="tl-next-lbl">次の一手</div><div class="tl-next-txt">${esc(f.nextAction)}</div></div>`:''}
               ${f.stakeholders?`<div class="tl-meta">👤 ${esc(f.stakeholders)}</div>`:''}
-              <div class="tl-actions">
+              ${sel ? '' : `<div class="tl-actions">
                 <button class="btn btn-outline btn-xs" onclick="openForkModal('${p.id}','${f.id}')">編集</button>
                 <button class="btn btn-danger  btn-xs" onclick="delItem('${p.id}','forks','${f.id}')">削除</button>
-              </div>
+              </div>`}
             </div>
           </div>`).join('')}
       </div>
-      <button class="tl-add-btn" onclick="openForkModal('${p.id}')">＋ 分岐点を手動で追加</button>
+      ${sel ? '' : `<button class="tl-add-btn" onclick="openForkModal('${p.id}')">＋ 分岐点を手動で追加</button>`}
     </div>`;
 }
 
@@ -2206,24 +2228,30 @@ function paneRecords(p) {
   const STATUS_COLOR = { '未着手':'', '進行中':'bd-green', '保留':'bd-yellow', '完了':'bd-gray' };
   const SENT_COLOR   = { '危険':'bd-red', '注意':'bd-orange', '良好':'', '普通':'' };
 
+  const sel = bulkMode.rec;
+  const keys = filtered.map(r => r._field + ':' + r.id);
   const html = filtered.map(r => {
     const sentBadge = r.sentiment && SENT_COLOR[r.sentiment]
       ? badge(r.sentiment, SENT_COLOR[r.sentiment]) : '';
     const statBadge = r.status && STATUS_COLOR[r.status] !== undefined
       ? (STATUS_COLOR[r.status] ? badge(r.status, STATUS_COLOR[r.status]) : '')
       : '';
+    const key = r._field + ':' + r.id;
     return `
       <div class="rec-card">
         <div class="rec-head">
-          <div class="rec-left">
-            <div class="rec-date">${esc(r.date)}</div>
-            <div class="rec-title">${esc(r.title)}</div>
+          <div class="rec-left" style="display:flex;gap:8px;align-items:flex-start;">
+            ${sel ? `<input type="checkbox" class="bulk-cb" ${bulkSel.rec.includes(key)?'checked':''} onchange="bulkPick('rec','${key}')">` : ''}
+            <div>
+              <div class="rec-date">${esc(r.date)}</div>
+              <div class="rec-title">${esc(r.title)}</div>
+            </div>
           </div>
           <div class="rec-bds">
             ${badge(r._cat, r._color)}
             ${sentBadge}
             ${statBadge}
-            <button class="btn btn-danger btn-xs" onclick="delItem('${p.id}','${r._field}','${r.id}')">削除</button>
+            ${sel ? '' : `<button class="btn btn-danger btn-xs" onclick="delItem('${p.id}','${r._field}','${r.id}')">削除</button>`}
           </div>
         </div>
         ${r.body ? `<div class="rec-body">${esc(r.body)}</div>` : ''}
@@ -2232,8 +2260,15 @@ function paneRecords(p) {
       </div>`;
   }).join('');
 
+  /* 一括完了は状態を持つ events のみ有効（decisions/learnings は完了概念がないため削除のみ） */
+  const canComplete = filtered.some(r => r._field === 'events');
   return `
-    <div style="max-width:820px;">
+    <div>
+      ${filtered.length ? `<div class="bulk-head">
+        <span style="font-size:.75rem;color:var(--gray3);">${filtered.length}件</span>
+        <button class="btn btn-outline btn-xs" onclick="bulkToggle('rec')">${sel ? '✕ 選択をやめる' : '☑ 選択'}</button>
+      </div>` : ''}
+      ${sel ? bulkBar('rec', p.id, keys, canComplete) : ''}
       <div class="rec-list">${html || '<div class="empty"><div class="empty-i">📝</div>記録がありません。スプレッドシートから取り込んでください。</div>'}</div>
     </div>`;
 }
@@ -2348,7 +2383,79 @@ function delItem(pid,field,itemId){
   if(!confirm('削除しますか？')) return;
   const px=S.projects.findIndex(p=>p.id===pid);
   S.projects[px][field]=S.projects[px][field].filter(x=>x.id!==itemId);
+  if(field==='forks')dropLinkedMove(S.projects[px],itemId);   /* 分岐ムーブの連動削除 */
   touchProj(pid); save(); renderDetail();
+}
+
+/* ══ 旧イベント・旧分岐の一括操作（選択モード）══
+   対象は13列シート由来の旧データ（events/decisions/learnings/forks）。
+   moves（v2の新データ）はタイムライン側で個別×削除できるため対象外。 */
+let bulkMode={rec:false,fork:false};
+let bulkSel={rec:[],fork:[]};
+/* v2.1で分岐ムーブは forks に同IDで二重書き込みしている。その逆操作＝forks削除時にムーブも消す */
+function dropLinkedMove(p,forkId){
+  if(!p||!p.moves)return 0;
+  const before=p.moves.length;
+  p.moves=p.moves.filter(m=>m.id!==forkId);
+  return before-p.moves.length;
+}
+function bulkToggle(kind){
+  bulkMode[kind]=!bulkMode[kind];
+  if(!bulkMode[kind])bulkSel[kind]=[];
+  renderDetail();
+}
+function bulkPick(kind,key){
+  const i=bulkSel[kind].indexOf(key);
+  if(i>=0)bulkSel[kind].splice(i,1); else bulkSel[kind].push(key);
+  renderDetail();
+}
+function bulkAll(kind,keysJson){
+  let keys=[]; try{ keys=JSON.parse(keysJson); }catch(e){}
+  bulkSel[kind]=(bulkSel[kind].length===keys.length)?[]:keys.slice();   /* 全選択⇄全解除のトグル */
+  renderDetail();
+}
+function bulkDelete(kind,pid){
+  const keys=bulkSel[kind];
+  if(!keys.length)return;
+  if(!confirm(keys.length+'件を削除しますか？取り消せません。'))return;
+  const p=proj(pid); if(!p)return;
+  let linked=0;
+  keys.forEach(k=>{
+    const [field,id]=k.split(':');
+    if(!p[field])return;
+    p[field]=p[field].filter(x=>x.id!==id);
+    if(field==='forks')linked+=dropLinkedMove(p,id);
+  });
+  bulkSel[kind]=[];
+  touchProj(pid); save(); renderDetail();
+  toast(keys.length+'件を削除しました'+(linked?'（連動する分岐ムーブ'+linked+'件も削除）':''));
+}
+function bulkComplete(kind,pid){
+  const keys=bulkSel[kind];
+  if(!keys.length)return;
+  const p=proj(pid); if(!p)return;
+  let done=0,skipped=0;
+  keys.forEach(k=>{
+    const [field,id]=k.split(':');
+    /* 状態を持つのは events / forks のみ。decisions・learnings は完了概念が無いのでスキップ */
+    if(field!=='events'&&field!=='forks'){skipped++;return;}
+    const it=(p[field]||[]).find(x=>x.id===id);
+    if(!it)return;
+    it.status='完了'; it.updatedAt=new Date().toISOString(); done++;
+  });
+  bulkSel[kind]=[];
+  touchProj(pid); save(); renderDetail();
+  toast(done+'件を完了にしました'+(skipped?'（'+skipped+'件は完了状態を持たないため対象外）':''));
+}
+function bulkBar(kind,pid,keys,canComplete){
+  const n=bulkSel[kind].length;
+  return `<div class="bulk-bar">
+    <label class="bulk-all"><input type="checkbox" ${n&&n===keys.length?'checked':''} onchange="bulkAll('${kind}',${JSON.stringify(JSON.stringify(keys)).replace(/"/g,'&quot;')})"> すべて選択</label>
+    <span class="bulk-count">${n}件を選択中</span>
+    ${n?`<button class="btn btn-danger btn-xs" onclick="bulkDelete('${kind}','${pid}')">🗑 一括削除</button>`:''}
+    ${n&&canComplete?`<button class="btn btn-outline btn-xs" onclick="bulkComplete('${kind}','${pid}')">✓ 一括完了</button>`:''}
+    ${n?`<button class="btn btn-outline btn-xs" onclick="bulkSel['${kind}']=[];renderDetail()">解除</button>`:''}
+  </div>`;
 }
 function touchProj(pid){ const p=proj(pid); if(p) p.updatedAt=today(); }
 
