@@ -12,6 +12,19 @@ Drive上の「固定名ファイルの古い重複」を掃除する運用。ブ
   所有者しかゴミ箱に入れられない（編集者権限では trash が403になる）。誤って別アカウント（個人Gmail等）で
   認可すると、対象が全て403スキップされ0件しか掃除できない（2026-07-13 に実際に発生）。誤認可時は
   `tools/token.json` を退避 → `--dry-run` を再実行 → OAuth画面で `takeshima@3a-c.com` を選び直す。
+
+### 🚧 現状（2026-07-20）：会社アカウントでの再認可は行き止まり — 自動掃除は当面保留
+- この OAuthアプリ（Cloudプロジェクト `my-apps-498101`・クライアントID `450582924828-…apps.googleusercontent.com`・
+  User type=外部/本番・未確認）は、`drive` が**制限付きスコープ**のため、`takeshima@3a-c.com`（`3a-c.com` Workspace）で
+  認可しようとすると管理ポリシーに**「このアプリはブロックされます」**と拒否される。個人Gmailは所有者でないので掃除不可。
+- 正攻法は `3a-c.com` の **Workspace 管理者**が Admin Console（セキュリティ→API制御→サードパーティアプリ）で
+  上記クライアントIDを**「信頼済み」**に登録すること。**所有者は当該Workspaceの管理者ではない**ため、これは実施不可。
+- 別解（自動化を復活させたい場合のみ）：`takeshima@3a-c.com` 側で新規Cloudプロジェクトを作り、
+  OAuth同意画面の **User type を「内部(Internal)」** にすれば未確認でもドメイン内利用は許可される
+  （＝ブロックされない・本番モードならトークンも長命）。ただし会社アカウントでのプロジェクト作成権限が要る。
+- **結論：無理に自動化を追わない。** 重複42件は「固定名ファイルの古い版が残るだけ」で動作に無害。
+  どうしても消したい時は、`takeshima@3a-c.com` でログインした Drive の Web UI から、固定名ごとに
+  最新1つを残して古い版を手動でゴミ箱へ（各名で modifiedTime 降順に並べ替え）。本ツールでの自動掃除は保留。
 - Python 実行パス：`C:\Users\竹嶋寛人\AppData\Local\Programs\Python\Python312\python.exe`
   （`python` 単体はストアのスタブなので使わない）。
 - 依存：google-api-python-client / google-auth / google-auth-oauthlib（未導入なら pip install）。
