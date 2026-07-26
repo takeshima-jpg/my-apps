@@ -49,7 +49,9 @@ python tools/drive_cleanup.py
 
 - **対象**：aix-drafts フォルダ内の次の固定名ファイルの古い重複のみ。各名前で**最新1つだけ残す**。
   - `aix-tasks.json` / `aix_draft_latest.json` / `aix_review_weekly.json` /
-    `aix_review_monthly.json` / `aix-hitomemo.json` / `myapps-all-backup.json`
+    `aix_review_monthly.json` / `aix-hitomemo.json`
+  - ※`myapps-all-backup.json` は 2026-07-26 Drive再編でバックアップを 90_バックアップ へ移したため対象から除外
+    （直下前提が崩れたため。週次スナップショットの整理は Task OS 側が 90 で行う）
 - **絶対に触らない**：
   - 日付つきスナップショット（`*-YYYY-MM-DD.json` / `*-YYYY-Www.json` / `*-YYYY-MM.json`）。
     ※週次スナップショット（myapps-weekly-*）の保持は Task OS 側の gdPruneWeekly が担当（直近8週）。本ツールは触らない。

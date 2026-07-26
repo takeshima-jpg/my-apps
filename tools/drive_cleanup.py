@@ -46,13 +46,14 @@ SCOPES = [
 ]
 
 # 最新1件だけ残し、古い同名はゴミ箱へ入れる対象（完全一致のみ）
+# ※ myapps-all-backup.json は 2026-07-26 Drive再編でバックアップ置き場を 90_バックアップ へ移したため
+#   この直下前提のリストからは除外（週次スナップショットの整理は Task OS 側が 90 で行う）。
 TARGET_NAMES = {
     'aix-tasks.json',
     'aix_draft_latest.json',
     'aix_review_weekly.json',
     'aix_review_monthly.json',
     'aix-hitomemo.json',
-    'myapps-all-backup.json',
 }
 
 HERE = os.path.dirname(os.path.abspath(__file__))

@@ -122,8 +122,8 @@ aix-drafts フォルダ（ID: `1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U`）の固定名
 ### 掃除ルール（厳守）
 
 - **対象（最新1件だけ残す）**: `aix-tasks.json` / `aix_draft_latest.json` /
-  `aix_review_weekly.json` / `aix_review_monthly.json` / `aix-hitomemo.json` /
-  `myapps-all-backup.json`
+  `aix_review_weekly.json` / `aix_review_monthly.json` / `aix-hitomemo.json`
+  （※`myapps-all-backup.json` は 2026-07-26 Drive再編でバックアップを 90_バックアップ へ移したため対象外）
 - **絶対に触らない**: 日付つきスナップショット
   (`myapps-all-backup-YYYY-MM-DD.json` / `myapps-weekly-YYYY-Www.json` /
   `myapps-all-backup-YYYY-MM.json`)、および上記以外の名前のファイル
