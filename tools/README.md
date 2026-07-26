@@ -66,13 +66,13 @@ python tools/weekly_facts.py <backup.json> 2026-07-06        # 指定日を含�
 python tools/weekly_facts.py <backup.json> 2026-07-06 --prev # 前週も併せて出力（再掲禁止判定用）
 ```
 
-`weekly_facts.json` を**入力バックアップと同じフォルダ**に出力し、標準出力にカウントサマリを表示する。
+`weekly-facts.json` を**入力バックアップと同じフォルダ**に出力し、標準出力にカウントサマリを表示する。
 
 ### 日曜の運用（3ステップ）
 
 1. Task OS で統合バックアップ（myapps-all-backup）を出す
 2. `bash tools/run_weekly_facts.sh` を実行（最新バックアップを自動で拾い `--prev` 付きで計算）
-3. `G:\マイドライブ\aix-drafts` に置かれた `weekly_facts.json` をCoworkの週次レビューに渡す
+3. `G:\マイドライブ\aix-drafts\20_週次・月次` に置かれた `weekly-facts.json` をCoworkの週次レビューに渡す（2026-07-26 Drive再編でサブフォルダ化）
 
 `run_weekly_facts.sh` は Downloads の日付付きバックアップと aix-drafts の固定名バックアップから
 **更新時刻が最新のもの**を選ぶ（ファイル名は日付で変わるため固定名参照はしない）。

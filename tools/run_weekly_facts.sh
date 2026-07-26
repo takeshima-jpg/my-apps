@@ -4,7 +4,7 @@
 #   1. 最新の myapps-all-backup*.json を自動で見つける
 #      （Downloads の日付付き ＋ Cowork作業フォルダの固定名 myapps-all-backup.json を対象に、更新時刻が最新のもの）
 #   2. tools/weekly_facts.py に食わせ、--prev 付きで実行（前週サマリも出す）
-#   3. 出力された weekly_facts.json を Coworkの作業フォルダ（GDrive aix-drafts）に置く
+#   3. 出力された weekly-facts.json を Coworkの作業フォルダ（GDrive aix-drafts/20_週次・月次）に置く
 #
 # 使い方:
 #   bash tools/run_weekly_facts.sh              # 対象週 = 今日を含む週（月曜起点）
@@ -47,14 +47,17 @@ if [ "$AGE_H" -ge 24 ]; then
 fi
 
 # ── 2. weekly_facts.py を --prev 付きで実行 ──
-#     （weekly_facts.json は入力バックアップと同じフォルダに出る）
+#     （weekly-facts.json は入力バックアップと同じフォルダに出る）
 ANCHOR="${1:-}"
 PYTHONUTF8=1 "$PY" "$ROOT/tools/weekly_facts.py" "$LATEST" ${ANCHOR:+"$ANCHOR"} --prev
 
 # ── 3. 出力を Cowork作業フォルダへ ──
-OUT="$(dirname "$LATEST")/weekly_facts.json"
-DEST="$COWORK_DIR/weekly_facts.json"
-if [ "$(cd "$(dirname "$OUT")" && pwd)" != "$(cd "$COWORK_DIR" && pwd)" ]; then
+#     2026-07-26 Drive再編：aix-drafts直下ではなく 20_週次・月次 サブフォルダに置く（なければ作る）
+OUT="$(dirname "$LATEST")/weekly-facts.json"
+DEST_DIR="$COWORK_DIR/20_週次・月次"
+DEST="$DEST_DIR/weekly-facts.json"
+mkdir -p "$DEST_DIR"
+if [ "$(cd "$(dirname "$OUT")" && pwd)" != "$(cd "$DEST_DIR" && pwd)" ]; then
   cp "$OUT" "$DEST"
 fi
 echo ""

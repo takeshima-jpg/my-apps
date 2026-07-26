@@ -22,6 +22,7 @@ myapps-all-backup-*.json
 myapps-weekly-*.json
 
 # weekly_facts.py の生成物（Coworkの作業フォルダへコピーして使う）
+weekly-facts.json
 weekly_facts.json
 aix_weekly_facts.json
 

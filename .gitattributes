@@ -1,5 +1,6 @@
 # 保守スクリプトは改行LF固定（CRLFだとbashフックが shebang で壊れるため）
-tools/pre-commit         text eol=lf
-tools/install-hooks.sh   text eol=lf
-tools/extract_scripts.js text eol=lf
-tools/*.py               text eol=lf
+tools/pre-commit           text eol=lf
+tools/install-hooks.sh     text eol=lf
+tools/run_weekly_facts.sh  text eol=lf
+tools/extract_scripts.js   text eol=lf
+tools/*.py                 text eol=lf

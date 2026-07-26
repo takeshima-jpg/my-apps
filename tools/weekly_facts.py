@@ -14,7 +14,7 @@ weekly_facts.py — 週次レビュー用「事実」計算スクリプト
     python3 weekly_facts.py backup.json 2026-07-06 --prev
         → 前週も併せて出す（週次v3の「前週との再掲禁止」判定用）
 
-出力：weekly_facts.json（同ディレクトリ）＋ 標準出力にサマリ。
+出力：weekly-facts.json（同ディレクトリ）＋ 標準出力にサマリ。
       このJSONをCoworkに渡し、Coworkは「数える」のをやめて「意味を読む」ことに専念する。
 """
 import json, sys, os
@@ -180,7 +180,7 @@ def main():
             "facts": pf,
         }
 
-    outpath = os.path.join(os.path.dirname(os.path.abspath(path)), "weekly_facts.json")
+    outpath = os.path.join(os.path.dirname(os.path.abspath(path)), "weekly-facts.json")
     json.dump(result, open(outpath, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 
     # 標準出力サマリ
