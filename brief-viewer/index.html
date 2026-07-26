@@ -146,12 +146,16 @@ const CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleuser
 const SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 const REDIRECT_URI = location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html');
 const FOLDER_NAME = 'aix-drafts';
-const FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U';
+const FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U';   // 旧：aix-drafts直下（旧名フォールバック用）
+// 2026-07-26 Drive再編：サブフォルダ化＋ファイル名変更
+const FOLDER_DAILY  = '1qOQXKraLlYA8BA3WM1dvNdVGzHasRWKP'; // 10_日次データ
+const FOLDER_PERIOD = '13H2Hd7-_8B4p0Qa6z1y0RAq5-B51jhRw'; // 20_週次・月次
 // 毎朝／週次／月次の3レビューをタブで切り替え（各GDriveファイル）
+// file=新名（新フォルダから検索）、legacy=旧名（aix-drafts直下フォールバック。切替確認後に削除可）
 const TABS = {
-  daily:   { file: 'aix_draft_latest.json',  label: '毎朝', title: '📋 Morning Brief' },
-  weekly:  { file: 'aix_review_weekly.json',  label: '週次', title: '📋 Strategic Review（週次）' },
-  monthly: { file: 'aix_review_monthly.json', label: '月次', title: '📋 Executive Review（月次）' },
+  daily:   { file: 'daily-brief.json',    folder: FOLDER_DAILY,  legacy: 'aix_draft_latest',   label: '毎朝', title: '📋 Morning Brief' },
+  weekly:  { file: 'weekly-review.json',  folder: FOLDER_PERIOD, legacy: 'aix_review_weekly',  label: '週次', title: '📋 Strategic Review（週次）' },
+  monthly: { file: 'monthly-review.json', folder: FOLDER_PERIOD, legacy: 'aix_review_monthly', label: '月次', title: '📋 Executive Review（月次）' },
 };
 let currentTab = 'daily';
 const TOKEN_KEY = 'brief_viewer_token';
@@ -250,14 +254,17 @@ async function loadBrief() {
   btn.disabled = true;
   setStatus('loading', '読み込み中…');
   const COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';
+  const TAB_FOLDER = TABS[currentTab].folder;
+  const LEGACY_BASE = TABS[currentTab].legacy;
   try {
-    // 部分一致で最新を探す（Drive Desktop同期で末尾に (5) 等が付いた重複も拾い、modifiedTime降順で最新を採用）
+    // ① 新フォルダID＋新名で検索（同名複数はcreatedTime最新を採用。Driveコネクタは更新のたび同名新規作成する仕様）
+    // ② 0件なら旧名を旧フォルダ（aix-drafts直下）から探す（移行期間の保険。切替確認後にこの分岐は削除可）
+    // ※ includeItemsFromAllDrives/supportsAllDrives が共有アイテム到達の要（外さないこと）
     let file = null;
-    for (const cond of [`%22${FOLDER_ID}%22+in+parents+and+name+contains+%22${BASE}%22+and+trashed%3Dfalse`,
-                        `name+contains+%22${BASE}%22+and+trashed%3Dfalse`,
-                        `name+contains+%22${BASE}%22+and+sharedWithMe%3Dtrue+and+trashed%3Dfalse`]) {
+    for (const cond of [`%22${TAB_FOLDER}%22+in+parents+and+name+contains+%22${BASE}%22+and+trashed%3Dfalse`,
+                        `%22${FOLDER_ID}%22+in+parents+and+name+contains+%22${LEGACY_BASE}%22+and+trashed%3Dfalse`]) {
       try {
-        const lr = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${cond}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=10${COMMON}`);
+        const lr = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${cond}&fields=files(id,name,createdTime,modifiedTime)&orderBy=createdTime+desc&pageSize=10${COMMON}`);
         const ld = await lr.json();
         if (ld.files && ld.files.length) { file = ld.files[0]; break; }
       } catch (e) { if (e.code === 401 || e.code === 403) throw e; }
@@ -295,14 +302,15 @@ async function loadBrief() {
         return (dd.files || []).map(f => f.name);
       } catch (e) { return []; }
     }
-    const owned = await listAix('name+contains+%22aix%22+and+trashed%3Dfalse');
-    const shared = await listAix('name+contains+%22aix%22+and+sharedWithMe%3Dtrue+and+trashed%3Dfalse');
+    const inNewFolder = await listAix(`%22${TAB_FOLDER}%22+in+parents+and+trashed%3Dfalse`);
+    const inOldFolder = await listAix(`%22${FOLDER_ID}%22+in+parents+and+trashed%3Dfalse`);
     const fmt = arr => arr.length ? arr.map(n => `・<code>${n}</code>`).join('<br>') : '（なし）';
     showMessage('🔍', 'Briefが見つかりません',
       `ログイン中のアカウント：<code>${email || '不明'}</code><br><br>` +
-      `<code>${FILE_NAME}</code> が見つかりませんでした。<br><br>` +
-      `<b>所有/マイドライブの「aix」ファイル：</b><br>${fmt(owned)}<br><br>` +
-      `<b>共有された「aix」ファイル：</b><br>${fmt(shared)}`,
+      `<code>${FILE_NAME}</code> が見つかりませんでした。<br>` +
+      `探したフォルダID：<code>${TAB_FOLDER}</code>（旧名 <code>${LEGACY_BASE}</code> は <code>${FOLDER_ID}</code> 直下も確認）<br><br>` +
+      `<b>新フォルダ内のファイル：</b><br>${fmt(inNewFolder)}<br><br>` +
+      `<b>旧フォルダ（aix-drafts直下）のファイル：</b><br>${fmt(inOldFolder)}`,
       [
         { label: '再読み込み', onclick: loadBrief },
         { label: '別アカウントで再ログイン', ghost: true, onclick: () => { clearToken(); connect(); } },

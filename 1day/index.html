@@ -867,21 +867,31 @@ const BRIEF_TABS = {
 };
 
 // ── Brief鮮度対策：brief-viewerのGDriveトークン（同一オリジン共有）で最新を直接取得 ──
-const BRIEF_FILE_BASE = { daily:'aix_draft_latest', weekly:'aix_review_weekly', monthly:'aix_review_monthly' };
+// 2026-07-26 Drive再編：新フォルダ＋新名で検索、0件時のみ旧名をaix-drafts直下から（フォールバックは切替確認後に削除可）
+// ※ BRIEF_LS_KEY（localStorageキー）はDriveファイル名とは別物なので変更しない
+const BRIEF_FOLDER_DAILY  = '1qOQXKraLlYA8BA3WM1dvNdVGzHasRWKP'; // 10_日次データ
+const BRIEF_FOLDER_PERIOD = '13H2Hd7-_8B4p0Qa6z1y0RAq5-B51jhRw'; // 20_週次・月次
+const BRIEF_FOLDER_LEGACY = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U'; // 旧：aix-drafts直下
+const BRIEF_FILE_BASE   = { daily:'daily-brief', weekly:'weekly-review', monthly:'monthly-review' };
+const BRIEF_FILE_FOLDER = { daily:BRIEF_FOLDER_DAILY, weekly:BRIEF_FOLDER_PERIOD, monthly:BRIEF_FOLDER_PERIOD };
+const BRIEF_LEGACY_BASE = { daily:'aix_draft_latest', weekly:'aix_review_weekly', monthly:'aix_review_monthly' };
 const BRIEF_LS_KEY    = { daily:'aix_draft_latest', weekly:'aix_review_weekly', monthly:'aix_review_monthly' };
 async function refreshBriefFromDrive(tab) {
   tab = tab || 'daily';
   const token = localStorage.getItem('brief_viewer_token');
   if (!token) return false; // brief-viewer未接続なら静かにスキップ
-  const COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';
-  const BASE = BRIEF_FILE_BASE[tab];
+  const COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true'; // 共有アイテム到達の要
   const hdr = { headers: { 'Authorization': 'Bearer ' + token } };
   try {
-    const q = `name+contains+%22${BASE}%22+and+trashed%3Dfalse`;
-    const lr = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=10${COMMON}`, hdr);
-    if (!lr.ok) return false; // 期限切れ等は静かにフォールバック
-    const ld = await lr.json();
-    const file = ld.files && ld.files[0];
+    // 同名複数はcreatedTime最新を採用（Driveコネクタは更新のたび同名新規作成する仕様）
+    let file = null;
+    for (const q of [`%22${BRIEF_FILE_FOLDER[tab]}%22+in+parents+and+name+contains+%22${BRIEF_FILE_BASE[tab]}%22+and+trashed%3Dfalse`,
+                     `%22${BRIEF_FOLDER_LEGACY}%22+in+parents+and+name+contains+%22${BRIEF_LEGACY_BASE[tab]}%22+and+trashed%3Dfalse`]) {
+      const lr = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,createdTime)&orderBy=createdTime+desc&pageSize=10${COMMON}`, hdr);
+      if (!lr.ok) return false; // 期限切れ等は静かにフォールバック
+      const ld = await lr.json();
+      if (ld.files && ld.files.length) { file = ld.files[0]; break; }
+    }
     if (!file) return false;
     const cr = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media${COMMON}`, hdr);
     if (!cr.ok) return false;

@@ -559,8 +559,8 @@ function toggleBrief(){ briefExpanded = !briefExpanded; renderTodayBrief(); }
 
 // AIタスクの取り込み本体はTask OSに任せる（台帳 aix_imported_keys・lectica_daily_practice処理等の
 // 二重管理を避けるため）。シェルは導線だけ＝Task OSを別タブで開く。
-// aix-tasks.json の正本はGoogle Drive（ローカルファイルではない）。Task OSはログイン済みなら
-// 起動時にGDrive同期(gdAutoSync)でDriveのaix-tasks.jsonを自動取り込みするため、開くだけでよい。
+// daily-tasks.json（旧aix-tasks.json）の正本はGoogle Drive（ローカルファイルではない）。Task OSはログイン済みなら
+// 起動時にGDrive同期(gdAutoSync)でDriveのdaily-tasks.jsonを自動取り込みするため、開くだけでよい。
 // ローカルのファイル選択（input type=file）はシェルからは一切使わない。読込後この画面を ⟳ で反映。
 function openTaskImport(){
   window.open('../task-os/index.html', '_blank');

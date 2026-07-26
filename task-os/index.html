@@ -2146,14 +2146,16 @@ if('serviceWorker' in navigator){
 }
 </script>
 <script>
-// ===== GDrive連携（A: スナップショット送出 / C: aix-tasks自動取り込み）=====
+// ===== GDrive連携（A: スナップショット送出 / C: daily-tasks自動取り込み）=====
 // 方針：一方向。スナップショットは「書き出すだけ」、GDriveからlocalStorageへ全消し復元はしない（先祖返り防止）。
 const GD_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';
 const GD_SCOPE = 'https://www.googleapis.com/auth/drive';
 const GD_REDIRECT = location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html');
 const GD_TOKEN_KEY = 'gdrive_token_taskos';
-const GD_FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U'; // aix-drafts（3Aアカウント）
-const GD_AIX_FILE = 'aix-tasks.json';
+const GD_FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U'; // aix-drafts（3Aアカウント）※旧名フォールバック＆スナップショット書出先
+// 2026-07-26 Drive再編：日次系は 10_日次データ 配下の新名が正（旧名はフォールバックのみ）
+const GD_DAILY_FOLDER_ID = '1qOQXKraLlYA8BA3WM1dvNdVGzHasRWKP'; // 10_日次データ
+const GD_AIX_FILE = 'daily-tasks.json';   // 旧: aix-tasks.json
 const GD_SNAPSHOT_FILE = 'myapps-all-backup.json';
 const GD_WEEKLY_PREFIX = 'myapps-weekly-';   // 週次スナップショット（ISO週キー）
 const GD_WEEKLY_KEEP = 8;                     // 直近8週ぶん保持（古いものはゴミ箱）
@@ -2235,14 +2237,20 @@ async function gdFindInFolder(name){
   return (d.files && d.files[0]) || null;
 }
 // 末尾に (N) が付いた重複（Drive Desktop同期で発生）も拾い、最終更新が最新のものを返す
-async function gdFindNewestByBase(base){
-  const q = encodeURIComponent(`'${GD_FOLDER_ID}' in parents and name contains '${base}' and trashed=false`);
-  const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=10`);
+async function gdFindNewestByBase(base, folderId){
+  // フォルダID＋名前で検索し、同名複数はcreatedTime最新を採用（Driveコネクタは更新のたび同名新規作成する仕様）
+  // includeItemsFromAllDrives/supportsAllDrives は共有アイテム到達の要（外さないこと）
+  const q = encodeURIComponent(`'${folderId || GD_FOLDER_ID}' in parents and name contains '${base}' and trashed=false`);
+  const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,createdTime,modifiedTime)&orderBy=createdTime desc&pageSize=10&includeItemsFromAllDrives=true&supportsAllDrives=true`);
   const d = await r.json();
   return (d.files && d.files[0]) || null;
 }
+// 2026-07-26 Drive再編：新フォルダ＋新名で探し、0件なら旧名をaix-drafts直下から（フォールバックは切替確認後に削除可）
+async function gdFindDailyFile(newBase, legacyBase){
+  return (await gdFindNewestByBase(newBase, GD_DAILY_FOLDER_ID)) || (await gdFindNewestByBase(legacyBase, GD_FOLDER_ID));
+}
 async function gdDownload(id){
-  const r = await gdFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`);
+  const r = await gdFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&supportsAllDrives=true`);
   return await r.text();
 }
 async function gdUpload(name, contentStr){
@@ -2285,7 +2293,7 @@ async function gdPruneWeekly(){
 // 発生する原因だったため。固定名ファイルの重複整理は drive_cleanup.py（dry-run→本番）で行う。
 // 手順は docs/specs/drive-cleanup-運用.md。週次スナップショットの保持(gdPruneWeekly)は自前ファイルなので存続。
 
-// ===== ヒトメモ自動取り込み（aix-hitomemo.json → localStorage hitomemo_profiles_v1 / 未登録）=====
+// ===== ヒトメモ自動取り込み（daily-contacts.json → localStorage hitomemo_profiles_v1 / 未登録）=====
 // ヒトメモがGDrive未ログインでも、Task OSを開くだけで未登録に入る。冪等キーはヒトメモと共有。
 function _hitomemoParseBlock(text){
   const extract = (label) => {
@@ -2323,8 +2331,8 @@ function _hitomemoParseBlock(text){
 async function importHitomemoFromAix(){
   const HM_KEY = 'hitomemo_profiles_v1';
   const LAST_KEY = 'hitomemo_aix_last_modified';   // ヒトメモと共有（二重取り込み防止）
-  const AIX_HM_FILE = 'aix-hitomemo.json';
-  const f = await gdFindNewestByBase('aix-hitomemo');
+  const AIX_HM_FILE = 'daily-contacts.json';   // 旧: aix-hitomemo.json
+  const f = await gdFindDailyFile('daily-contacts', 'aix-hitomemo');
   if(!f) return 0;
   const last = localStorage.getItem(LAST_KEY);
   if(last && last === f.modifiedTime) return 0;     // 既に取込済み（冪等）
@@ -2353,10 +2361,10 @@ async function gdAutoSync(manual){
   if(!gdToken){ if(manual) gdConnect(); return; }
   gdSetStatus('syncing');
   try {
-    // C: aix-tasks.json を自動取り込み（冪等）
+    // C: daily-tasks.json（旧aix-tasks.json）を自動取り込み（冪等）
     let importMsg = '';
     try {
-      const f = await gdFindNewestByBase('aix-tasks');
+      const f = await gdFindDailyFile('daily-tasks', 'aix-tasks');
       if(f){
         const parsed = JSON.parse(await gdDownload(f.id));
         const res = applyAixTasks(parsed);
@@ -2367,7 +2375,7 @@ async function gdAutoSync(manual){
       }
     } catch(e){ if(e.code===401) throw e; console.warn('aix自動取込スキップ', e); }
 
-    // C2: aix-hitomemo.json をヒトメモ未登録へ取り込み（冪等・ヒトメモ未ログインでも入る）
+    // C2: daily-contacts.json をヒトメモ未登録へ取り込み（冪等・ヒトメモ未ログインでも入る）
     try {
       const hmAdded = await importHitomemoFromAix();
       if(hmAdded > 0) importMsg = (importMsg ? importMsg + ' / ' : '') + `ヒトメモ${hmAdded}人を未登録へ`;
