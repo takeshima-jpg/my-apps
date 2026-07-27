@@ -2152,7 +2152,9 @@ const GD_CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleu
 const GD_SCOPE = 'https://www.googleapis.com/auth/drive';
 const GD_REDIRECT = location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html');
 const GD_TOKEN_KEY = 'gdrive_token_taskos';
-const GD_FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U'; // aix-drafts（3Aアカウント）※旧名フォールバック＆スナップショット書出先
+const GD_FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U'; // aix-drafts（3Aアカウント）※旧名フォールバック用
+// 2026-07-26 Drive再編：my-apps全体バックアップは 90_バックアップ に一本化（30_バックアップは廃止）
+const GD_BACKUP_FOLDER_ID = '1e1M-viqZx4y_7YoeTAVhgNE7tk1yZSCv'; // 90_バックアップ（myapps-all-backup / myapps-weekly-* の置き場）
 // 2026-07-26 Drive再編：日次系は 10_日次データ 配下の新名が正（旧名はフォールバックのみ）
 const GD_DAILY_FOLDER_ID = '1qOQXKraLlYA8BA3WM1dvNdVGzHasRWKP'; // 10_日次データ
 const GD_AIX_FILE = 'daily-tasks.json';   // 旧: aix-tasks.json
@@ -2230,8 +2232,8 @@ function gdFlushSkipInfo(){
     console.info('dedupe: 掃除できないファイル ' + gdUntrashable.size + '件をスキップ（所有外/権限のためtrash不可）');
   }
 }
-async function gdFindInFolder(name){
-  const q = encodeURIComponent(`'${GD_FOLDER_ID}' in parents and name='${name}' and trashed=false`);
+async function gdFindInFolder(name, folderId){
+  const q = encodeURIComponent(`'${folderId || GD_FOLDER_ID}' in parents and name='${name}' and trashed=false`);
   const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=5`);
   const d = await r.json();
   return (d.files && d.files[0]) || null;
@@ -2253,15 +2255,16 @@ async function gdDownload(id){
   const r = await gdFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&supportsAllDrives=true`);
   return await r.text();
 }
-async function gdUpload(name, contentStr){
-  // 既存があればその上に上書き、無ければaix-draftsフォルダ内に新規作成（2ステップ：作成→media PATCH）
-  let existing = await gdFindInFolder(name);
+async function gdUpload(name, contentStr, folderId){
+  // 既存があればその上に上書き、無ければ指定フォルダ（既定=aix-drafts）内に新規作成（2ステップ：作成→media PATCH）
+  const targetFolder = folderId || GD_FOLDER_ID;
+  let existing = await gdFindInFolder(name, targetFolder);
   let id;
   if(existing){ id = existing.id; }
   else {
     const r = await gdFetch('https://www.googleapis.com/drive/v3/files?fields=id', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ name: name, parents:[GD_FOLDER_ID] })
+      body: JSON.stringify({ name: name, parents:[targetFolder] })
     });
     id = (await r.json()).id;
   }
@@ -2274,7 +2277,7 @@ async function gdUpload(name, contentStr){
 // 週キー（YYYY-Www）は辞書順＝時系列順。Drive Desktopの「(1)」等の同名複製も週キー単位で最新だけ残す。
 async function gdPruneWeekly(){
   try{
-    const q = encodeURIComponent(`'${GD_FOLDER_ID}' in parents and name contains '${GD_WEEKLY_PREFIX}' and trashed=false`);
+    const q = encodeURIComponent(`'${GD_BACKUP_FOLDER_ID}' in parents and name contains '${GD_WEEKLY_PREFIX}' and trashed=false`);
     const r = await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&pageSize=200`);
     const files = ((await r.json()).files)||[];
     const ordered = files.sort((a,b)=> (b.name||'').localeCompare(a.name||''));  // 新しい週が先頭
@@ -2398,11 +2401,11 @@ async function gdAutoSync(manual){
     // 毎朝Coworkが読むファイルは軽量化：Reflectの生ログは直近60日だけに絞る（要約reflectOSは保持）。
     // 全履歴は週次スナップショット／手動エクスポートに残るため復元能力は維持。
     const morningSnap = { ...fullSnap, reflectOS_idb: trimReflectIDBLogs(fullSnap.reflectOS_idb, 60) };
-    await gdUpload(GD_SNAPSHOT_FILE, JSON.stringify(morningSnap, null, 2));
+    await gdUpload(GD_SNAPSHOT_FILE, JSON.stringify(morningSnap, null, 2), GD_BACKUP_FOLDER_ID);
 
     // A2: 週次スナップショット（完全版。ISO週キー・同一週は上書き）。週差分レビュー＋完全復元用に直近8週を保持。
     try {
-      await gdUpload(GD_WEEKLY_PREFIX + isoWeekKey(new Date()) + '.json', fullSnapStr);
+      await gdUpload(GD_WEEKLY_PREFIX + isoWeekKey(new Date()) + '.json', fullSnapStr, GD_BACKUP_FOLDER_ID);
       await gdPruneWeekly();
     } catch(e){ if(e.code===401) throw e; console.warn('週次スナップショット保存スキップ', e); }
 
