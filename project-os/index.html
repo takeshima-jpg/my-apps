@@ -810,12 +810,13 @@ textarea.fc.tall { min-height: 130px; }
 .core-ta{width:100%;min-height:56px;font-size:1rem;font-family:inherit;line-height:1.6;padding:8px;border:1px solid var(--navy);border-radius:8px;box-sizing:border-box;resize:vertical}
 /* ── v2.2: 見立て4項目（各1行・インライン編集・任意） ── */
 .mt-wrap{margin:2px 0 10px;padding:4px 0;border-top:1px dashed var(--gray1,#e5e7eb)}
-.mt-row{display:flex;gap:10px;align-items:baseline;padding:5px 12px;border:1px solid transparent;border-radius:8px;cursor:pointer}
+.mt-row{display:flex;gap:10px;align-items:flex-start;padding:5px 12px;border:1px solid transparent;border-radius:8px;cursor:pointer}
 .mt-row:hover{border-color:var(--gray1,#e5e7eb);background:#fafafa}
-.mt-lbl{flex-shrink:0;width:80px;font-size:.68rem;color:var(--gray3);font-weight:700;letter-spacing:.04em}
-.mt-val{font-size:.92rem;color:var(--gray5,#333);line-height:1.6;word-break:break-word;overflow-wrap:anywhere}
+.mt-lbl{flex-shrink:0;width:80px;padding-top:3px;font-size:.68rem;color:var(--gray3);font-weight:700;letter-spacing:.04em}
+.mt-val{flex:1;min-width:0;font-size:.92rem;color:var(--gray5,#333);line-height:1.6;word-break:break-word;overflow-wrap:anywhere}
 .mt-empty{color:var(--gray3);font-size:.78rem}
-.mt-input{flex:1;font-size:.92rem;font-family:inherit;padding:5px 8px;border:1px solid var(--navy);border-radius:6px;box-sizing:border-box;width:100%}
+.mt-input{display:block;width:100%;box-sizing:border-box;font-size:.92rem;font-family:inherit;line-height:1.6;padding:8px 10px;border:1px solid var(--navy);border-radius:6px;resize:vertical;min-height:2.6em;overflow:hidden}
+.mt-input-hint{font-size:.66rem;color:var(--gray3);margin-top:3px}
 .fork-notice{font-size:.8rem;color:var(--orange);background:var(--ora-s,#fff7ed);border:1px solid var(--orange);border-radius:8px;padding:7px 12px;margin:4px 0 10px;max-width:max-content}
 .qa-wrap{margin:14px 0 20px;padding:12px;border:1px solid var(--gray1,#e5e7eb);border-radius:12px;background:#fbfbfa}
 .qa-ta{width:100%;min-height:44px;font-size:.92rem;font-family:inherit;line-height:1.6;padding:8px 10px;border:1px solid var(--gray2,#d1d5db);border-radius:8px;box-sizing:border-box;resize:vertical;margin-bottom:8px}
@@ -1884,6 +1885,9 @@ function coreEdit(pid,field,el){
   const ta=document.createElement('textarea');
   ta.className='core-ta';ta.value=cur;
   valEl.appendChild(ta);ta.focus();
+  ta.setSelectionRange(ta.value.length,ta.value.length);
+  const grow=()=>{ta.style.height='auto';ta.style.height=Math.max(ta.scrollHeight,56)+'px';};
+  grow();ta.addEventListener('input',grow);
   const done=()=>{
     const v=ta.value.trim();
     if(v!==cur.trim()){
@@ -1946,16 +1950,29 @@ function mitateEdit(pid,field,el){
   const cur=p[field]||'';
   const valEl=el.querySelector('.mt-val');
   valEl.innerHTML='';
-  const inp=document.createElement('input');
-  inp.type='text';inp.className='mt-input';inp.value=cur;
-  valEl.appendChild(inp);inp.focus();
+  const inp=document.createElement('textarea');
+  inp.className='mt-input';inp.value=cur;inp.rows=1;
+  const hint=document.createElement('div');
+  hint.className='mt-input-hint';hint.textContent='改行可。Ctrl/⌘+Enterまたは枠外クリックで保存・Escで取消';
+  const grow=()=>{inp.style.height='auto';inp.style.height=inp.scrollHeight+'px';};
+  valEl.appendChild(inp);valEl.appendChild(hint);
+  inp.focus();
+  /* 末尾にキャレットを置く＋高さを内容にフィット */
+  inp.setSelectionRange(inp.value.length,inp.value.length);grow();
+  let cancelled=false;
   const done=()=>{
+    if(cancelled)return;
     const v=inp.value.trim();
     if(v!==cur.trim()){p[field]=v;touchProj(pid);save();}
     renderDetail();
   };
+  inp.addEventListener('input',grow);
   inp.addEventListener('blur',done);
-  inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();});
+  inp.addEventListener('keydown',e=>{
+    if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();inp.blur();}
+    else if(e.key==='Escape'){e.preventDefault();cancelled=true;renderDetail();}
+    /* 素のEnterは改行（長文の見立てを複数行で編集できるように） */
+  });
 }
 function quickAddHtml(p){
   return `<div class="qa-wrap">
