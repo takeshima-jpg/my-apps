@@ -496,7 +496,11 @@ input, select, textarea { font-family: var(--f0); }
 }
 .tl-card:hover { box-shadow: var(--sh2); }
 .tl-card.future-card { border-color: var(--ora-b); background: var(--ora-s); }
-.tl-date { font-size: .68rem; color: var(--gray3); margin-bottom: 5px; }
+.tl-date { font-size: .68rem; color: var(--gray3); margin-bottom: 5px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.tl-inline-date { font-size:.72rem; font-family:inherit; padding:3px 6px; border:1px solid var(--gray1); border-radius:6px; color:var(--gray5); background:#fff; cursor:pointer; }
+.tl-inline-st { font-size:.72rem; font-family:inherit; padding:3px 8px; border:1px solid var(--gray1); border-radius:6px; cursor:pointer; font-weight:700; }
+.tl-inline-st.st-future { color:var(--orange); border-color:var(--ora-b); background:var(--ora-s); }
+.tl-inline-st.st-past { color:var(--gray3); background:#fff; }
 .tl-title { font-weight: 700; font-size: .95rem; color: var(--navy); margin-bottom: 8px; }
 .tl-what { font-size: .82rem; color: var(--gray4); margin-bottom: 6px; line-height: 1.55; }
 .tl-why {
@@ -2016,7 +2020,7 @@ function collapsesHtml(p){
   <details class="det-fold"${op('records')} ontoggle="foldTgl('records',this)"><summary>旧イベント・記録一覧（シート由来）</summary>
     <div class="det-fold-b">${paneRecords(p)}</div>
   </details>
-  <details class="det-fold"${op('forks')} ontoggle="foldTgl('forks',this)"><summary>旧分岐点一覧</summary>
+  <details class="det-fold"${op('forks')} ontoggle="foldTgl('forks',this)"><summary>今後のスケジュール</summary>
     <div class="det-fold-b">${paneForks(p)}</div>
   </details>
   ${p.sheetUrl?`<details class="det-fold"${op('sheet')} ontoggle="foldTgl('sheet',this)"><summary>シートURL</summary><div class="det-fold-b"><a href="${esc(p.sheetUrl)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="text-decoration:none;">📊 シートを閲覧</a></div></details>`:''}`;
@@ -2144,8 +2148,8 @@ function paneForks(p){
   return `
     <div class="forks-wrap">
       <div class="forks-intro">
-        「未来が変わった瞬間」を記録するタイムラインです。<br>
-        スプレッドシートの種別=<strong>分岐</strong>の行がここに取り込まれます。
+        <strong>予定</strong>＝これから起きること／<strong>完了</strong>＝決着した分岐。日付順に並びます。<br>
+        日付・ステータスは各カード上で直接編集できます（スプレッドシートの種別=<strong>分岐</strong>の行もここに取り込まれます）。
       </div>
       ${items.length ? `<div class="bulk-head">
         <span style="font-size:.75rem;color:var(--gray3);">${items.length}件</span>
@@ -2160,7 +2164,13 @@ function paneForks(p){
               <div style="display:flex;gap:8px;align-items:flex-start;">
                 ${sel ? `<input type="checkbox" class="bulk-cb" ${bulkSel.fork.includes('forks:'+f.id)?'checked':''} onchange="bulkPick('fork','forks:${f.id}')">` : ''}
                 <div style="flex:1;">
-                  <div class="tl-date">${esc(f.date)}${f.status==='future'?' <span style="color:var(--orange);font-size:.68rem;">（予定）</span>':''}${f.status==='完了'?' <span style="color:var(--gray3);font-size:.68rem;">（完了）</span>':''}</div>
+                  <div class="tl-date">
+                    <input type="date" class="tl-inline-date" value="${esc(f.date||'')}" onchange="forkInlineSet('${p.id}','${f.id}','date',this.value)">
+                    <select class="tl-inline-st ${f.status==='future'?'st-future':'st-past'}" onchange="forkInlineSet('${p.id}','${f.id}','status',this.value)">
+                      <option value="future"${f.status==='future'?' selected':''}>予定</option>
+                      <option value="past"${f.status!=='future'?' selected':''}>完了</option>
+                    </select>
+                  </div>
                   <div class="tl-title">${esc(f.title)}</div>
                 </div>
               </div>
@@ -2368,7 +2378,7 @@ function openForkModal(pid,fid){
   showModal(f?'分岐点を編集':'分岐点を記録', `
     <div class="fr2">
       <div class="fg"><label class="fl">日付</label>${fmtDate('ffd',f?.date||today())}</div>
-      <div class="fg"><label class="fl">ステータス</label>${sel('ffst',['past','future'],f?.status||'past')}</div>
+      <div class="fg"><label class="fl">ステータス</label><select class="fc" id="ffst"><option value="future"${(f?.status)==='future'?' selected':''}>予定</option><option value="past"${(f?.status)!=='future'?' selected':''}>完了</option></select></div>
     </div>
     <div class="fg"><label class="fl">分岐点タイトル *</label>${inp('fft',f?.title,'世界線が変わった出来事')}</div>
     <div class="fg"><label class="fl">何が変わったか</label>${ta('ffw',f?.what)}</div>
@@ -2396,6 +2406,14 @@ function openForkModal(pid,fid){
 /* ══════════════════════════════════
    HELPERS
 ══════════════════════════════════ */
+/* タイムライン上で日付・ステータスを直接編集して即保存 */
+function forkInlineSet(pid,fid,key,val){
+  const px=S.projects.findIndex(p=>p.id===pid); if(px<0)return;
+  const fi=(S.projects[px].forks||[]).findIndex(x=>x.id===fid); if(fi<0)return;
+  S.projects[px].forks[fi][key]=val;
+  S.projects[px].forks[fi].updatedAt=new Date().toISOString();
+  touchProj(pid); save(); renderDetail();
+}
 function delItem(pid,field,itemId){
   if(!confirm('削除しますか？')) return;
   const px=S.projects.findIndex(p=>p.id===pid);
@@ -2484,6 +2502,12 @@ function migrateProjectItems(){
       (p[field]||[]).forEach(item=>{
         if(!item.updatedAt) item.updatedAt = item.date ? item.date+'T00:00:00.000Z' : fallback;
       });
+    });
+    // 分岐ステータスの表記ゆれを正規化：内部値はpast/futureに統一（表示は完了/予定）
+    (p.forks||[]).forEach(f=>{
+      if(f.status==='完了') f.status='past';
+      else if(f.status==='予定'||f.status==='未来') f.status='future';
+      else if(f.status!=='past'&&f.status!=='future') f.status = (f.date&&f.date>=today())?'future':'past';
     });
   });
 }
