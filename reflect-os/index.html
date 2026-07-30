@@ -226,6 +226,17 @@ nav{display:flex;flex-direction:column;gap:0;}
 .log-item:hover .log-title{color:var(--go)}
 .log-date{font-size:10px;color:var(--di);font-family:var(--mono);margin-bottom:4px;display:flex;gap:8px;align-items:center}
 .log-title{font-size:17px;color:var(--tx);margin-bottom:5px;transition:color .15s}
+.log-trace{margin:6px 0 2px}
+.trace-toggle{font-size:12px;color:var(--mu);background:none;border:1px solid var(--bd);border-radius:12px;padding:2px 10px;cursor:pointer}
+.trace-toggle:hover{color:var(--tx);border-color:var(--mu)}
+.trace-toggle.open{color:var(--go);border-color:var(--go)}
+.trace-body{margin:8px 0 4px;padding:10px 12px;background:#f7f7fb;border-left:3px solid #cfcfe6;border-radius:6px;font-size:13px;line-height:1.7}
+.trace-origin{color:var(--tx);font-weight:600;margin-bottom:6px}
+.trace-step{margin:3px 0;color:var(--tx)}
+.trace-point{color:var(--mu)}
+.trace-arrow{color:#9a9ac0;margin:0 6px;font-weight:700}
+.trace-shift{color:var(--tx)}
+.trace-landing{margin-top:7px;padding-top:6px;border-top:1px dashed #d7d7e6;color:var(--go);font-weight:600}
 .log-lesson{font-size:15px;color:var(--mu);line-height:1.7;border-left:2px solid var(--go-bd);padding-left:12px;margin-top:4px}
 .log-q{font-size:14px;color:var(--bl);margin-top:4px}
 .log-exp{font-size:14px;color:var(--go);margin-top:4px}
@@ -616,6 +627,23 @@ function logCard(r){
   }
   // 気づき・学び（1行）
   if(r.lesson){const ls=r.lesson.split(/\n/).find(l=>l.trim())||'';const lsc=ls.trim();item.appendChild(D({cls:'log-lesson'},lsc.length>100?lsc.slice(0,100)+'…':lsc));}
+  // 経緯（trace）：デフォルト折りたたみ。本体はクリーンなまま、掘りたいときだけ軌跡を出す
+  if(r.trace && (r.trace.origin || (r.trace.steps&&r.trace.steps.length) || r.trace.landing)){
+    const tw=D({cls:'log-trace'});
+    const nStep=(r.trace.steps||[]).length;
+    const tg=Bt({cls:'trace-toggle'}, '⤵ 経緯'+(nStep?'（'+nStep+'手）':''));
+    const body=D({cls:'trace-body',css:'display:none'});
+    if(r.trace.origin) body.appendChild(D({cls:'trace-origin'}, '出発点：'+r.trace.origin));
+    (r.trace.steps||[]).forEach(s=>{
+      const row=D({cls:'trace-step'});
+      row.appendChild(Sp({cls:'trace-point'}, s.point||''));
+      if(s.shift){ row.appendChild(Sp({cls:'trace-arrow'},'→')); row.appendChild(Sp({cls:'trace-shift'}, s.shift)); }
+      body.appendChild(row);
+    });
+    if(r.trace.landing) body.appendChild(D({cls:'trace-landing'}, '着地：'+r.trace.landing));
+    tg.addEventListener('click',e=>{e.stopPropagation();const open=body.style.display!=='none';body.style.display=open?'none':'block';tg.classList.toggle('open',!open);});
+    tw.appendChild(tg); tw.appendChild(body); item.appendChild(tw);
+  }
   if(r.question){const ql=r.question.split(/\n/).find(l=>l.trim())||'';const qt=ql.trim();item.appendChild(D({cls:'log-q'},'？ '+(qt.length>80?qt.slice(0,80)+'…':qt)));}
   if(r.nextExp){const nl=r.nextExp.split(/\n/).find(l=>l.trim())||'';const nt=nl.trim();item.appendChild(D({cls:'log-exp'},'▶ '+(nt.length>80?nt.slice(0,80)+'…':nt)));}
   const acts=D({cls:'log-acts'});
@@ -986,8 +1014,9 @@ function renderLog(){
   const hd=D({css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px'});
   hd.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0'}, S.unthemedOnly ? 'テーマ未紐づけ（'+S.logs.filter(r=>!r.themes||r.themes.length===0).length+'件）' : 'ログ（'+S.logs.length+'件）'));
   const fc=D({css:'display:flex;gap:4px;flex-wrap:wrap'});
-  let ft='all';const fB={};
+  let ft='all';let traceOnly=false;const fB={};
   ['all',...Object.keys(TM)].forEach(t=>{const lb=t==='all'?'すべて':TM[t]?.label||t;const c=Bt({cls:'chip'+(t==='all'?' on':'')},lb);fB[t]=c;c.addEventListener('click',()=>{ft=t;Object.entries(fB).forEach(([k,v])=>v.className='chip'+(k===t?' on':''));upd();});fc.appendChild(c);});
+  const trC=Bt({cls:'chip'},'⤵ 経緯あり');trC.addEventListener('click',()=>{traceOnly=!traceOnly;trC.className='chip'+(traceOnly?' on':'');upd();});fc.appendChild(trC);
   hd.appendChild(fc);
   // テーマフィルター
   const myThemesLog=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
@@ -1002,12 +1031,12 @@ function renderLog(){
     // updをthFilt対応に上書き
     f.appendChild(hd);
     const lw=D({});f.appendChild(lw);
-    function upd(){lw.innerHTML='';let rs=ft==='all'?S.logs:S.logs.filter(r=>r.type===ft);if(thFilt!=='all')rs=rs.filter(r=>(r.themes||[]).includes(thFilt));if(S.unthemedOnly)rs=rs.filter(r=>!r.themes||r.themes.length===0);if(!rs.length){lw.appendChild(D({cls:'empty'},'記録がありません'));return;}rs.forEach(r=>lw.appendChild(logCard(r)));}
+    function upd(){lw.innerHTML='';let rs=ft==='all'?S.logs:S.logs.filter(r=>r.type===ft);if(thFilt!=='all')rs=rs.filter(r=>(r.themes||[]).includes(thFilt));if(S.unthemedOnly)rs=rs.filter(r=>!r.themes||r.themes.length===0);if(traceOnly)rs=rs.filter(r=>r.trace&&(r.trace.origin||(r.trace.steps&&r.trace.steps.length)||r.trace.landing));if(!rs.length){lw.appendChild(D({cls:'empty'},'記録がありません'));return;}rs.forEach(r=>lw.appendChild(logCard(r)));}
     upd();return f;
   }
   hd.appendChild(fc);f.appendChild(hd);
   const lw=D({});f.appendChild(lw);
-  function upd(){lw.innerHTML='';let rs=ft==='all'?S.logs:S.logs.filter(r=>r.type===ft);if(S.unthemedOnly)rs=rs.filter(r=>!r.themes||r.themes.length===0);if(!rs.length){lw.appendChild(D({cls:'empty'},'記録がありません'));return;}rs.forEach(r=>lw.appendChild(logCard(r)));}
+  function upd(){lw.innerHTML='';let rs=ft==='all'?S.logs:S.logs.filter(r=>r.type===ft);if(S.unthemedOnly)rs=rs.filter(r=>!r.themes||r.themes.length===0);if(traceOnly)rs=rs.filter(r=>r.trace&&(r.trace.origin||(r.trace.steps&&r.trace.steps.length)||r.trace.landing));if(!rs.length){lw.appendChild(D({cls:'empty'},'記録がありません'));return;}rs.forEach(r=>lw.appendChild(logCard(r)));}
   upd();return f;
 }
 
@@ -1129,13 +1158,38 @@ function parseDecisionBlocks(text){
   return out;
 }
 
+/* 【経緯ログ】ブロック → trace{origin,steps[{point,shift}],landing} に変換。
+   本体（振り返り）とは混ぜず、直前の振り返りレコードにtraceとしてぶら下げる（同一取り込みテキスト内で紐づく）。 */
+function parseTraceBlock(block){
+  const origin  = extractField(block, ['出発点','起点','最初のモヤモヤ']);
+  const landing = extractField(block, ['着地','着地点','結論']);
+  const pathRaw = extractMultiField(block, ['掘り下げの道筋','道筋','掘り下げ']);
+  const steps = [];
+  String(pathRaw||'').split('\n').forEach(line=>{
+    const l = line.replace(/^[\s・\-–—*●•\u30fb]+/,'').trim();
+    if(!l || /^[（(]/.test(l)) return;                 // 空行・プレースホルダ例は除外
+    const parts = l.split(/\s*(?:→|->|⇒|=>)\s*/);
+    if(parts.length>=2) steps.push({point:parts[0].trim(), shift:parts.slice(1).join(' → ').trim()});
+    else steps.push({point:l, shift:''});
+  });
+  if(!origin && !landing && !steps.length) return null;
+  return {origin, steps, landing};
+}
+
 function parseAiReflect(text){
   const entries = [];
+  let lastEntry = null;
   const blocks = text.split(/(?=【[^】]+】)/);
   blocks.forEach(block => {
     const hm = block.match(/^【([^】]+)】/);
     if(!hm) return;
     const rawType = hm[1].trim();
+    // 【経緯ログ】は本体に混ぜず、直前の振り返りレコードのtraceとして格納
+    if(/経緯ログ|経緯/.test(rawType)){
+      const tr = parseTraceBlock(block);
+      if(tr && lastEntry) lastEntry.trace = tr;
+      return;
+    }
     const typKey = TYPE_MAP[rawType] || TYPE_MAP[rawType.toLowerCase()] || null;
     if(!typKey) return;
 
@@ -1164,6 +1218,7 @@ function parseAiReflect(text){
       entry.pivot        = extractField(block, ['転換点']);
     }
     entries.push(entry);
+    lastEntry = entry;
   });
   return entries;
 }
