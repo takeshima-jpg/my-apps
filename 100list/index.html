@@ -880,6 +880,7 @@ function fmtDate(s){ return s?s.split('T')[0]:''; }
 function thisYear(){ return new Date().getFullYear(); }
 function thisMonth(){ return new Date().getMonth()+1; }
 function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtAdded(iso){ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return ''; return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0'); }
 
 function prioTag(p){
   if(p==='High') return `<span class="tag tag-high">高</span>`;
@@ -961,6 +962,9 @@ function renderDashboard(){
   const focusName = settings.focusListName||'重点リスト';
 
   const activeItems = items.filter(i=>!i.discarded);
+  // 最近追加したやりたいこと（追加日=createdAt の新しい順に上位10件）
+  const recentAdded = [...activeItems].filter(i=>i.createdAt)
+    .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,10);
   const total = activeItems.length;
   const done = activeItems.filter(i=>i.completed).length;
   const undone = total-done;
@@ -1068,6 +1072,19 @@ function renderDashboard(){
     }
   </div>
 
+</div>
+
+<div class="card" style="border-left:4px solid #4299e1;margin-top:16px">
+  <div class="card-title">🆕 最近追加したやりたいこと（${recentAdded.length}件）<button class="btn btn-sm btn-gray no-print" style="margin-left:auto" onclick="navigate('list')">一覧</button></div>
+  ${recentAdded.length===0?'<p class="text-light text-sm">まだ追加がありません</p>':
+    recentAdded.map(i=>`
+    <div class="flex items-center gap-8" style="padding:7px 0;border-bottom:1px solid #f0f4f8">
+      <button class="complete-btn ${i.completed?'done':''}" onclick="toggleComplete('${i.id}');renderPage('dashboard')" title="${i.completed?'未完了に戻す':'完了にする'}">${i.completed?'✓':''}</button>
+      <div class="flex-1 truncate" style="font-size:15px;font-weight:600${i.completed?';text-decoration:line-through;color:#a0aec0':''}">${esc(i.title)}</div>
+      <div class="text-xs text-light" style="flex-shrink:0" title="追加日">🕒 ${fmtAdded(i.createdAt)}</div>
+      <button onclick="openForm('${i.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#a0aec0;font-size:16px;padding:2px 4px" title="編集">✏️</button>
+    </div>`).join('')
+  }
 </div>
 
 ${buildRandomCard(activeItems)}
