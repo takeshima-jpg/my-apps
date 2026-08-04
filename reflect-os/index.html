@@ -554,9 +554,11 @@ function openThemeForm(existing){
 
 /* ── Log form ── */
 function buildLogForm(type){
-  // 全タイプ共通：5フィールドに統一
+  // 全タイプ共通：5フィールドに統一（＋きっかけ＝trace.origin）
+  if(S.fd._origin===undefined) S.fd._origin=(S.fd.trace&&S.fd.trace.origin)||'';
   return [
     D({cls:'g2'},tI('タイトル','title','ひと言で'),tI('日付','date','','date')),
+    tI('きっかけ','_origin','何が引き金でこの振り返りに至ったか（任意）'),
     taF('気づき・学び','lesson','腹落ちした学び。箇条書き可。',80),
     tI('問い','question','まだ答えが出ていない問い','text',true),
     taF('次の実験','nextExp','「〜してみる」で書く',55,true),
@@ -584,6 +586,10 @@ function renderLogForm(type){
 
 async function saveLog(status){
   const r={...S.fd,status,id:S.fd.id||uid(),date:S.fd.date||tod(),type:S.forming||S.editing?.type};
+  // きっかけ（trace.origin）を標準項目として保存。空なら除去し、trace全体が空になれば消す
+  const origin=(S.fd._origin||'').trim(); delete r._origin;
+  if(origin){ r.trace={...(r.trace||{}),origin}; }
+  else if(r.trace){ const t={...r.trace}; delete t.origin; r.trace=((t.steps&&t.steps.length)||t.landing)?t:undefined; if(!r.trace)delete r.trace; }
   await dbput('logs',r);
   const i=S.logs.findIndex(x=>x.id===r.id);if(i>=0)S.logs[i]=r;else S.logs.unshift(r);
   S.logs.sort((a,b)=>b.date.localeCompare(a.date));
@@ -1670,7 +1676,7 @@ function lxCard(e,logs,master){
   if(e.priority30Days)top.appendChild(Sp({css:'font-size:11px;color:#b45309;border:1px solid #f0c000;border-radius:10px;padding:1px 7px'},'30日優先'));
   if(e.thisWeek)top.appendChild(Sp({css:'font-size:11px;color:#4f46e5;border:1px solid #c7d2fe;border-radius:10px;padding:1px 7px'},'今週'));
   const stcol=({not_started:'#94a3b8',active:'#2a6a3a',completed:'#1a6050',paused:'#b09040',skipped:'#94a3b8'})[e.status]||'#94a3b8';
-  top.appendChild(Sp({css:'font-size:11px;margin-left:auto;color:'+stcol+';font-weight:700'},LX_STATUS_LABEL[e.status]||e.status));
+  top.appendChild(Sp({css:'font-size:11px;margin-left:auto;color:'+stcol+';font-weight:700'},(LX_STATUS_LABEL[e.status]||e.status)+(e.status==='skipped'&&e.skipReason?'・'+e.skipReason:'')));
   card.appendChild(top);
   card.appendChild(D({css:'font-size:15px;font-weight:700;margin-bottom:4px'},e.title));
   card.appendChild(D({css:'font-size:13px;color:var(--tx);white-space:pre-wrap;line-height:1.6;margin-bottom:6px'},e.description));
@@ -1684,8 +1690,22 @@ function lxCard(e,logs,master){
   b(e.thisWeek?'今週やる解除':'今週やる',function(){lxSetField(e.id,'thisWeek',!e.thisWeek);ra();});
   b('完了にする',function(){lxSetField(e.id,'status','completed');ra();});
   b('保留にする',function(){lxSetField(e.id,'status','paused');ra();});
-  if(e.status==='completed'||e.status==='paused'||e.status==='skipped')b('実験中に戻す',function(){lxSetField(e.id,'status','active');ra();});
+  b('見送る',function(){S.lxSkipPick=e.id;ra();});
+  if(e.status==='completed'||e.status==='paused'||e.status==='skipped')b('実験中に戻す',function(){lxSetField(e.id,'status','active');lxSetField(e.id,'skipReason','');ra();});
   card.appendChild(btns);
+  if(S.lxSkipPick===e.id){
+    const rr=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center'});
+    rr.appendChild(Sp({css:'font-size:12px;color:var(--di)'},'見送る理由：'));
+    ['合わない','忘れた','余力なし'].forEach(function(reason){
+      const x=Bt({cls:'btn-g',css:'font-size:12px'},reason);
+      x.addEventListener('click',function(){lxSetField(e.id,'status','skipped');lxSetField(e.id,'skipReason',reason);lxSetField(e.id,'skipDate',tod());S.lxSkipPick=null;ra();});
+      rr.appendChild(x);
+    });
+    const cx=Bt({cls:'btn-g',css:'font-size:12px;color:var(--di)'},'やめる');
+    cx.addEventListener('click',function(){S.lxSkipPick=null;ra();});
+    rr.appendChild(cx);
+    card.appendChild(rr);
+  }
   if(S.lxForm&&S.lxForm.anchor==='card'&&S.lxForm.experimentId===e.id){ card.appendChild(lxRecordForm(master||lxReadMaster()||[])); }
   return card;
 }
