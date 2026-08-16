@@ -387,7 +387,8 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
       <div class="field-label">記録日</div>
       <div class="date-btn-row" id="dateBtnRow"></div>
       <input type="hidden" id="entryDate">
-      <input type="date" id="entryDateEdit" style="display:none;margin-top:8px;padding:8px 12px;border:1px solid var(--border2);border-radius:6px;font-family:inherit;font-size:14px;background:var(--bg3);color:var(--text);width:100%;" onchange="document.getElementById('entryDate').value=this.value;">
+      <div id="entryDateLabel" style="font-size:.72rem;color:var(--text3);margin-top:10px;margin-bottom:4px;">記録する日付（過去日も直接選べます）</div>
+      <input type="date" id="entryDateEdit" style="margin-top:0;padding:8px 12px;border:1px solid var(--border2);border-radius:6px;font-family:inherit;font-size:14px;background:var(--bg3);color:var(--text);width:100%;" onchange="document.getElementById('entryDate').value=this.value; document.querySelectorAll('#dateBtnRow .date-btn').forEach(b=>b.classList.remove('selected'));">
     </div>
     <div class="field">
       <div class="field-label">今週は？</div>
@@ -1383,6 +1384,7 @@ function buildDateButtons(editDate = null) {
         row.querySelectorAll('.date-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         hiddenInput.value = dateStr;
+        const de = document.getElementById('entryDateEdit'); if (de) de.value = dateStr;
       });
     }
     row.appendChild(btn);
@@ -1424,8 +1426,10 @@ function openEntryModal(editId = null) {
     }
   } else {
     buildDateButtons();
-    // 既存データ互換チェック（新規は不要）
-    document.getElementById('entryDateEdit').style.display = 'none';
+    // 新規でも日付を直接選べるようにする（過去日も指定可能）
+    const dateEditInput = document.getElementById('entryDateEdit');
+    dateEditInput.style.display = 'block';
+    dateEditInput.value = document.getElementById('entryDate').value || today();
     document.getElementById('dateBtnRow').style.display = '';
   }
 
