@@ -782,7 +782,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-07-26';
+const BUILD_VER = '2026-08-18';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -995,7 +995,7 @@ function handleAixTaskImport(e) {
     try {
       const parsed = JSON.parse(ev.target.result);
       const res = applyAixTasks(parsed);
-      const lxNew = autoGenLecticaShot();
+      const lxNew = autoGenLecticaShot(true);   // AIタスク読込＝提案が無ければランダム可
 
       if (res.added === 0 && res.draftCount === 0 && !res.briefLoaded && !lxNew) {
         toast('追加できる新規データはありませんでした');
@@ -1638,11 +1638,13 @@ function homeShot(noDue) {
 // homeLectica / home100List / homeProjects / lecticaAddPending は撤去
 // （ランチャー今日タブ・Morning Briefへ移行。Lectica自動生成 autoGenLecticaShot は同期で使うため存続）
 
-// Lectica実験のShotを自動生成（毎朝・冪等）。
+// Lectica実験のShotを自動生成（毎朝・冪等）。Cowork（参謀提案）が唯一の選定者で、Task OSは写すだけ。
 // ・今日のLectica Shotが既にあれば原則何もしない
 //   （例外：ランダム生成由来かつ未完了のものは、後着の参謀提案で1回だけ差し替える）
-// ・直近14日に使った実験は除外（同じものの連続回避）
-// ・参謀の「本日（日付一致）の提案」で最近未使用ならそれを優先、なければ最近使っていない実験からランダム
+// ・本日（日付一致・usable）の参謀提案があれば必ず採用（連続回避は課さない＝選定責任はCowork側）
+// ・提案が無い日は allowRandom===true（同期・AIタスク読込時のみ）に限りランダム生成。
+//   未ログイン起動（allowRandom=false）では何も生成しない＝提案が届く前にランダムが枠を埋めない
+// ・14日連続回避はランダム分岐でのみ使う
 // 戻り値：生成／差し替えしたら1、しなければ0
 // 由来フラグ lecticaSource: 'sanbo'（参謀提案由来）／'random'（ランダム生成由来）を生成時に付与する。
 // 未設定（旧データ・手動追加・他OS経由でフィールドが落ちた場合）は差し替え対象にしない＝安全側。
@@ -1652,7 +1654,8 @@ function lecticaMemo(memo,expId){
   if(memo.indexOf('Reflect')<0) memo=memo+'\n実行後：Reflect OSに実績を記録する';
   return memo;
 }
-function autoGenLecticaShot(){
+function autoGenLecticaShot(allowRandom){
+  allowRandom = allowRandom === true;   // 既定false：明示された呼び出し（同期・AIタスク読込）でのみランダム許可
   try{
     const today=TODAY;
     let shot=[]; try{ shot=JSON.parse(localStorage.getItem('shot-task-os-v1')||'[]')||[]; }catch(e){ shot=[]; }
@@ -1697,20 +1700,21 @@ function autoGenLecticaShot(){
       return 0;
     }
 
-    // 直近14日に使った実験IDを集める（連続回避）
-    const WINDOW=14;
-    const cut=new Date(today+'T00:00:00'); cut.setDate(cut.getDate()-WINDOW);
-    const cutStr=cut.toLocaleDateString('sv');
-    const recent={};
-    logs.forEach(l=>{ if(l&&l.experimentId&&l.date&&l.date>=cutStr) recent[l.experimentId]=1; });
-    shot.forEach(t=>{ if(t&&t.category==='Lectica'&&t.dueDate&&t.dueDate>=cutStr){ const m=(t.memo||'').match(/実験ID：(L\d+)/); if(m) recent[m[1]]=1; } });
-
     let chosen=null;
-    // ① 参謀の本日の提案（日付一致・最近未使用・usable）を優先。新規生成時は従来どおり連続回避を適用
-    if(sanboExp && !recent[sanboExp.id]){ chosen=sanboExp; }
-    else { sanboShot=null; }
-    // ② なければ最近使っていない usable な実験からランダム（active/thisWeekを軽く優先）
+    // ① 参謀の本日の提案（日付一致・usable）は必ず採用（連続回避は課さない＝選定責任はCowork側）
+    if(sanboExp){ chosen=sanboExp; }
+    // ② 提案が無い日：allowRandom（同期・AIタスク読込時のみtrue）のときだけランダム生成。
+    //    未ログイン起動などでは何も生成しない（警告・空カードも出さない：signal over noise）
     if(!chosen){
+      if(!allowRandom) return 0;
+      // 直近14日に使った実験IDを集める（連続回避。ランダム分岐でのみ使う）
+      const WINDOW=14;
+      const cut=new Date(today+'T00:00:00'); cut.setDate(cut.getDate()-WINDOW);
+      const cutStr=cut.toLocaleDateString('sv');
+      const recent={};
+      logs.forEach(l=>{ if(l&&l.experimentId&&l.date&&l.date>=cutStr) recent[l.experimentId]=1; });
+      shot.forEach(t=>{ if(t&&t.category==='Lectica'&&t.dueDate&&t.dueDate>=cutStr){ const m=(t.memo||'').match(/実験ID：(L\d+)/); if(m) recent[m[1]]=1; } });
+      // 最近使っていない usable な実験からランダム（active/thisWeekを軽く優先）
       let pool=master.filter(e=>usable(e)&&!recent[e.id]);
       if(!pool.length) pool=master.filter(usable);   // 全部最近使用なら条件緩和
       if(!pool.length) pool=master.slice();           // それでも空なら全件
@@ -2386,7 +2390,7 @@ async function gdAutoSync(manual){
 
     // C3: Lectica実験のShotを自動生成（毎朝・冪等／参謀提案優先・なければランダム）
     try {
-      const lx = autoGenLecticaShot();
+      const lx = autoGenLecticaShot(true);   // 同期完了＝提案が無ければランダム可
       if(lx > 0){
         if(typeof renderHome==='function') renderHome();
         importMsg = (importMsg ? importMsg + ' / ' : '') + 'Lectica実験を自動生成';
@@ -2432,7 +2436,8 @@ gdHandleRedirect();
 document.addEventListener('DOMContentLoaded', ()=>{
   gdUpdateBtn();
   if(gdToken){ setTimeout(()=>{ try{ gdAutoSync(false); }catch(e){ console.warn(e); } }, 1200); }
-  else { setTimeout(()=>{ try{ if(autoGenLecticaShot()>0 && typeof renderHome==='function') renderHome(); }catch(e){ console.warn(e); } }, 300); }
+  // 未ログイン起動：ランダム不可（提案が届く前に枠を埋めない）。当日のpendingが残っていれば提案分のみ生成
+  else { setTimeout(()=>{ try{ if(autoGenLecticaShot(false)>0 && typeof renderHome==='function') renderHome(); }catch(e){ console.warn(e); } }, 300); }
 });
 </script>
 </body>
