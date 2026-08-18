@@ -41,6 +41,8 @@ yaritai_items_v4 / oneday_logs_v1 / oneday_reviews_v1 / kouso_backlog_v1 / kouso
 su-v6-persons / hitomemo_profiles_v1 / lectica_experiments_master_v1 / lectica_experiment_logs_v1 /
 aix_draft_latest / aix_review_weekly / aix_review_monthly / aix_imported_keys / aix_lectica_pending /
 hitomemo_aix_imported / taskos_last_sync
+※ reflect_focus_v1 はReflect→Task OSの重点ミラー（派生データ・Reflect起動で再生成可）。
+　形式（focusQuestions/unlinkedExperiments）はTask OSが読むため変更時は両OS同時に
 
 ## 日次briefの契約
 - brief は markdown文字列（aix-tasks.json の brief キー / aix_draft_latest.json）
