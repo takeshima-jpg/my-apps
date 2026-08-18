@@ -54,6 +54,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-brief-evidence-collapse-spec.md](specs/claude-code-brief-evidence-collapse-spec.md) | Brief本文の根拠ブロック（─根拠─〜）をdetailsで既定折りたたみ（brief-viewer/1day両方のmarkdownToHtmlを同期・マーカー無しは従来どおり） | ✅実装済み 2026-08-18 |
 | [claude-code-reflect-nav-consolidation-spec.md](specs/claude-code-reflect-nav-consolidation-spec.md) | 【A】Reflect OS 導線整理（ホーム重点を閲覧専用化・テーマ未紐づけをログ内フィルタへ・検索をアーカイブに統合＝ナビ10→8）＋重点スナップショット reflect_focus_v1 をlocalStorageへミラー（Bの前提） | ✅実装済み 2026-08-18 |
 | [claude-code-taskos-focus-display-spec.md](specs/claude-code-taskos-focus-display-spec.md) | 【B・要A先行】Task OS HOMEに重点の問い/実験中を閲覧専用カード表示（reflect_focus_v1参照・空なら非表示）＋参謀提案のR系実験（Lecticaマスタ外）受け入れ | ✅実装済み 2026-08-18 |
+| [reflect-os-idb-stores-実装依頼書.md](specs/reflect-os-idb-stores-実装依頼書.md) | Reflect OSに questions/experiments ストア追加＋Q###/R###連番ID＋初回シード＋バックアップ出力（Brief追補D用） | ⚠️要設計調整（前提が現行実装と不一致：ストアは探求ボードで実装済み・現行はlocalStorage reflectOS_v1・実ギャップはtask-osバックアップの4ストア固定とID規約。実装保留） |
 | [drive-cleanup-運用.md](specs/drive-cleanup-運用.md) | drive_cleanup.py の週1手動運用手順書（dry-run→本番・掃除ルール） | 🔧運用中（手順書） |
 | [claude-code-minutes-triage-spec.md](specs/claude-code-minutes-triage-spec.md) | 議事録→OS振り分け（inbox triage）の手順書。「inboxを振り分けて」で発動 | 🔧運用中（手順書） |
 | [claude-code-sheets-integration-spec.md](specs/claude-code-sheets-integration-spec.md) | スプレッドシート連携（Project OS直接取り込み＋シート更新ツール）の設計・手順 | 🔧運用中（手順書） |
