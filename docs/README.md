@@ -49,7 +49,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-taskos-collect-parse-hotfix.md](specs/claude-code-taskos-collect-parse-hotfix.md) | Task OS 同期の緊急修正（collectAllOSDataが週次/月次briefのmarkdownをJSON.parseして落ちる→安全パース＋restore対称化） | ✅実装済み 2026-07-12 `8bf0153` |
 | [claude-code-taskos-dedupe-403-quiet-spec.md](specs/claude-code-taskos-dedupe-403-quiet-spec.md) | GDrive dedupeの403（所有外trash不可）を静音スキップ・セッション再試行なし・ログ洪水解消 | ✅実装済み 2026-07-12 `ad3bad8` |
 | [claude-code-drive-cleanup-unify-spec.md](specs/claude-code-drive-cleanup-unify-spec.md) | Drive掃除を一本化（ブラウザ側dedupe廃止＋drive_cleanup.py週1手動）。手順=[drive-cleanup-運用](specs/drive-cleanup-運用.md) | ✅実装済み 2026-07-12 `a541b5b` |
-| [claude-code-lectica-single-source-spec.md](specs/claude-code-lectica-single-source-spec.md) | Lectica出題の選定者をCowork提案に一本化（autoGenLecticaShotのランダム選定を撤去・提案が無い日はShot非生成。差し替えロジックと冪等性は維持） | 🕒未実装 |
+| [claude-code-lectica-single-source-spec.md](specs/claude-code-lectica-single-source-spec.md) | 【v2】Lectica出題をCowork提案優先に（ランダムはallowRandom引数で同期・AIタスク読込時のみに降格・未ログイン起動時は非生成。追補：launcher addLecticaShotの二重防止をカテゴリ基準に統一） | 🕒未実装 |
 | [claude-code-lectica-skip-autopause-spec.md](specs/claude-code-lectica-skip-autopause-spec.md) | Lectica日次スキップを自動pause化（期日超過の未完了LecticaShotをlecticaAutoPausedとしてpendingへ・手動スキップボタンと保留ログ記録を廃止・recent判定維持） | 🕒未実装 |
 | [claude-code-brief-evidence-collapse-spec.md](specs/claude-code-brief-evidence-collapse-spec.md) | Brief本文の根拠ブロック（─根拠─〜）をdetailsで既定折りたたみ（brief-viewer/1day両方のmarkdownToHtmlを同期・マーカー無しは従来どおり） | 🕒未実装 |
 | [drive-cleanup-運用.md](specs/drive-cleanup-運用.md) | drive_cleanup.py の週1手動運用手順書（dry-run→本番・掃除ルール） | 🔧運用中（手順書） |
