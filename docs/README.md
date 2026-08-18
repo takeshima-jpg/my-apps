@@ -52,6 +52,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-lectica-single-source-spec.md](specs/claude-code-lectica-single-source-spec.md) | 【v2】Lectica出題をCowork提案優先に（ランダムはallowRandom引数で同期・AIタスク読込時のみに降格・未ログイン起動時は非生成。追補：launcher addLecticaShotの二重防止をカテゴリ基準に統一） | ✅実装済み 2026-08-18 |
 | [claude-code-lectica-skip-autopause-spec.md](specs/claude-code-lectica-skip-autopause-spec.md) | Lectica日次スキップを自動pause化（期日超過の未完了LecticaShotをlecticaAutoPausedとしてpendingへ・手動スキップボタンと保留ログ記録を廃止・recent判定維持） | ✅実装済み 2026-08-18 |
 | [claude-code-brief-evidence-collapse-spec.md](specs/claude-code-brief-evidence-collapse-spec.md) | Brief本文の根拠ブロック（─根拠─〜）をdetailsで既定折りたたみ（brief-viewer/1day両方のmarkdownToHtmlを同期・マーカー無しは従来どおり） | ✅実装済み 2026-08-18 |
+| [claude-code-reflect-nav-consolidation-spec.md](specs/claude-code-reflect-nav-consolidation-spec.md) | Reflect OS 導線整理（ホーム重点を閲覧専用化・テーマ未紐づけをログ内フィルタへ・検索をアーカイブに統合＝ナビ10→8）＋重点スナップショット reflect_focus_v1 をlocalStorageへミラー（Task OS表示用・依頼書Bの前提） | 🕒未実装 |
 | [drive-cleanup-運用.md](specs/drive-cleanup-運用.md) | drive_cleanup.py の週1手動運用手順書（dry-run→本番・掃除ルール） | 🔧運用中（手順書） |
 | [claude-code-minutes-triage-spec.md](specs/claude-code-minutes-triage-spec.md) | 議事録→OS振り分け（inbox triage）の手順書。「inboxを振り分けて」で発動 | 🔧運用中（手順書） |
 | [claude-code-sheets-integration-spec.md](specs/claude-code-sheets-integration-spec.md) | スプレッドシート連携（Project OS直接取り込み＋シート更新ツール）の設計・手順 | 🔧運用中（手順書） |
