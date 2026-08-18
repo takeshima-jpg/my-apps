@@ -360,7 +360,6 @@ select option { background: var(--surface); }
 .act-btn.ab-del:hover { border-color: var(--red); color: var(--red); }
 .act-btn.ab-del.armed { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
 .act-btn.ab-del.armed:hover { background: var(--red); border-color: var(--red); color: #fff; }
-.act-btn.ab-skip:hover { border-color: var(--gray); color: var(--gray); }
 .act-btn.ab-tmr:hover { border-color: var(--purple); color: var(--purple); }
 .act-btn.ab-week:hover { border-color: var(--purple); color: var(--purple); }
 .act-btn.ab-reject { color: #dc2626; }
@@ -1082,28 +1081,26 @@ function deleteTask(id, title) {
   save(); render();
 }
 
-// ── Lectica: スキップ（result=保留 のログを1行だけ残してタスクを消す）──
-function lxSkip(id) {
-  const t = tasks.find(x => x.id === id); if (!t) return;
-  const m = (t.memo||'').match(/実験ID：\s*([A-Za-z0-9]+)/);
-  const expId = m ? m[1].toUpperCase() : '';
-  const date = t.dueDate || new Date().toLocaleDateString('sv');
+// ── Lectica: 期日超過の未完了を自動で保留へ（毎ロード・冪等）──
+// 手動スキップ（旧lxSkip）は廃止。やらなかった日の処理を竹嶋の手作業にしない。
+// ログは書かない：全件同一文言の保留ログは分析価値が無く、実施率の分母は生成済みShot履歴から算出できる。
+// 実験そのものを「合わない」と見送る判断は Reflect OS 実験マスタ側の「見送る」3択（合わない/忘れた/余力なし）に一本化。
+// Shotは削除せずpendingで残すため、task-os autoGenLecticaShot の14日連続回避（memoの実験ID参照）は壊れない。
+function lxAutoPause() {
+  const today = getTodayKey();
   const now = new Date().toISOString();
-  try {
-    const KEY = 'lectica_experiment_logs_v1';
-    let logs = [];
-    try { const r = localStorage.getItem(KEY); const a = r ? JSON.parse(r) : []; logs = Array.isArray(a) ? a : []; } catch (e) { logs = []; }
-    logs.unshift({
-      id: 'log_' + date.replace(/-/g,'') + '_' + Math.random().toString(36).slice(2,8),
-      experimentId: expId, date: date, source: 'skip',
-      usedScene: '', people: [], actualAction: '', insight: 'スキップ（実施できず）', nextChange: '',
-      result: 'pause', createdAt: now, updatedAt: now
-    });
-    localStorage.setItem(KEY, JSON.stringify(logs));
-  } catch (e) { console.warn('lectica skip log失敗', e); }
-  tasks = tasks.filter(x => x.id !== id);
-  save(); render();
-  toast('Lecticaをスキップ（保留ログを記録）');
+  let changed = 0;
+  tasks.forEach(t => {
+    if (t && t.category === 'Lectica' && t.dueDate && t.dueDate < today &&
+        (t.status === 'todo' || t.status === 'doing')) {
+      t.status = 'pending';               // 既存の保留ステータス（保留セクションに入り期限切れ集計から外れる）
+      t.lecticaAutoPaused = true;         // 手動保留と区別する由来フラグ
+      t.updatedAt = now;
+      changed++;
+    }
+  });
+  if (changed) save();
+  return changed;
 }
 
 // ── EDIT ──
@@ -1321,9 +1318,8 @@ function buildCardHTML(t) {
     if ((t.memo||'').includes('AI参謀 Morning Brief自動生成')) {
       acts += `<button class="act-btn ab-reject" onclick="rejectTask('${id}')">不採用</button>`;
     }
-    if (t.category==='Lectica' && /実験ID：\s*([A-Za-z0-9]+)/.test(t.memo||'')) {
-      acts += `<button class="act-btn ab-skip" onclick="lxSkip('${id}')">スキップ</button>`;
-    }
+    // Lecticaのスキップボタンは廃止：日次のやり残しはlxAutoPauseが自動で保留化し、
+    // 実験そのものの見送りはReflect OS側の「見送る」3択で行う（日次スキップと実験の見送りは別物）
   } else {
     acts += `<button class="act-btn ab-back" onclick="changeStatus('${id}','todo')">戻す</button>`;
   }
@@ -1440,7 +1436,8 @@ function openReview() {
   const today = getTodayKey();
   const threshold = 30;
   const active = tasks.filter(t => t.status !== 'done');
-  const overdue = active.filter(t => getDateState(t.dueDate)==='overdue');
+  // 保留（自動pause含む）は期限切れに数えない（保留中セクションで1回だけ数える）
+  const overdue = active.filter(t => t.status !== 'pending' && getDateState(t.dueDate)==='overdue');
   const pending = tasks.filter(t => t.status==='pending');
   const nodue = active.filter(t => !t.dueDate);
   const stale = active.filter(t => daysSinceUpdate(t) >= threshold);
@@ -1693,6 +1690,8 @@ function init() {
   tasks = tasks.filter(t => !t.isHeader);
   // カテゴリ未設定タスクを「今日のタスク」に補正
   fixOrphanCategories();
+  // 期日超過の未完了Lecticaを自動保留（render前・冪等）
+  lxAutoPause();
   save();
   document.getElementById('headerDate').textContent = getTodayKey().replace(/-/g,'/');
   render();
