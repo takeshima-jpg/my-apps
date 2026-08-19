@@ -543,10 +543,14 @@ const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.
 const AIX_FOLDER_ID = '1dEA4ZZJi5E97Dk_MRNwG6EbBlINlMO3U';   // 旧：aix-drafts直下（旧名フォールバック用）
 // 2026-07-26 Drive再編：10_日次データ配下の daily-contacts.json が正
 const AIX_DAILY_FOLDER_ID = '1qOQXKraLlYA8BA3WM1dvNdVGzHasRWKP'; // 10_日次データ
-const AIX_HITOMEMO_BASE = 'daily-contacts';                  // Coworkが書く自動取り込み用ファイル（新名）
-const AIX_HITOMEMO_LEGACY = 'aix-hitomemo';                  // 旧名（切替確認後にフォールバック削除可）
-const AIX_HITOMEMO_FILE = AIX_HITOMEMO_BASE + '.json';       // 表示用
-const AIX_LAST_KEY = 'hitomemo_aix_last_modified';           // 冪等性：最後に取り込んだmodifiedTime
+// 2026-08-18 分離：人物(daily-people)と接点(daily-contacts)を別ファイルで読む。
+// 旧 aix-hitomemo.json は people/contacts 両方を含む旧名として双方のフォールバックに残す。
+const AIX_PEOPLE_BASE = 'daily-people';                      // 人物プロファイル（Cowork出力・新名）
+const AIX_CONTACTS_BASE = 'daily-contacts';                 // 接点（Cowork出力・新名）
+const AIX_HITOMEMO_LEGACY = 'aix-hitomemo';                  // 旧名（people/contacts両方入り・移行期フォールバック）
+const AIX_HITOMEMO_FILE = AIX_CONTACTS_BASE + '.json';       // 表示用
+const AIX_LAST_PEOPLE_KEY = 'hitomemo_aix_last_people';      // 冪等性：人物ファイルの最後に取り込んだmodifiedTime
+const AIX_LAST_CONTACTS_KEY = 'hitomemo_aix_last_contacts';  // 冪等性：接点ファイルの最後に取り込んだmodifiedTime
 const GDRIVE_REDIRECT_URI = (location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html'));
 
 let gdriveToken = null;
@@ -751,7 +755,22 @@ function toast(msg) {
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
 }
-// Coworkが aix-drafts に書いた aix-hitomemo.json を読み、未登録に自動取り込み
+// 10_日次データ配下の base名ファイルを検索（同名複数はcreatedTime最新）。0件なら旧名をaix-drafts直下から（移行期の保険）。
+async function _gdFindDailyFile(base, legacyBase) {
+  const COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';
+  const queries = [`%22${AIX_DAILY_FOLDER_ID}%22+in+parents+and+name+contains+%22${base}%22+and+trashed%3Dfalse`];
+  if (legacyBase) queries.push(`%22${AIX_FOLDER_ID}%22+in+parents+and+name+contains+%22${legacyBase}%22+and+trashed%3Dfalse`);
+  for (const q of queries) {
+    const findRes = await gdriveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,createdTime,modifiedTime)&orderBy=createdTime+desc&pageSize=10${COMMON}`);
+    const findData = await findRes.json();
+    if (findData.files && findData.files.length) return findData.files[0];
+  }
+  return null;
+}
+
+// Coworkが 10_日次データ に書いた人物/接点を、別々のファイルとして読み未登録へ自動取り込み（読み取り専用）。
+// 人物＝daily-people.json（{people:[...]}）／接点＝daily-contacts.json（{contacts:[...]}）。冪等キーもファイル別。
+// 人物ファイルが接点ファイルの影に隠れて読まれない問題を解消。両方Cowork出力・アプリはDriveへ書き戻さない。
 async function gdriveAutoImportHitomemo(retry, manual) {
   if (!gdriveToken) { if (manual) alert('先にサイドバーの「🔗 Googleでログイン」をしてください。'); return; }
   if (!window.__hitomemoImportPeople) {           // React未マウント → 少し待って再試行
@@ -759,28 +778,37 @@ async function gdriveAutoImportHitomemo(retry, manual) {
     return;
   }
   try {
-    // 新フォルダ＋新名で検索（同名複数はcreatedTime最新を採用）→ 0件なら旧名をaix-drafts直下から（移行期間の保険）
-    const COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';
-    let file = null;
-    for (const q of [`%22${AIX_DAILY_FOLDER_ID}%22+in+parents+and+name+contains+%22${AIX_HITOMEMO_BASE}%22+and+trashed%3Dfalse`,
-                     `%22${AIX_FOLDER_ID}%22+in+parents+and+name+contains+%22${AIX_HITOMEMO_LEGACY}%22+and+trashed%3Dfalse`]) {
-      const findRes = await gdriveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,createdTime,modifiedTime)&orderBy=createdTime+desc&pageSize=10${COMMON}`);
-      const findData = await findRes.json();
-      if (findData.files && findData.files.length) { file = findData.files[0]; break; }
-    }
-    if (!file) { if (manual) alert(`${AIX_HITOMEMO_FILE} が見つかりません（フォルダID: ${AIX_DAILY_FOLDER_ID}）。Coworkがまだ書き出していない可能性があります。`); return; }
-    const last = localStorage.getItem(AIX_LAST_KEY);
-    if (last && last === file.modifiedTime) { if (manual) toast('最新です（新規の取り込みはありません）'); return; } // 既に取り込み済み（冪等）
-    const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&supportsAllDrives=true`);
-    const data = await res.json();
-    const people = (data && Array.isArray(data.people)) ? data.people : [];
-    const contacts = (data && Array.isArray(data.contacts)) ? data.contacts : [];
+    // ── 人物（daily-people → 旧名aix-hitomemoフォールバック）──
     let added = 0;
-    if (people.length) added = window.__hitomemoImportPeople(people) || 0;
-    // 接点の自動更新（contacts → 既存人物の lastContactDate / changeLog のみ。冪等なので毎回全件流してよい）
+    const pFile = await _gdFindDailyFile(AIX_PEOPLE_BASE, AIX_HITOMEMO_LEGACY);
+    if (pFile) {
+      const lastP = localStorage.getItem(AIX_LAST_PEOPLE_KEY);
+      if (!(lastP && lastP === pFile.modifiedTime)) {   // 同一modifiedTimeなら再取得しない（冪等）
+        const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${pFile.id}?alt=media&supportsAllDrives=true`);
+        const data = await res.json();
+        const people = (data && Array.isArray(data.people)) ? data.people : [];
+        if (people.length) added = window.__hitomemoImportPeople(people) || 0;   // 名前重複＋台帳で冪等
+        localStorage.setItem(AIX_LAST_PEOPLE_KEY, pFile.modifiedTime);
+      }
+    }
+    // ── 接点（daily-contacts → 旧名aix-hitomemoフォールバック）──
     let touched = { updated: 0, names: [] };
-    if (contacts.length && window.__hitomemoApplyContacts) touched = window.__hitomemoApplyContacts(contacts) || touched;
-    localStorage.setItem(AIX_LAST_KEY, file.modifiedTime);
+    const cFile = await _gdFindDailyFile(AIX_CONTACTS_BASE, AIX_HITOMEMO_LEGACY);
+    if (cFile) {
+      const lastC = localStorage.getItem(AIX_LAST_CONTACTS_KEY);
+      if (!(lastC && lastC === cFile.modifiedTime)) {
+        const res = await gdriveFetch(`https://www.googleapis.com/drive/v3/files/${cFile.id}?alt=media&supportsAllDrives=true`);
+        const data = await res.json();
+        const contacts = (data && Array.isArray(data.contacts)) ? data.contacts : [];
+        // 接点更新は lastContactDate鮮度ガード＋changeLog台帳で冪等なので全件流してよい
+        if (contacts.length && window.__hitomemoApplyContacts) touched = window.__hitomemoApplyContacts(contacts) || touched;
+        localStorage.setItem(AIX_LAST_CONTACTS_KEY, cFile.modifiedTime);
+      }
+    }
+    if (!pFile && !cFile) {   // どちらも見つからない
+      if (manual) alert(`${AIX_PEOPLE_BASE}.json / ${AIX_CONTACTS_BASE}.json が見つかりません（フォルダID: ${AIX_DAILY_FOLDER_ID}）。Coworkがまだ書き出していない可能性があります。`);
+      return;
+    }
     const msgs = [];
     if (added > 0) msgs.push(`📥 ${added}人を未登録に取り込みました`);
     if (touched.updated > 0) msgs.push(`🤝 接点を自動更新：${touched.updated}人（${touched.names[0]}さん${touched.updated > 1 ? ' 他' : ''}）`);
