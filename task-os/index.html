@@ -789,7 +789,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-08-18';
+const BUILD_VER = '2026-08-20';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -1002,7 +1002,7 @@ function handleAixTaskImport(e) {
     try {
       const parsed = JSON.parse(ev.target.result);
       const res = applyAixTasks(parsed);
-      const lxNew = autoGenLecticaShot(true);   // AIタスク読込＝提案が無ければランダム可
+      const lxNew = autoGenLecticaShot();   // AIタスク読込＝当日提案があれば反映（ランダムは廃止）
 
       if (res.added === 0 && res.draftCount === 0 && !res.briefLoaded && !lxNew) {
         toast('追加できる新規データはありませんでした');
@@ -1324,8 +1324,10 @@ function completeRt(rawId){
   saveRt(a); toast(`✓ 完了 → 次回 ${fmtDate(t.nextDate)}`); refresh();
 }
 function completeSh(rawId){
-  const a=getSh(), t=a.find(x=>x.id===rawId); if(!t) return;
-  t.status='done'; t.updatedAt=now(); saveSh(a); toast('✓ 完了 (Shot)'); refresh();
+  const a=getSh(), t=a.find(x=>x.id===rawId); if(!t) return false;
+  // 誤爆対策：Lecticaは「Shot で開く」の隣で✓完了を押しやすいので確認を挟む（他カテゴリは即完了のまま）
+  if(t.category==='Lectica' && !confirm('この実験を完了にしますか？')) return false;
+  t.status='done'; t.updatedAt=now(); saveSh(a); toast('✓ 完了 (Shot)'); refresh(); return true;
 }
 function postponeRt(rawId){
   const a=getRt(), t=a.find(x=>String(x.id)===String(rawId)); if(!t) return;
@@ -1669,35 +1671,33 @@ function homeShot(noDue) {
 // （ランチャー今日タブ・Morning Briefへ移行。Lectica自動生成 autoGenLecticaShot は同期で使うため存続）
 
 // Lectica実験のShotを自動生成（毎朝・冪等）。Cowork（参謀提案）が唯一の選定者で、Task OSは写すだけ。
-// ・今日のLectica Shotが既にあれば原則何もしない
-//   （例外：ランダム生成由来かつ未完了のものは、後着の参謀提案で1回だけ差し替える）
-// ・本日（日付一致・usable）の参謀提案があれば必ず採用（連続回避は課さない＝選定責任はCowork側）
-// ・提案が無い日は allowRandom===true（同期・AIタスク読込時のみ）に限りランダム生成。
-//   未ログイン起動（allowRandom=false）では何も生成しない＝提案が届く前にランダムが枠を埋めない
-// ・14日連続回避はランダム分岐でのみ使う
+// 2026-08-20：ランダム生成は完全廃止。提案（当日の有効な aix_lectica_pending）が無い日は何も出さない（return 0）。
+// ・本日（日付一致）の参謀提案があれば採用。L系はusable（completed/skippedは再出題しない）、
+//   マスタ外ID（R系）はpendingを信頼して採用（選定責任はCowork側・妥当性はTask OSで判定しない）
+// ・当日のLecticaが random由来かつ未完了(todo/doing)なら提案で置き換え（移行期の掃除）
+// ・当日のLecticaが done/pending/rejected 等でopenが無く、提案が別IDなら提案を新規追加
+//   （実行済みの古いものは履歴として残し、今日の提案を別途表示＝誤って完了にしても再出題される）
+// ・同一実験IDが当日に既にある（実行済み含む）なら追加も置き換えもしない（冪等・二重防止）
 // 戻り値：生成／差し替えしたら1、しなければ0
-// 由来フラグ lecticaSource: 'sanbo'（参謀提案由来）／'random'（ランダム生成由来）を生成時に付与する。
-// 未設定（旧データ・手動追加・他OS経由でフィールドが落ちた場合）は差し替え対象にしない＝安全側。
+// 由来フラグ lecticaSource: 'sanbo'（参謀提案由来）。旧 'random' は生成されなくなるが、既存データの
+// 'random' を差し替え対象とみなす判定（isRandom）は移行期の掃除のため残す。
 function lecticaMemo(memo,expId){
   memo=memo||'';
   if(memo.indexOf('実験ID：')<0) memo=(memo?memo+'\n':'')+'実験ID：'+expId;
   if(memo.indexOf('Reflect')<0) memo=memo+'\n実行後：Reflect OSに実績を記録する';
   return memo;
 }
-function autoGenLecticaShot(allowRandom){
-  allowRandom = allowRandom === true;   // 既定false：明示された呼び出し（同期・AIタスク読込）でのみランダム許可
+function autoGenLecticaShot(){
   try{
     const today=TODAY;
     let shot=[]; try{ shot=JSON.parse(localStorage.getItem('shot-task-os-v1')||'[]')||[]; }catch(e){ shot=[]; }
     let master=[]; try{ master=JSON.parse(localStorage.getItem('lectica_experiments_master_v1')||'[]')||[]; }catch(e){ master=[]; }
-    if(!master.length) return 0;   // 56件マスター未投入なら生成しない
-    let logs=[]; try{ logs=JSON.parse(localStorage.getItem('lectica_experiment_logs_v1')||'[]')||[]; }catch(e){ logs=[]; }
     let pending=null; try{ pending=JSON.parse(localStorage.getItem('aix_lectica_pending')||'null'); }catch(e){}
 
     const byId=id=>master.find(x=>x&&x.id===id);
     const usable=e=>e&&e.status!=='completed'&&e.status!=='skipped';
 
-    // 本日の参謀提案（日付一致・usable）。差し替え判定では連続回避(recent)を課さない＝明示的な提案を優先
+    // 本日の参謀提案（日付一致）。L系はusable（completed/skippedは不採用）、マスタ外ID（R系）はpendingを信頼して採用
     let sanboExp=null, sanboShot=null;
     if(pending){
       const pdate=(pending.shotTask&&pending.shotTask.dueDate)||pending.date||'';
@@ -1715,70 +1715,43 @@ function autoGenLecticaShot(allowRandom){
       }
     }
 
-    // 当日のLectica Shotが既にある場合：条件を満たすときだけ参謀提案で差し替え、それ以外は何もしない
-    const curIdx=shot.findIndex(t=>t&&t.category==='Lectica'&&t.dueDate===today);
-    if(curIdx>=0){
-      const cur=shot[curIdx];
-      const isRandom=cur.lecticaSource==='random';            // 手動追加・参謀由来・由来不明は対象外
-      const isOpen=cur.status==='todo'||cur.status==='doing'; // 完了済み(done)・保留・不採用は上書きしない
-      const sameExp=!!sanboExp&&(cur.memo||'').indexOf('実験ID：'+sanboExp.id)>=0;
-      if(sanboExp && isRandom && isOpen && !sameExp){
-        const nowIso=new Date().toISOString();
-        cur.title=(sanboShot&&sanboShot.title)||('今日のLectica実験：'+(pending.selectedExperimentTitle||sanboExp.title||sanboExp.id));
-        cur.category=(sanboShot&&sanboShot.category)||'Lectica';
-        cur.memo=lecticaMemo(sanboShot&&sanboShot.memo,sanboExp.id);
-        cur.lecticaSource='sanbo';   // 以降の再取り込みで二重差し替えしない
-        cur.updatedAt=nowIso;
-        shot[curIdx]=cur;
-        localStorage.setItem('shot-task-os-v1',JSON.stringify(shot));
-        try{ const e=byId(sanboExp.id); if(e&&e.status==='not_started'){ e.status='active'; localStorage.setItem('lectica_experiments_master_v1',JSON.stringify(master)); } }catch(_){}
-        return 1;
-      }
-      return 0;
+    // 提案が無い日は何もしない（ランダム廃止＝空でよい・催促しない）
+    if(!sanboExp) return 0;
+
+    // 当日のLectica Shot群を分類
+    const todays=shot.map((t,i)=>({t,i})).filter(o=>o.t&&o.t.category==='Lectica'&&o.t.dueDate===today);
+    const sameIdShot=todays.find(o=>(o.t.memo||'').indexOf('実験ID：'+sanboExp.id)>=0);
+    if(sameIdShot) return 0;   // 同一実験が当日に既にある（実行済み含む）→ 追加も置き換えもしない（冪等）
+
+    const buildTitle=()=>(sanboShot&&sanboShot.title)||('今日のLectica実験：'+(pending.selectedExperimentTitle||sanboExp.title||sanboExp.id));
+    const buildCat=()=>(sanboShot&&sanboShot.category)||'Lectica';
+    const promoteMaster=()=>{ try{ const e=byId(sanboExp.id); if(e&&e.status==='not_started'){ e.status='active'; localStorage.setItem('lectica_experiments_master_v1',JSON.stringify(master)); } }catch(_){} };
+
+    // ① 置き換え：random由来かつ未完了(todo/doing)のShotを提案で上書き（移行期の掃除）
+    const replaceable=todays.find(o=>o.t.lecticaSource==='random'&&(o.t.status==='todo'||o.t.status==='doing'));
+    if(replaceable){
+      const cur=replaceable.t;
+      cur.title=buildTitle();
+      cur.category=buildCat();
+      cur.memo=lecticaMemo(sanboShot&&sanboShot.memo,sanboExp.id);
+      cur.lecticaSource='sanbo';   // 以降の再取り込みで二重差し替えしない
+      cur.updatedAt=new Date().toISOString();
+      shot[replaceable.i]=cur;
+      localStorage.setItem('shot-task-os-v1',JSON.stringify(shot));
+      promoteMaster();
+      return 1;
     }
 
-    let chosen=null;
-    // ① 参謀の本日の提案（日付一致・usable）は必ず採用（連続回避は課さない＝選定責任はCowork側）
-    if(sanboExp){ chosen=sanboExp; }
-    // ② 提案が無い日：allowRandom（同期・AIタスク読込時のみtrue）のときだけランダム生成。
-    //    未ログイン起動などでは何も生成しない（警告・空カードも出さない：signal over noise）
-    if(!chosen){
-      if(!allowRandom) return 0;
-      // 直近14日に使った実験IDを集める（連続回避。ランダム分岐でのみ使う）
-      const WINDOW=14;
-      const cut=new Date(today+'T00:00:00'); cut.setDate(cut.getDate()-WINDOW);
-      const cutStr=cut.toLocaleDateString('sv');
-      const recent={};
-      logs.forEach(l=>{ if(l&&l.experimentId&&l.date&&l.date>=cutStr) recent[l.experimentId]=1; });
-      shot.forEach(t=>{ if(t&&t.category==='Lectica'&&t.dueDate&&t.dueDate>=cutStr){ const m=(t.memo||'').match(/実験ID：(L\d+)/); if(m) recent[m[1]]=1; } });
-      // 最近使っていない usable な実験からランダム（active/thisWeekを軽く優先）
-      let pool=master.filter(e=>usable(e)&&!recent[e.id]);
-      if(!pool.length) pool=master.filter(usable);   // 全部最近使用なら条件緩和
-      if(!pool.length) pool=master.slice();           // それでも空なら全件
-      if(pool.length){
-        const pri=pool.filter(e=>e.status==='active'||e.thisWeek);
-        const src=pri.length?pri:pool;
-        chosen=src[Math.floor(Math.random()*src.length)];
-      }
-    }
-    if(!chosen) return 0;
+    // openな（todo/doing）Lecticaが別に居るなら尊重して何もしない（sanbo由来・手動追加を上書きしない【厳守】）
+    const openShot=todays.find(o=>o.t.status==='todo'||o.t.status==='doing');
+    if(openShot) return 0;
 
-    // Shot生成
+    // ここまで来る＝当日のLecticaが無い or done/pending/rejected のみ、かつ提案は別ID → 新規追加
+    // （実行済みの古いものは履歴として残し、今日の提案を別途表示。誤って完了にしても再出題される）
     const now=new Date().toISOString();
-    let title, cat='Lectica', memo='';
-    if(sanboShot){
-      title=sanboShot.title||('今日のLectica実験：'+(pending.selectedExperimentTitle||chosen.title||''));
-      cat=sanboShot.category||'Lectica';
-      memo=sanboShot.memo||'';
-    }else{
-      title='今日のLectica実験：'+(chosen.title||chosen.id);
-    }
-    memo=lecticaMemo(memo,chosen.id);
-    /* 由来フラグ：後着の参謀提案で差し替えてよいのは random のみ（sanbo・手動追加は対象外） */
-    shot.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title:title,category:cat,priority:'normal',status:'todo',dueDate:today,memo:memo,lecticaSource:(sanboShot||chosen===sanboExp)?'sanbo':'random',createdAt:now,completedAt:null,updatedAt:now});
+    shot.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title:buildTitle(),category:buildCat(),priority:'normal',status:'todo',dueDate:today,memo:lecticaMemo(sanboShot&&sanboShot.memo,sanboExp.id),lecticaSource:'sanbo',createdAt:now,completedAt:null,updatedAt:now});
     localStorage.setItem('shot-task-os-v1',JSON.stringify(shot));
-    // 実験ステータス not_started→active
-    try{ const e=byId(chosen.id); if(e&&e.status==='not_started'){ e.status='active'; localStorage.setItem('lectica_experiments_master_v1',JSON.stringify(master)); } }catch(_){}
+    promoteMaster();
     return 1;
   }catch(e){ console.warn('autoGenLecticaShot', e); return 0; }
 }
@@ -1931,7 +1904,7 @@ function todayRow(t){
   const isDone=done[t.id];
   const links=renderLinks(t);
   let acts='';
-  if(t.src==='shot') acts=`<button class="btn-done" onclick="completeSh('${t.rawId}');markDone('${t.id}')">✓</button>`;
+  if(t.src==='shot') acts=`<button class="btn-done" onclick="if(completeSh('${t.rawId}'))markDone('${t.id}')">✓</button>`;
   else if(t.src==='routine') acts=`<button class="btn-done" onclick="completeRt('${t.rawId}');markDone('${t.id}')">✓</button>`;
   else acts=`<button class="btn-done" onclick="completePj('${t.pId}','${t.kind}','${t.rawId}');markDone('${t.id}')">✓</button>`;
 
@@ -2428,7 +2401,7 @@ async function gdAutoSync(manual){
 
     // C3: Lectica実験のShotを自動生成（毎朝・冪等／参謀提案優先・なければランダム）
     try {
-      const lx = autoGenLecticaShot(true);   // 同期完了＝提案が無ければランダム可
+      const lx = autoGenLecticaShot();   // 同期完了＝当日提案があれば反映（ランダムは廃止）
       if(lx > 0){
         if(typeof renderHome==='function') renderHome();
         importMsg = (importMsg ? importMsg + ' / ' : '') + 'Lectica実験を自動生成';
@@ -2474,8 +2447,8 @@ gdHandleRedirect();
 document.addEventListener('DOMContentLoaded', ()=>{
   gdUpdateBtn();
   if(gdToken){ setTimeout(()=>{ try{ gdAutoSync(false); }catch(e){ console.warn(e); } }, 1200); }
-  // 未ログイン起動：ランダム不可（提案が届く前に枠を埋めない）。当日のpendingが残っていれば提案分のみ生成
-  else { setTimeout(()=>{ try{ if(autoGenLecticaShot(false)>0 && typeof renderHome==='function') renderHome(); }catch(e){ console.warn(e); } }, 300); }
+  // 未ログイン起動：当日のpendingが残っていれば提案分のみ生成（ランダムは廃止＝無ければ何も出さない）
+  else { setTimeout(()=>{ try{ if(autoGenLecticaShot()>0 && typeof renderHome==='function') renderHome(); }catch(e){ console.warn(e); } }, 300); }
 });
 </script>
 </body>

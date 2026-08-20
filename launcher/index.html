@@ -646,30 +646,27 @@ function addLecticaShot(){
   const now = new Date().toISOString();
   const memo = (st.memo || '') + (expId ? ('\n実験ID：' + expId) : '') + '\n実行後：Reflect OSに実績を記録する';
   // 二重作成防止はカテゴリ基準（task-os autoGenLecticaShotと同基準）。提案（Cowork）が正、Shot側は写し。
-  const curIdx = tasks.findIndex(t => t && t.dueDate === today && t.category === 'Lectica');
-  if (curIdx >= 0) {
-    const cur = tasks[curIdx];
-    // 同じ実験なら何もしない
-    if (expId && (cur.memo || '').indexOf('実験ID：' + expId) >= 0) {
-      toast('今日のこの実験は追加済みです'); renderTodayLectica(); return;
-    }
-    // 別実験でも未着手（todo/doing）なら追加ではなく置き換え（idは変えない）
-    if (cur.status === 'todo' || cur.status === 'doing') {
-      cur.title = st.title || ('今日のLectica実験：' + (p.selectedExperimentTitle || ''));
-      cur.category = st.category || 'Lectica';
-      cur.memo = memo;
-      cur.updatedAt = now;
-      tasks[curIdx] = cur;
-      writeShotTasks(tasks);
-      renderTodayLectica();
-      renderTodayTasks();
-      reloadShotFrame();
-      toast('今日のLecticaを提案内容に置き換えました');
-      return;
-    }
-    // done / pending / rejected：実行済み・保留済みは上書きしない
-    toast('今日のLecticaは処理済みです'); renderTodayLectica(); return;
+  const todays = tasks.filter(t => t && t.dueDate === today && t.category === 'Lectica');
+  // 同一実験が当日に既にある（実行済み含む）→ 追加も置き換えもしない
+  if (expId && todays.some(t => (t.memo || '').indexOf('実験ID：' + expId) >= 0)) {
+    toast('今日のこの実験は追加済みです'); renderTodayLectica(); return;
   }
+  // 未着手（todo/doing）の当日Lecticaがあれば提案内容で置き換え（idは変えない）
+  const open = todays.find(t => t.status === 'todo' || t.status === 'doing');
+  if (open) {
+    open.title = st.title || ('今日のLectica実験：' + (p.selectedExperimentTitle || ''));
+    open.category = st.category || 'Lectica';
+    open.memo = memo;
+    open.updatedAt = now;
+    writeShotTasks(tasks);
+    renderTodayLectica();
+    renderTodayTasks();
+    reloadShotFrame();
+    toast('今日のLecticaを提案内容に置き換えました');
+    return;
+  }
+  // done/pending/rejected のみ or 当日Lectica無し → 提案を新規追加（実行済みは履歴として残す）。
+  // 誤って完了にしても今日の提案がもう一度出てくる（task-os autoGenLecticaShot ③と同思想）
   tasks.push({
     id: shotGenId(),
     title: st.title || ('今日のLectica実験：' + (p.selectedExperimentTitle || '')),

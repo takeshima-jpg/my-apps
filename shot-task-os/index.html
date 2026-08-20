@@ -327,6 +327,12 @@ select option { background: var(--surface); }
   padding-left: 8px;
   white-space: pre-line;
 }
+/* Lecticaカードの実験内容フル表示（開かずに読める・既定展開） */
+.lx-detail { margin-top: 6px; border-left: 2px solid var(--purple, #7c5cff); padding-left: 10px; }
+.lx-field { display: flex; gap: 8px; font-size: 13px; line-height: 1.6; margin: 2px 0; }
+.lx-flabel { flex-shrink: 0; min-width: 84px; color: var(--text3); font-weight: 700; }
+.lx-fval { color: var(--text); white-space: pre-line; word-break: break-word; }
+.lx-field.lx-review .lx-fval { color: var(--purple, #7c5cff); }
 
 /* ACTIONS */
 .task-actions {
@@ -1172,6 +1178,37 @@ function escH(s) {
 }
 
 // memo内のURLをクリック可能なリンクに変換する
+// Lecticaのmemoから✦枠の構造化5項目を抽出（Cowork FB追補Gがmemoにラベル付きで書く前提）。
+// 1項目も無ければ null（旧Shot＝ラベル無しは従来どおりrenderMemoにフォールバック）。
+function lecticaFields(memo) {
+  if (!memo) return null;
+  const grab = (labels) => {
+    for (const line of String(memo).split('\n')) {
+      const m = line.match(/^\s*([^：:]+)[：:]\s*(.+?)\s*$/);
+      if (m && labels.includes(m[1].trim())) return m[2].trim();
+    }
+    return '';
+  };
+  const f = {
+    q:      grab(['重点の問い', '問い']),
+    exp:    grab(['実験', '実験名']),
+    scene:  grab(['使う場面', '場面']),
+    done:   grab(['完了条件', '完了']),
+    review: grab(['今日振り返るなら', '今日の振り返り', '振り返り']),
+  };
+  if (!f.q && !f.exp && !f.scene && !f.done && !f.review) return null;
+  return f;
+}
+// Lectica実験内容を開かずに読める形で展開（既定展開・折りたたみ無し）。
+function renderLecticaDetail(memo) {
+  const f = lecticaFields(memo);
+  if (!f) return null;
+  const row = (lbl, val, extra) => val ? `<div class="lx-field${extra||''}"><span class="lx-flabel">${escH(lbl)}</span><span class="lx-fval">${escH(val)}</span></div>` : '';
+  return `<div class="lx-detail">${row('重点の問い', f.q)}${row('実験', f.exp)}${row('使う場面', f.scene)}${row('完了条件', f.done)}${row('今日振り返るなら', f.review, ' lx-review')}</div>`;
+}
+// Lecticaの完了✔は確認を挟む（開くボタン隣での誤爆対策）。
+function lecticaComplete(id) { if (confirm('この実験を完了にしますか？')) changeStatus(id, 'done'); }
+
 function renderMemo(memo) {
   if (!memo) return '';
   const urlRe = /https?:\/\/[^\s<>"'）】\]）]+/g;
@@ -1306,14 +1343,22 @@ function buildCardHTML(t) {
   if (t.status==='pending') meta += '<span class="mtag mtag-pending">保留</span>';
   if (t.status==='done') meta += '<span class="mtag mtag-done">完了</span>';
 
-  const memo = t.memo ? `<div class="task-memo">${renderMemo(t.memo)}</div>` : '';
+  // Lecticaは✦枠の構造化5項目を展開表示（あれば）。無ければ従来どおりmemo全文。
+  let memo = '';
+  if (t.category === 'Lectica') {
+    const detail = renderLecticaDetail(t.memo);
+    memo = detail || (t.memo ? `<div class="task-memo">${renderMemo(t.memo)}</div>` : '');
+  } else {
+    memo = t.memo ? `<div class="task-memo">${renderMemo(t.memo)}</div>` : '';
+  }
 
   // action buttons
   const id = t.id, titleEsc = escH(t.title).replace(/'/g,"&#39;");
+  const isLx = t.category === 'Lectica';
   let acts = '';
   if (t.status !== 'done') {
     acts += `<button class="act-btn ab-tmr" onclick="setToday('${id}')">今日</button>`;
-    acts += `<button class="act-btn ab-done" onclick="changeStatus('${id}','done')">完了</button>`;
+    acts += `<button class="act-btn ab-done" onclick="${isLx?`lecticaComplete('${id}')`:`changeStatus('${id}','done')`}">完了</button>`;
     acts += `<button class="act-btn ab-pend" onclick="changeStatus('${id}','pending')">保留</button>`;
     if ((t.memo||'').includes('AI参謀 Morning Brief自動生成')) {
       acts += `<button class="act-btn ab-reject" onclick="rejectTask('${id}')">不採用</button>`;
