@@ -59,6 +59,16 @@ Shot OSのLecticaカード（少なくともLecticaカテゴリ）の完了✔�
 - 「開く」ボタンとの距離も可能なら少し離す（副次対応・必須ではない）
 - Lectica以外のShotにも同じ確認を付けるかは実装judge（竹嶋さんの誤爆はLecticaで発生）
 
+### ⑥ `aix_lectica_pending` の読み取りを新旧フィールド名の両対応にする【今回の実バグ】
+2026-08-21の実機で、ランチャーのLecticaカードが「(実験名なし)」になった。原因：
+Coworkは `lectica_daily_practice` を `experimentId` / `title` で出力しているが、
+コード側（launcher 712行の name 組み立て・658/675行のタイトル・task-osの `pending.selectedExperimentId`）は
+旧名 `selectedExperimentId` / `selectedExperimentTitle` だけを読んでいる。
+- **全読み取り箇所**（launcher・task-os両方）で次の形に統一する：
+  - ID：`pending.experimentId || pending.selectedExperimentId`
+  - タイトル：`pending.title || pending.selectedExperimentTitle`
+- どちらの形式のJSONでも同一の挙動になること（後方互換）
+
 ## 変更しないこと【厳守】
 - 提案による差し替えの冪等性（同じ提案の再取り込みで変化しない）
 - 手動追加Shot・sanbo由来Shotを上書きしない
@@ -67,7 +77,8 @@ Shot OSのLecticaカード（少なくともLecticaカテゴリ）の完了✔�
 
 ## 検証
 - 構文検証（node --check）
-- 提案あり（L系）→ Shot 1件・内容フル表示
+- 提案あり（L系・新フィールド名 experimentId/title のJSON）→ Shot 1件・内容フル表示・ランチャーカードにタイトル表示
+- 提案あり（旧フィールド名 selectedExperimentId/selectedExperimentTitle のJSON）→ 同上（後方互換）
 - 提案あり（R系・マスタ外）→ Shot 1件・memoに実験ID：R002・内容フル表示
 - 提案なし → Lecticaが生成されない・空・エラーなし・警告文も出ない
 - 当日randomのtodoあり＋提案 → 置き換え・1件
