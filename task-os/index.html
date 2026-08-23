@@ -789,7 +789,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-08-22';
+const BUILD_VER = '2026-08-23';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -1318,20 +1318,29 @@ function openLinkModal(raw){
 }
 
 // ── WRITE OPS ──
+// Routine OS の addLog と同じ形式で routineOS_logs に残す（Routine OS の履歴と週次集計はログだけを見る）
+function addRtLog(t,action,prev,next){
+  let logs=[]; try{ logs=JSON.parse(localStorage.getItem('routineOS_logs'))||[]; }catch{ logs=[]; }
+  const logId=logs.reduce((m,l)=>Math.max(m,Number(l&&l.logId)||0),0)+1;
+  logs.push({logId,taskId:t.id,title:t.title||'',layer:t.layer,cycle:t.cycle,action,actionDate:TODAY,previousNextDate:prev||'',newNextDate:next||'',skipReason:'',memo:''});
+  localStorage.setItem('routineOS_logs',JSON.stringify(logs));
+}
 function completeRt(rawId){
   const a=getRt(), t=a.find(x=>String(x.id)===String(rawId)); if(!t) return;
-  t.lastDone=TODAY; t.updatedAt=now(); t.nextDate=addD(TODAY,parseInt(t.addDays)||7); t.status='';
-  saveRt(a); toast(`✓ 完了 → 次回 ${fmtDate(t.nextDate)}`); refresh();
+  const prev=t.nextDate||TODAY;
+  t.lastDone=TODAY; t.lastDate=prev; t.updatedAt=now(); t.nextDate=addD(TODAY,parseInt(t.addDays)||7); t.status='';
+  saveRt(a); addRtLog(t,'完了',prev,t.nextDate); toast(`✓ 完了 → 次回 ${fmtDate(t.nextDate)}`); refresh();
 }
 function completeSh(rawId){
   const a=getSh(), t=a.find(x=>x.id===rawId); if(!t) return false;
   // 誤爆対策：Lecticaは「Shot で開く」の隣で✓完了を押しやすいので確認を挟む（他カテゴリは即完了のまま）
   if(t.category==='Lectica' && !confirm('この実験を完了にしますか？')) return false;
-  t.status='done'; t.updatedAt=now(); saveSh(a); toast('✓ 完了 (Shot)'); refresh(); return true;
+  t.status='done'; t.completedAt=now(); t.updatedAt=t.completedAt; saveSh(a); toast('✓ 完了 (Shot)'); refresh(); return true;
 }
 function postponeRt(rawId){
   const a=getRt(), t=a.find(x=>String(x.id)===String(rawId)); if(!t) return;
-  t.nextDate=addD(t.nextDate||TODAY,1); t.updatedAt=now(); saveRt(a); toast(`↗ 翌日へ`); refresh();
+  const prev=t.nextDate||TODAY;
+  t.nextDate=addD(prev,1); t.updatedAt=now(); saveRt(a); addRtLog(t,'延期',prev,t.nextDate); toast(`↗ 翌日へ`); refresh();
 }
 function postponeSh(rawId){
   const a=getSh(), t=a.find(x=>x.id===rawId); if(!t) return;
