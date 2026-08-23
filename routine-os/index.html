@@ -514,6 +514,8 @@ function showToast(){
 }
 
 // ========== CYCLE NORMALIZATION ==========
+// ※task-os/index.html に normalizeCycle/getRoutineInterval/calcNextRoutineDate 等を移植済み（completeRt用）。
+//   変更時は両方を同時に更新すること（brief-viewer/1day の markdownToHtml と同じ同期契約）。
 function normalizeCycle(value){
   var raw=String(value||'').trim();
   if(!raw)return '';
@@ -869,6 +871,8 @@ function getTomorrowDate(){
 // サイクルから周期を推定（addDaysが未設定でも機能する）
 // サイクルのみで周期を決定（normalizeCycle経由で揺れを吸収）
 // ========== LOCAL DATE FUNCTIONS (タイムゾーン非依存) ==========
+// ※task-os/index.html に以下の日付計算群（parseLocalDate〜calcNextRoutineDate）を移植済み（completeRt用）。
+//   変更時は両方を同時に更新すること（brief-viewer/1day の markdownToHtml と同じ同期契約）。
 function parseLocalDate(dateStr){
   var s=normalizeDate(String(dateStr||'').trim());
   if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(s))return null;

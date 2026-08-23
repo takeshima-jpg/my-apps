@@ -1319,6 +1319,109 @@ function openLinkModal(raw){
 
 // ── WRITE OPS ──
 // Routine OS の addLog と同じ形式で routineOS_logs に残す（Routine OS の履歴と週次集計はログだけを見る）
+// ══ Routine OS 次回日計算ロジックの移植（completeRt が本家と同一結果を出すため）══
+// ※routine-os/index.html の同名関数と同一実装。変更時は両方を同時に更新すること
+//   （brief-viewer/1day の markdownToHtml と同じ同期契約）。normalizeDate/thisYear は parseLocalDate の依存として同梱。
+const thisYear=new Date().getFullYear();
+function normalizeCycle(value){
+  var raw=String(value||'').trim();
+  if(!raw)return '';
+  // レイヤー名が誤ってcycleに入っている場合は除去
+  var layerNames=['意思決定・経営','重要運用','改善・振り返り','任意・保守'];
+  for(var i=0;i<layerNames.length;i++){if(raw===layerNames[i])return '';}
+  if(raw.indexOf('隔週')>=0)return '隔週';
+  if(raw.indexOf('週次')>=0||raw.indexOf('毎週')>=0||raw.toLowerCase().indexOf('weekly')>=0)return '週次';
+  if(raw.indexOf('隔月')>=0)return '隔月';
+  if(raw.indexOf('四半期')>=0||raw.indexOf('3ヶ月')>=0||raw.indexOf('3か月')>=0)return '四半期';
+  if(raw.indexOf('半期')>=0||raw.indexOf('半年')>=0||raw.indexOf('6ヶ月')>=0||raw.indexOf('6か月')>=0)return '半期';
+  if(raw.indexOf('月次')>=0||raw.indexOf('毎月')>=0||raw.toLowerCase().indexOf('monthly')>=0)return '月次';
+  if(raw.indexOf('年次')>=0||raw.indexOf('毎年')>=0||raw.toLowerCase().indexOf('yearly')>=0||raw.toLowerCase().indexOf('annual')>=0)return '年次';
+  if(raw.indexOf('任意日')>=0)return '任意日';
+  if(raw.indexOf('不定期')>=0)return '不定期';
+  return '';
+}
+function normalizeDate(v){
+  if(!v||typeof v!=='string')return '';
+  v=v.trim();
+  // Already YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}$/.test(v)){var dt=new Date(v+'T00:00:00');return isNaN(dt)?v:v;}
+  // YYYY/M/D or YYYY/MM/DD
+  var m=v.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if(m){return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');}
+  // M/D or MM/DD (no year)
+  m=v.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if(m){return thisYear+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0');}
+  // M月D日
+  m=v.match(/^(\d{1,2})月(\d{1,2})日?$/);
+  if(m){return thisYear+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0');}
+  // M月D日YYYY年 or YYYY年M月D日
+  m=v.match(/(\d{4})年(\d{1,2})月(\d{1,2})日?/);
+  if(m){return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');}
+  return v; // keep original for quality check
+}
+function parseLocalDate(dateStr){
+  var s=normalizeDate(String(dateStr||'').trim());
+  if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(s))return null;
+  var parts=s.split('-').map(Number);
+  var y=parts[0],m=parts[1],d=parts[2];
+  var date=new Date(y,m-1,d);
+  date.setHours(0,0,0,0);
+  if(date.getFullYear()!==y||date.getMonth()!==m-1||date.getDate()!==d)return null;
+  return date;
+}
+function formatLocalDate(date){
+  var y=date.getFullYear();
+  var m=String(date.getMonth()+1).padStart(2,'0');
+  var d=String(date.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+d;
+}
+function getTodayLocalString(){
+  var d=new Date();d.setHours(0,0,0,0);return formatLocalDate(d);
+}
+function addDaysLocal(date,days){
+  var next=new Date(date.getFullYear(),date.getMonth(),date.getDate()+days);
+  next.setHours(0,0,0,0);return next;
+}
+function addMonthsLocal(date,months){
+  var y=date.getFullYear(),m=date.getMonth(),d=date.getDate();
+  var target=new Date(y,m+months,1);
+  var lastDay=new Date(target.getFullYear(),target.getMonth()+1,0).getDate();
+  target.setDate(Math.min(d,lastDay));
+  target.setHours(0,0,0,0);return target;
+}
+function addYearsLocal(date,years){return addMonthsLocal(date,years*12);}
+function getRoutineInterval(t){
+  var cycle=normalizeCycle(typeof t==='string'?t:(t&&t.cycle?t.cycle:''));
+  var map={'週次':{type:'days',value:7},'隔週':{type:'days',value:14},'月次':{type:'months',value:1},'隔月':{type:'months',value:2},'四半期':{type:'months',value:3},'半期':{type:'months',value:6},'年次':{type:'years',value:1}};
+  return map[cycle]||null;
+}
+// 完了・スキップ専用：ローカル日付計算で確実に未来日を返す（最大240回）
+function calcNextRoutineDate(t,previousScheduledDate){
+  var todayStr=getTodayLocalString();
+  var today=parseLocalDate(todayStr);
+  var base=parseLocalDate(previousScheduledDate)||parseLocalDate(t.nextDate)||parseLocalDate(t.lastScheduledDate)||today;
+  var interval=getRoutineInterval(t);
+  if(!interval){
+    console.error('サイクル判定失敗',{title:t.title,cycle:t.cycle,normalizedCycle:normalizeCycle(t.cycle),addDays:t.addDays,task:t});
+    return null;
+  }
+  function addOnce(date){
+    if(interval.type==='days')return addDaysLocal(date,interval.value);
+    if(interval.type==='months')return addMonthsLocal(date,interval.value);
+    if(interval.type==='years')return addYearsLocal(date,interval.value);
+    return null;
+  }
+  var next=addOnce(base);
+  var guard=0;
+  while(next&&next<=today&&guard<240){next=addOnce(next);guard++;}
+  if(!next||next<=today){
+    console.error('未来日の生成に失敗',{title:t.title,cycle:t.cycle,base:formatLocalDate(base),today:todayStr,interval:interval,task:t});
+    return null;
+  }
+  return formatLocalDate(next);
+}
+// ══ 移植ブロックここまで ══
+
 function addRtLog(t,action,prev,next){
   let logs=[]; try{ logs=JSON.parse(localStorage.getItem('routineOS_logs'))||[]; }catch{ logs=[]; }
   const logId=logs.reduce((m,l)=>Math.max(m,Number(l&&l.logId)||0),0)+1;
@@ -1327,8 +1430,10 @@ function addRtLog(t,action,prev,next){
 }
 function completeRt(rawId){
   const a=getRt(), t=a.find(x=>String(x.id)===String(rawId)); if(!t) return;
-  const prev=t.nextDate||TODAY;
-  t.lastDone=TODAY; t.lastDate=prev; t.updatedAt=now(); t.nextDate=addD(TODAY,parseInt(t.addDays)||7); t.status='';
+  const prev = t.nextDate || TODAY;                       // 旧予定日（期日切れならその過去日）
+  const nextDate = calcNextRoutineDate(t, prev);          // 移植した Routine OS 本家ロジック（加算基準・サイクル・キャッチアップを尊重）
+  if(!nextDate){ toast('⚠ 次回予定日を計算できません（Routine OSで設定を確認）'); return; }  // 計算不能時は上書きせず中断
+  t.lastDone=TODAY; t.lastDate=prev; t.updatedAt=now(); t.nextDate=nextDate; t.status='';
   saveRt(a); addRtLog(t,'完了',prev,t.nextDate); toast(`✓ 完了 → 次回 ${fmtDate(t.nextDate)}`); refresh();
 }
 function completeSh(rawId){
