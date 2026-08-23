@@ -938,12 +938,32 @@ function calcNextRoutineDate(t,previousScheduledDate){
   return formatLocalDate(next);
 }
 // 延期専用（周期計算なし）
+// ※task-os/index.html に同名関数を移植済み（completeRt用）。変更時は両方を同時に更新すること
+//   （brief-viewer/1day の markdownToHtml と同じ同期契約）。
+// 完了時の次回日：加算基準(addBase)でディスパッチする。
+//  from_ms/from_me/from_ys/fixed/from_last … calcNext（営業日・例外加算日数addDays・祝日/週末除外を尊重）
+//    ＋キャッチアップ（結果が今日以前なら結果を基準に再計算し未来日まで・guard240）。null（設定不備）はフォールバックせず中断。
+//  from_next（既定）・未設定・不明値 … 現行のサイクル計算 calcNextRoutineDate（曜日保持＋キャッチアップ）を維持。
+function nextDateOnComplete(t,prev){
+  var ab=t&&t.addBase;
+  if(ab==='from_ms'||ab==='from_me'||ab==='from_ys'||ab==='fixed'||ab==='from_last'){
+    var todayStr=getTodayLocalString();
+    var base=(ab==='from_last')?todayStr:(prev||todayStr);   // from_last=完了日基準／他=旧予定日基準
+    var next=calcNext(t,base);
+    if(!next)return null;
+    var guard=0;
+    while(next&&next<=todayStr&&guard<240){var n2=calcNext(t,next);if(!n2){next=null;break;}next=n2;guard++;}
+    if(!next||next<=todayStr)return null;
+    return next;
+  }
+  return calcNextRoutineDate(t,prev);
+}
 function doComplete(id,memo){
   var t=tasks.find(function(x){return String(x.id)===String(id);});if(!t)return;
   t.cycle=normalizeCycle(t.cycle);
   var prev=parseLocalDate(t.nextDate);
   var previousScheduledDate=prev?formatLocalDate(prev):getTodayLocalString();
-  var nextDate=calcNextRoutineDate(t,previousScheduledDate);
+  var nextDate=nextDateOnComplete(t,previousScheduledDate);   // addBaseでディスパッチ（from_ms等はcalcNext）
   if(!nextDate){
     alert('次回予定日を計算できません。\n\nタスク名: '+t.title+'\n保存されているサイクル: '+(t.cycle||'空')+'\n次回予定日: '+(t.nextDate||'空')+'\n\nconsoleの診断ログを確認してください。');
     return;

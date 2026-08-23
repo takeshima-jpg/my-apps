@@ -789,7 +789,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-08-23';
+const BUILD_VER = '2026-08-23b';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -1422,6 +1422,61 @@ function calcNextRoutineDate(t,previousScheduledDate){
 }
 // ══ 移植ブロックここまで ══
 
+// ══ Routine OS 営業日・加算基準計算の移植（completeRt の from_ms/from_me/from_ys/fixed/from_last 用）══
+// ※routine-os/index.html の同名関数と同一実装。変更時は両方を同時に更新すること（markdownToHtmlと同じ同期契約）。
+// 祝日は同一オリジンの localStorage 'routineOS_holidays'（[{date,name},...]）を holidays 配列に読み込んで参照する（isHolが使用）。
+let holidays=[];
+function ds(d){if(typeof d==='string')return d.slice(0,10);return d.toLocaleDateString('sv');}
+function isWE(d){var x=new Date(d+'T00:00:00');return x.getDay()===0||x.getDay()===6;}
+function isHol(d){
+  var s=typeof d==='string'?d.slice(0,10):ds(d);
+  return holidays.some(function(h){return h.date===s;});
+}
+function isValidDate(s){if(!s)return false;var d=new Date(s+'T00:00:00');return !isNaN(d)&&s===ds(d);}
+function addBD(st,n,ew,eh){
+  var d=new Date(st+'T00:00:00'),cnt=0,step=n>=0?1:-1,tgt=Math.abs(n);
+  while(cnt<tgt){d.setDate(d.getDate()+step);if(ew&&isWE(ds(d)))continue;if(eh&&isHol(ds(d)))continue;cnt++;}
+  return ds(d);
+}
+function addCD(st,n){var d=new Date(st+'T00:00:00');d.setDate(d.getDate()+n);return ds(d);}
+function nBD(y,m,n,eh){var d=new Date(y,m,1),cnt=0;while(d.getMonth()===m){var s=ds(d);if(!isWE(s)&&(!eh||!isHol(s))){cnt++;if(cnt===n)return s;}d.setDate(d.getDate()+1);}return null;}
+function nLBD(y,m,n,eh){var d=new Date(y,m+1,0),cnt=0;while(d.getMonth()===m){var s=ds(d);if(!isWE(s)&&(!eh||!isHol(s))){cnt++;if(cnt===Math.abs(n))return s;}d.setDate(d.getDate()-1);}return null;}
+function calcNext(t,from){
+  if(!from||!isValidDate(from))return null;
+  var days=parseInt(t.addDays);if(isNaN(days))return null;
+  var tp=t.addType||'calendar',ab=t.addBase||'from_last',eh=t.excludeHolidays,ew=t.excludeWeekends;
+  var base=new Date(from+'T00:00:00');
+  if(ab==='fixed'&&t.fixedM&&t.fixedD){
+    var nx=new Date(base.getFullYear(),t.fixedM-1,t.fixedD);
+    if(nx<=base)nx.setFullYear(nx.getFullYear()+1);
+    return ds(nx);
+  }
+  if(ab==='from_ms'){var m=base.getMonth(),y=base.getFullYear(),nm=m+1>11?0:m+1,ny=m+1>11?y+1:y;return tp==='business'?nBD(ny,nm,days,eh):(new Date(ny,nm,days)).toLocaleDateString('sv');}
+  if(ab==='from_me'){var m=base.getMonth(),y=base.getFullYear(),nm=m+1>11?0:m+1,ny=m+1>11?y+1:y;return tp==='business'?nLBD(ny,nm,Math.abs(days),eh):ds(new Date(ny,nm+1,days));}
+  if(ab==='from_ys'){var y=base.getFullYear()+1;return tp==='business'?nBD(y,0,days,eh):ds(new Date(y,0,days));}
+  return tp==='business'?addBD(from,days,ew!==false,eh):addCD(from,days);
+}
+// ※routine-os/index.html の同名関数と同一実装。変更時は両方を同時に更新すること
+function nextDateOnComplete(t,prev){
+  var ab=t&&t.addBase;
+  if(ab==='from_ms'||ab==='from_me'||ab==='from_ys'||ab==='fixed'||ab==='from_last'){
+    var todayStr=getTodayLocalString();
+    var base=(ab==='from_last')?todayStr:(prev||todayStr);   // from_last=完了日基準／他=旧予定日基準
+    var next=calcNext(t,base);
+    if(!next)return null;
+    var guard=0;
+    while(next&&next<=todayStr&&guard<240){var n2=calcNext(t,next);if(!n2){next=null;break;}next=n2;guard++;}
+    if(!next||next<=todayStr)return null;
+    return next;
+  }
+  return calcNextRoutineDate(t,prev);
+}
+// 祝日を routineOS_holidays（同一オリジン）から holidays へ読み込む（task-os固有のグルー・completeRt実行時に呼ぶ）
+function rtLoadHolidays(){
+  try{ var raw=JSON.parse(localStorage.getItem('routineOS_holidays')||'[]'); holidays=(Array.isArray(raw)?raw:[]).map(function(x){return typeof x==='string'?{date:x,name:''}:x;}); }catch(e){ holidays=[]; }
+}
+// ══ 移植ブロック（営業日計算）ここまで ══
+
 function addRtLog(t,action,prev,next){
   let logs=[]; try{ logs=JSON.parse(localStorage.getItem('routineOS_logs'))||[]; }catch{ logs=[]; }
   const logId=logs.reduce((m,l)=>Math.max(m,Number(l&&l.logId)||0),0)+1;
@@ -1430,8 +1485,9 @@ function addRtLog(t,action,prev,next){
 }
 function completeRt(rawId){
   const a=getRt(), t=a.find(x=>String(x.id)===String(rawId)); if(!t) return;
+  rtLoadHolidays();                                       // 祝日をroutineOS_holidaysから読み込む（営業日計算のisHolが参照）
   const prev = t.nextDate || TODAY;                       // 旧予定日（期日切れならその過去日）
-  const nextDate = calcNextRoutineDate(t, prev);          // 移植した Routine OS 本家ロジック（加算基準・サイクル・キャッチアップを尊重）
+  const nextDate = nextDateOnComplete(t, prev);           // addBaseでディスパッチ（from_ms/from_me/from_ys/fixed/from_last=calcNext＋キャッチアップ／from_next=サイクル計算）
   if(!nextDate){ toast('⚠ 次回予定日を計算できません（Routine OSで設定を確認）'); return; }  // 計算不能時は上書きせず中断
   t.lastDone=TODAY; t.lastDate=prev; t.updatedAt=now(); t.nextDate=nextDate; t.status='';
   saveRt(a); addRtLog(t,'完了',prev,t.nextDate); toast(`✓ 完了 → 次回 ${fmtDate(t.nextDate)}`); refresh();
