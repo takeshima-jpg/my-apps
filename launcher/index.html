@@ -361,11 +361,13 @@ function briefJsonToMarkdown(d) {
   if (d.decisions?.length) md += `## 今日判断すべきこと\n${d.decisions.map(c => `・${c}`).join('\n')}\n\n`;
   // ── ④ 内省・学び ──
   if (d.lectica_daily_practice || d.vision_brief || d.vision_proposals?.length || d.explore_themes?.length || d.week_question?.length || (d.reflect && (d.reflect.open_questions?.length || d.reflect.active_experiments?.length || d.reflect.proposals?.length)) || (d.life_list && (d.life_list.focus_today?.length || d.life_list.one_joy || d.life_list.proposals?.length))) md += `# ① 内省・学び\n\n`;
-  if (d.lectica_daily_practice && (d.lectica_daily_practice.selectedExperimentId || d.lectica_daily_practice.selectedExperimentTitle)) {
+  if (d.lectica_daily_practice && (d.lectica_daily_practice.experimentId || d.lectica_daily_practice.selectedExperimentId || d.lectica_daily_practice.title || d.lectica_daily_practice.selectedExperimentTitle)) {
     const lp = d.lectica_daily_practice;
     md += `## ✦ 今日のLectica実験\n`;
-    if (lp.selectedExperimentId) md += `・実験ID：${lp.selectedExperimentId}\n`;
-    if (lp.selectedExperimentTitle) md += `・実験名：${lp.selectedExperimentTitle}\n`;
+    const _eid = lp.experimentId || lp.selectedExperimentId;      // 新名 experimentId 優先・旧名 selectedExperimentId 後方互換
+    const _etitle = lp.title || lp.selectedExperimentTitle;        // 新名 title 優先・旧名 selectedExperimentTitle 後方互換
+    if (_eid) md += `・実験ID：${_eid}\n`;
+    if (_etitle) md += `・実験名：${_etitle}\n`;
     if (lp.category) md += `・カテゴリ：${lp.category}\n`;
     if (lp.targetSchedule) md += `・使う場面：${lp.targetSchedule}\n`;
     if (lp.reason) md += `・選定理由：${lp.reason}\n`;
@@ -641,7 +643,7 @@ function addLecticaShot(){
   if (!p) { toast('今日のLectica提案がありません'); return; }
   const today = todayKey();
   const st = p.shotTask || {};
-  const expId = p.selectedExperimentId || '';
+  const expId = p.experimentId || p.selectedExperimentId || '';   // 新名優先・旧名後方互換
   const tasks = readShotTasks();
   const now = new Date().toISOString();
   const memo = (st.memo || '') + (expId ? ('\n実験ID：' + expId) : '') + '\n実行後：Reflect OSに実績を記録する';
@@ -654,7 +656,7 @@ function addLecticaShot(){
   // 未着手（todo/doing）の当日Lecticaがあれば提案内容で置き換え（idは変えない）
   const open = todays.find(t => t.status === 'todo' || t.status === 'doing');
   if (open) {
-    open.title = st.title || ('今日のLectica実験：' + (p.selectedExperimentTitle || ''));
+    open.title = st.title || ('今日のLectica実験：' + (p.title || p.selectedExperimentTitle || ''));
     open.category = st.category || 'Lectica';
     open.memo = memo;
     open.updatedAt = now;
@@ -669,7 +671,7 @@ function addLecticaShot(){
   // 誤って完了にしても今日の提案がもう一度出てくる（task-os autoGenLecticaShot ③と同思想）
   tasks.push({
     id: shotGenId(),
-    title: st.title || ('今日のLectica実験：' + (p.selectedExperimentTitle || '')),
+    title: st.title || ('今日のLectica実験：' + (p.title || p.selectedExperimentTitle || '')),
     category: st.category || 'Lectica',
     priority: 'normal',
     status: 'todo',
@@ -706,13 +708,13 @@ function renderTodayLectica(){
   try { p = JSON.parse(localStorage.getItem('aix_lectica_pending') || 'null'); } catch(e) {}
   const pDate = p && (p.date || (p.shotTask && p.shotTask.dueDate));
   if (!p || pDate !== todayKey()) { area.innerHTML = '<div class="empty">今日のLectica提案はありません</div>'; return; }
-  const name = [p.selectedExperimentId, p.selectedExperimentTitle].filter(Boolean).join('：');
+  const name = [p.experimentId || p.selectedExperimentId, p.title || p.selectedExperimentTitle].filter(Boolean).join('：');
   const rows = [];
   if (p.category) rows.push(['カテゴリ', p.category]);
   if (p.targetSchedule) rows.push(['使う場面', p.targetSchedule]);
   if (p.reason) rows.push(['選定理由', p.reason]);
   if (p.completionCondition) rows.push(['完了条件', p.completionCondition]);
-  const expId = p.selectedExperimentId || '';
+  const expId = p.experimentId || p.selectedExperimentId || '';   // 新名優先・旧名後方互換
   const already = readShotTasks().some(t => t && t.dueDate === todayKey() && expId && (t.memo || '').indexOf('実験ID：' + expId) >= 0);
   area.innerHTML =
     '<div class="lx-row"><span class="task-tag lectica">今日の実験</span> <b>' + escHtml(name || '(実験名なし)') + '</b></div>'

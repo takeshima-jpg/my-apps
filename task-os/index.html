@@ -1705,7 +1705,7 @@ function autoGenLecticaShot(){
 
     // デバッグ：同期のたびに分岐と入力を1行で残す（不具合切り分け用。スクショ1枚で追える）
     const pDate=pending?((pending.shotTask&&pending.shotTask.dueDate)||pending.date||''):'';
-    const pId=pending?(pending.selectedExperimentId||''):'';
+    const pId=pending?(pending.experimentId||pending.selectedExperimentId||''):'';   // 新名experimentId優先・旧名後方互換
     const todaysCount=shot.filter(t=>t&&t.category==='Lectica'&&t.dueDate===today).length;
     const _lxlog=(branch,reason)=>{ try{ console.info('[lectica-sync] 提案date='+(pDate||'-')+', experimentId='+(pId||'-')+', 当日Shot件数='+todaysCount+', 分岐='+branch+(reason?'('+reason+')':'')); }catch(_){} };
 
@@ -1716,15 +1716,15 @@ function autoGenLecticaShot(){
     let sanboExp=null, sanboShot=null;
     if(pending){
       const pdate=(pending.shotTask&&pending.shotTask.dueDate)||pending.date||'';
-      const pid=pending.selectedExperimentId||'';
+      const pid=pending.experimentId||pending.selectedExperimentId||'';   // 新名experimentId優先・旧名後方互換
       if(pdate===today && pid){
         const pe=byId(pid);
         if(pe){ if(usable(pe)){ sanboExp=pe; sanboShot=pending.shotTask||null; } }   // L系：completed/skippedは再出題しない
-        else if(pending.shotTask||pending.selectedExperimentTitle){
+        else if(pending.shotTask||pending.title||pending.selectedExperimentTitle){
           /* マスタ外ID（Reflect探求ボードのR系実験など）：pending自体を信頼して採用する（選定責任はCowork側・
              活動中か等の妥当性はTask OSでは判定しない）。タイトル/メモはshotTaskを正とし、memoの実験ID行はpidをそのまま書く。
              合成オブジェクトのため byId(pid) はundefined＝マスタのactive昇格処理は既存のif(e&&…)ガードで自然にスキップされる */
-          sanboExp={id:pid,title:pending.selectedExperimentTitle||(pending.shotTask&&pending.shotTask.title)||pid,_external:true};
+          sanboExp={id:pid,title:pending.title||pending.selectedExperimentTitle||(pending.shotTask&&pending.shotTask.title)||pid,_external:true};
           sanboShot=pending.shotTask||null;
         }
       }
@@ -1738,7 +1738,7 @@ function autoGenLecticaShot(){
     const sameIdShot=todays.find(o=>(o.t.memo||'').indexOf('実験ID：'+sanboExp.id)>=0);
     if(sameIdShot){ _lxlog('skip','同一ID既存'); return 0; }   // 同一実験が当日に既にある（実行済み含む）→ 追加も置き換えもしない（冪等）
 
-    const buildTitle=()=>(sanboShot&&sanboShot.title)||('今日のLectica実験：'+(pending.selectedExperimentTitle||sanboExp.title||sanboExp.id));
+    const buildTitle=()=>(sanboShot&&sanboShot.title)||('今日のLectica実験：'+(pending.title||pending.selectedExperimentTitle||sanboExp.title||sanboExp.id));
     const buildCat=()=>(sanboShot&&sanboShot.category)||'Lectica';
     const promoteMaster=()=>{ try{ const e=byId(sanboExp.id); if(e&&e.status==='not_started'){ e.status='active'; localStorage.setItem('lectica_experiments_master_v1',JSON.stringify(master)); } }catch(_){} };
 
