@@ -1057,6 +1057,11 @@ function changeStatus(id, status) {
   t.updatedAt = new Date().toISOString();
   if (status === 'done') t.completedAt = new Date().toISOString();
   else t.completedAt = null;
+  // 未着手/進行中へ戻すときは自動pauseフラグを外す（期日が過去のままだと次回ロードで再pauseされるため）
+  if ((status === 'todo' || status === 'doing') && t.lecticaAutoPaused) {
+    delete t.lecticaAutoPaused;
+    if (t.dueDate && t.dueDate < getTodayKey()) t.dueDate = getTodayKey();  // 期日も今日に引き上げて再pauseを防ぐ
+  }
   save(); render();
 }
 
@@ -1359,7 +1364,12 @@ function buildCardHTML(t) {
   if (t.status !== 'done') {
     acts += `<button class="act-btn ab-tmr" onclick="setToday('${id}')">今日</button>`;
     acts += `<button class="act-btn ab-done" onclick="${isLx?`lecticaComplete('${id}')`:`changeStatus('${id}','done')`}">完了</button>`;
-    acts += `<button class="act-btn ab-pend" onclick="changeStatus('${id}','pending')">保留</button>`;
+    if (t.status === 'pending') {
+      // 保留中カード：保留ボタンの代わりに未着手へ戻す導線を出す（自動pauseされたLecticaの復帰にも使う）
+      acts += `<button class="act-btn ab-back" onclick="changeStatus('${id}','todo')">未着手に戻す</button>`;
+    } else {
+      acts += `<button class="act-btn ab-pend" onclick="changeStatus('${id}','pending')">保留</button>`;
+    }
     if ((t.memo||'').includes('AI参謀 Morning Brief自動生成')) {
       acts += `<button class="act-btn ab-reject" onclick="rejectTask('${id}')">不採用</button>`;
     }
