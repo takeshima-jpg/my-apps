@@ -1630,7 +1630,9 @@ function lxParseImport(text){
   });
   const get=function(keys){ for(let i=0;i<keys.length;i++){ const k=keys[i]; if(map[k]!==undefined&&map[k]!=='') return map[k]; } return ''; };
   const idRaw=get(['実験ID','実験Id','ID','id']);
-  const idM=idRaw.match(/L\d{1,3}/i);
+  const idM=idRaw.match(/[LR]\d{1,3}/i);
+  const relRaw=get(['関連実験','関連実験ID','関連ID','related']);
+  const relM=relRaw?relRaw.match(/[LR]\d{1,3}/i):null;
   const resMap={continue:'continue',complete:'complete',change:'change',pause:'pause','継続':'continue','完了':'complete','変更':'change','保留':'pause'};
   const resRaw=get(['結果','result']);
   const result=resMap[resRaw]||resMap[(resRaw||'').toLowerCase()]||'continue';
@@ -1638,6 +1640,7 @@ function lxParseImport(text){
   const dateM=dateRaw.match(/\d{4}-\d{2}-\d{2}/);
   return {
     experimentId: idM?idM[0].toUpperCase():'',
+    relatedExperimentId: (relM&&idM&&relM[0].toUpperCase()!==idM[0].toUpperCase())?relM[0].toUpperCase():(relM&&!idM?relM[0].toUpperCase():''),
     date: dateM?dateM[0]:tod(),
     usedScene: get(['使った場面','使用場面','場面']),
     people: get(['関係者','関わった人','people']),
@@ -1670,10 +1673,12 @@ function lxImportSave(master){
   try{
     const parsed=lxParseImport(S.lxImport&&S.lxImport.text);
     if(!parsed){ alert('取り込みブロックが見つかりません。---REFLECT-IMPORT--- 〜 ---END--- を含めて貼り付けてください。'); return false; }
-    if(!parsed.experimentId){ alert('実験ID（L0xx）が読み取れませんでした。ブロックに「実験ID：L029」の行を入れてください。'); return false; }
+    if(!parsed.experimentId){ alert('実験ID（L0xx / R0xx）が読み取れませんでした。ブロックに「実験ID：L029」や「実験ID：R001」の行を入れてください。'); return false; }
+    // R系（Reflect実験・Cowork統合棚卸しの採番）はLecticaマスターに存在しないため、照合をスキップしてログのみ記録する
+    const isReflectExp=/^R/i.test(parsed.experimentId);
     const mas=master||lxReadMaster()||[];
-    const exp=mas.find(function(e){return e&&e.id===parsed.experimentId;});
-    if(!exp){ alert('実験ID '+parsed.experimentId+' がマスターに見つかりません。IDを確認してください。'); return false; }
+    const exp=isReflectExp?null:mas.find(function(e){return e&&e.id===parsed.experimentId;});
+    if(!isReflectExp&&!exp){ alert('実験ID '+parsed.experimentId+' がマスターに見つかりません。IDを確認してください。'); return false; }
     if(!(parsed.usedScene||parsed.insight||parsed.nextChange||parsed.actualAction)){ alert('使った場面・気づき・次回変えること・実際にやったこと のいずれかが必要です。'); return false; }
     const logs=lxReadLogs();
     const dup=logs.some(function(l){return l&&l.experimentId===parsed.experimentId&&l.date===parsed.date&&(l.insight||'')===(parsed.insight||'');});
@@ -1681,7 +1686,7 @@ function lxImportSave(master){
     const now=new Date().toISOString();
     logs.unshift({
       id:'log_'+(parsed.date||tod()).replace(/-/g,'')+'_'+Math.random().toString(36).slice(2,8),
-      experimentId:parsed.experimentId,date:parsed.date,source:'import',
+      experimentId:parsed.experimentId,relatedExperimentId:parsed.relatedExperimentId||'',date:parsed.date,source:'import',
       usedScene:parsed.usedScene||'',
       people:(parsed.people||'').split(/[,、，]/).map(function(s){return s.trim();}).filter(Boolean),
       actualAction:parsed.actualAction||'',insight:parsed.insight||'',nextChange:parsed.nextChange||'',
@@ -1689,7 +1694,7 @@ function lxImportSave(master){
     });
     lxWriteLogs(logs);
     const stMap={continue:'active',complete:'completed',change:'active',pause:'paused'};
-    if(stMap[parsed.result])lxSetField(parsed.experimentId,'status',stMap[parsed.result]);
+    if(!isReflectExp&&stMap[parsed.result])lxSetField(parsed.experimentId,'status',stMap[parsed.result]);
     S.lxImport=null; toast('取り込みました：'+parsed.experimentId+'（'+parsed.date+'）'); ra(); updateNav();
     return true;
   }catch(e){ alert('取り込みエラー: '+e.message); return false; }
@@ -1703,6 +1708,11 @@ function lxCard(e,logs,master){
   top.appendChild(Sp({css:'font-size:11px;color:#fff;background:'+col+';border-radius:10px;padding:1px 8px'},e.category));
   if(e.priority30Days)top.appendChild(Sp({css:'font-size:11px;color:#b45309;border:1px solid #f0c000;border-radius:10px;padding:1px 7px'},'30日優先'));
   if(e.thisWeek)top.appendChild(Sp({css:'font-size:11px;color:#4f46e5;border:1px solid #c7d2fe;border-radius:10px;padding:1px 7px'},'今週'));
+  // 対応回数：この実験を直接実施したログ＋R系実施で関連付いたログ（relatedExperimentId）の合算を表示
+  const lgs=logs||[];
+  const directN=lgs.filter(function(l){return l&&l.experimentId===e.id;}).length;
+  const relN=lgs.filter(function(l){return l&&l.relatedExperimentId===e.id;}).length;
+  if(directN+relN>0)top.appendChild(Sp({css:'font-size:11px;color:#475569;border:1px solid var(--bd);border-radius:10px;padding:1px 7px'},'実施'+directN+'回'+(relN>0?'＋関連'+relN:'')));
   const stcol=({not_started:'#94a3b8',active:'#2a6a3a',completed:'#1a6050',paused:'#b09040',skipped:'#94a3b8'})[e.status]||'#94a3b8';
   top.appendChild(Sp({css:'font-size:11px;margin-left:auto;color:'+stcol+';font-weight:700'},(LX_STATUS_LABEL[e.status]||e.status)+(e.status==='skipped'&&e.skipReason?'・'+e.skipReason:'')));
   card.appendChild(top);
