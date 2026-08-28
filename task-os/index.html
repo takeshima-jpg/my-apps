@@ -835,7 +835,7 @@ function restoreAllOSData(data) {
 
 
 // ── Reflect OS 完全バックアップ（localStorage: reflectOS_v1 / stores: logs,themes,settings,checks）──
-const REFLECT_STORES = ['logs','themes','settings','checks'];
+const REFLECT_STORES = ['logs','themes','settings','checks','questions','experiments','principles'];
 function dumpReflectIDB() {
   // Reflect OSはlocalStorage(reflectOS_v1)へ移行済み。互換のため{version,stores}形式で返す
   try {
@@ -849,7 +849,7 @@ function restoreReflectIDB(dump) {
     if (!dump || !dump.stores) return Promise.resolve(false);
     const cur = JSON.parse(localStorage.getItem('reflectOS_v1') || 'null') || {logs:[],themes:[],settings:[],checks:[]};
     Object.keys(dump.stores).forEach(s => { cur[s] = Array.isArray(dump.stores[s]) ? dump.stores[s] : []; });
-    ['logs','themes','settings','checks'].forEach(s => { if(!Array.isArray(cur[s])) cur[s] = []; });
+    REFLECT_STORES.forEach(s => { if(!Array.isArray(cur[s])) cur[s] = []; });
     localStorage.setItem('reflectOS_v1', JSON.stringify(cur));
     return Promise.resolve(true);
   } catch(e) { return Promise.resolve(false); }
