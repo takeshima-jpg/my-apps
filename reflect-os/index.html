@@ -1858,7 +1858,7 @@ const tkFocusQs=()=>S.questions.filter(q=>q.status==='focus');
    ①過去にextIdで保存されたデータをridへ引き継ぐ ②Cowork採番と確定対応のタイトルにridを付与。
    タイトル完全一致・rid未設定・そのridが未使用のときだけ。手動設定（編集フォーム）が常に優先。 */
 async function tkAutoAssignRids(){
-  for(const x of S.experiments){if(x&&x.extId&&!x.rid){x.rid=String(x.extId).toUpperCase();delete x.extId;await tkSave('experiments',x);}}
+  for(const x of S.experiments){let ch=false;if(x&&x.extId&&!x.rid){x.rid=String(x.extId).toUpperCase();delete x.extId;ch=true;}if(x&&x.lastPracticeDate&&!x.lastPracticedAt){x.lastPracticedAt=x.lastPracticeDate;delete x.lastPracticeDate;ch=true;}if(ch)await tkSave('experiments',x);}
   const map={'R001':'問いを一緒に開き、自分も一手動く','R002':'未来接続型の対話を行う','R003':'問題を構造で捉える'};
   for(const rid in map){
     if(S.experiments.some(x=>x&&(x.rid||'').toUpperCase()===rid))continue;
