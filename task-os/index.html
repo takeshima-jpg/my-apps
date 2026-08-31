@@ -195,6 +195,11 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
 .trow-date.ov{color:var(--r);font-weight:600;}
 .trow-date.td{color:#C97A00;font-weight:600;}
 .trow-actions{display:flex;gap:4px;flex-shrink:0;}
+/* スマホ幅：リンクチップ等で行が溢れて右端の「開く」が画面外に出ないよう折返しを許可（A-2） */
+@media(max-width:480px){
+  .trow{flex-wrap:wrap;}
+  .trow-actions{margin-left:auto;}
+}
 
 /* ── BUTTONS ── */
 .btn-done{padding:3px 10px;border-radius:5px;border:1px solid rgba(78,168,107,.3);
@@ -798,7 +803,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-08-23b';
+const BUILD_VER = '2026-08-31';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -1960,11 +1965,12 @@ function renderHome(){
      今週（折りたたみ）→ Shot期限未設定（折りたたみ）。
      旧「今日の一手」カードはPJ現在地の1件目（同じ選定基準の次の一手）に統合＝重複表示を避ける
      （homeTopCard/pickNextMoveはレガシー残置） */
+  /* セクション順序（UIスプリント1 A-2）：今日やること→期限超過→PJの現在地→重点の問い（今日の主役をフォールド上へ） */
   let h = '';
-  h += homePjCompass();
-  h += homeOvBanner(ov);
-  h += homeFocusCard();   /* Reflect重点（PJ現在地の並びだが期限超過バナーより上には置かない） */
   h += homeTodayList(tasks, td);
+  h += homeOvBanner(ov);
+  h += homePjCompass();
+  h += homeFocusCard();
   h += homeInsight();
   h += homeThisWeek(thisWeek);
   h += homeShot(noDue);
@@ -1999,24 +2005,26 @@ function trowHtml(t){
   const ov=isOv(t.due), td=isTd(t.due);
   let cls=''; if(ov) cls=' ov'; else if(td) cls=' today-due';
   const links=renderLinks(t);
-  let acts='';
+  /* ✔完了は行の左端（旧●の位置）・「開く」は右端に分離（フィッツ/誤爆対策。Lecticaの確認ダイアログはcompleteSh内で維持） */
+  let chk='', open='';
   if(t.src==='shot'){
-    acts=`<button class="btn-done" onclick="completeSh('${t.rawId}');event.stopPropagation()">✓</button>
-    <button class="btn-open" onclick="nav('shot');event.stopPropagation()">開く</button>`;
+    chk=`<button class="btn-done trow-chk" onclick="completeSh('${t.rawId}');event.stopPropagation()" title="完了にする">✓</button>`;
+    open=`<button class="btn-open" onclick="nav('shot');event.stopPropagation()">開く</button>`;
   } else if(t.src==='routine'){
-    acts=`<button class="btn-done" onclick="completeRt('${t.rawId}');event.stopPropagation()">✓</button>
-    <button class="btn-open" onclick="nav('routine');event.stopPropagation()">開く</button>`;
+    chk=`<button class="btn-done trow-chk" onclick="completeRt('${t.rawId}');event.stopPropagation()" title="完了にする">✓</button>`;
+    open=`<button class="btn-open" onclick="nav('routine');event.stopPropagation()">開く</button>`;
   } else {
-    acts=`<button class="btn-done" onclick="completePj('${t.pId}','${t.kind}','${t.rawId}');event.stopPropagation()">✓</button>
-    <button class="btn-open" onclick="nav('project');event.stopPropagation()">開く</button>`;
+    chk=`<button class="btn-done trow-chk" onclick="completePj('${t.pId}','${t.kind}','${t.rawId}');event.stopPropagation()" title="完了にする">✓</button>`;
+    open=`<button class="btn-open" onclick="nav('project');event.stopPropagation()">開く</button>`;
   }
   return `<div class="trow${cls}">
+    ${chk}
     <div class="src-dot src-${t.src}"></div>
     <div class="trow-title" title="${esc(t.title)}">${esc(t.title)}</div>
     ${t.src==='project'?`<span class="src-badge" title="Project由来のタスクです。完了はスプレッドシートの「状態」列を完了にしてから再取り込みしてください。アプリ側で✓しても、シート再取り込みで戻ります。">📊 Project</span>`:''}
     ${links}
     ${t.due?`<div class="trow-date ${ov?'ov':td?'td':''}">${fmtDate(t.due)}</div>`:''}
-    <div class="trow-actions">${acts}</div>
+    <div class="trow-actions">${open}</div>
   </div>`;
 }
 
