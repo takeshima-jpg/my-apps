@@ -2570,10 +2570,34 @@ async function importHitomemoFromAix(){
   return added.length;
 }
 
+// Shot OSで「やらない」判定した rejected は非表示のまま残り続け、参謀（バックアップ経由の集計）のノイズになる。
+// rejected かつ updatedAt から30日経過したものを同期時に物理削除する（削除件数はコンソールへ）。
+// updatedAt が無い場合は createdAt で代用し、どちらも無いレコードは安全側で削除しない。冪等。
+function pruneRejectedShots(){
+  try{
+    let shot=[]; try{ shot=JSON.parse(localStorage.getItem('shot-task-os-v1')||'[]')||[]; }catch(e){ return 0; }
+    const cut=new Date(); cut.setDate(cut.getDate()-30);
+    const cutIso=cut.toISOString();
+    const keep=shot.filter(t=>{
+      if(!t||t.status!=='rejected') return true;
+      const ts=t.updatedAt||t.createdAt||'';
+      return !(ts&&ts<cutIso);
+    });
+    const removed=shot.length-keep.length;
+    if(removed>0){
+      localStorage.setItem('shot-task-os-v1',JSON.stringify(keep));
+      console.info('[shot-prune] rejected（30日超）を物理削除: '+removed+'件');
+    }
+    return removed;
+  }catch(e){ console.warn('[shot-prune] 掃除スキップ', e); return 0; }
+}
+
 async function gdAutoSync(manual){
   if(!gdToken){ if(manual) gdConnect(); return; }
   gdSetStatus('syncing');
   try {
+    // C0: rejected 30日超の掃除（取り込み・スナップショット送出の前に済ませて集計ノイズを消す）
+    pruneRejectedShots();
     // C: daily-tasks.json（旧aix-tasks.json）を自動取り込み（冪等）
     let importMsg = '';
     try {
