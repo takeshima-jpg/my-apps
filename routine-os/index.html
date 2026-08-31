@@ -817,9 +817,17 @@ function rDash(){
     return (a.nextDate||'9999')<(b.nextDate||'9999')?-1:1;
   });
   var el=document.getElementById('v-dashboard');
-  // 期限切れ警告バナー
+  /* UIスプリント1 A-3：セクション順序＝今日のタスク→期限切れ→統計→その他。
+     赤警告帯は期限切れの三重表示を避け N>=5 のときだけ（N<5はリスト見出しバッジで十分）。 */
+  // ① 今日のタスク（原則引用の直下・最上段。0件でも見出しを出して今日を主役に）
+  var todayCard='<div class="card" style="margin-bottom:14px;border-color:#F0C000;border-width:1.5px;background:#FFFDE6;">'+
+    '<div class="ch" style="background:#FFFDE6;"><span class="ct" style="color:#856404;">今日のタスク</span><span class="cc" style="background:rgba(240,192,0,.2);color:#856404;">'+tod.length+'</span></div>'+
+    (tod.length?'<div style="background:#FFFDE6;">'+tod.map(function(t){return tRow(t);}).join('')+'</div>'
+               :'<div class="empty" style="background:#FFFDE6;">今日のタスクはありません</div>')+
+    '</div>';
+  // ② 期限切れ（警告帯は5件以上のみ）
   var ovBanner='';
-  if(ov.length){
+  if(ov.length>=5){
     ovBanner='<div style="background:var(--red-l);border:1.5px solid var(--red);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">'+
       '<div>'+
       '<div style="font-size:15px;font-weight:700;color:var(--red-d);">⚠ 期限切れタスクが '+ov.length+' 件あります</div>'+
@@ -827,25 +835,24 @@ function rDash(){
       '</div>'+
       '</div>';
   }
-  el.innerHTML=ovBanner+
-    (ov.length?'<div class="card" style="margin-bottom:14px;border-color:var(--red);border-width:1.5px;background:var(--red-l);">'+
+  var ovCard=(ov.length?'<div class="card" style="margin-bottom:14px;border-color:var(--red);border-width:1.5px;background:var(--red-l);">'+
     '<div class="ch" style="background:var(--red-l);"><span class="ct" style="color:var(--red-d)">期限切れタスク</span><span class="cc" style="background:rgba(226,75,74,.15);color:var(--red-d)">'+ov.length+'</span></div>'+
-    '<div style="background:var(--red-l);">'+ov.map(function(t){return tRow(t);}).join('')+'</div></div>':'')+
-    (l1shown.length?'<div class="card" style="margin-bottom:14px;border-color:rgba(226,75,74,.45);border-width:1.5px;">'+
+    '<div style="background:var(--red-l);">'+ov.map(function(t){return tRow(t);}).join('')+'</div></div>':'');
+  // ③ 統計：「今日」1枚を大きく＋残り3つは1行の小さな数値（総数は薄グレー）
+  var stats='<div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;margin-bottom:14px;">'+
+    '<div class="met'+(tod.length?' inf':'')+'" style="flex:1;min-width:150px;"><div class="ml">今日のタスク</div><div class="mv" style="font-size:34px;">'+tod.length+'</div><div class="ms">本日中</div></div>'+
+    '<div style="display:flex;flex-direction:column;justify-content:center;gap:5px;font-size:13px;line-height:1.5;padding:4px 6px;">'+
+      '<div>期限切れ <b style="color:var(--red-d);font-size:15px;">'+ov.length+'</b> <span style="color:var(--sub,#888);">要対応</span></div>'+
+      '<div>直近30日 <b style="font-size:15px;">'+thisMonthTasks.length+'</b> <span style="color:var(--sub,#888);">予定</span></div>'+
+      '<div style="color:#AAB0B8;">総タスク数 '+tasks.length+'</div>'+
+    '</div>'+
+    '</div>';
+  // ④ その他（意思決定・経営／直近30日）
+  var others=(l1shown.length?'<div class="card" style="margin-bottom:14px;border-color:rgba(226,75,74,.45);border-width:1.5px;">'+
     '<div class="pb">意思決定・経営タスク（期限切れ・今日のみ）</div>'+
     '<div>'+l1shown.map(function(t){return tRow(t,true);}).join('')+'</div></div>':'')+
-    '<div class="mets">'+
-    '<div class="met'+(ov.length?' dan':'')+'"><div class="ml">期限切れ</div><div class="mv">'+ov.length+'</div><div class="ms">要対応</div></div>'+
-    '<div class="met'+(tod.length?' inf':'')+'"><div class="ml">今日のタスク</div><div class="mv">'+tod.length+'</div><div class="ms">本日中</div></div>'+
-    '<div class="met"><div class="ml">直近30日</div><div class="mv">'+thisMonthTasks.length+'</div><div class="ms">予定</div></div>'+
-    '<div class="met"><div class="ml">総タスク数</div><div class="mv">'+tasks.length+'</div><div class="ms">件</div></div>'+
-    '</div>'+
-    '<div class="dg">'+
-    (tod.length?'<div class="card" style="margin-bottom:0;border-color:#F0C000;border-width:1.5px;background:#FFFDE6;">'+
-    '<div class="ch" style="background:#FFFDE6;"><span class="ct" style="color:#856404;">今日のタスク</span><span class="cc" style="background:rgba(240,192,0,.2);color:#856404;">'+tod.length+'</span></div>'+
-    '<div style="background:#FFFDE6;">'+tod.map(function(t){return tRow(t);}).join('')+'</div></div>':'')+
-    '<div class="card"><div class="ch"><span class="ct">直近30日のタスク</span><span class="cc">'+thisMonthTasks.length+'</span></div>'+(thisMonthTasks.length?thisMonthTasks.map(function(t){return tRow(t);}).join(''):'<div class="empty">直近30日のタスクはありません</div>')+'</div>'+
-    '</div>';
+    '<div class="card"><div class="ch"><span class="ct">直近30日のタスク</span><span class="cc">'+thisMonthTasks.length+'</span></div>'+(thisMonthTasks.length?thisMonthTasks.map(function(t){return tRow(t);}).join(''):'<div class="empty">直近30日のタスクはありません</div>')+'</div>';
+  el.innerHTML=todayCard+ovBanner+ovCard+stats+others;
 }
 
 // ========== TODAY EXECUTION MODE ==========
