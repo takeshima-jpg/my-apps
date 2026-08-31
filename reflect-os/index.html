@@ -704,14 +704,24 @@ function renderHome(){
     f.appendChild(notice);
   }
 
-  // VISION
+  // 現在の重点をVISIONより上に置くためのスロット（UIスプリント1 A-4。重点の生成コードは下のIIFEのまま）
+  const focusSlot=D({});
+  f.appendChild(focusSlot);
+
+  // VISION（本文は1行要約＋「▶ 全文を見る」折りたたみ。部品は原則・指針と同じ vision-expand/vision-detail）
   const vblock=D({cls:'vision-block'});
   vblock.appendChild(D({cls:'sec-lbl'},'VISION 2026'));
-  vblock.appendChild(D({cls:'vision-text'},
-    '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。\n'+
+  vblock.appendChild(D({cls:'vision-text'},'守りの総合支援を通して、挑戦する人が成長できる社会をつくる。'));
+  const vfexp=D({cls:'vision-expand'});
+  vfexp.appendChild(Sp({css:'font-size:10px'},'▶'));
+  vfexp.appendChild(document.createTextNode('  全文を見る'));
+  const vfull=D({cls:'vision-detail'});
+  vfull.appendChild(D({cls:'vision-text'},
     '安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、\n'+
     '仲間と目指す確信のある未来を選ぶ。'
   ));
+  vblock.appendChild(vfexp);vblock.appendChild(vfull);
+  vfexp.addEventListener('click',()=>{const open=vfull.classList.toggle('open');vfexp.children[0].textContent=open?'▼':'▶';});
   const vexp=D({cls:'vision-expand'});
   vexp.appendChild(Sp({css:'font-size:10px'},'▶'));
   vexp.appendChild(document.createTextNode('  原則・指針を見る'));
@@ -829,9 +839,10 @@ function renderHome(){
     return card;
   }
 
-  /* ══ Phase 3：現在の重点（VISIONの直後・重点テーマの前）══
+  /* ══ Phase 3：現在の重点（A-4でVISIONより上の focusSlot へ配置・重点テーマの前）══
      閲覧専用（導線整理2026-08-18）：編集・状態変更は探求ボードに集約し、同じ操作が2画面に出ないようにする。
-     カードクリックまたは「→ 探求ボードを開く」で遷移すれば操作は失われない */
+     カードクリックまたは「→ 探求ボードを開く」で遷移すれば操作は失われない
+     （例外：問い未設定バッジのみボタン化し、ホームから直接 tkLinkModal で紐づけできる＝A-4） */
   (function(){
     const w=D({});
     const hd=D({css:'display:flex;align-items:center;gap:10px;margin-bottom:10px'});
@@ -859,7 +870,7 @@ function renderHome(){
       w.appendChild(lnk);
     }
     w.appendChild(D({css:'margin-bottom:26px'}));
-    f.appendChild(w);
+    focusSlot.appendChild(w);   // A-4：VISIONより上のスロットへ
   })();
 
   // ── 探求テーマ（手動追加のみ） ──
@@ -2334,7 +2345,8 @@ function tkECard(x){
   tt.appendChild(tkStBadge(x.status,TK_EST));
   const tb=tkTypeBadge(x);if(tb)tt.appendChild(tb);
   tt.appendChild(Sp({css:'flex:1'},(tkIsReview(x)?'🔍 ':'▶ ')+(x.rid?'['+x.rid+'] ':'')+x.title));
-  if(!x.questionId&&!tkIsReview(x))tt.appendChild(Sp({cls:'tk-warn'},'問い未設定'));   /* 検証はPJ外＝未設定が通常 */
+  /* A-4：問い未設定はバッジ→ボタン化。その場で紐づけモーダルを開ける（探求ボードへ移動しなくてよい） */
+  if(!x.questionId&&!tkIsReview(x)){const wb=Bt({cls:'tk-warn',css:'cursor:pointer;border:1px solid #d8b0b0;background:#faf0f0'},'⚠ 問い未設定 → 紐づけ');wb.addEventListener('click',e=>{e.stopPropagation();tkLinkModal([x.id]);});tt.appendChild(wb);}   /* 検証はPJ外＝未設定が通常 */
   card.appendChild(tt);
   const ds=tkDueSoon(x);
   if(ds&&(x.status==='active'||x.status==='candidate'))card.appendChild(D({cls:'tk-meta'},(tkIsReview(x)?'検証日':'期限')+'：'+ds.date+'（あと'+ds.days+'日）'));
@@ -2373,7 +2385,8 @@ function tkECardRO(x){
   const tt=D({cls:'tk-qtitle',css:'display:flex;gap:6px;align-items:flex-start'});
   tt.appendChild(tkStBadge(x.status,TK_EST));
   tt.appendChild(Sp({css:'flex:1'},'▶ '+x.title+(x.scene?'（'+x.scene+'）':'')));
-  if(!x.questionId&&!tkIsReview(x))tt.appendChild(Sp({cls:'tk-warn'},'問い未設定'));
+  /* A-4：ホームの閲覧専用カードでも問い未設定だけはボタン化（唯一の例外操作＝その場で紐づけ） */
+  if(!x.questionId&&!tkIsReview(x)){const wb=Bt({cls:'tk-warn',css:'cursor:pointer;border:1px solid #d8b0b0;background:#faf0f0'},'⚠ 問い未設定 → 紐づけ');wb.addEventListener('click',e=>{e.stopPropagation();tkLinkModal([x.id]);});tt.appendChild(wb);}
   card.appendChild(tt);
   card.addEventListener('click',()=>{S.tab='tankyu';ra();updateNav();});
   return card;
