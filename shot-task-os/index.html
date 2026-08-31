@@ -376,6 +376,14 @@ select option { background: var(--surface); }
 .act-btn.ab-del.armed { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
 .act-btn.ab-del.armed:hover { background: var(--red); border-color: var(--red); color: #fff; }
 .act-btn.ab-tmr:hover { border-color: var(--purple); color: var(--purple); }
+/* B-2：実行判断のプライマリ（やる）だけ色を付ける。他アクションはゴーストのまま */
+.act-btn.ab-primary { background: var(--purple); border-color: var(--purple); color: #fff; font-weight: 700; }
+.act-btn.ab-primary:hover { background: #5a4088; border-color: #5a4088; color: #fff; }
+/* スマホ幅：操作列がカード本文（Lecticaフル表示等）を圧迫して縦書き化するため、操作は下段へ折返し */
+@media(max-width:480px){
+  .task-card{flex-wrap:wrap;}
+  .task-actions{max-width:none;width:100%;justify-content:flex-end;border-top:1px dashed var(--border);padding-top:8px;margin-top:4px;}
+}
 .act-btn.ab-week:hover { border-color: var(--purple); color: var(--purple); }
 .act-btn.ab-reject { color: #dc2626; }
 .act-btn.ab-reject:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
@@ -1371,13 +1379,14 @@ function buildCardHTML(t) {
   const isLx = t.category === 'Lectica';
   let acts = '';
   if (t.status !== 'done') {
-    acts += `<button class="act-btn ab-tmr" onclick="setToday('${id}')">今日</button>`;
+    /* B-2：実行判断のプライマリは「やる」1つだけ（旧「今日」＝今日やる指定）。他はゴーストのまま */
+    acts += `<button class="act-btn ab-tmr ab-primary" onclick="setToday('${id}')">やる</button>`;
     acts += `<button class="act-btn ab-done" onclick="${isLx?`lecticaComplete('${id}')`:`changeStatus('${id}','done')`}">完了</button>`;
     if (t.status === 'pending') {
       // 保留中カード：保留ボタンの代わりに未着手へ戻す導線を出す（自動pauseされたLecticaの復帰にも使う）
       acts += `<button class="act-btn ab-back" onclick="changeStatus('${id}','todo')">未着手に戻す</button>`;
     } else {
-      acts += `<button class="act-btn ab-pend" onclick="changeStatus('${id}','pending')">保留</button>`;
+      acts += `<button class="act-btn ab-pend" onclick="changeStatus('${id}','pending')" title="放置すると期日超過で自動pauseになります">保留（期日超過で自動pause）</button>`;
     }
     if ((t.memo||'').includes('AI参謀 Morning Brief自動生成')) {
       acts += `<button class="act-btn ab-reject" onclick="rejectTask('${id}')">不採用</button>`;
