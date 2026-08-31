@@ -10,6 +10,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KOSO Log</title>
 <style>
+/* UI基準：指で狙えるタップ領域（フィッツの法則） */
+button, [role="button"], .btn, .nav a, .nav button, .tab, .tab-btn {
+  min-height: 44px; min-width: 44px; box-sizing: border-box;
+}
+/* 密度が必要な一覧行内の小操作は明示的に例外化（クラス付与で opt-out） */
+.dense button, .dense .btn, .tk-meta button { min-height: 32px; min-width: 32px; }
+/* flexナビ内では明示min-widthが「内容幅未満への縮小」を許してしまうため、従来のmin-width:auto相当（内容幅で停止）に戻す */
+.dense > button, .dense > .btn { flex-shrink: 0; }
+
 /* ─── Reset & Base ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

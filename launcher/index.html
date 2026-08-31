@@ -16,6 +16,15 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
+/* UI基準：指で狙えるタップ領域（フィッツの法則） */
+button, [role="button"], .btn, .nav a, .nav button, .tab, .tab-btn {
+  min-height: 44px; min-width: 44px; box-sizing: border-box;
+}
+/* 密度が必要な一覧行内の小操作は明示的に例外化（クラス付与で opt-out） */
+.dense button, .dense .btn, .tk-meta button { min-height: 32px; min-width: 32px; }
+/* flexナビ内では明示min-widthが「内容幅未満への縮小」を許してしまうため、従来のmin-width:auto相当（内容幅で停止）に戻す */
+.dense > button, .dense > .btn { flex-shrink: 0; }
+
 :root {
   --bg: #f5f5f7; --bg2: #ffffff; --bg3: #ebebee;
   --border: #d8d8e0; --border2: #c8c8d4;

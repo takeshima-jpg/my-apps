@@ -12,6 +12,15 @@
 <title>Routine OS v2</title>
 
 <style>
+/* UI基準：指で狙えるタップ領域（フィッツの法則） */
+button, [role="button"], .btn, .nav a, .nav button, .tab, .tab-btn {
+  min-height: 44px; min-width: 44px; box-sizing: border-box;
+}
+/* 密度が必要な一覧行内の小操作は明示的に例外化（クラス付与で opt-out） */
+.dense button, .dense .btn, .tk-meta button { min-height: 32px; min-width: 32px; }
+/* flexナビ内では明示min-widthが「内容幅未満への縮小」を許してしまうため、従来のmin-width:auto相当（内容幅で停止）に戻す */
+.dense > button, .dense > .btn { flex-shrink: 0; }
+
 :root{
   --red:#E24B4A;--red-l:#FCEBEB;--red-d:#791F1F;
   --orange:#EF9F27;--orange-l:#FAEEDA;--orange-d:#854F0B;
@@ -1133,7 +1142,7 @@ function rMonthly(){
     // 2. 来月予定
     '<div class="rs"><h3>来月予定のルーチン（'+nextMonthTasks.length+'件）</h3>'+
     (nextMonthTasks.length?nextMonthTasks.map(function(t){
-      return '<div class="tr"><span class="tt">'+esc(t.title)+'</span>'+layBadge(t.layer)+
+      return '<div class="tr dense"><span class="tt">'+esc(t.title)+'</span>'+layBadge(t.layer)+
         '<span class="tm">'+esc(t.cycle||'')+'</span>'+
         '<span class="tm">'+esc(t.nextDate||'')+'</span>'+
         '<div class="ta" style="opacity:1;display:flex;gap:4px;">'+
@@ -1146,7 +1155,7 @@ function rMonthly(){
     // 3. 期限切れ
     '<div class="rs"><h3>期限切れルーチン（'+ovTasks.length+'件）</h3>'+
     (ovTasks.length?ovTasks.map(function(t){
-      return '<div class="tr" style="background:#FFF0F0;border-left:4px solid var(--red);padding-left:12px;">'+
+      return '<div class="tr dense" style="background:#FFF0F0;border-left:4px solid var(--red);padding-left:12px;">'+
         '<span class="tt">'+esc(t.title)+'</span>'+layBadge(t.layer)+
         '<span class="tm">'+esc(t.nextDate||'')+'</span>'+
         '<div class="ta" style="opacity:1;display:flex;gap:4px;">'+
@@ -1169,7 +1178,7 @@ function rMonthly(){
       if(!t.notifyMsg)reasons.push('通知文なし');
       if(!t.deliverable)reasons.push('完了条件なし');
       if(t.status==='停止')reasons.push('停止済み');
-      return '<div class="tr"><span class="tt">'+esc(t.title)+'</span>'+
+      return '<div class="tr dense"><span class="tt">'+esc(t.title)+'</span>'+
         '<span style="font-size:14px;color:var(--text3);flex:1;">'+reasons.join(' / ')+'</span>'+
         '<div class="ta" style="opacity:1;display:flex;gap:4px;">'+
         '<button class="ab" onclick="openEdit('+t.id+')">編集</button>'+

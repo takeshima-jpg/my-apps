@@ -11,6 +11,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shot Task OS</title>
 <style>
+/* UI基準：指で狙えるタップ領域（フィッツの法則） */
+button, [role="button"], .btn, .nav a, .nav button, .tab, .tab-btn {
+  min-height: 44px; min-width: 44px; box-sizing: border-box;
+}
+/* 密度が必要な一覧行内の小操作は明示的に例外化（クラス付与で opt-out） */
+.dense button, .dense .btn, .tk-meta button { min-height: 32px; min-width: 32px; }
+/* flexナビ内では明示min-widthが「内容幅未満への縮小」を許してしまうため、従来のmin-width:auto相当（内容幅で停止）に戻す */
+.dense > button, .dense > .btn { flex-shrink: 0; }
+
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
 
 :root {
@@ -725,11 +734,11 @@ input[type=checkbox] {
 <header>
   <div class="header-icon"><img src="icons/icon-64.png" alt="icon"></div>
   <div class="logo">Shot Task OS</div>
-  <div class="mob-panel-btns">
+  <div class="mob-panel-btns dense">
     <button class="mob-panel-btn" onclick="showPanel('left')">サマリー</button>
     <button class="mob-panel-btn active" onclick="showPanel('center')">タスク</button>
   </div>
-  <div class="header-nav">
+  <div class="header-nav dense">
     <button class="nav-btn active" id="navMain" onclick="switchView('main')">実行判断</button>
     <button class="nav-btn" id="navAll" onclick="switchView('all')">全タスク一覧</button>
   </div>
@@ -1332,7 +1341,7 @@ function buildCardHTML(t) {
   const sym = t.priority === 'high' ? '●' : '・';
   const titleCls = `task-title${t.priority==='high'?' p-high':''}${t.status==='done'?' done-strike':''}`;
   // インライン優先度トグル
-  const priToggle = `<span class="inline-pri">
+  const priToggle = `<span class="inline-pri dense">
     <button class="ipr-btn${t.priority==='high'?' ipr-high':''}" onclick="changePriority('${t.id}','high')" title="優先高">●</button>
     <button class="ipr-btn${t.priority==='normal'?' ipr-normal':''}" onclick="changePriority('${t.id}','normal')" title="通常">・</button>
   </span>`;
@@ -1388,7 +1397,7 @@ function buildCardHTML(t) {
       <div class="task-meta">${meta}</div>
       ${memo}
     </div>
-    <div class="task-actions">${acts}</div>
+    <div class="task-actions dense">${acts}</div>
   </div>`;
 }
 
