@@ -805,6 +805,10 @@ textarea.fc.tall { min-height: 130px; }
 .hc-name{font-size:1.12rem;font-weight:700;color:var(--navy)} /* v2.2: 拡大 */
 .hc-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .hc-fork{font-size:.68rem;color:var(--orange);background:var(--ora-s,#fff7ed);border:1px solid var(--orange);border-radius:6px;padding:2px 8px;white-space:nowrap}
+/* B-1：分岐バッジはタイトル直下の独立行（右上の今週/壁打ちと分離＝ゲシュタルト） */
+.hc-fork-line{font-size:.72rem;color:var(--orange);background:var(--ora-s,#fff7ed);border:1px solid var(--orange);border-radius:6px;padding:3px 10px;margin:2px 0 6px;display:inline-block;max-width:100%;word-break:break-word}
+/* B-1：ゴールの「…続き／畳む」 */
+.hc-more{color:var(--navy);font-size:.78rem;cursor:pointer;text-decoration:underline;white-space:nowrap}
 .hc-ago{font-size:.68rem;color:var(--gray3);white-space:nowrap}
 .hc-line{display:flex;gap:8px;font-size:.9rem;line-height:1.6;margin-bottom:2px} /* v2.2: 拡大 */
 .hc-l{flex-shrink:0;width:44px;font-size:.68rem;color:var(--gray3);font-weight:600;padding-top:2px}
@@ -1556,26 +1560,40 @@ function nearFork(p){
   const days=Math.round((new Date(f.date)-new Date(t))/864e5);
   return days<=14?{title:f.title,days,date:f.date}:null;
 }
+/* B-1：長いゴールの展開状態（pid→true・セッション内のみ） */
+const _goalOpen={};
+function toggleGoal(pid,ev){ev.stopPropagation();_goalOpen[pid]=!_goalOpen[pid];render();}
 function homeCard(p,todayStr){
   const lm=lastMoveInfo(p);
   const nf=nearFork(p);
   const danger=(p.events||[]).some(e=>e.sentiment==='危険');
   const overdue=p.deadline&&p.deadline<todayStr;
+  /* B-1：ゴールが長い場合は1文目のみ＋「…続き」で展開（ミラーの法則。約3行超＝90字超を折りたたみ対象） */
+  const g=p.goal||'';
+  let goalHtml;
+  if(!g)goalHtml='<span class="hc-v hc-empty">未設定</span>';
+  else{
+    const first=g.split('。')[0]+(g.includes('。')?'。':'');
+    const needFold=g.length>90&&first.length<g.length;
+    if(needFold&&!_goalOpen[p.id])goalHtml=`<span class="hc-v">${esc(first)} <a class="hc-more" onclick="toggleGoal('${p.id}',event)">…続き</a></span>`;
+    else if(needFold)goalHtml=`<span class="hc-v">${esc(g)} <a class="hc-more" onclick="toggleGoal('${p.id}',event)">畳む</a></span>`;
+    else goalHtml=`<span class="hc-v">${esc(g)}</span>`;
+  }
   return `<div class="home-card" onclick="nav('detail','${p.id}')">
     <div class="hc-head">
       <span class="hc-name">${esc(p.name)}</span>
       <span class="hc-badges">
-        ${nf?`<span class="hc-fork">⚡ ${esc(nf.title)} あと${nf.days}日</span>`:''}
         ${danger?'<span class="bd bd-red">危険</span>':''}
         ${overdue?'<span class="bd bd-orange">期限超過</span>':''}
         <span class="hc-ago">${esc(lm.label)}</span>
         <button class="hc-spark" onclick="event.stopPropagation();sparkCopy('${p.id}')" title="このPJの核とムーブをコピーして壁打ちへ">🗣 壁打ち</button>
       </span>
     </div>
-    <div class="hc-line"><span class="hc-l">ゴール</span><span class="hc-v${p.goal?'':' hc-empty'}">${esc(p.goal)||'未設定'}</span></div>
+    ${nf?`<div class="hc-fork-line">⚡ ${esc(nf.title)} あと${nf.days}日</div>`:''}
+    <div class="hc-line"><span class="hc-l">ゴール</span>${goalHtml}</div>
     <div class="hc-line"><span class="hc-l">問い</span><span class="hc-v${p.question?'':' hc-empty'}">${esc(p.question)||'未設定'}</span></div>
     <div class="hc-line"><span class="hc-l">一手</span><span class="hc-v${p.nextMove?'':' hc-empty'}">${esc(p.nextMove)||'未設定'}</span></div>
-    ${p.centerPin?`<div class="hc-line"><span class="hc-l">🎯</span><span class="hc-v">${esc(p.centerPin)}</span></div>`:''}
+    ${p.centerPin?`<div class="hc-line"><span class="hc-l">今期</span><span class="hc-v">${esc(p.centerPin)}</span></div>`:''}
   </div>`;
 }
 function homeNewInput(){
