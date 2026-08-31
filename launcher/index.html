@@ -81,6 +81,22 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .qa-ai { padding: 8px 16px; font-size: 14px; font-weight: 700; background: none; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); cursor: pointer; font-family: var(--font-body); }
 .qa-ai:hover { background: #efe9ff; }
 .qa-note { font-size: 12px; color: var(--text3); }
+/* ── A-5：その他▾ メニュー ── */
+#tabMoreMenu { position: fixed; z-index: 1000; min-width: 170px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 6px 24px rgba(0,0,0,.12); padding: 6px; }
+#tabMoreMenu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; background: none; border: none; border-radius: 6px; font-family: var(--font-body); font-size: 14px; color: var(--text); cursor: pointer; text-align: left; }
+#tabMoreMenu button:hover { background: var(--bg3); }
+#tabMoreMenu .mm-ico { width: 20px; height: 20px; border-radius: 4px; object-fit: cover; }
+#tabMoreMenu a { display: block; font-size: 12px; color: var(--text3); text-decoration: none; padding: 8px 10px; border-top: 1px solid var(--border); margin-top: 4px; }
+#tabMoreMenu a:hover { color: var(--accent); }
+/* ── A-5：今日の1手カード（Task OS HOME「PJの現在地」.pjc-* と同じ見た目の部品） ── */
+.pjc-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin:16px 0 4px}
+.pjc-hd{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.06em;margin-bottom:6px}
+.pjc-row{padding:7px 4px;cursor:pointer;line-height:1.55;border-radius:8px}
+.pjc-row:hover{background:var(--bg3)}
+.pjc-l1{font-size:14px;color:var(--text);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.pjc-name{font-weight:700}
+.pjc-q{color:var(--text2);flex:1;min-width:120px}
+.pjc-l2{font-size:13px;color:var(--text3);margin-top:1px;padding-left:2px}
 .qa-bar { display: flex; gap: 8px; }
 .qa-bar input { flex: 1; padding: 12px 15px; font-size: 16px; border: 1px solid var(--border2); border-radius: var(--radius); font-family: var(--font-body); background: var(--bg2); color: var(--text); }
 .qa-bar input:focus { outline: none; border-color: var(--accent); }
@@ -197,6 +213,9 @@ const TABS = [
   { id:'hitomemo', label:'ヒトメモ', icon:'👥', img:'../hitomemo/icons/icon-32.png',       url:'../hitomemo/index.html' },
 ];
 const OTHER_LINKS = [ { label:'brief-viewer', url:'../brief-viewer/index.html' } ];
+/* UIスプリント1 A-5：上部ナビは5項目＋「その他▾」に集約（ヒックの法則・スマホ横はみ出し解消）。
+   その他▾にはProject/1day/構想/100/SU/ヒトメモが入る（TABS定義は不変・表示の振り分けのみ） */
+const PRIMARY_TAB_IDS = ['today','task','shot','routine','reflect'];
 const LAST_TAB_KEY = 'launcher_last_tab';
 
 // Googleログインがまだ要るOSと、そのトークンキー（全OSは同一オリジン＝localStorage共有なのでシェルから接続有無を判定できる）。
@@ -219,15 +238,34 @@ function tabIconHtml(t, cls){
 
 function buildTabbar(){
   const bar = document.getElementById('tabbar');
+  const primary = TABS.filter(t => PRIMARY_TAB_IDS.includes(t.id));
   bar.innerHTML = '<div class="tab-logo"><img src="favicon.svg" alt=""><span>ランチャーOS</span></div>'
-  + TABS.map(t =>
+  + primary.map(t =>
     '<button class="tab" data-id="' + t.id + '" onclick="switchTab(\'' + t.id + '\')">'
     + tabIconHtml(t, 'tab-ico') + '<span>' + t.label + '</span></button>'
   ).join('')
-  + '<div class="tab-others"><div class="lbl">その他</div>'
-  + OTHER_LINKS.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener">↗ ' + l.label + '</a>').join('')
-  + '</div>'
+  + '<button class="tab" id="tabMoreBtn" onclick="toggleMoreMenu(event)"><span class="ico">▾</span><span>その他</span></button>'
   + '<div class="tab-vision">守りの総合支援を通して、挑戦する人が成長できる社会をつくる</div>';
+}
+
+/* その他▾ メニュー（bodyにfixedで出す：縦タブバー/スマホ横バーの両レイアウトでクリップされない） */
+function toggleMoreMenu(ev){
+  ev.stopPropagation();
+  const old = document.getElementById('tabMoreMenu');
+  if (old) { old.remove(); return; }
+  const secondary = TABS.filter(t => !PRIMARY_TAB_IDS.includes(t.id));
+  const m = document.createElement('div');
+  m.id = 'tabMoreMenu';
+  m.innerHTML = secondary.map(t =>
+      '<button data-id="' + t.id + '" onclick="switchTab(\'' + t.id + '\');document.getElementById(\'tabMoreMenu\')?.remove()">'
+      + tabIconHtml(t, 'mm-ico') + '<span>' + t.label + '</span></button>').join('')
+    + OTHER_LINKS.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener">↗ ' + l.label + '</a>').join('');
+  document.body.appendChild(m);
+  const r = ev.currentTarget.getBoundingClientRect();
+  const mw = 180;
+  m.style.left = Math.min(Math.max(8, r.left), window.innerWidth - mw - 8) + 'px';
+  m.style.top = (r.bottom + 4 + m.offsetHeight > window.innerHeight ? r.top - m.offsetHeight - 4 : r.bottom + 4) + 'px';
+  setTimeout(() => document.addEventListener('click', function h(){ document.getElementById('tabMoreMenu')?.remove(); document.removeEventListener('click', h); }), 0);
 }
 
 function switchTab(id){
@@ -235,6 +273,7 @@ function switchTab(id){
   currentTab = tab.id;
   try { localStorage.setItem(LAST_TAB_KEY, tab.id); } catch(e) {}
   document.querySelectorAll('.tabbar .tab').forEach(b => b.classList.toggle('active', b.dataset.id === tab.id));
+  document.getElementById('tabMoreBtn')?.classList.toggle('active', !PRIMARY_TAB_IDS.includes(tab.id));   // その他▾内のOSが表示中なら▾を点灯
   document.getElementById('curTabName').innerHTML = tabIconHtml(tab, 'mh-ico') + escHtml(tab.label);
   const todayView = document.getElementById('todayView');
   const loginBtn = document.getElementById('btnLogin');
@@ -244,11 +283,13 @@ function switchTab(id){
     todayView.style.display = '';
     Object.values(frames).forEach(f => f.style.display = 'none');
     loginBtn.style.display = 'none';
+    document.getElementById('btnReload').style.display = 'none';   // A-5：今日タブは「⟳ 今日を更新」に一本化
     help.textContent = '';
     renderToday();   // 表示のたびに再読込（他タブでの変更を反映）
   } else {
     todayView.style.display = 'none';
     loginBtn.style.display = '';
+    document.getElementById('btnReload').style.display = '';
     // ログインが要るOSだけ導線を強調。他はTask OS統合バックアップに一本化済み
     help.textContent = (tab.id in TAB_TOKEN_KEYS)
       ? 'このOSはGoogleログインが必要です。「🔑 ログイン」から別タブで（ログイン後 ⟳）'
@@ -555,6 +596,7 @@ function getAixDraft(){
 }
 
 let briefExpanded = false;
+let showCarryover = false;   // A-5：昨日からの引き継ぎの展開状態（今日タブ再描画ごとに折りたたみへ戻る）
 // 既定表示は「# 今日の予定」「# 今日の要点」セクションまで
 function briefHeadMarkdown(md){
   const lines = md.split('\n');
@@ -578,18 +620,82 @@ function openTaskImport(){
   toast('Task OSを開きました。GDrive同期後この画面を ⟳');
 }
 
+/* A-5：「⟳ 今日を更新」1ボタン＝同期→AIタスク読込→再描画を順に実行。
+   同期ロジックはTask OS本体のものをそのまま使う（複製しない）：非表示のtask-os iframeを（再）読込すると
+   起動時のgdAutoSyncが daily-tasks 取り込みまで実行し、完了時に localStorage 'taskos_last_sync' を更新する。
+   同一オリジンの別ブラウジングコンテキストからの書き込みなので storage イベントで完了を検知できる。 */
+let refreshBusy = false;
+function refreshToday(){
+  if (refreshBusy) return;
+  refreshBusy = true;
+  const btn = document.getElementById('btnTodayRefresh');
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ 更新中…'; }
+  let finished = false, tm = null;
+  const done = (msg) => {
+    if (finished) return; finished = true;
+    window.removeEventListener('storage', onS);
+    if (tm) clearTimeout(tm);
+    refreshBusy = false;
+    if (currentTab === 'today') renderToday();   // ボタンごと再描画（disabled解除）
+    toast(msg);
+  };
+  const onS = (e) => {
+    if (e.key === 'taskos_last_sync') setTimeout(() => done('今日を更新しました'), 800);   // C3(Lectica反映)の書き込み分を少し待つ
+  };
+  window.addEventListener('storage', onS);
+  // task-os を非表示で（再）起動（既存iframeがあればリロード＝ユーザーがTaskタブを開いていても状態はどうせ再同期される）
+  let f = frames['task'];
+  if (f) { try { f.contentWindow.location.reload(); } catch(e) { f.src = '../task-os/index.html'; } }
+  else {
+    f = document.createElement('iframe');
+    f.className = 'osframe'; f.style.display = 'none';
+    f.src = '../task-os/index.html';
+    frames['task'] = f;
+    document.getElementById('stage').appendChild(f);
+  }
+  tm = setTimeout(() => done(localStorage.getItem('gdrive_token_taskos')
+    ? '再表示しました（同期完了は確認できませんでした。もう一度お試しください）'
+    : '手元データで再表示しました（Task OSでGoogleログインすると同期されます）'), 15000);
+}
+
+/* A-5：画面最上段の「今日の1手」1枚。当日のLectica提案があればそれ、無ければセンターピン。
+   見た目はTask OS HOME「PJの現在地」カード（.pjc-*）と同じ部品。どちらも無ければ出さない（催促しない） */
+function todayOneMoveHtml(){
+  const T = todayKey();
+  let p = null; try { p = JSON.parse(localStorage.getItem('aix_lectica_pending') || 'null'); } catch(e) {}
+  const pDate = p && ((p.shotTask && p.shotTask.dueDate) || p.date || '');
+  const pid = p && (p.experimentId || p.selectedExperimentId || '');
+  const ptitle = p && (p.title || p.selectedExperimentTitle || (p.shotTask && p.shotTask.title) || '');
+  if (p && pDate === T && (pid || ptitle)) {
+    const scene = p.targetSchedule || '';
+    return '<div class="pjc-wrap"><div class="pjc-hd">✦ 今日の1手</div>'
+      + '<div class="pjc-row" onclick="switchTab(\'task\')" title="Task OSで見る">'
+      + '<div class="pjc-l1"><span class="pjc-name">' + escHtml([pid, ptitle].filter(Boolean).join('：')) + '</span></div>'
+      + (scene ? '<div class="pjc-l2">' + escHtml(scene) + '</div>' : '')
+      + '</div></div>';
+  }
+  let pj = null; try { const d = JSON.parse(localStorage.getItem('pos_v4') || '{}'); pj = (d.projects || []).find(x => x && x.status !== '完了' && x.centerPin); } catch(e) {}
+  if (pj) {
+    return '<div class="pjc-wrap"><div class="pjc-hd">✦ 今日の1手（センターピン）</div>'
+      + '<div class="pjc-row" onclick="switchTab(\'project\')" title="Project OSで見る">'
+      + '<div class="pjc-l1"><span class="pjc-name">' + escHtml(pj.title) + '</span><span class="pjc-q">' + escHtml(pj.centerPin) + '</span></div>'
+      + '</div></div>';
+  }
+  return '';
+}
+
 function renderToday(){
   const el = document.getElementById('todayView');
   el.innerHTML = `
     <div class="today-inner">
+      ${todayOneMoveHtml()}
       <div class="qa-wrap">
         <div class="qa-bar">
           <input id="qaInput" type="text" placeholder="今日のShotタスクを追加…（Enterで登録）">
           <button onclick="quickAdd()">追加</button>
         </div>
         <div class="qa-sub">
-          <button class="qa-ai" onclick="openTaskImport()">🤖 AIタスク読込</button>
-          <span class="qa-note">Task OSを開いてGDrive同期（読込後この画面を ⟳）</span>
+          <button class="qa-ai" id="btnTodayRefresh" onclick="refreshToday()">⟳ 今日を更新</button>
         </div>
       </div>
       <h2>📋 今日のBRIEF（要点）</h2>
@@ -611,7 +717,7 @@ function renderTodayBrief(){
   const area = document.getElementById('briefArea');
   if (!area) return;
   const md = getAixDraft();
-  if (!md) { area.innerHTML = '<div class="empty">今日のBriefはまだありません（Cowork実行後に表示されます）</div>'; return; }
+  if (!md) { area.innerHTML = '<div class="empty">Briefは生成待ちです（通常 8:30 ごろ）</div>'; return; }
   const head = briefHeadMarkdown(md);
   const shown = briefExpanded ? md : (head || md);
   const hasMore = !briefExpanded && head && head.length < md.trim().length;
@@ -628,7 +734,27 @@ function renderTodayTasks(){
   const tasks = readShotTasks()
     .filter(t => t && t.status === 'todo' && t.dueDate && t.dueDate <= today)
     .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || '') || (a.priority === 'high' ? -1 : 1));
-  if (!tasks.length) { area.innerHTML = '<div class="empty">今日のタスクはありません 🎉</div>'; return; }
+  if (!tasks.length) {
+    /* A-5：空でも昨日以前の未完了（一覧に出ないdoing/pending含む）があれば引き継ぎとして提示（ツァイガルニク） */
+    const carry = readShotTasks().filter(t => t && t.dueDate && t.dueDate < today && ['todo','doing','pending'].includes(t.status));
+    if (carry.length) {
+      if (showCarryover) {
+        area.innerHTML = '<div class="empty" style="padding-bottom:4px;">昨日からの引き継ぎ ' + carry.length + '件</div>'
+          + carry.map(t => '<div class="task-row">'
+            + '<button class="task-check" onclick="completeTask(\'' + escHtml(t.id) + '\')" title="完了にする">✓</button>'
+            + '<span class="task-title">' + escHtml(t.title) + '</span>'
+            + '<span class="task-overdue">' + escHtml((t.dueDate || '').slice(5).replace('-', '/')) + '〜</span>'
+            + '<span class="task-tag">' + escHtml(t.category || '') + '</span>'
+            + '</div>').join('');
+      } else {
+        area.innerHTML = '<div class="empty">昨日からの引き継ぎ ' + carry.length + '件 '
+          + '<a style="color:var(--accent);cursor:pointer;text-decoration:underline;" onclick="showCarryover=true;renderTodayTasks()">→ 表示</a></div>';
+      }
+      return;
+    }
+    area.innerHTML = '<div class="empty">今日のタスクはありません 🎉</div>';
+    return;
+  }
   area.innerHTML = tasks.map(t => {
     const lect = t.category === 'Lectica';
     const overdue = t.dueDate < today;
