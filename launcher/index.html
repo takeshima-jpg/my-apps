@@ -113,6 +113,9 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .empty { font-size: 14px; color: var(--text3); padding: 8px 0; }
 .brief-more { margin-top: 10px; padding: 8px 16px; font-size: 13px; background: none; border: 1px solid var(--border); border-radius: 999px; color: var(--text2); cursor: pointer; font-family: var(--font-body); }
 .brief-more:hover { border-color: var(--accent); color: var(--accent); }
+.brief-tabs { display: inline-flex; gap: 6px; margin-left: 10px; vertical-align: middle; }
+.brief-chip { min-height: 32px; padding: 4px 12px; font-size: 12px; font-weight: 500; background: none; border: 1px solid var(--border); border-radius: 999px; color: var(--text2); cursor: pointer; font-family: var(--font-body); }
+.brief-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .lx-row { font-size: 15px; }
 .lx-row a { color: var(--accent); cursor: pointer; text-decoration: underline; font-size: 14px; }
 .lx-detail { font-size: 13px; color: var(--text2); margin-top: 6px; line-height: 1.6; }
@@ -393,6 +396,10 @@ function completeTask(id){
 function briefJsonToMarkdown(d) {
   if (typeof d === 'string') return d;
   if (typeof d !== 'object' || d === null) return String(d);
+  /* 新形式：Markdown全文が brief（または markdown/body/review/content）にある場合はそれを正本にする（Brief Viewerと同一判定） */
+  for (const k of ['brief', 'markdown', 'body', 'review', 'content']) {
+    if (typeof d[k] === 'string' && d[k].trim()) return d[k];
+  }
   let md = '';
   if (d.cadence_notice) md += `**📣 ${d.cadence_notice}**\n\n`;
   // ── 📅 今日の予定 ──
@@ -583,9 +590,11 @@ function markdownToHtml(md) {
 }
 
 // 1day の getAixDraft と同等の3形式判定（オブジェクト／文字列／JSON文字列）。dailyのみ
-function getAixDraft(){
-  let raw = localStorage.getItem('aix_draft_latest');
-  if (!raw) raw = localStorage.getItem('oneday_aix_draft');
+const BRIEF_LS_KEY = { daily:'aix_draft_latest', weekly:'aix_review_weekly', monthly:'aix_review_monthly' };
+function getAixDraft(tab){
+  tab = tab || 'daily';
+  let raw = localStorage.getItem(BRIEF_LS_KEY[tab] || 'aix_draft_latest');
+  if (!raw && tab === 'daily') raw = localStorage.getItem('oneday_aix_draft');
   if (!raw) return null;
   try {
     const d = JSON.parse(raw);
@@ -596,6 +605,38 @@ function getAixDraft(){
 }
 
 let briefExpanded = false;
+let briefTab = 'daily';   // 毎朝／週次／月次（Brief Viewer・1day OSと同じ3区分）
+const BRIEF_FOLDER_DAILY  = '1qOQXKraLlYA8BA3WM1dvNdVGzHasRWKP'; // 10_日次データ
+const BRIEF_FOLDER_PERIOD = '13H2Hd7-_8B4p0Qa6z1y0RAq5-B51jhRw'; // 20_週次・月次
+const BRIEF_FILE_BASE   = { daily:'daily-brief', weekly:'weekly-review', monthly:'monthly-review' };
+const BRIEF_FILE_FOLDER = { daily:BRIEF_FOLDER_DAILY, weekly:BRIEF_FOLDER_PERIOD, monthly:BRIEF_FOLDER_PERIOD };
+/* 週次/月次はTask OS同期に含まれない日があるため、Brief Viewerで取得済みのトークンがあればDriveから直接取り直す（1day OSと同実装） */
+async function refreshBriefFromDrive(tab) {
+  tab = tab || 'daily';
+  const token = localStorage.getItem('brief_viewer_token');
+  if (!token) return false;
+  const COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';
+  const hdr = { headers: { 'Authorization': 'Bearer ' + token } };
+  try {
+    const q = `%22${BRIEF_FILE_FOLDER[tab]}%22+in+parents+and+name+contains+%22${BRIEF_FILE_BASE[tab]}%22+and+trashed%3Dfalse`;
+    const lr = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,createdTime)&orderBy=createdTime+desc&pageSize=10${COMMON}`, hdr);
+    if (!lr.ok) return false;
+    const ld = await lr.json();
+    const file = ld.files && ld.files[0];
+    if (!file) return false;
+    const cr = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media${COMMON}`, hdr);
+    if (!cr.ok) return false;
+    const raw = await cr.text();
+    const prev = localStorage.getItem(BRIEF_LS_KEY[tab]);
+    if (raw && raw !== prev) { localStorage.setItem(BRIEF_LS_KEY[tab], raw); return true; }
+    return false;
+  } catch (e) { return false; }
+}
+async function setBriefTab(tab){
+  briefTab = tab; briefExpanded = (tab !== 'daily');   // 週次/月次は最初から全文
+  renderTodayBrief();
+  if (tab !== 'daily') { const changed = await refreshBriefFromDrive(tab); if (changed) renderTodayBrief(); }
+}
 let showCarryover = false;   // A-5：昨日からの引き継ぎの展開状態（今日タブ再描画ごとに折りたたみへ戻る）
 // 既定表示は「# 今日の予定」「# 今日の要点」セクションまで
 function briefHeadMarkdown(md){
@@ -698,7 +739,7 @@ function renderToday(){
           <button class="qa-ai" id="btnTodayRefresh" onclick="refreshToday()">⟳ 今日を更新</button>
         </div>
       </div>
-      <h2>📋 今日のBRIEF（要点）</h2>
+      <h2>📋 BRIEF <span class="brief-tabs" id="briefTabs"></span></h2>
       <div class="card"><div id="briefArea"></div></div>
       <h2>✅ 今日のタスク</h2>
       <div class="card"><div id="todayTasks"></div></div>
@@ -716,9 +757,17 @@ function renderToday(){
 function renderTodayBrief(){
   const area = document.getElementById('briefArea');
   if (!area) return;
-  const md = getAixDraft();
-  if (!md) { area.innerHTML = '<div class="empty">Briefは生成待ちです（通常 8:30 ごろ）</div>'; return; }
-  const head = briefHeadMarkdown(md);
+  const tabs = document.getElementById('briefTabs');
+  if (tabs) tabs.innerHTML = [['daily','毎朝'],['weekly','週次'],['monthly','月次']].map(([k,l]) =>
+    '<button class="brief-chip' + (briefTab===k?' on':'') + '" onclick="setBriefTab(\''+k+'\')">' + l + '</button>').join('');
+  const md = getAixDraft(briefTab);
+  if (!md) {
+    area.innerHTML = '<div class="empty">' + (briefTab==='daily' ? 'Briefは生成待ちです（通常 8:30 ごろ）'
+      : briefTab==='weekly' ? '週次レビューはまだありません（週次runnow後に表示。Brief Viewerで接続済みならDriveから自動取得します）'
+      : '月次レビューはまだありません（月次runnow後に表示。Brief Viewerで接続済みならDriveから自動取得します）') + '</div>';
+    return;
+  }
+  const head = briefTab==='daily' ? briefHeadMarkdown(md) : '';
   const shown = briefExpanded ? md : (head || md);
   const hasMore = !briefExpanded && head && head.length < md.trim().length;
   area.innerHTML = '<div class="brief-body">' + markdownToHtml(shown) + '</div>'
@@ -905,7 +954,7 @@ try { _initTab = localStorage.getItem(LAST_TAB_KEY) || 'today'; } catch(e) {}
 switchTab(TABS.some(t => t.id === _initTab) ? _initTab : 'today');
 // 別タブ（本体ページ）での変更を今日タブへ反映。トークン変化なら接続バッジも更新
 window.addEventListener('storage', e => {
-  if (currentTab === 'today' && ['shot-task-os-v1', 'aix_draft_latest', 'oneday_aix_draft', 'aix_lectica_pending'].includes(e.key)) renderToday();
+  if (currentTab === 'today' && ['shot-task-os-v1', 'aix_draft_latest', 'oneday_aix_draft', 'aix_lectica_pending', 'aix_review_weekly', 'aix_review_monthly'].includes(e.key)) renderToday();
   if (Object.values(TAB_TOKEN_KEYS).includes(e.key)) {
     const tab = TABS.find(t => t.id === currentTab);
     if (tab) updateConnBadge(tab);
