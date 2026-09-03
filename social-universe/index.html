@@ -395,7 +395,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
   <div class="h-actions">
     <button class="hbtn hbtn-ghost" onclick="openDormant()">◇ 余白リスト</button>
     <button class="hbtn hbtn-ghost" onclick="doPrint()">⊟ A3印刷</button>
-    <span id="qrChip" onclick="openQuarterReview()" style="display:none;align-self:center;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;white-space:nowrap;"></span>
+    <span id="qrChip" onclick="qrChipClick()" style="display:none;align-self:center;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;white-space:nowrap;"></span>
     <button class="hbtn" style="background:#0e7490;border-color:#0e7490;color:#fff;" onclick="openQuarterReview()" title="四半期に一度のマップ見直し。気づきを記録してスナップショットと一緒に保存します">◔ 四半期見直し</button>
     <button class="hbtn hbtn-ghost" onclick="doSnapshot()" title="A3印刷プレビューをHTMLファイルで保存">◈ スナップショット</button>
     <button class="hbtn hbtn-ghost" onclick="openSnapshotHistory()" id="snapHistBtn" title="保存済みスナップショット一覧">≡ 履歴</button>
@@ -567,8 +567,8 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
     </div>
     <div style="font-size:12px;color:var(--s400);margin-bottom:12px;">運用サイクル：<b>① Top10アクション振り返り → ② マップ調整 → ③ ◈スナップショットで紙出し</b>（今回の記録は③のスナップショットに添付されます）</div>
     <div style="margin-bottom:12px;">
-      <div style="font-size:11px;color:var(--s400);margin-bottom:4px;">① この3か月のTop10アクション <span style="font-size:10px;">前回渡した「次の行動」— できたか眺めてから書く</span></div>
-      <div id="qrTop10" style="max-height:150px;overflow:auto;border:1px solid var(--s200,#e2e8f0);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.7;background:#f8fafc;"></div>
+      <div style="font-size:11px;color:var(--s400);margin-bottom:4px;">① この3か月のTop10アクション <span style="font-size:10px;">前回渡した「次の行動」に対して、何が起きたかを1行で</span></div>
+      <div id="qrTop10" style="max-height:210px;overflow:auto;border:1px solid var(--s200,#e2e8f0);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.6;background:#f8fafc;"></div>
     </div>
     <div style="margin-bottom:12px;">
       <div style="font-size:11px;color:var(--s400);margin-bottom:4px;">対象四半期</div>
@@ -595,6 +595,20 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
     <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--s200,#e2e8f0);padding-top:14px;">
       <button onclick="closeQuarterReview()" style="padding:10px 16px;border-radius:8px;border:1px solid var(--s200,#e2e8f0);background:#fff;color:var(--s400);font-size:13px;cursor:pointer;">キャンセル</button>
       <button onclick="saveQuarterReview()" style="padding:10px 20px;border-radius:8px;border:none;background:#0e7490;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">記録してスナップショット保存</button>
+    </div>
+  </div>
+</div>
+<div id="qrActOverlay" style="display:none" class="mo" onclick="if(event.target===this)closeTop10Actions()">
+  <div style="background:#fff;border-radius:14px;max-width:620px;width:92%;max-height:88vh;overflow:auto;padding:22px 24px;" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <div style="font-size:17px;font-weight:700;color:var(--s700);flex:1;">✎ 今回のTop10アクション（一括入力）</div>
+      <button onclick="closeTop10Actions()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--s400);">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--s400);margin-bottom:14px;">② マップ調整で決めた★Top10に、次の3か月の行動を1ページでまとめて記入。保存で各人物のネクストアクションに反映されます（→ヒトメモに反映・A3印刷のTop10表もこの内容）。</div>
+    <div id="qrActList" style="margin-bottom:16px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--s200,#e2e8f0);padding-top:14px;">
+      <button onclick="closeTop10Actions()" style="padding:10px 16px;border-radius:8px;border:1px solid var(--s200,#e2e8f0);background:#fff;color:var(--s400);font-size:13px;cursor:pointer;">キャンセル</button>
+      <button onclick="saveTop10Actions()" style="padding:10px 20px;border-radius:8px;border:none;background:#0e7490;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">保存（各人物に反映）</button>
     </div>
   </div>
 </div>
@@ -1626,7 +1640,7 @@ function renderSnapshotGrid(){
       <div class="snap-info">
         <div class="snap-label">${snap.review?'◔ ':''}${snap.label}</div>
         <div class="snap-meta">${snap.date} · ${snap.personCount}人</div>
-        ${snap.review?`<div style="font-size:11px;color:var(--s700);margin-top:5px;line-height:1.55;border-top:1px dashed #e2e8f0;padding-top:5px;">${String(snap.review.insights).replace(/</g,'&lt;')}${snap.review.policy?`<div style="color:#0e7490;margin-top:3px;">→ ${String(snap.review.policy).replace(/</g,'&lt;')}</div>`:''}</div>`:''}
+        ${snap.review?`<div style="font-size:11px;color:var(--s700);margin-top:5px;line-height:1.55;border-top:1px dashed #e2e8f0;padding-top:5px;">${String(snap.review.insights).replace(/</g,'&lt;')}${(snap.review.top10Results||[]).filter(r=>r.result).map(r=>`<div style="color:#64748b;">・${String(r.name).replace(/</g,'&lt;')}：${String(r.result).replace(/</g,'&lt;')}</div>`).join('')}${snap.review.policy?`<div style="color:#0e7490;margin-top:3px;">→ ${String(snap.review.policy).replace(/</g,'&lt;')}</div>`:''}</div>`:''}
       </div>
       <div class="snap-actions">
         <button class="snap-btn" onclick="previewSnap(${idx})">👁 プレビュー</button>
@@ -1787,7 +1801,10 @@ function openQuarterReview(){
   document.getElementById('qrQuarter').value=currentQuarterLabel();
   const t10=(persons||[]).filter(su=>su.isTop10&&!su.isDormant);
   document.getElementById('qrTop10').innerHTML = t10.length
-    ? t10.map(su=>'<div>★ <b>'+nameDisp(su.name)+'</b>'+(su.nextAction?'：'+String(su.nextAction).replace(/</g,'&lt;'):'<span style="color:#94a3b8">：（アクション未設定）</span>')+'</div>').join('')
+    ? t10.map(su=>'<div style="margin-bottom:7px;">★ <b>'+nameDisp(su.name)+'</b>'
+        +(su.nextAction?'：<span style="color:#475569">'+String(su.nextAction).replace(/</g,'&lt;')+'</span>':'<span style="color:#94a3b8">：（アクション未設定）</span>')
+        +'<input type="text" data-qr-result="'+su.id+'" placeholder="結果：どうなったか1行（空欄可）" style="display:block;width:100%;margin-top:3px;padding:6px 9px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;box-sizing:border-box;background:#fff;">'
+        +'</div>').join('')
     : '<span style="color:#94a3b8">Top10が未設定です（★を付けてから見直すと材料が揃います）</span>';
   const last=lastReviewSnap();
   const hint=document.getElementById('qrInsights');
@@ -1800,8 +1817,13 @@ function closeQuarterReview(){ document.getElementById('qrOverlay').style.displa
 function saveQuarterReview(){
   const insights=document.getElementById('qrInsights').value.trim();
   if(!insights){ alert('「マップ全体の気づき」を1行以上入れてください（見直しの核なので）'); return; }
+  const top10Results=[...document.querySelectorAll('[data-qr-result]')].map(inp=>{
+    const su=(persons||[]).find(x=>x.id===inp.getAttribute('data-qr-result'));
+    return su?{name:nameDisp(su.name), action:su.nextAction||'', result:inp.value.trim()}:null;
+  }).filter(x=>x&&(x.action||x.result));
   const review={
     quarter: document.getElementById('qrQuarter').value.trim()||currentQuarterLabel(),
+    top10Results,
     insights,
     more: document.getElementById('qrMore').value.trim(),
     less: document.getElementById('qrLess').value.trim(),
@@ -1814,10 +1836,31 @@ function saveQuarterReview(){
   updateQrChip();
   showToast('◔ '+review.quarter+' の見直しを記録しました。マップを調整したら ◈スナップショット（紙出し）で締めてください');
 }
+function openTop10Actions(){
+  const t10=(persons||[]).filter(su=>su.isTop10&&!su.isDormant);
+  document.getElementById('qrActList').innerHTML = t10.length
+    ? t10.map(su=>'<div style="margin-bottom:10px;"><div style="font-size:12px;font-weight:600;color:var(--s700);margin-bottom:3px;">★ '+nameDisp(su.name)+'</div>'
+        +'<input type="text" data-qr-next="'+su.id+'" value="'+String(su.nextAction||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" placeholder="次の3か月の行動（空欄＝アクションなし）" style="width:100%;padding:8px 11px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;box-sizing:border-box;"></div>').join('')
+    : '<span style="color:#94a3b8;font-size:13px;">★Top10がいません。マップで★を付けてから開いてください。</span>';
+  document.getElementById('qrActOverlay').style.display='flex';
+}
+function closeTop10Actions(){ document.getElementById('qrActOverlay').style.display='none'; }
+function saveTop10Actions(){
+  let n=0;
+  document.querySelectorAll('[data-qr-next]').forEach(inp=>{
+    const su=(persons||[]).find(x=>x.id===inp.getAttribute('data-qr-next'));
+    if(su && (su.nextAction||'')!==inp.value.trim()){ su.nextAction=inp.value.trim(); su.updatedAt=new Date().toISOString(); n++; }
+  });
+  if(n) sv(SK,persons);
+  closeTop10Actions();
+  if(typeof render==='function'){ try{render();}catch(e){} }
+  showToast('✎ Top10アクションを'+n+'件更新しました。'+(ld('su_pending_review')?'◈スナップショット（紙出し）で締めてください':''));
+}
+function qrChipClick(){ if(ld('su_pending_review')) openTop10Actions(); else openQuarterReview(); }
 function updateQrChip(){
   const el=document.getElementById('qrChip'); if(!el) return;
   const pend=ld('su_pending_review');
-  if(pend){ el.style.display='inline-block'; el.style.background='#fef9c3'; el.style.color='#a16207'; el.textContent='◔ '+pend.quarter+' 見直し記録済み — マップ調整→◈スナップショットで締め'; return; }
+  if(pend){ el.style.display='inline-block'; el.style.background='#fef9c3'; el.style.color='#a16207'; el.textContent='◔ '+pend.quarter+' 記録済み — 調整→✎アクション一括入力（クリック）→◈紙出し'; return; }
   const last=lastReviewSnap();
   if(!last){ el.style.display='inline-block'; el.style.background='#f1f5f9'; el.style.color='#64748b'; el.textContent='見直し記録なし'; return; }
   const days=Math.floor((Date.now()-new Date(last.review.reviewedAt||last.savedAt).getTime())/86400000);
