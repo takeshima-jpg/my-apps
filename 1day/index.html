@@ -828,17 +828,27 @@ function updateBriefTabBadges(){
 
 function markdownToHtml(md) {
   if (!md) return '';
+  try { return _markdownToHtmlCore(md); }
+  catch (e) {
+    /* 全体フォールバック：空白画面ではなく素のテキストを出す（brief-viewer 5ae8413と同期） */
+    if (window.console) console.error('markdownToHtml failed, fallback to plain:', e);
+    return '<pre class="bv-fallback" style="white-space:pre-wrap">' + String(md).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>';
+  }
+}
+const _escLine = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function _markdownToHtmlCore(md) {
   const lines = md.split('\n');
   let html = '';
   let inList = false;
   let inEvidence = false;   // ─根拠─ ブロック内か（既定折りたたみの<details>で包む）
   let curCat = '';
   const _bc = t => /要点|予定/.test(t)?'key':/内省/.test(t)?'ins':/財務|外部/.test(t)?'fin':/事業|実行/.test(t)?'biz':/人材|関係/.test(t)?'ppl':/参謀|運用/.test(t)?'ops':'';
-  for (let line of lines) {
-    line = line
+  for (const rawLine of lines) {
+   try {
+    let line = rawLine
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-      .replace(/`(.+?)`/g,'<code>$1</code>');
+      .replace(/\*\*(.+?)\*\*/gu,'<strong>$1</strong>')
+      .replace(/`(.+?)`/gu,'<code>$1</code>');
     // markdownリンク [label](url) → ファビコン付き青リンク
     line = line.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function(_m, label, url) {
       let host = ''; try { host = new URL(url.replace(/&amp;/g, '&')).hostname; } catch(e) {}
@@ -889,6 +899,12 @@ function markdownToHtml(md) {
       if (inList) { html += '</ul>'; inList = false; }
       html += '<p>' + line + '</p>';
     }
+   } catch (lineErr) {
+    /* この行だけ素通し（絵文字等での正規表現例外を全体停止に波及させない） */
+    if (inList) { html += '</ul>'; inList = false; }
+    html += '<p>' + _escLine(rawLine) + '</p>';
+    if (window.console) console.warn('brief line skipped:', lineErr && lineErr.message);
+   }
   }
   if (inList) html += '</ul>';
   if (inEvidence) html += '</details>';   // 終了マーカーも次見出しも無いまま本文が終わった場合
