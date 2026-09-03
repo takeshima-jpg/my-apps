@@ -395,6 +395,8 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
   <div class="h-actions">
     <button class="hbtn hbtn-ghost" onclick="openDormant()">◇ 余白リスト</button>
     <button class="hbtn hbtn-ghost" onclick="doPrint()">⊟ A3印刷</button>
+    <span id="qrChip" onclick="openQuarterReview()" style="display:none;align-self:center;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;white-space:nowrap;"></span>
+    <button class="hbtn" style="background:#0e7490;border-color:#0e7490;color:#fff;" onclick="openQuarterReview()" title="四半期に一度のマップ見直し。気づきを記録してスナップショットと一緒に保存します">◔ 四半期見直し</button>
     <button class="hbtn hbtn-ghost" onclick="doSnapshot()" title="A3印刷プレビューをHTMLファイルで保存">◈ スナップショット</button>
     <button class="hbtn hbtn-ghost" onclick="openSnapshotHistory()" id="snapHistBtn" title="保存済みスナップショット一覧">≡ 履歴</button>
     <button class="hbtn hbtn-add"   onclick="openModal(null)">＋ 人物を追加</button>
@@ -557,6 +559,45 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 
 <!-- ═══ BACKUP MODAL ════════════════════════════════════════ -->
 <!-- ═══ SNAPSHOT HISTORY MODAL ═══════════════════════════════ -->
+<div id="qrOverlay" style="display:none" class="mo" onclick="if(event.target===this)closeQuarterReview()">
+  <div style="background:#fff;border-radius:14px;max-width:560px;width:92%;max-height:88vh;overflow:auto;padding:22px 24px;" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <div style="font-size:17px;font-weight:700;color:var(--s700);flex:1;">◔ 四半期見直し</div>
+      <button onclick="closeQuarterReview()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--s400);">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--s400);margin-bottom:12px;">運用サイクル：<b>① Top10アクション振り返り → ② マップ調整 → ③ ◈スナップショットで紙出し</b>（今回の記録は③のスナップショットに添付されます）</div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--s400);margin-bottom:4px;">① この3か月のTop10アクション <span style="font-size:10px;">前回渡した「次の行動」— できたか眺めてから書く</span></div>
+      <div id="qrTop10" style="max-height:150px;overflow:auto;border:1px solid var(--s200,#e2e8f0);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.7;background:#f8fafc;"></div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--s400);margin-bottom:4px;">対象四半期</div>
+      <input id="qrQuarter" type="text" style="width:130px;padding:8px 10px;border:1px solid var(--s200,#e2e8f0);border-radius:8px;font-size:14px;">
+    </div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--s400);margin-bottom:4px;">マップ全体の気づき <span style="font-size:10px;">この四半期、関係はどう動いたか</span></div>
+      <textarea id="qrInsights" rows="4" placeholder="例：事業・成果の列に人が寄りすぎている。安心・人生が2人だけ。" style="width:100%;padding:10px 12px;border:1px solid var(--s200,#e2e8f0);border-radius:8px;font-size:13px;line-height:1.7;resize:vertical;box-sizing:border-box;"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <div style="font-size:11px;color:#15803d;margin-bottom:4px;">増やす・始める <span style="color:var(--s400);font-size:10px;">任意</span></div>
+        <textarea id="qrMore" rows="3" placeholder="接点を増やす人・新しく関わる人" style="width:100%;padding:9px 11px;border:1px solid var(--s200,#e2e8f0);border-radius:8px;font-size:13px;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#b91c1c;margin-bottom:4px;">減らす・手放す <span style="color:var(--s400);font-size:10px;">任意</span></div>
+        <textarea id="qrLess" rows="3" placeholder="距離を置く関係・消耗している接点" style="width:100%;padding:9px 11px;border:1px solid var(--s200,#e2e8f0);border-radius:8px;font-size:13px;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;color:var(--s400);margin-bottom:4px;">次の四半期の方針 <span style="font-size:10px;">1行で・任意</span></div>
+      <input id="qrPolicy" type="text" placeholder="例：安心・人生の列を1人増やす" style="width:100%;padding:9px 11px;border:1px solid var(--s200,#e2e8f0);border-radius:8px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--s200,#e2e8f0);padding-top:14px;">
+      <button onclick="closeQuarterReview()" style="padding:10px 16px;border-radius:8px;border:1px solid var(--s200,#e2e8f0);background:#fff;color:var(--s400);font-size:13px;cursor:pointer;">キャンセル</button>
+      <button onclick="saveQuarterReview()" style="padding:10px 20px;border-radius:8px;border:none;background:#0e7490;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">記録してスナップショット保存</button>
+    </div>
+  </div>
+</div>
 <div id="snapshotOverlay" style="display:none" class="mo" onclick="if(event.target===this)closeSnapshotHistory()">
   <div class="md" style="width:min(92vw,860px);max-height:88vh;overflow:hidden;display:flex;flex-direction:column;">
     <div class="md-hd">
@@ -1583,8 +1624,9 @@ function renderSnapshotGrid(){
         <iframe src="${blobUrl}" style="transform:scale(${scale.toFixed(4)});pointer-events:none;" onload="this.dataset.loaded='1'"></iframe>
       </div>
       <div class="snap-info">
-        <div class="snap-label">${snap.label}</div>
+        <div class="snap-label">${snap.review?'◔ ':''}${snap.label}</div>
         <div class="snap-meta">${snap.date} · ${snap.personCount}人</div>
+        ${snap.review?`<div style="font-size:11px;color:var(--s700);margin-top:5px;line-height:1.55;border-top:1px dashed #e2e8f0;padding-top:5px;">${String(snap.review.insights).replace(/</g,'&lt;')}${snap.review.policy?`<div style="color:#0e7490;margin-top:3px;">→ ${String(snap.review.policy).replace(/</g,'&lt;')}</div>`:''}</div>`:''}
       </div>
       <div class="snap-actions">
         <button class="snap-btn" onclick="previewSnap(${idx})">👁 プレビュー</button>
@@ -1656,6 +1698,7 @@ function updateSnapBadge(){
 }
 
 function doSnapshot(){
+  const review = ld('su_pending_review');   // ◔四半期見直しの記録があれば、この紙出しに添付して消費
   buildPrint();
 
   // print CSS を抽出（@media print ブロックの中身をそのまま使う）
@@ -1708,12 +1751,14 @@ ${printHTML}
   // localStorage に保存（サムネイル表示用）
   const snaps = getSnapshots();
   snaps.push({
-    label,
+    label: (review && review.quarter) ? review.quarter : label,
     date: dateStr,
     personCount: persons.filter(p=>!p.isDormant).length,
     html: snapHTML,
     savedAt: new Date().toISOString(),
+    review: review || null,   // 四半期見直しの記録（気づき・増やす/減らす・次の方針）
   });
+  if(review) localStorage.removeItem('su_pending_review');
   // 最大12件保持（3ヶ月×3年分）
   if(snaps.length > 12) snaps.splice(0, snaps.length - 12);
   saveSnapshots(snaps);
@@ -1729,6 +1774,57 @@ ${printHTML}
   showToast(`◈ スナップショット保存 (${label}) · 履歴に追加しました`);
 }
 
+// ── QUARTER REVIEW（四半期見直し）──
+function currentQuarterLabel(){
+  const now=new Date(); return now.getFullYear()+'Q'+Math.ceil((now.getMonth()+1)/3);
+}
+function lastReviewSnap(){
+  const snaps=getSnapshots();
+  for(let i=snaps.length-1;i>=0;i--){ if(snaps[i]&&snaps[i].review) return snaps[i]; }
+  return null;
+}
+function openQuarterReview(){
+  document.getElementById('qrQuarter').value=currentQuarterLabel();
+  const t10=(persons||[]).filter(su=>su.isTop10&&!su.isDormant);
+  document.getElementById('qrTop10').innerHTML = t10.length
+    ? t10.map(su=>'<div>★ <b>'+nameDisp(su.name)+'</b>'+(su.nextAction?'：'+String(su.nextAction).replace(/</g,'&lt;'):'<span style="color:#94a3b8">：（アクション未設定）</span>')+'</div>').join('')
+    : '<span style="color:#94a3b8">Top10が未設定です（★を付けてから見直すと材料が揃います）</span>';
+  const last=lastReviewSnap();
+  const hint=document.getElementById('qrInsights');
+  hint.placeholder = last && last.review && last.review.policy
+    ? '前回('+(last.review.quarter||last.label)+')の方針：「'+last.review.policy+'」— どうだったかから書き始めると早い'
+    : '例：事業・成果の列に人が寄りすぎている。安心・人生が2人だけ。';
+  document.getElementById('qrOverlay').style.display='flex';
+}
+function closeQuarterReview(){ document.getElementById('qrOverlay').style.display='none'; }
+function saveQuarterReview(){
+  const insights=document.getElementById('qrInsights').value.trim();
+  if(!insights){ alert('「マップ全体の気づき」を1行以上入れてください（見直しの核なので）'); return; }
+  const review={
+    quarter: document.getElementById('qrQuarter').value.trim()||currentQuarterLabel(),
+    insights,
+    more: document.getElementById('qrMore').value.trim(),
+    less: document.getElementById('qrLess').value.trim(),
+    policy: document.getElementById('qrPolicy').value.trim(),
+    reviewedAt: new Date().toISOString(),
+  };
+  sv('su_pending_review', review);   // ②マップ調整→③紙出しの順を守るため、次のスナップショットに添付する
+  ['qrInsights','qrMore','qrLess','qrPolicy'].forEach(id=>{document.getElementById(id).value='';});
+  closeQuarterReview();
+  updateQrChip();
+  showToast('◔ '+review.quarter+' の見直しを記録しました。マップを調整したら ◈スナップショット（紙出し）で締めてください');
+}
+function updateQrChip(){
+  const el=document.getElementById('qrChip'); if(!el) return;
+  const pend=ld('su_pending_review');
+  if(pend){ el.style.display='inline-block'; el.style.background='#fef9c3'; el.style.color='#a16207'; el.textContent='◔ '+pend.quarter+' 見直し記録済み — マップ調整→◈スナップショットで締め'; return; }
+  const last=lastReviewSnap();
+  if(!last){ el.style.display='inline-block'; el.style.background='#f1f5f9'; el.style.color='#64748b'; el.textContent='見直し記録なし'; return; }
+  const days=Math.floor((Date.now()-new Date(last.review.reviewedAt||last.savedAt).getTime())/86400000);
+  el.style.display='inline-block';
+  if(days>=92){ el.style.background='#fee2e2'; el.style.color='#b91c1c'; el.textContent='⚠ 前回見直しから'+days+'日 — 四半期見直しの時期です'; }
+  else { el.style.background='#ecfeff'; el.style.color='#0e7490'; el.textContent='前回見直し：'+(last.review.quarter||last.label)+'（'+days+'日前）'; }
+}
 // ── TOAST ──
 let _toastTimer=null;
 function showToast(msg){
@@ -1746,6 +1842,7 @@ document.addEventListener('keydown',e=>{
 // ── INIT ──
 renderMap();
 updateSnapBadge();
+updateQrChip();
 </script>
   <script>
     if ('serviceWorker' in navigator) {
