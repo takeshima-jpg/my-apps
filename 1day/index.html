@@ -1802,16 +1802,12 @@ function renderAixDraftList() {
 
   const satLabels = { great:'◎', good:'〇', meh:'△', bad:'×' };
   const satVals = ['great','good','meh','bad'];
-  const tags = ['経営','組織','人間関係','家族','健康','感情','学び','お金','未来'];
-  const flags = { unease:'△ 違和感', energy:'◉ エネルギー高', blog:'≡ ブログ候補', deep:'◎ 深掘り', vision:'◈ VISION関連' };
+  /* ＋記録する（手動フォーム）と同一構成に統一：タグ無し・フラグは違和感/深掘りの2種のみ */
+  const flags = { unease:'△ 違和感', deep:'◎ 深掘り' };
 
   list.innerHTML = drafts.map((d, i) => `
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:16px;">
       <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">${d.targetDate || d.date || ''}</div>
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">できごと</div>
-        <textarea id="aix-events-${i}" style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || d.text || d.content || ''}</textarea>
-      </div>
       <div style="margin-bottom:14px;">
         <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">今週は？</div>
         <div style="display:flex;gap:8px;">
@@ -1819,14 +1815,12 @@ function renderAixDraftList() {
         </div>
       </div>
       <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">△ 違和感 <span style="font-size:10px;">任意</span></div>
-        <input type="text" id="aix-unease-${i}" placeholder="なんかモヤっとしたこと、一言で" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);font-family:var(--font-body);font-size:13px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">できごと</div>
+        <textarea id="aix-events-${i}" style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || d.text || d.content || ''}</textarea>
       </div>
       <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">タグ <span style="font-size:10px;">任意</span></div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
-          ${tags.map(t => `<button onclick="aixToggleTag(${i},'${t}')" id="aix-tag-${i}-${t.replace(/[・]/g,'')}" style="padding:7px 4px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;">${t}</button>`).join('')}
-        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">△ 違和感 <span style="font-size:10px;">任意</span></div>
+        <input type="text" id="aix-unease-${i}" placeholder="なんかモヤっとしたこと、一言で" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);font-family:var(--font-body);font-size:13px;">
       </div>
       <div style="margin-bottom:18px;">
         <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">フラグ <span style="font-size:10px;">任意</span></div>
@@ -1843,7 +1837,6 @@ function renderAixDraftList() {
 
   drafts.forEach((d, i) => {
     window['_aixSat_'+i] = '';
-    window['_aixTags_'+i] = [];
     window['_aixFlags_'+i] = [];
   });
 }
@@ -1854,14 +1847,6 @@ function aixToggleSat(i, val) {
     const btn = document.getElementById(`aix-sat-${i}-${v}`);
     if (btn) { btn.style.background = window['_aixSat_'+i] === v ? 'var(--accent)' : 'var(--bg3)'; btn.style.color = window['_aixSat_'+i] === v ? '#1a2a00' : 'var(--text2)'; }
   });
-}
-
-function aixToggleTag(i, tag) {
-  const arr = window['_aixTags_'+i] || [];
-  const idx = arr.indexOf(tag); if (idx >= 0) arr.splice(idx,1); else arr.push(tag);
-  window['_aixTags_'+i] = arr;
-  const btn = document.getElementById(`aix-tag-${i}-${tag.replace(/[・]/g,'')}`);
-  if (btn) { btn.style.background = arr.includes(tag) ? 'rgba(124,111,255,0.15)' : 'var(--bg3)'; btn.style.borderColor = arr.includes(tag) ? 'var(--accent)' : 'var(--border)'; btn.style.color = arr.includes(tag) ? 'var(--accent)' : 'var(--text2)'; }
 }
 
 function aixToggleFlag(i, flag) {
@@ -1881,7 +1866,7 @@ function aixApproveByIdx(i) {
   const targetDate = d.targetDate || d.date || today();  // 描画と同じく date 両対応＋最終フォールバック（サイレント失敗防止）
   const unease = (document.getElementById('aix-unease-' + i) || {}).value || '';
   const satisfaction = window['_aixSat_' + i] || '';
-  const tags = window['_aixTags_' + i] || [];
+  const tags = [];   /* ＋記録するに合わせタグ入力は廃止（既存ログのタグ表示・データは不変） */
   const flags = window['_aixFlags_' + i] || [];
   let log = state.logs.find(l => l.date === targetDate);
   if (log) {
