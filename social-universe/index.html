@@ -689,6 +689,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
       <div class="pp-t10-col">
         <div class="pp-t10-ttl">⭐ Top10 アクション</div>
         <div id="ppTop10"></div>
+        <div id="ppQr"></div>
       </div>
     </div>
     <div class="pp-legend">
@@ -1544,6 +1545,24 @@ function showBkSt(t,m){
 // ╔══════════════════════════════════════════════════════════╗
 // ║  PRINT                                                   ║
 // ╚══════════════════════════════════════════════════════════╝
+function qrBlockHTML(review){
+  if(!review) return '';
+  const esc=t=>String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const results=(review.top10Results||[]).filter(r=>r.result);
+  return `
+  <div class="pp-qr" style="margin-top:3mm;border-top:1.2pt solid #0e7490;padding-top:2mm;">
+    <div style="font-size:9.5pt;font-weight:700;color:#0e7490;border-left:2.5pt solid #0e7490;padding-left:2mm;margin-bottom:1.5mm;">◔ 四半期見直し（${esc(review.quarter)}）</div>
+    ${results.length?`<div style="font-size:7.5pt;color:#64748b;margin-bottom:0.5mm;">前回アクションの結果</div>
+    <div style="font-size:8pt;color:#334155;line-height:1.5;margin-bottom:1.5mm;">${results.map(r=>'・<b>'+esc(r.name)+'</b>：'+esc(r.result)).join('<br>')}</div>`:''}
+    <div style="font-size:7.5pt;color:#64748b;margin-bottom:0.5mm;">マップ全体の気づき</div>
+    <div style="font-size:8pt;color:#334155;line-height:1.5;margin-bottom:1.5mm;">${esc(review.insights)}</div>
+    ${(review.more||review.less)?`<div style="display:flex;gap:3mm;margin-bottom:1.5mm;">
+      ${review.more?`<div style="flex:1;"><div style="font-size:7.5pt;color:#15803d;">増やす・始める</div><div style="font-size:8pt;color:#334155;line-height:1.5;">${esc(review.more)}</div></div>`:''}
+      ${review.less?`<div style="flex:1;"><div style="font-size:7.5pt;color:#b91c1c;">減らす・手放す</div><div style="font-size:8pt;color:#334155;line-height:1.5;">${esc(review.less)}</div></div>`:''}
+    </div>`:''}
+    ${review.policy?`<div style="font-size:8.5pt;font-weight:700;color:#0e7490;">→ 次の四半期：${esc(review.policy)}</div>`:''}
+  </div>`;
+}
 function buildPrint(){
   const now=new Date();
   document.getElementById('ppDate').textContent=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
@@ -1597,6 +1616,8 @@ function buildPrint(){
     t10h+=`</table><div class="pp-t10-note">※ Top10は次の行動を決めた人のみ</div>`;
   }
   document.getElementById('ppTop10').innerHTML=t10h;
+  const _qrv = ld('su_pending_review') || (lastReviewSnap()&&lastReviewSnap().review) || null;
+  const _qrEl = document.getElementById('ppQr'); if(_qrEl) _qrEl.innerHTML = qrBlockHTML(_qrv);
 }
 
 function doPrint(){ buildPrint(); setTimeout(()=>window.print(),80); }
@@ -1662,7 +1683,13 @@ function previewSnap(idx){
   _previewIdx = idx;
   document.getElementById('snapPreviewTitle').textContent = `${snap.label} — ${snap.date}`;
   const body = document.getElementById('snapPreviewBody');
-  const blob = new Blob([snap.html], {type:'text/html;charset=utf-8'});
+  let _html = snap.html;
+  if (snap.review && _html.indexOf('pp-qr') === -1) {
+    /* 旧スナップ（振り返りが本体HTMLに未埋め込み）にはプレビュー時に差し込む */
+    const blk = '<div style="max-width:420mm;margin:2mm auto 0;padding:0 6mm;">' + qrBlockHTML(snap.review) + '</div>';
+    _html = _html.includes('</body>') ? _html.replace('</body>', blk + '</body>') : _html + blk;
+  }
+  const blob = new Blob([_html], {type:'text/html;charset=utf-8'});
   const url  = URL.createObjectURL(blob);
   body.innerHTML = `<iframe src="${url}" style="width:100%;height:calc(94vh - 80px);border:none;" onload="URL.revokeObjectURL(this.src)"></iframe>`;
   document.getElementById('snapPreviewOverlay').style.display='flex';
