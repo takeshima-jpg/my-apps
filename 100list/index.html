@@ -688,6 +688,7 @@ function toggleComplete(id){
         discardedAt: null,
         createdAt: now,
         updatedAt: now,
+        autoRenewed: true,   // 毎年繰り返しの自動追加分（「最近追加」には出さない）
       };
       items.push(nextItem);
       saveItems(items);
@@ -972,7 +973,12 @@ function renderDashboard(){
 
   const activeItems = items.filter(i=>!i.discarded);
   // 最近追加したやりたいこと（追加日=createdAt の新しい順に上位10件）
-  const recentAdded = [...activeItems].filter(i=>i.createdAt)
+  // 毎年繰り返しの自動追加分は「新しくやりたくなったこと」ではないので除外する。
+  // autoRenewedフラグ（今後の自動追加に付与）に加え、フラグ導入前に生成済みの分も
+  // 「繰り返し項目で、同タイトルの過去年版が存在する」ことで判定して除外する。
+  const _isRenewalCopy = i => i.autoRenewed ||
+    (i.isRecurringYearly && items.some(p => p.id !== i.id && p.title === i.title && p.year < i.year));
+  const recentAdded = [...activeItems].filter(i=>i.createdAt && !_isRenewalCopy(i))
     .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,10);
   const total = activeItems.length;
   const done = activeItems.filter(i=>i.completed).length;
