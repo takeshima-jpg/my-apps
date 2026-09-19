@@ -116,6 +116,18 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .brief-tabs { display: inline-flex; gap: 6px; margin-left: 10px; vertical-align: middle; }
 .brief-chip { min-height: 32px; padding: 4px 12px; font-size: 12px; font-weight: 500; background: none; border: 1px solid var(--border); border-radius: 999px; color: var(--text2); cursor: pointer; font-family: var(--font-body); }
 .brief-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.lx-card { border: 1.5px solid #0e7490 !important; background: color-mix(in srgb, #0e7490 6%, var(--bg2, #fff)); font-size: 13.5px; line-height: 1.75; }
+.lx-card .lx-title { font-weight: 700; color: #0e7490; font-size: 14.5px; margin-bottom: 7px; display: flex; align-items: baseline; gap: 10px; }
+.lx-card .lx-row { display: flex; gap: 10px; }
+.lx-card .lx-k { flex: 0 0 auto; font-size: 12px; color: #0e7490; font-weight: 700; min-width: 3.5em; cursor: default; }
+.lx-card details.lx-smpwrap { margin: 6px 0; }
+.lx-card details.lx-smpwrap > summary { cursor: pointer; user-select: none; list-style: revert; }
+.lx-card .lx-sub { font-size: 12px; color: var(--text3, #64748b); margin-left: 4.5em; }
+.lx-card .lx-smp { padding-left: 1.4em; }
+.lx-card .lx-skip { color: var(--text3, #64748b); font-size: 13px; }
+.lx-card.lx-past { opacity: .55; }
+.lx-card .lx-pastnote { font-size: 11px; font-weight: 500; color: var(--text3, #94a3b8); }
+@media (max-width: 480px) { .lx-card .lx-sub { margin-left: 0; } }
 .lx-row { font-size: 15px; }
 .lx-row a { color: var(--accent); cursor: pointer; text-decoration: underline; font-size: 14px; }
 .lx-detail { font-size: 13px; color: var(--text2); margin-top: 6px; line-height: 1.6; }
@@ -611,6 +623,62 @@ const BRIEF_FOLDER_PERIOD = '13H2Hd7-_8B4p0Qa6z1y0RAq5-B51jhRw'; // 20_週次・
 const BRIEF_FILE_BASE   = { daily:'daily-brief', weekly:'weekly-review', monthly:'monthly-review' };
 const BRIEF_FILE_FOLDER = { daily:BRIEF_FOLDER_DAILY, weekly:BRIEF_FOLDER_PERIOD, monthly:BRIEF_FOLDER_PERIOD };
 /* 週次/月次はTask OS同期に含まれない日があるため、Brief Viewerで取得済みのトークンがあればDriveから直接取り直す（1day OSと同実装） */
+/* ✦ 明日の予告（V-3）：daily-brief/daily-tasksのlectica_nextを表示。
+   通常経路（Task OS同期）はbrief文字列のみ格納のため、JSONで無い場合は
+   brief_viewer_tokenがあればdaily-brief.jsonをセッション1回だけ取得して補う。 */
+function _lxEsc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function lectinFromStorage(){
+  try {
+    const raw = localStorage.getItem('aix_draft_latest');
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    return (d && typeof d==='object') ? (d.lectica_next||null) : null;
+  } catch(e){ return null; }
+}
+let _lxFetchTried = false;
+function renderLectinCard(){
+  const el = document.getElementById('lectinCard');
+  if (!el) return;
+  const nx = lectinFromStorage();
+  if (!nx) {
+    el.style.display='none'; el.innerHTML='';
+    if (!_lxFetchTried && localStorage.getItem('brief_viewer_token')) {
+      _lxFetchTried = true;
+      refreshBriefFromDrive('daily').then(ch=>{ if(ch) renderTodayBrief(); });
+    }
+    return;
+  }
+  const wd=['日','月','火','水','木','金','土'];
+  let dstr='', past=false;
+  if (nx.date && /^\d{4}-\d{2}-\d{2}$/.test(nx.date)) {
+    const dt=new Date(nx.date+'T00:00:00');
+    dstr=(dt.getMonth()+1)+'/'+dt.getDate()+' '+wd[dt.getDay()];
+    const t=new Date(); t.setHours(0,0,0,0); past = dt < t;
+  }
+  if (nx.skipped) {
+    el.style.display='block';
+    el.innerHTML = '<div class="lx-skip">✦ 明日の予告'+(dstr?'（'+_lxEsc(dstr)+'）':'')+'：省略——'+_lxEsc(nx.skipReason||'')+'</div>';
+    return;
+  }
+  if (!nx.experimentId && !nx.title) { el.style.display='none'; el.innerHTML=''; return; }
+  const isNew = Array.isArray(nx.samples) && nx.samples.length>0;
+  const rel = nx.relatedExperimentId ? ' × '+_lxEsc(nx.relatedExperimentId)+'「'+_lxEsc(nx.relatedExperimentTitle||'')+'」' : '';
+  let body = '<div class="lx-row"><span class="lx-k">お題</span><span>'+_lxEsc(nx.experimentId)+'「'+_lxEsc(nx.title)+'」'+rel+'</span></div>'
+    + (nx.focusQuestion?'<div class="lx-sub">（重点の問い：'+_lxEsc(nx.focusQuestion)+'）</div>':'');
+  if (isNew) {
+    body += '<details class="lx-smpwrap" open><summary class="lx-k">やり方サンプル（どれでも・自分流でも可）</summary>'
+      + nx.samples.map((sm,i)=>'<div class="lx-smp">'+(['①','②','③','④','⑤'][i]||'・')+' '+_lxEsc(sm)+'</div>').join('')
+      + '</details>'
+      + (nx.whyNow?'<div class="lx-row"><span class="lx-k">なぜ今</span><span>'+_lxEsc(nx.whyNow)+'</span></div>':'')
+      + (nx.signal?'<div class="lx-row"><span class="lx-k">合図</span><span>'+_lxEsc(nx.signal)+'</span></div>':'');
+  } else {
+    body += (nx.targetSchedule?'<div class="lx-row"><span class="lx-k">場面</span><span>'+_lxEsc(nx.targetSchedule)+'</span></div>':'')
+      + (nx.prepTonight?'<div class="lx-row"><span class="lx-k">今夜準備</span><span>'+_lxEsc(nx.prepTonight)+'</span></div>':'');
+  }
+  el.style.display='block';
+  el.className = 'card lx-card'+(past?' lx-past':'');
+  el.innerHTML = '<div class="lx-title">✦ 明日の予告'+(dstr?'（'+_lxEsc(dstr)+'）':'')+(past?'<span class="lx-pastnote">予告は '+_lxEsc(dstr)+' 分</span>':'')+'</div>'+body;
+}
 async function refreshBriefFromDrive(tab) {
   tab = tab || 'daily';
   const token = localStorage.getItem('brief_viewer_token');
@@ -741,6 +809,7 @@ function renderToday(){
       </div>
       <h2>📋 BRIEF <span class="brief-tabs" id="briefTabs"></span></h2>
       <div class="card"><div id="briefArea"></div></div>
+      <div class="card lx-card" id="lectinCard" style="display:none"></div>
       <h2>✅ 今日のタスク</h2>
       <div class="card"><div id="todayTasks"></div></div>
       <h2>✦ 今日のLECTICA</h2>
@@ -755,6 +824,7 @@ function renderToday(){
 }
 
 function renderTodayBrief(){
+  renderLectinCard();
   const area = document.getElementById('briefArea');
   if (!area) return;
   const tabs = document.getElementById('briefTabs');
