@@ -70,6 +70,17 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .bv-fresh .bv-fresh-date { font-family: var(--font-mono); font-size: 12px; font-weight: 500; opacity: 0.85; }
 .bv-meta .luck-pill { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 20px; padding: 3px 12px; color: #c2410c; font-weight: 600; }
 @media (max-width: 600px) { .bv-fresh { margin: 12px 18px 0; padding: 10px 14px; font-size: 14px; flex-wrap: wrap; } }
+.bv-lectin { max-width: 760px; margin: 12px auto 0; padding: 12px 18px; border: 1.5px solid #0e7490; border-radius: 12px; background: color-mix(in srgb, #0e7490 6%, var(--bg, #fff)); font-size: 14px; line-height: 1.75; }
+.bv-lectin > summary { cursor: pointer; font-weight: 700; color: #0e7490; font-size: 15px; user-select: none; display: flex; align-items: baseline; gap: 10px; }
+.bv-lectin .bv-lx-body { margin-top: 8px; }
+.bv-lectin .bv-lx-row { display: flex; gap: 10px; }
+.bv-lectin .bv-lx-k { flex: 0 0 auto; font-size: 12px; color: #0e7490; font-weight: 700; min-width: 3.5em; }
+.bv-lectin .bv-lx-sub { font-size: 12.5px; color: var(--text3, #64748b); margin-left: 4.5em; }
+.bv-lectin .bv-lx-smp { padding-left: 4.5em; }
+.bv-lectin-skip { max-width: 760px; margin: 12px auto 0; padding: 10px 18px; border: 1px dashed var(--border, #cbd5e1); border-radius: 12px; color: var(--text3, #64748b); font-size: 13.5px; }
+.bv-lectin-past { opacity: .55; }
+.bv-lectin .bv-lx-pastnote { font-size: 11px; font-weight: 500; color: var(--text3, #94a3b8); }
+@media (max-width: 600px) { .bv-lectin, .bv-lectin-skip { margin: 10px 18px 0; } .bv-lectin .bv-lx-smp, .bv-lectin .bv-lx-sub { padding-left: 1em; margin-left: 0; } }
 .brief-body { max-width: 760px; margin: 0 auto; padding: 14px 24px 60px; line-height: 1.8; width: 100%; }
 /* ─根拠─ ブロック（既定折りたたみ）：本文より小さく淡く、目立たせない */
 .brief-body details.bv-evidence { margin: 2px 0 12px; }
@@ -281,7 +292,8 @@ async function loadBrief() {
       const raw = await cr.text();
       let data;
       try { data = JSON.parse(raw); } catch (e) { data = raw; }
-      render(toMarkdown(data), file.modifiedTime, (data && typeof data === 'object') ? data.lucky_day : '');
+      render(toMarkdown(data), file.modifiedTime, (data && typeof data === 'object') ? data.lucky_day : '',
+             (currentTab === 'daily' && data && typeof data === 'object') ? data.lectica_next : null);
       setStatus('connected', '接続済み');
       localStorage.setItem('bv_seen_' + currentTab, file.modifiedTime || '');
       setBadge(currentTab, false);
@@ -587,7 +599,7 @@ function freshnessBanner(iso) {
   } catch (e) { return ''; }
 }
 
-function render(md, modifiedTime, luckyDay) {
+function render(md, modifiedTime, luckyDay, lectin) {
   const main = document.getElementById('main');
   main.innerHTML = `
     ${freshnessBanner(modifiedTime)}
@@ -596,7 +608,50 @@ function render(md, modifiedTime, luckyDay) {
       <span class="date-pill">最終更新 ${fmtDate(modifiedTime)}</span>
       ${luckyDay ? `<span class="luck-pill">📅 ${luckyDay}</span>` : ''}
     </div>
+    ${lectinCardHTML(lectin)}
     <div class="brief-body">${markdownToHtml(md)}</div>`;
+}
+
+/* ✦ 明日の予告カード（V-2）：前夜にスクロール無しで目に入る専用カード。
+   本文の「## ✦ 明日の予告」節は正本としてそのまま残す（二重表示で可）。
+   markdownToHtmlは通さない（8/25絵文字例外の再発防止）——エスケープ＋改行のみ。 */
+function _lxEsc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function lectinCardHTML(nx){
+  if (!nx || typeof nx !== 'object') return '';
+  const wd=['日','月','火','水','木','金','土'];
+  let dstr='', past=false;
+  if (nx.date && /^\d{4}-\d{2}-\d{2}$/.test(nx.date)) {
+    const dt=new Date(nx.date+'T00:00:00');
+    dstr=`${dt.getMonth()+1}/${dt.getDate()} ${wd[dt.getDay()]}`;
+    const today=new Date(); today.setHours(0,0,0,0);
+    past = dt < today;
+  }
+  if (nx.skipped) {
+    return `<div class="bv-lectin bv-lectin-skip">✦ 明日の予告${dstr?`（${_lxEsc(dstr)}）`:''}：省略——${_lxEsc(nx.skipReason||'')}</div>`;
+  }
+  if (!nx.experimentId && !nx.title) return '';
+  const isNew = Array.isArray(nx.samples) && nx.samples.length > 0;
+  const rel = nx.relatedExperimentId ? ` × ${_lxEsc(nx.relatedExperimentId)}「${_lxEsc(nx.relatedExperimentTitle||'')}」` : '';
+  let body='';
+  if (isNew) {
+    body = `
+      <div class="bv-lx-row"><span class="bv-lx-k">お題</span><span>${_lxEsc(nx.experimentId)}「${_lxEsc(nx.title)}」${rel}</span></div>
+      ${nx.focusQuestion?`<div class="bv-lx-sub">（重点の問い：${_lxEsc(nx.focusQuestion)}）</div>`:''}
+      <div class="bv-lx-k" style="margin-top:7px;">やり方サンプル（どれでも・自分流でも可）</div>
+      ${nx.samples.map((sm,i)=>`<div class="bv-lx-smp">${['①','②','③','④','⑤'][i]||('・')} ${_lxEsc(sm)}</div>`).join('')}
+      ${nx.whyNow?`<div class="bv-lx-row" style="margin-top:7px;"><span class="bv-lx-k">なぜ今</span><span>${_lxEsc(nx.whyNow)}</span></div>`:''}
+      ${nx.signal?`<div class="bv-lx-row"><span class="bv-lx-k">合図</span><span>${_lxEsc(nx.signal)}</span></div>`:''}`;
+  } else {
+    /* 9/21以前の旧形式フォールバック：お題／場面／今夜準備（作り込まない） */
+    body = `
+      <div class="bv-lx-row"><span class="bv-lx-k">お題</span><span>${_lxEsc(nx.experimentId)}「${_lxEsc(nx.title)}」${rel}</span></div>
+      ${nx.targetSchedule?`<div class="bv-lx-row"><span class="bv-lx-k">場面</span><span>${_lxEsc(nx.targetSchedule)}</span></div>`:''}
+      ${nx.prepTonight?`<div class="bv-lx-row"><span class="bv-lx-k">今夜準備</span><span>${_lxEsc(nx.prepTonight)}</span></div>`:''}`;
+  }
+  return `<details class="bv-lectin${past?' bv-lectin-past':''}" open>
+    <summary>✦ 明日の予告${dstr?`（${_lxEsc(dstr)}）`:''}${past?`<span class="bv-lx-pastnote">予告は ${_lxEsc(dstr)} 分</span>`:''}</summary>
+    <div class="bv-lx-body">${body}</div>
+  </details>`;
 }
 
 function switchTab(tab) {
