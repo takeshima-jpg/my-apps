@@ -1661,6 +1661,7 @@ function lxParseImport(text){
   return {
     experimentId: idM?idM[0].toUpperCase():'',
     relatedExperimentId: (relM&&idM&&relM[0].toUpperCase()!==idM[0].toUpperCase())?relM[0].toUpperCase():(relM&&!idM?relM[0].toUpperCase():''),
+    ...((relM&&relRaw&&/再演/.test(relRaw))?{relatedNote:'再演'}:{}),   /* 追補K：再演の印（集計用・表示不使用） */
     date: dateM?dateM[0]:tod(),
     usedScene: get(['使った場面','使用場面','場面']),
     people: get(['関係者','関わった人','people']),
@@ -1707,6 +1708,7 @@ function lxImportSave(master){
     logs.unshift({
       id:'log_'+(parsed.date||tod()).replace(/-/g,'')+'_'+Math.random().toString(36).slice(2,8),
       experimentId:parsed.experimentId,relatedExperimentId:parsed.relatedExperimentId||'',date:parsed.date,source:'import',
+      ...(parsed.relatedNote?{relatedNote:parsed.relatedNote}:{}),   /* 追補K：再演の印を保存ログへ引き継ぐ */
       usedScene:parsed.usedScene||'',
       people:(parsed.people||'').split(/[,、，]/).map(function(s){return s.trim();}).filter(Boolean),
       actualAction:parsed.actualAction||'',insight:parsed.insight||'',nextChange:parsed.nextChange||'',
