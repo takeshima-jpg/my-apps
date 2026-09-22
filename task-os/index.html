@@ -1915,6 +1915,21 @@ function autoGenLecticaShot(){
 
     const buildTitle=()=>(sanboShot&&sanboShot.title)||('今日のLectica実験：'+(pending.title||pending.selectedExperimentTitle||sanboExp.title||sanboExp.id));
     const buildCat=()=>(sanboShot&&sanboShot.category)||'Lectica';
+    /* ✦今日の実験の全文（お題×関連・重点の問い・やり方サンプル・なぜ今・合図）をShotに構造化保存。
+       Shot OSが全文カードとして表示する（無い旧Shotはmemoパース表示のまま＝後方互換）。パッチAI形式・旧形式両対応 */
+    const buildDetail=()=>{ const d={
+        experimentId: sanboExp.id,
+        title: pending.title||pending.selectedExperimentTitle||sanboExp.title||'',
+        category: pending.category||'',
+        relatedExperimentId: pending.relatedExperimentId||'',
+        relatedExperimentTitle: pending.relatedExperimentTitle||'',
+        focusQuestion: pending.focusQuestion||'',
+        samples: Array.isArray(pending.samples)?pending.samples.filter(x=>typeof x==='string'&&x.trim()):[],
+        whyNow: pending.whyNow||'',
+        signal: pending.signal||'',
+      };
+      return (d.samples.length||d.focusQuestion||d.whyNow||d.signal||d.relatedExperimentId)?d:null;
+    };
     const promoteMaster=()=>{ try{ const e=byId(sanboExp.id); if(e&&e.status==='not_started'){ e.status='active'; localStorage.setItem('lectica_experiments_master_v1',JSON.stringify(master)); } }catch(_){} };
 
     // ① 置き換え：random由来かつ未完了(todo/doing)のShotを提案で上書き（移行期の掃除）
@@ -1924,6 +1939,7 @@ function autoGenLecticaShot(){
       cur.title=buildTitle();
       cur.category=buildCat();
       cur.memo=lecticaMemo(sanboShot&&sanboShot.memo,sanboExp.id);
+      cur.lecticaDetail=buildDetail();
       cur.lecticaSource='sanbo';   // 以降の再取り込みで二重差し替えしない
       cur.updatedAt=new Date().toISOString();
       shot[replaceable.i]=cur;
@@ -1940,7 +1956,7 @@ function autoGenLecticaShot(){
     // ここまで来る＝当日のLecticaが無い or done/pending/rejected のみ、かつ提案は別ID → 新規追加
     // （実行済みの古いものは履歴として残し、今日の提案を別途表示。誤って完了にしても再出題される）
     const now=new Date().toISOString();
-    shot.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title:buildTitle(),category:buildCat(),priority:'normal',status:'todo',dueDate:today,memo:lecticaMemo(sanboShot&&sanboShot.memo,sanboExp.id),lecticaSource:'sanbo',createdAt:now,completedAt:null,updatedAt:now});
+    shot.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title:buildTitle(),category:buildCat(),priority:'normal',status:'todo',dueDate:today,memo:lecticaMemo(sanboShot&&sanboShot.memo,sanboExp.id),lecticaDetail:buildDetail(),lecticaSource:'sanbo',createdAt:now,completedAt:null,updatedAt:now});
     localStorage.setItem('shot-task-os-v1',JSON.stringify(shot));
     promoteMaster();
     _lxlog('create', todaysCount?'当日は実行済み等のみ→提案を新規追加':'当日Shot0件→提案から新規生成');
