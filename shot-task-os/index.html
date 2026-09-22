@@ -338,6 +338,9 @@ select option { background: var(--surface); }
 }
 /* Lecticaカードの実験内容フル表示（開かずに読める・既定展開） */
 .lx-detail { margin-top: 6px; border-left: 2px solid var(--purple, #7c5cff); padding-left: 10px; }
+.lx-sample { line-height: 1.65; }
+.lx-samples-note { display: block; font-size: 11px; color: var(--text3, #94a3b8); margin-bottom: 2px; }
+.lx-fval-samples { display: block; }
 .lx-field { display: flex; gap: 8px; font-size: 13px; line-height: 1.6; margin: 2px 0; }
 .lx-flabel { flex-shrink: 0; min-width: 84px; color: var(--text3); font-weight: 700; }
 .lx-fval { color: var(--text); white-space: pre-line; word-break: break-word; }
@@ -1222,10 +1225,25 @@ function lecticaFields(memo) {
   return f;
 }
 // Lectica実験内容を開かずに読める形で展開（既定展開・折りたたみ無し）。
-function renderLecticaDetail(memo) {
+// t.lecticaDetail（同期が保存する✦今日の実験の構造化全文）があれば全文カード、無い旧Shotはmemoパース表示（後方互換）。
+function renderLecticaDetail(t) {
+  const d = (t && typeof t === 'object' && t.lecticaDetail) ? t.lecticaDetail : null;
+  const memo = (t && typeof t === 'object') ? t.memo : t;
+  const row = (lbl, val, extra) => val ? `<div class="lx-field${extra||''}"><span class="lx-flabel">${escH(lbl)}</span><span class="lx-fval">${escH(val)}</span></div>` : '';
+  if (d) {
+    const rel = d.relatedExperimentId ? ` × ${d.relatedExperimentId}「${d.relatedExperimentTitle||''}」` : '';
+    const odai = `${d.experimentId||''}「${d.title||''}」${rel}`;
+    const samples = (d.samples||[]).map((sm,i)=>`<div class="lx-sample">${['①','②','③','④','⑤'][i]||'・'} ${escH(sm)}</div>`).join('');
+    return `<div class="lx-detail">`
+      + row('お題', odai)
+      + row('重点の問い', d.focusQuestion)
+      + (samples ? `<div class="lx-field"><span class="lx-flabel">やり方</span><span class="lx-fval lx-fval-samples"><span class="lx-samples-note">（どれでも・自分流でも可）</span>${samples}</span></div>` : '')
+      + row('なぜ今', d.whyNow)
+      + row('合図', d.signal)
+      + `</div>`;
+  }
   const f = lecticaFields(memo);
   if (!f) return null;
-  const row = (lbl, val, extra) => val ? `<div class="lx-field${extra||''}"><span class="lx-flabel">${escH(lbl)}</span><span class="lx-fval">${escH(val)}</span></div>` : '';
   return `<div class="lx-detail">${row('重点の問い', f.q)}${row('実験', f.exp)}${row('使う場面', f.scene)}${row('完了条件', f.done)}${row('今日振り返るなら', f.review, ' lx-review')}</div>`;
 }
 // Lecticaの完了✔は確認を挟む（開くボタン隣での誤爆対策）。
@@ -1368,7 +1386,7 @@ function buildCardHTML(t) {
   // Lecticaは✦枠の構造化5項目を展開表示（あれば）。無ければ従来どおりmemo全文。
   let memo = '';
   if (t.category === 'Lectica') {
-    const detail = renderLecticaDetail(t.memo);
+    const detail = renderLecticaDetail(t);
     memo = detail || (t.memo ? `<div class="task-memo">${renderMemo(t.memo)}</div>` : '');
   } else {
     memo = t.memo ? `<div class="task-memo">${renderMemo(t.memo)}</div>` : '';
