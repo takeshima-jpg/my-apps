@@ -376,6 +376,28 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 @media (max-width: 600px) { .reflect-area { padding: 0 16px; } .rf-th { display: none; } }
 .centerpin-area { padding: 14px 32px 0; width: 100%; box-sizing: border-box; }
 .cp-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; }
+/* 行動記録（ゆみさん負荷） */
+.yumi-area { padding: 10px 32px 0; width: 100%; box-sizing: border-box; }
+@media (max-width: 600px) { .yumi-area { padding: 10px 16px 0; } .yl-stats { gap: 12px; } }
+.yl-row { display: flex; gap: 8px; }
+.yl-btn { flex: 1; padding: 11px 0; background: var(--bg3); border: 2px solid var(--border); border-radius: var(--radius); font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; color: var(--text2); font-family: var(--font-body); min-height: 44px; }
+.yl-btn:hover { border-color: var(--border2); }
+.yl-btn.selected[data-yl="yes"], .yl-btn.selected[id$="-yes"] { border-color: var(--sat-great); background: rgba(62,207,142,0.1); color: var(--sat-great); }
+.yl-btn.selected[data-yl="no"],  .yl-btn.selected[id$="-no"]  { border-color: var(--sat-meh);   background: rgba(245,200,66,0.1); color: #b8900f; }
+.yl-note { margin-top: 8px; }
+.yl-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; }
+.yl-card-alert { border-color: var(--sat-bad); background: rgba(255,92,92,0.04); }
+.yl-head { font-size: .78rem; color: var(--text3); font-weight: 600; margin-bottom: 8px; }
+.yl-sub { font-size: .85rem; color: var(--text3); }
+.yl-stats { display: flex; gap: 22px; flex-wrap: wrap; }
+.yl-stat { display: flex; align-items: baseline; gap: 6px; }
+.yl-num { font-family: var(--font-mono); font-size: 1.35rem; font-weight: 700; color: var(--text); }
+.yl-num-no { color: #b8900f; }
+.yl-lbl { font-size: .82rem; color: var(--text2); }
+.yl-alert { margin-top: 10px; padding: 9px 12px; border-radius: 8px; background: rgba(255,92,92,0.1); color: var(--sat-bad); font-weight: 700; font-size: .92rem; }
+.log-yumi { font-size: .9rem; }
+.log-yumi.yes { color: var(--sat-great); }
+.log-yumi.no { color: var(--text3); }
 .cp-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
 .cp-eye { font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; color: var(--text3); }
 .cp-open { font-size: 12px; padding: 4px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--text2); white-space: nowrap; }
@@ -417,6 +439,14 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
     <div class="field">
       <div class="field-label">できごと <span class="required">必須</span></div>
       <textarea id="eventsInput" placeholder="今週起きたこと、気になったこと、誰かとの会話…&#10;箇条書きでもOK" rows="4"></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label">🏠 今日、ゆみさんの負荷を一つ引き取ったか</div>
+      <div class="yl-row">
+        <button type="button" class="yl-btn" data-yl="yes">はい</button>
+        <button type="button" class="yl-btn" data-yl="no">いいえ</button>
+      </div>
+      <input type="text" id="yumiLoadNote" class="yl-note" placeholder="引き取ったこと（任意・1行）" style="display:none">
     </div>
     <div class="field">
       <div class="field-label">△ 違和感 <span class="optional">任意</span></div>
@@ -524,6 +554,7 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 
     <!-- 今週のセンターピン（Project OS 進行中PJ） -->
     <div class="centerpin-area" id="centerpinArea" style="display:none"></div>
+    <div class="yumi-area" id="yumiArea" style="display:none"></div>
 
     <!-- VISIONエリア -->
     <div class="vision-area" id="visionArea"></div>
@@ -559,6 +590,12 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 'use strict';
 
 const DB_KEY = 'oneday_logs_v1';
+/* ── 行動記録（ゆみさん負荷の引き取り）──
+   「ゆみさんと家庭円満で生涯安泰プロジェクト」の検知機能。自分の行動の記録だけで「任せ」に気付く。
+   ログの任意項目 yumiLoad:'yes'|'no' / yumiLoadNote。項目が無い日（旧ログ・未回答）は未記録として集計から除外。 */
+const YUMI_ALERT_WEEKDAY_NO = 3;     // 平日の「いいえ」がこの日数連続したら警告
+const YUMI_SUMMARY_DAYS     = 7;     // 「はい」日数を数える直近の日数
+const YUMI_STREAK_LOOKBACK  = 21;    // 連続判定でさかのぼる最大日数（古い記録で警告が続かないように）
 const RV_KEY = 'oneday_reviews_v1';
 
 let state = { logs:[], reviews:[], filter:'all', search:'', editId:null, view: 'log', selected:new Set() };
@@ -1028,10 +1065,70 @@ function render() {
   document.getElementById('weekDisplay').textContent = `W ${currentWeekRange()}`;
   renderLogList();
   renderCenterPin();
+  renderYumiSummary();
   renderReflectToday();
 }
 
 // ── Project OS（pos_v4）から進行中PJのセンターピンを読み、ログ画面の先頭に表示 ──
+function aixToggleYumi(i, v) {
+  const cur = window['_aixYumi_' + i] || '';
+  const nv = cur === v ? '' : v;
+  window['_aixYumi_' + i] = nv;
+  ['yes','no'].forEach(k => { const b = document.getElementById('aix-yl-' + i + '-' + k); if (b) b.classList.toggle('selected', k === nv); });
+  const n = document.getElementById('aix-yln-' + i); if (n) n.style.display = nv === 'yes' ? 'block' : 'none';
+}
+
+// ── 行動記録サマリ（センターピン直下）：直近7日の「はい」日数と、平日「いいえ」の連続 ──
+function yumiDayMap() {
+  /* 同じ日に複数ログがある場合：どれか1つでも「はい」ならその日は「はい」。回答のある日だけが記録日 */
+  const m = {};
+  (state.logs || []).forEach(l => {
+    if (!l || !l.date || (l.yumiLoad !== 'yes' && l.yumiLoad !== 'no')) return;
+    m[l.date] = (m[l.date] === 'yes' || l.yumiLoad === 'yes') ? 'yes' : 'no';
+  });
+  return m;
+}
+function yumiStats(baseDate) {
+  const m = yumiDayMap();
+  const d0 = baseDate ? new Date(baseDate + 'T00:00:00') : new Date();
+  const ds = k => { const x = new Date(d0); x.setDate(x.getDate() - k); return x; };
+  const key = x => x.toLocaleDateString('sv');
+  let yes = 0, recorded = 0;
+  for (let k = 0; k < YUMI_SUMMARY_DAYS; k++) { const v = m[key(ds(k))]; if (v) { recorded++; if (v === 'yes') yes++; } }
+  /* 平日「いいえ」の連続：今日からさかのぼり、土日と未記録の平日は数えずに飛ばす。「はい」の平日で止まる */
+  let streak = 0;
+  for (let k = 0; k < YUMI_STREAK_LOOKBACK; k++) {
+    const x = ds(k), wd = x.getDay();
+    if (wd === 0 || wd === 6) continue;
+    const v = m[key(x)];
+    if (!v) continue;
+    if (v === 'yes') break;
+    streak++;
+  }
+  return { yes, recorded, unrecorded: YUMI_SUMMARY_DAYS - recorded, streak, alert: streak >= YUMI_ALERT_WEEKDAY_NO, any: Object.keys(m).length > 0 };
+}
+function renderYumiSummary() {
+  const area = document.getElementById('yumiArea');
+  if (!area) return;
+  const aixView = document.getElementById('aix-view');
+  if (aixView && aixView.style.display === 'block') { area.innerHTML = ''; area.style.display = 'none'; return; }
+  const st = yumiStats();
+  if (!st.any) {
+    area.style.display = 'block';
+    area.innerHTML = `<div class="yl-card"><div class="yl-head">🏠 ゆみさんの負荷を引き取ったか</div><div class="yl-sub">まだ記録がありません。「＋記録する」で今日の分から付けられます。</div></div>`;
+    return;
+  }
+  area.style.display = 'block';
+  area.innerHTML = `<div class="yl-card${st.alert ? ' yl-card-alert' : ''}">
+      <div class="yl-head">🏠 ゆみさんの負荷を引き取ったか</div>
+      <div class="yl-stats">
+        <div class="yl-stat"><span class="yl-num">${st.yes}/${st.recorded}</span><span class="yl-lbl">日「はい」（直近${YUMI_SUMMARY_DAYS}日${st.unrecorded ? '・未記録' + st.unrecorded + '日' : ''}）</span></div>
+        <div class="yl-stat"><span class="yl-num${st.streak ? ' yl-num-no' : ''}">${st.streak}</span><span class="yl-lbl">日 平日「いいえ」連続</span></div>
+      </div>
+      ${st.alert ? `<div class="yl-alert">⚠ 平日が任せになっています。自分からドアを開ける</div>` : ''}
+    </div>`;
+}
+
 function renderCenterPin() {
   const area = document.getElementById('centerpinArea');
   if (!area) return;
@@ -1291,6 +1388,9 @@ function buildCard(log) {
   const tagsHtml  = '';
   const flagsHtml = (log.flags||[]).filter(f => f === 'unease' || f === 'deep').map(f => `<span class="flag-pill">${FLAG_LABELS[f]||f}</span>`).join('');
   const uneaseHtml = log.unease ? `<div class="log-unease">⚠ ${escHtml(log.unease)}</div>` : '';
+  const yumiHtml = log.yumiLoad === 'yes'
+    ? `<div class="log-yumi yes">🏠 引き取った${log.yumiLoadNote ? '：' + escHtml(log.yumiLoadNote) : ''}</div>`
+    : (log.yumiLoad === 'no' ? `<div class="log-yumi no">🏠 引き取れず</div>` : '');
   const checkHtml  = state.view === 'log'
     ? `<div class="card-check">${state.selected.has(log.id) ? '✓' : ''}</div>`
     : '';
@@ -1317,6 +1417,7 @@ function buildCard(log) {
     </div>
     <div class="log-events truncated">${escHtml(log.events||'')}</div>
     ${uneaseHtml}
+    ${yumiHtml}
     ${(tagsHtml||flagsHtml) ? `<div class="log-footer">${tagsHtml}${flagsHtml}</div>` : ''}
   `;
 
@@ -1370,6 +1471,13 @@ function escHtml(str) {
 
 // ENTRY MODAL
 let selectedSat = '', selectedTags = new Set(), selectedFlags = new Set(), selectedConviction = '';
+let selectedYumi = '';   // 'yes' | 'no' | ''（未回答＝項目を書かない）
+function ylApply(v) {
+  selectedYumi = v;
+  document.querySelectorAll('#entryModal .yl-btn').forEach(b => b.classList.toggle('selected', b.dataset.yl === v));
+  const note = document.getElementById('yumiLoadNote');
+  if (note) note.style.display = v === 'yes' ? 'block' : 'none';
+}
 
 function buildDateButtons(editDate = null) {
   const row = document.getElementById('dateBtnRow');
@@ -1444,6 +1552,7 @@ function buildDateButtons(editDate = null) {
 function openEntryModal(editId = null) {
   state.editId = editId;
   selectedSat = ''; selectedTags = new Set(); selectedFlags = new Set();
+  document.getElementById('yumiLoadNote').value = ''; ylApply('');
   document.getElementById('modalTitle').textContent = editId ? '記録を編集' : '今週を記録';
   document.getElementById('eventsInput').value = '';
   document.getElementById('unease').value = '';
@@ -1462,6 +1571,8 @@ function openEntryModal(editId = null) {
       document.getElementById('dateBtnRow').style.display = 'none';
       document.getElementById('eventsInput').value = log.events || '';
       document.getElementById('unease').value = log.unease || '';
+      ylApply(log.yumiLoad === 'yes' || log.yumiLoad === 'no' ? log.yumiLoad : '');
+      document.getElementById('yumiLoadNote').value = log.yumiLoadNote || '';
       selectedSat = log.satisfaction || '';
       selectedTags = new Set(log.tags || []);
       selectedFlags = new Set(log.flags || []);
@@ -1496,11 +1607,17 @@ function saveEntry() {
   const entryDate = document.getElementById('entryDate').value || today();
   // 既存データ互換：learning フラグがあれば学びタグを付与、flagsから除去しない（表示のみ除外済み）
 
+  const ylNote = selectedYumi === 'yes' ? document.getElementById('yumiLoadNote').value.trim() : '';
+  const applyYumi = o => {   /* 回答があれば書く／未回答なら項目を持たない（旧ログと同じ＝未記録） */
+    delete o.yumiLoad; delete o.yumiLoadNote;
+    if (selectedYumi === 'yes' || selectedYumi === 'no') { o.yumiLoad = selectedYumi; if (ylNote) o.yumiLoadNote = ylNote; }
+    return o;
+  };
   if (state.editId) {
     const idx = state.logs.findIndex(l => l.id === state.editId);
-    if (idx >= 0) state.logs[idx] = { ...state.logs[idx], date:entryDate, satisfaction:selectedSat, events, unease:document.getElementById('unease').value.trim(), tags:[...selectedTags], flags:[...selectedFlags], updatedAt:new Date().toISOString() };
+    if (idx >= 0) state.logs[idx] = applyYumi({ ...state.logs[idx], date:entryDate, satisfaction:selectedSat, events, unease:document.getElementById('unease').value.trim(), tags:[...selectedTags], flags:[...selectedFlags], updatedAt:new Date().toISOString() });
   } else {
-    state.logs.push({ id:Date.now().toString(), date:entryDate, satisfaction:selectedSat, events, unease:document.getElementById('unease').value.trim(), tags:[...selectedTags], flags:[...selectedFlags], archived:false, createdAt:new Date().toISOString() });
+    state.logs.push(applyYumi({ id:Date.now().toString(), date:entryDate, satisfaction:selectedSat, events, unease:document.getElementById('unease').value.trim(), tags:[...selectedTags], flags:[...selectedFlags], archived:false, createdAt:new Date().toISOString() }));
   }
   saveData(); closeEntryModal(); render();
   toast(state.editId ? '更新しました ✓' : '記録しました ✓');
@@ -1651,6 +1768,9 @@ function bindEvents() {
   document.getElementById('closeModal').addEventListener('click', closeEntryModal);
   document.getElementById('entryModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeEntryModal(); });
 
+  document.querySelectorAll('#entryModal .yl-btn').forEach(btn => btn.addEventListener('click', () => {
+    ylApply(selectedYumi === btn.dataset.yl ? '' : btn.dataset.yl);   // 同じボタンをもう一度押すと未回答に戻る
+  }));
   document.querySelectorAll('.sat-btn').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('.sat-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected'); selectedSat = btn.dataset.value;
@@ -1835,6 +1955,14 @@ function renderAixDraftList() {
         <textarea id="aix-events-${i}" oninput="this.style.height='auto';this.style.height=Math.max(140,this.scrollHeight)+'px'" style="width:100%;min-height:140px;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || d.text || d.content || ''}</textarea>
       </div>
       <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">🏠 今日、ゆみさんの負荷を一つ引き取ったか</div>
+        <div class="yl-row">
+          <button type="button" class="yl-btn" id="aix-yl-${i}-yes" onclick="aixToggleYumi(${i},'yes')">はい</button>
+          <button type="button" class="yl-btn" id="aix-yl-${i}-no" onclick="aixToggleYumi(${i},'no')">いいえ</button>
+        </div>
+        <input type="text" id="aix-yln-${i}" class="yl-note" placeholder="引き取ったこと（任意・1行）" style="display:none;font-size:13px;padding:8px 12px;">
+      </div>
+      <div style="margin-bottom:14px;">
         <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">△ 違和感 <span style="font-size:10px;">任意</span></div>
         <input type="text" id="aix-unease-${i}" placeholder="なんかモヤっとしたこと、一言で" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);font-family:var(--font-body);font-size:13px;">
       </div>
@@ -1884,6 +2012,8 @@ function aixApproveByIdx(i) {
   const satisfaction = window['_aixSat_' + i] || '';
   const tags = [];   /* ＋記録するに合わせタグ入力は廃止（既存ログのタグ表示・データは不変） */
   const flags = window['_aixFlags_' + i] || [];
+  const yumi = window['_aixYumi_' + i] || '';
+  const yumiNote = yumi === 'yes' ? ((document.getElementById('aix-yln-' + i) || {}).value || '').trim() : '';
   let log = state.logs.find(l => l.date === targetDate);
   if (log) {
     log.events = log.events ? log.events + '\n' + events : events;
@@ -1891,9 +2021,12 @@ function aixApproveByIdx(i) {
     if (satisfaction) log.satisfaction = satisfaction;
     if (tags.length) log.tags = [...new Set([...(log.tags||[]), ...tags])];
     if (flags.length) log.flags = [...new Set([...(log.flags||[]), ...flags])];
+    if (yumi) { log.yumiLoad = yumi; if (yumiNote) log.yumiLoadNote = yumiNote; else if (yumi === 'no') delete log.yumiLoadNote; }
     log.updatedAt = new Date().toISOString();
   } else {
-    state.logs.push({ id: Date.now().toString(), date: targetDate, satisfaction, events, unease, tags, flags, archived: false, createdAt: new Date().toISOString() });
+    const nl = { id: Date.now().toString(), date: targetDate, satisfaction, events, unease, tags, flags, archived: false, createdAt: new Date().toISOString() };
+    if (yumi) { nl.yumiLoad = yumi; if (yumiNote) nl.yumiLoadNote = yumiNote; }
+    state.logs.push(nl);
   }
   saveData();
   drafts.splice(i, 1); _aixSaveDrafts(drafts);
