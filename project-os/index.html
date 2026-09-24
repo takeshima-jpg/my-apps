@@ -873,6 +873,8 @@ textarea.fc.tall { min-height: 130px; }
   .det-one{padding:16px 14px 60px}
   .qa-btns .qa-btn{flex:1;min-width:72px}
 }
+.tl-group-lbl { font-size:.72rem; font-weight:700; color:var(--gray4); letter-spacing:.08em; margin:14px 0 6px; }
+.hc-spark.hc-edit { border-color: var(--navy); color: var(--navy); font-weight:700; }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -2039,13 +2041,10 @@ function collapsesHtml(p){
     <div class="det-fold-b">
       ${phases.length?`<div class="fold-sec"><div class="fold-lbl">重点テーマ</div>${phases.map(ph=>`<div class="fold-val">・${esc(ph.phase)} ${esc(ph.theme)}${ph.goal?' — '+esc(ph.goal):''}</div>`).join('')}</div>`:'<div style="font-size:.8rem;color:var(--gray3);margin-bottom:8px;">重点テーマは未設定</div>'}
       <div style="display:flex;gap:8px;margin-top:6px;">
-        <button class="btn btn-outline btn-xs" onclick="openProjModal('${p.id}')">✏ メタを編集</button>
         <button class="btn btn-danger btn-xs" onclick="delProj('${p.id}')">PJを削除</button>
+        <span style="font-size:.72rem;color:var(--gray3);align-self:center;">編集は画面上部の「✏ 編集」から</span>
       </div>
     </div>
-  </details>
-  <details class="det-fold"${op('records')} ontoggle="foldTgl('records',this)"><summary>旧イベント・記録一覧（シート由来）</summary>
-    <div class="det-fold-b">${paneRecords(p)}</div>
   </details>
   <details class="det-fold"${op('forks')} ontoggle="foldTgl('forks',this)"><summary>今後のスケジュール</summary>
     <div class="det-fold-b">${paneForks(p)}</div>
@@ -2064,6 +2063,7 @@ function renderDetail() {
     badge(p.priority,PRI[p.priority]||'bd-gray') +
     (p.deadline?`<span class="muted" style="font-size:.7rem;">期限 ${esc(p.deadline)}</span>`:'') +
     (p.owner?`<span class="muted" style="font-size:.7rem;">👤 ${esc(p.owner)}</span>`:'') +
+    `<button class="hc-spark hc-edit" onclick="openProjModal('${p.id}')" title="PJ名・状態・期限・ゴール・問い・次の一手・見立て・重点テーマを編集">✏ 編集</button>` +
     `<button class="hc-spark" onclick="sparkCopy('${p.id}')" title="このPJの核とムーブをコピーして壁打ちへ">🗣 壁打ちへ持っていく</button>` +
     `<button class="hc-spark" onclick="shareModal('${p.id}')" title="共有相手向けに項目を選んで書き出す">⇪ 共有用に書き出す</button>`;
   $$('tab-bar').innerHTML = '';
@@ -2169,27 +2169,32 @@ function paneOv(p){
 
 /* ── FORKS ── */
 function paneForks(p){
-  const items = [...(p.forks||[])].sort((a,b)=>(a.date||'').localeCompare(b.date||''));  // 昇順（期日が近い順）
+  /* 2026-09 統合：旧「イベント・記録一覧（シート由来）」をこのタイムラインへ統合。
+     分岐(forks)＋決定(decisions)・学習(learnings)・イベント(events)を1本に並べる。
+     並び：予定（近い順）→ これまで（新しい順）。データ構造・保存形式は不変。 */
+  const todayStr = today();
   const sel = bulkMode.fork;
-  const keys = items.map(f => 'forks:' + f.id);
-  return `
-    <div class="forks-wrap">
-      <div class="forks-intro">
-        <strong>予定</strong>＝これから起きること／<strong>完了</strong>＝決着した分岐。日付順に並びます。<br>
-        日付・ステータスは各カード上で直接編集できます（スプレッドシートの種別=<strong>分岐</strong>の行もここに取り込まれます）。
-      </div>
-      ${items.length ? `<div class="bulk-head">
-        <span style="font-size:.75rem;color:var(--gray3);">${items.length}件</span>
-        <button class="btn btn-outline btn-xs" onclick="bulkToggle('fork')">${sel ? '✕ 選択をやめる' : '☑ 選択'}</button>
-      </div>` : ''}
-      ${sel ? bulkBar('fork', p.id, keys, true) : ''}
-      <div class="timeline">
-        ${items.map(f=>`
+  const items = [];
+  (p.forks||[]).forEach(f => items.push({kind:'fork', field:'forks', id:f.id, date:f.date||'', future:f.status==='future', f}));
+  const REC = {decisions:['決定','bd-gray'], learnings:['学習','bd-teal'], events:['イベント','bd-gray']};
+  (p.decisions||[]).forEach(d => items.push({kind:'rec', field:'decisions', id:d.id, date:d.date||'', future:false,
+    title:d.content||d.title||'', body:d.reason||'', sub:d.retrospective||'', who:d.stakeholders||''}));
+  (p.learnings||[]).forEach(l => items.push({kind:'rec', field:'learnings', id:l.id, date:l.date||'', future:false,
+    title:l.event||'', body:l.learning||'', sub:l.improvement||'', who:''}));
+  (p.events||[]).forEach(e => items.push({kind:'rec', field:'events', id:e.id, date:e.date||'',
+    future:!!(e.date && e.date > todayStr && e.status !== '完了'), status:e.status||'',
+    title:e.title||'', body:e.content||'', sub:e.result||'', who:e.stakeholders||e.assignee||''}));
+  const list = items.filter(it => it.kind==='fork' || (it.title && it.title.trim()));   /* タイトル空の旧行はゴミとして非表示（従来どおり） */
+  const fut  = list.filter(it => it.future).sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+  const past = list.filter(it => !it.future).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const keys = list.map(it => it.field + ':' + it.id);
+  const cb = it => sel ? `<input type="checkbox" class="bulk-cb" ${bulkSel.fork.includes(it.field+':'+it.id)?'checked':''} onchange="bulkPick('fork','${it.field}:${it.id}')">` : '';
+  const forkCard = it => { const f = it.f; return `
           <div class="tl-item">
             <div class="tl-dot ${f.status||'past'}" style="${f.status==='future'?'border-color:var(--orange);box-shadow:0 0 0 3px var(--ora-s);':'border-color:var(--navy);background:var(--navy);'}"></div>
             <div class="tl-card ${f.status==='future'?'future-card':''}">
               <div style="display:flex;gap:8px;align-items:flex-start;">
-                ${sel ? `<input type="checkbox" class="bulk-cb" ${bulkSel.fork.includes('forks:'+f.id)?'checked':''} onchange="bulkPick('fork','forks:${f.id}')">` : ''}
+                ${cb(it)}
                 <div style="flex:1;">
                   <div class="tl-date">
                     <input type="date" class="tl-inline-date" value="${esc(f.date||'')}" onchange="forkInlineSet('${p.id}','${f.id}','date',this.value)">
@@ -2197,6 +2202,7 @@ function paneForks(p){
                       <option value="future"${f.status==='future'?' selected':''}>予定</option>
                       <option value="past"${f.status!=='future'?' selected':''}>完了</option>
                     </select>
+                    ${badge('分岐','bd-orange')}
                   </div>
                   <div class="tl-title">${esc(f.title)}</div>
                 </div>
@@ -2210,10 +2216,51 @@ function paneForks(p){
                 <button class="btn btn-danger  btn-xs" onclick="delItem('${p.id}','forks','${f.id}')">削除</button>
               </div>`}
             </div>
-          </div>`).join('')}
+          </div>`; };
+  const recCard = it => { const [lbl,col] = REC[it.field]; return `
+          <div class="tl-item">
+            <div class="tl-dot" style="${it.future?'border-color:var(--orange);box-shadow:0 0 0 3px var(--ora-s);':'border-color:var(--gray3);background:var(--gray3);'}"></div>
+            <div class="tl-card ${it.future?'future-card':''}">
+              <div style="display:flex;gap:8px;align-items:flex-start;">
+                ${cb(it)}
+                <div style="flex:1;">
+                  <div class="tl-date"><span style="font-size:.75rem;color:var(--gray4);">${esc(it.date||'日付なし')}</span> ${badge(lbl,col)} ${it.status==='完了'?badge('完了','bd-gray'):''}</div>
+                  <div class="tl-title">${esc(it.title)}</div>
+                </div>
+              </div>
+              ${it.body?`<div class="tl-what">${esc(it.body)}</div>`:''}
+              ${it.sub ?`<div class="tl-why">${esc(it.sub)}</div>`:''}
+              ${it.who ?`<div class="tl-meta">👤 ${esc(it.who)}</div>`:''}
+              ${sel ? '' : `<div class="tl-actions">
+                ${it.field==='events'&&it.status!=='完了'?`<button class="btn btn-outline btn-xs" onclick="recInlineDone('${p.id}','${it.id}')">✓ 完了</button>`:''}
+                <button class="btn btn-danger btn-xs" onclick="delItem('${p.id}','${it.field}','${it.id}')">削除</button>
+              </div>`}
+            </div>
+          </div>`; };
+  const card = it => it.kind==='fork' ? forkCard(it) : recCard(it);
+  return `
+    <div class="forks-wrap">
+      <div class="forks-intro">
+        <strong>予定</strong>（近い順）→ <strong>これまで</strong>（新しい順）の1本の時系列です。分岐・決定・学習・イベントをまとめて表示します。<br>
+        分岐の日付・ステータスは各カード上で直接編集できます（スプレッドシート由来の旧記録もここに並びます）。
       </div>
+      ${list.length ? `<div class="bulk-head">
+        <span style="font-size:.75rem;color:var(--gray3);">予定 ${fut.length}件 ／ これまで ${past.length}件</span>
+        <button class="btn btn-outline btn-xs" onclick="bulkToggle('fork')">${sel ? '✕ 選択をやめる' : '☑ 選択'}</button>
+      </div>` : ''}
+      ${sel ? bulkBar('fork', p.id, keys, true) : ''}
+      ${fut.length ? `<div class="tl-group-lbl">予定</div><div class="timeline">${fut.map(card).join('')}</div>` : ''}
+      ${past.length ? `<div class="tl-group-lbl">これまで</div><div class="timeline">${past.map(card).join('')}</div>` : ''}
+      ${!list.length ? '<div class="empty"><div class="empty-i">🗓</div>予定・記録はまだありません。</div>' : ''}
       ${sel ? '' : `<button class="tl-add-btn" onclick="openForkModal('${p.id}')">＋ 分岐点を手動で追加</button>`}
     </div>`;
+}
+/* 統合タイムライン上の旧イベントを1件だけ完了にする */
+function recInlineDone(pid,id){
+  const p=proj(pid); if(!p) return;
+  const it=(p.events||[]).find(x=>x.id===id); if(!it) return;
+  it.status='完了'; it.updatedAt=new Date().toISOString();
+  touchProj(pid); save(); renderDetail(); toast('完了にしました');
 }
 
 /* ── RECORDS (記録: decisions + learnings + events) ── */
@@ -2503,7 +2550,7 @@ function bulkComplete(kind,pid){
     if(field!=='events'&&field!=='forks'){skipped++;return;}
     const it=(p[field]||[]).find(x=>x.id===id);
     if(!it)return;
-    it.status='完了'; it.updatedAt=new Date().toISOString(); done++;
+    it.status=(field==='forks')?'past':'完了'; it.updatedAt=new Date().toISOString(); done++;
   });
   bulkSel[kind]=[];
   touchProj(pid); save(); renderDetail();
