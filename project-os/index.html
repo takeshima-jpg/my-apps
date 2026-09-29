@@ -1252,6 +1252,28 @@ function load() {
 }
 function save() { localStorage.setItem(KEY, JSON.stringify(S)); }
 
+/* ── 2026-09 重点項目の呼び方（phaseLabel）──
+   PJごとに phases を「フェーズ（順番に進む段階）」「重点テーマ（並列の重点）」のどちらで呼ぶかを持つ。
+   任意フィールドで未設定＝'phase'。phases の中身は一切変えない。
+   Cowork も pos_v4 の phaseLabel を見て呼び分ける（未設定＝フェーズ）。 */
+function phaseWord(p){ return (p && p.phaseLabel === 'theme') ? '重点テーマ' : 'フェーズ'; }
+function phaseWordShort(p){ return (p && p.phaseLabel === 'theme') ? 'テーマ' : 'フェーズ'; }
+
+/* 既存データの一度だけの移行（冪等）：3Aグループ2030構想を「重点テーマ」に。
+   移行前に pos_v4 を退避（同名キーがあれば上書きしない）。他PJは未設定のまま＝フェーズ。 */
+const PHASELABEL_BK = 'pos_backup_phaselabel_20260927';
+function migratePhaseLabel(){
+  try{
+    const target = (S.projects||[]).find(p=>p.id==='s6n9vf1vgdx');
+    if(!target || target.phaseLabel) return;            /* 対象なし／既に値あり＝何もしない */
+    if(!localStorage.getItem(PHASELABEL_BK)) localStorage.setItem(PHASELABEL_BK, JSON.stringify(S));
+    target.phaseLabel='theme';
+    save();
+    console.info('[phaseLabel] s6n9vf1vgdx を重点テーマに移行（退避＝'+PHASELABEL_BK+'）');
+  }catch(e){ console.warn('phaseLabel migration skipped:',e); }
+}
+migratePhaseLabel();
+
 /* ══════════════════════════════════
    SEED DATA
 ══════════════════════════════════ */
@@ -1833,7 +1855,7 @@ function renderProjs() {
       ${p.goal ? `<div class="pc-goal">${esc(p.goal)}</div>` : ''}
       ${p.attentionIssue ? `<div class="pc-attention">⚠ ${esc(p.attentionIssue)}</div>` : ''}
       <div class="pc-stats">
-        ${curPhase ? `<span class="pc-stat" style="color:var(--navy);font-weight:600;">テーマ ${esc(curPhase.phase)} ${esc(curPhase.theme)}</span>` : ''}
+        ${curPhase ? `<span class="pc-stat" style="color:var(--navy);font-weight:600;">${phaseWordShort(p)} ${esc(curPhase.phase)} ${esc(curPhase.theme)}</span>` : ''}
         ${fkFuture ? `<span class="pc-stat">予定分岐 ${fkFuture}</span>` : ''}
         ${cstN     ? `<span class="pc-stat" style="color:var(--blue);">制約 ${cstN}</span>` : ''}
         ${evtN     ? `<span class="pc-stat">実行 ${evtN}</span>` : ''}
@@ -2037,9 +2059,9 @@ function collapsesHtml(p){
   const phases=(p.phases||[]);
   const op=k=>foldOpen[k]?' open':'';
   return `
-  <details class="det-fold"${op('meta')} ontoggle="foldTgl('meta',this)"><summary>詳細メタ（重点テーマ・PJ設定）</summary>
+  <details class="det-fold"${op('meta')} ontoggle="foldTgl('meta',this)"><summary>詳細メタ（${phaseWord(p)}・PJ設定）</summary>
     <div class="det-fold-b">
-      ${phases.length?`<div class="fold-sec"><div class="fold-lbl">重点テーマ</div>${phases.map(ph=>`<div class="fold-val">・${esc(ph.phase)} ${esc(ph.theme)}${ph.goal?' — '+esc(ph.goal):''}</div>`).join('')}</div>`:'<div style="font-size:.8rem;color:var(--gray3);margin-bottom:8px;">重点テーマは未設定</div>'}
+      ${phases.length?`<div class="fold-sec"><div class="fold-lbl">${phaseWord(p)}</div>${phases.map(ph=>`<div class="fold-val">・${esc(ph.phase)} ${esc(ph.theme)}${ph.goal?' — '+esc(ph.goal):''}</div>`).join('')}</div>`:`<div style="font-size:.8rem;color:var(--gray3);margin-bottom:8px;">${phaseWord(p)}は未設定</div>`}
       <div style="display:flex;gap:8px;margin-top:6px;">
         <button class="btn btn-danger btn-xs" onclick="delProj('${p.id}')">PJを削除</button>
         <span style="font-size:.72rem;color:var(--gray3);align-self:center;">編集は画面上部の「✏ 編集」から</span>
@@ -2063,7 +2085,7 @@ function renderDetail() {
     badge(p.priority,PRI[p.priority]||'bd-gray') +
     (p.deadline?`<span class="muted" style="font-size:.7rem;">期限 ${esc(p.deadline)}</span>`:'') +
     (p.owner?`<span class="muted" style="font-size:.7rem;">👤 ${esc(p.owner)}</span>`:'') +
-    `<button class="hc-spark hc-edit" onclick="openProjModal('${p.id}')" title="PJ名・状態・期限・ゴール・問い・次の一手・見立て・重点テーマを編集">✏ 編集</button>` +
+    `<button class="hc-spark hc-edit" onclick="openProjModal('${p.id}')" title="PJ名・状態・期限・ゴール・問い・次の一手・見立て・${phaseWord(p)}を編集">✏ 編集</button>` +
     `<button class="hc-spark" onclick="sparkCopy('${p.id}')" title="このPJの核とムーブをコピーして壁打ちへ">🗣 壁打ちへ持っていく</button>` +
     `<button class="hc-spark" onclick="shareModal('${p.id}')" title="共有相手向けに項目を選んで書き出す">⇪ 共有用に書き出す</button>`;
   $$('tab-bar').innerHTML = '';
@@ -2109,7 +2131,7 @@ function paneOv(p){
 
   const phaseMapHtml = phases.length ? `
     <div class="ov-section">
-      <div class="ov-section-lbl">重点テーマ</div>
+      <div class="ov-section-lbl">${phaseWord(p)}</div>
       <div class="ov-phase-map">
         ${phases.map(ph => `
           <div class="ov-phase-item">
@@ -2415,19 +2437,24 @@ function openProjModal(pid){
     <div class="fg"><label class="fl">注意論点</label>${inp('fat',p?.attentionIssue,'リスク・要注意事項')}</div>
     <div class="fg"><label class="fl">成功条件</label>${ta('fsc',p?.successConditions)}</div>
     <div class="fg"><label class="fl">悪い未来</label>${ta('fbf',p?.badFuture,'このプロジェクトが失敗したらどうなるか')}</div>
-    <div class="fg"><label class="fl">センターピン</label>${ta('fcp',p?.centerPin,'成功の鍵となる最重要ポイント')}</div>`,
+    <div class="fg"><label class="fl">センターピン</label>${ta('fcp',p?.centerPin,'成功の鍵となる最重要ポイント')}</div>
+    <div class="fg"><label class="fl">重点項目の呼び方</label>${sel('fpl',['フェーズ（順番に進む段階）','重点テーマ（並列の重点）'],p?.phaseLabel==='theme'?'重点テーマ（並列の重点）':'フェーズ（順番に進む段階）')}</div>`,
   ()=>{
     const name=g('fn'); if(!name){alert('プロジェクト名を入力してください');return;}
     const data={name,status:g('fst'),priority:g('fpr'),
       sheetUrl:g('fsurl'),
       goal:g('fgo'),attentionIssue:g('fat'),successConditions:g('fsc'),
       badFuture:g('fbf'),centerPin:g('fcp'),
+      phaseLabel:(g('fpl')||'').indexOf('重点テーマ')===0?'theme':'phase',   /* phases の中身は変えない */
       updatedAt:today()};
     if(p) Object.assign(proj(pid),data);
     else S.projects.push({id:uid(),...data,stakeholders:[],issues:[],forks:[],decisions:[],learnings:[],events:[],constraints:[]});
     save(); closeModal(); render();
   });
 }
+
+/* 壁打ち（sparkCopy）・共有（shareModal）は現状 phases を出力していないため変更不要。
+   将来 phases を出力する場合は見出しに phaseWord(p) を使うこと（画面とCoworkで呼び方を揃える）。 */
 
 /* PROJECT DELETE */
 function delProj(pid){
