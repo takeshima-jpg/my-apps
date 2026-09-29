@@ -753,7 +753,9 @@ function readReflectOSFromIDB() {
       });
     } catch(e) {}
     const themes = (o.themes || []).filter(t => t && t.status !== '完了')
-      .map(t => ({ title: t.title || '', status: t.status || '', priority: t.priority || '', question: t.question || '', hypothesis: t.hypothesis || '' }));
+      /* Cowork向け要約。キー名は互換のため維持し、値の取り先をテーマの実フィールドに合わせる
+         （問い＝currentState／仮説＝centerPin || summary。reflect-osの同期契約と対応） */
+      .map(t => ({ id: t.id || '', title: t.title || '', status: t.status || '', priority: t.priority || '', question: t.currentState || '', hypothesis: t.centerPin || t.summary || '', fromProjectOS: !!t._fromProjectOS }));
     return Promise.resolve({ themes, importantQuestions, activeExperiments });
   } catch(e) { return Promise.resolve(EMPTY); }
 }
