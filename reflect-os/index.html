@@ -386,6 +386,9 @@ nav{display:flex;flex-direction:column;gap:0;}
 // 他のタブで保存された場合に再読み込み
 window.addEventListener('storage', function(e) {
   if (e.key === 'reflectOS_v1') { location.reload(); return; }
+  /* Project OSが別タブで保存されたらPJ由来テーマを追随させる。
+     reloadはしない（入力中のフォームを壊さないため。再描画も入力中は見送る） */
+  if (e.key === 'pos_v4') { if (typeof posLiveSync === 'function') posLiveSync(); return; }
 });
 
 function toast(msg) {
@@ -754,7 +757,9 @@ function renderHome(){
     // 左：問い・仮説
     const left=D({});
     if(t.currentState){left.appendChild(D({cls:'tcard-dl'},'問い'));left.appendChild(D({css:'font-size:14px;color:var(--tx);line-height:1.7;white-space:pre-wrap;margin-bottom:10px'},t.currentState));}
-    if(t.summary){left.appendChild(D({cls:'tcard-dl'},t._fromProjectOS?'現在の仮説（センターピン）':'現在の仮説'));left.appendChild(D({css:'font-size:14px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:10px'},t.summary));}
+    /* PJ由来テーマはPJのセンターピンを正とし、無い場合だけ既存のsummary（手入力の仮説）を出す */
+    const hypo=t._fromProjectOS?((t.centerPin||'').trim()||t.summary):t.summary;
+    if(hypo){left.appendChild(D({cls:'tcard-dl'},t._fromProjectOS?'現在の仮説（センターピン）':'現在の仮説'));left.appendChild(D({css:'font-size:14px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:10px'},hypo));}
     /* Project由来テーマ：PJの中身も読めるようにする（タイトルだけの空テーマに見せない） */
     if(t._fromProjectOS){
       [['ゴール',t.goal],['悪い未来',t.badFuture],['成功条件',t.successConditions],['次の一手',t.nextMove]]
@@ -2807,7 +2812,8 @@ const POS_STATUS_MAP={'進行中':'実行中','構想中':'構想中','保留':'
    突合キーは 'pos_'+PJ id（既存どおり）。現用ストアは reflectOS_v1（dball('themes')）のみ更新。
    テーマ実フィールド：問い＝currentState／仮説＝summary（依頼書の question/hypothesis 相当）。
    上書きルール：currentState/summary は「テーマ側が空のときだけ」PJ値で補完＝手入力を潰さない。
-   goal/badFuture/successConditions/nextMove は参照用としてPJ値を常に最新反映（テーマ詳細で表示）。 */
+   goal/centerPin/badFuture/successConditions/nextMove は参照用としてPJ値を常に最新反映（テーマ詳細で表示）。
+   centerPin はPJのセンターピンそのもの。表示は centerPin || summary（PJ由来テーマのみ）。 */
 async function syncFromProjectOS(){
   try{
     const raw=localStorage.getItem('pos_v4');
@@ -2830,6 +2836,7 @@ async function syncFromProjectOS(){
         status:POS_STATUS_MAP[p.status]||'構想中',
         priority:p.priority==='高'?'A':p.priority==='中'?'B':'C',
         goal:p.goal||'',
+        centerPin:p.centerPin||'',   /* PJ正で毎回上書き。既存のsummary（手入力の仮説）は保持する */
         badFuture:p.badFuture||'',
         successConditions:p.successConditions||'',
         nextMove:p.nextMove||p.nextAction||'',
@@ -2853,6 +2860,24 @@ async function syncFromProjectOS(){
     }
     return added;
   }catch(e){console.warn('Project OS sync error:',e);return 0;}
+}
+
+/* pos_v4 の変更（別タブでのProject OS保存）を受けてPJ由来テーマを再同期する。
+   データは必ず更新し、画面の再描画だけは入力中（#body内のフォームにフォーカス）なら見送る。 */
+let _posLiveBusy=false;
+async function posLiveSync(){
+  if(_posLiveBusy)return;
+  _posLiveBusy=true;
+  try{
+    await syncFromProjectOS();
+    const priOrd={S:0,A:1,B:2,C:3};
+    const th=await dball('themes');
+    S.themes=th.sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));
+    const ae=document.activeElement;
+    const typing=ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)&&document.getElementById('body')?.contains(ae);
+    if(!typing)ra();
+  }catch(e){console.warn('pos live sync error:',e);}
+  finally{_posLiveBusy=false;}
 }
 
 /* ── VISION localStorage 共有 ── */
