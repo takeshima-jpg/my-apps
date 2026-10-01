@@ -1682,7 +1682,7 @@ function pushNowBand(ps,todayStr){
 /* ══ v2 Phase 2：壁打ちコンテキスト出力（読む量の削減） ══ */
 function sparkContextPJ(p){
   /* v2.2: 設定済みの見立てを1行ずつ含める。400字超はムーブ削減→それでも超えるならセンターピンのみ残す */
-  const mitAll=[['成功条件',p.successConditions],['悪い未来',p.badFuture],['センターピン',p.centerPin],['注意点',p.attentionIssue]].filter(x=>x[1]);
+  const mitAll=[['成功条件',p.successConditions],['悪い未来',p.badFuture],['センターピン',p.centerPin],['注意論点',p.attentionIssue]].filter(x=>x[1]);
   const nf=nearFork(p);
   const ms=[...(p.moves||[])].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
   const build=(mit,k)=>{
@@ -1730,13 +1730,16 @@ function piParse(){
   const body=(m?m[1]:raw).trim();
   if(!body){st.textContent='貼り付け内容が空です';return;}
   let pjName=null;const items=[];
+  const coreLast={};   /* v2.3 核・見立ての上書きラベル：同じラベルが複数あれば最後を採用 */
   body.split(/\n/).map(l=>l.trim()).filter(Boolean).forEach(l=>{
-    const mm=l.match(/^(PJ|プロジェクト|決定|学び|分岐|次の一手|問い)\s*[:：]\s*(.*)$/i);
+    const mm=l.match(/^(PJ|プロジェクト|決定|学び|分岐|次の一手|問い|ゴール|注意論点|注意点|成功条件|悪い未来|センターピン)\s*[:：]\s*(.*)$/i);
     if(!mm)return;   /* ラベル行以外は無視（寛容） */
     const isPj=/^pj$/i.test(mm[1])||mm[1]==='プロジェクト';
     const val=mm[2].trim();
     if(isPj){if(val)pjName=val;return;}
-    if(!val)return;
+    if(!val)return;   /* 空値は無視（クリアには使わない＝誤消去防止） */
+    const cf=PI_CORE_FIELDS[mm[1]];
+    if(cf){coreLast[cf[0]]={kind:'見立て',field:cf[0],label:cf[1],text:val};return;}
     const it={kind:mm[1],text:val};
     if(it.kind==='分岐'){
       const dm=it.text.match(/@\s*(\d{4}-\d{2}-\d{2})\s*$/);
@@ -1744,8 +1747,9 @@ function piParse(){
     }
     items.push(it);
   });
+  Object.values(coreLast).forEach(c=>items.push(c));
   if(!pjName){st.textContent='「PJ: プロジェクト名」の行が見つかりません';return;}
-  if(!items.length){st.textContent='取り込むラベル行（決定/学び/分岐/次の一手/問い）がありません';return;}
+  if(!items.length){st.textContent='取り込むラベル行（決定/学び/分岐/次の一手/問い/ゴール/注意論点/成功条件/悪い未来/センターピン）がありません';return;}
   const key=pjName.toLowerCase();
   const cands=S.projects.filter(p=>p.name.toLowerCase().includes(key)||key.includes(p.name.toLowerCase()));
   if(!cands.length){st.textContent='該当するPJが見つかりません：'+pjName;return;}
@@ -1758,10 +1762,21 @@ function piParse(){
   }
   piApply(cands[0].id,items);
 }
+/* v2.3：PROJECT-IMPORTの核・見立てラベル → PJフィールド（データキーは既存のまま） */
+const PI_CORE_FIELDS={'ゴール':['goal','ゴール'],'注意論点':['attentionIssue','注意論点'],'注意点':['attentionIssue','注意論点'],
+  '成功条件':['successConditions','成功条件'],'悪い未来':['badFuture','悪い未来'],'センターピン':['centerPin','センターピン']};
 function piApply(pid,items){
   const p=proj(pid);if(!p||!items)return;
-  let n=0;
+  let n=0,coreN=0,same=0;
   items.forEach(it=>{
+    if(it.kind==='見立て'){
+      /* 上書き（置換）。旧値と同じなら何もしない。旧→新を「見立て更新」ムーブとして履歴に残す（削除しない原則） */
+      const old=String(p[it.field]||'').trim();
+      if(old===it.text.trim()){same++;return;}
+      p[it.field]=it.text;
+      pushMove(p,'見立て更新',old?`${it.label}更新：「${old}」→「${it.text}」`:`${it.label}設定：「${it.text}」`);
+      coreN++;n++;return;
+    }
     const mv=pushMove(p,it.kind,it.text,it.forkDate);
     if(it.kind==='次の一手')p.nextMove=it.text;   /* 核3行に同期（旧値はムーブ履歴に残存） */
     if(it.kind==='問い')p.question=it.text;
@@ -1773,7 +1788,7 @@ function piApply(pid,items){
   });
   touchProj(pid);save();
   window.__piPending=null;
-  const st=$$('pi-status');if(st)st.textContent='✓ '+p.name+' に '+n+'件取り込みました（問い・次の一手は核に同期）';
+  const st=$$('pi-status');if(st)st.textContent='✓ '+p.name+' に '+n+'件取り込みました（問い・次の一手は核に同期'+(coreN?'／核・見立て'+coreN+'項目を置換し旧→新を履歴に記録':'')+(same?'／'+same+'項目は変更なしのためスキップ':'')+'）';
   const ta=$$('pi-paste');if(ta)ta.value='';
   toast(p.name+' に '+n+'件取り込みました');
 }
@@ -1920,7 +1935,7 @@ function initProjDrag() {
 ══════════════════════════════════ */
 /* ══ v2：PJ詳細＝1画面スクロール（タブ廃止。核3行→クイック追加→タイムライン→折りたたみ） ══ */
 const CORE_DEFS=[['goal','ゴール'],['question','現在の問い'],['nextMove','次の一手']];
-const MOVE_BD={'決定':'bd-gray','学び':'bd-teal','分岐':'bd-yellow','次の一手':'bd-blue','問い':'bd-purple'};
+const MOVE_BD={'決定':'bd-gray','学び':'bd-teal','分岐':'bd-yellow','次の一手':'bd-blue','問い':'bd-purple','見立て更新':'bd-orange'};
 
 function pushMove(p,kind,text,forkDate){
   if(!p.moves)p.moves=[];
@@ -1990,7 +2005,7 @@ function coreHtml(p){
    成功条件=successConditions／注意点=attentionIssue は既存メタを昇格再利用、
    悪い未来=badFuture／センターピン=centerPin も実コードでは既存フィールド（旧モーダル/シート由来）。
    見立ては上書き運用（ムーブ履歴化しない。履歴が要るのは核の問い・一手のみ） */
-const MITATE_DEFS=[['successConditions','成功条件'],['badFuture','悪い未来'],['centerPin','センターピン'],['attentionIssue','注意点']];
+const MITATE_DEFS=[['successConditions','成功条件'],['badFuture','悪い未来'],['centerPin','センターピン'],['attentionIssue','注意論点']];
 function mitateHtml(p){
   return `<div class="mt-wrap">`+MITATE_DEFS.map(([f,lbl])=>`
     <div class="mt-row" onclick="mitateEdit('${p.id}','${f}',this)" title="クリックで編集">
