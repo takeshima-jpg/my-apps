@@ -921,7 +921,7 @@ textarea.fc.tall { min-height: 130px; }
     <div class="pt">
       <div>
         <div class="pt-title">取り込む</div>
-        <div class="pt-sub">壁打ちAIの出力（PROJECT-IMPORT）を貼り付けて取り込みます。</div>
+        <div class="pt-sub">壁打ちAIの出力（PROJECT-IMPORT）を貼り付けて、ムーブの記録とゴール・見立ての見直しを取り込みます。</div>
       </div>
     </div>
     <div class="pb" style="max-width:900px;">
@@ -929,9 +929,9 @@ textarea.fc.tall { min-height: 130px; }
       <div class="import-panel" style="margin-bottom:14px;">
         <div class="import-panel-h">🗣 PROJECT-IMPORT 貼り付け（壁打ちから取り込み）</div>
         <div class="import-panel-b">
-          <div class="si-format-hint">壁打ちAIの出力をそのまま貼り付け。ラベル行（PJ: / 決定: / 学び: / 分岐: / 次の一手: / 問い:）だけを読みます。分岐は末尾に @YYYY-MM-DD で予定日を指定可。「問い:」「次の一手:」は核3行に同期し、旧値はムーブ履歴に残ります。</div>
+          <div class="si-format-hint">壁打ちAIの出力をそのまま貼り付け。ラベル行だけを読みます。<br><b>ムーブとして刻む</b>：決定: / 学び: / 分岐: / 次の一手: / 問い:　分岐は末尾に @YYYY-MM-DD で予定日を指定可。「問い:」「次の一手:」は核に同期します。<br><b>上書き（置換）する</b>：ゴール: / 注意論点: / 成功条件: / 悪い未来: / センターピン:　今と同じ値・空の行は何もしません。<br>どちらも旧値は消えず、ムーブ履歴に残ります。</div>
           <textarea class="import-textarea" id="pi-paste" style="min-height:150px;"
-            placeholder="---PROJECT-IMPORT---&#10;PJ: 事業承継&#10;決定: 持株会社方式を軸に進める&#10;学び: 感情面の整理が先&#10;分岐: 銀行への説明会 @2026-08-01&#10;次の一手: 税理士に株価算定を依頼&#10;問い: 先代の納得と税務合理性をどう両立するか&#10;---END---"></textarea>
+            placeholder="---PROJECT-IMPORT---&#10;PJ: 事業承継&#10;決定: 持株会社方式を軸に進める&#10;学び: 感情面の整理が先&#10;分岐: 銀行への説明会 @2026-08-01&#10;次の一手: 税理士に株価算定を依頼&#10;問い: 先代の納得と税務合理性をどう両立するか&#10;ゴール: （見直したときだけ）&#10;センターピン: （見直したときだけ）&#10;---END---"></textarea>
           <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;">
             <button class="btn btn-navy btn-sm" onclick="piParse()">⬇ 取り込む</button>
             <div id="pi-status" style="font-size:.8rem;color:var(--gray4);flex:1;"></div>
