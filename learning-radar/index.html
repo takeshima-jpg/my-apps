@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>学びレーダー</title>
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0e7490">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="学びレーダー">
+<style>
+/* UI基準：指で狙えるタップ領域（フィッツの法則） */
+button, [role="button"], .btn, .nav a, .nav button, .tab, .tab-btn {
+  min-height: 44px; min-width: 44px; box-sizing: border-box;
+}
+.dense button, .dense .btn, .tk-meta button { min-height: 32px; min-width: 32px; }
+/* flexナビ内では明示min-widthが「内容幅未満への縮小」を許してしまうため、従来のmin-width:auto相当（内容幅で停止）に戻す */
+.dense > button, .dense > .btn { flex-shrink: 0; }
+
+:root {
+  --bg: #f5f6f8; --card: #ffffff; --bd: #e2e5ea; --bd2: #cfd4dc;
+  --tx: #1c2430; --tx2: #566072; --tx3: #8b94a3;
+  --accent: #c2410c;                    /* 締切接近だけに使う */
+  --miss-bg: #fdf1f1; --miss-bd: #f3caca;
+  --radius: 10px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
+  background: var(--bg); color: var(--tx); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-wrap: anywhere; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 14px 14px 90px; padding-top: max(14px, env(safe-area-inset-top)); }
+
+/* ヘッダー */
+.hd { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 6px 10px; margin-bottom: 14px; }
+.hd-title { font-size: 1.15rem; font-weight: 700; }
+.hd-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; margin-left: auto; }
+.hd-last { font-size: .72rem; color: var(--tx3); min-height: 1.1em; }
+.hd-actions { display: flex; gap: 6px; }
+
+button { font-family: inherit; font-size: .875rem; color: var(--tx); background: var(--card); border: 1px solid var(--bd2);
+  border-radius: 8px; padding: 0 12px; cursor: pointer; white-space: nowrap; }
+button:hover { border-color: var(--tx3); }
+button.on { background: var(--tx); color: #fff; border-color: var(--tx); }
+button.pri { font-weight: 700; }
+a { color: #1d4ed8; }
+
+/* 節・カード */
+.sec { margin-top: 20px; }
+.sec-h { font-size: .8rem; font-weight: 700; color: var(--tx2); letter-spacing: .06em; margin: 0 2px 8px; }
+.sec.miss { background: var(--miss-bg); border: 1px solid var(--miss-bd); border-radius: var(--radius); padding: 10px 10px 2px; }
+.grp-h { font-size: .78rem; color: var(--tx3); margin: 10px 2px 6px; }
+.card { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; }
+.card.soon { border-left: 4px solid var(--accent); }
+.card.dim { opacity: .6; }
+.card-main { display: block; padding: 11px 14px 9px; cursor: pointer; min-width: 0; }
+.c-title { font-size: .97rem; font-weight: 600; line-height: 1.5; }
+.c-meta { font-size: .8rem; color: var(--tx2); margin-top: 2px; }
+.lbl { display: inline-block; font-size: .68rem; font-weight: 600; color: var(--tx2); border: 1px solid var(--bd2);
+  border-radius: 4px; padding: 0 5px; margin-right: 6px; vertical-align: 1px; line-height: 1.5; white-space: nowrap; }
+.soon-days { float: right; color: var(--accent); font-weight: 700; font-size: .85rem; margin-left: 8px; white-space: nowrap; }
+.c-btns { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 11px; }
+.c-detail { border-top: 1px solid var(--bd); padding: 10px 14px 12px; font-size: .9rem; }
+.kv { display: flex; gap: 10px; margin-bottom: 4px; }
+.kv .k { flex: 0 0 3.2em; color: var(--tx3); font-size: .78rem; padding-top: 2px; }
+.kv .v { flex: 1; min-width: 0; white-space: pre-wrap; }
+.c-tools { margin-top: 8px; }
+.hist { margin-top: 8px; font-size: .74rem; color: var(--tx3); }
+details.past { margin-top: 22px; }
+details.past > summary, details.fold > summary { cursor: pointer; font-size: .8rem; font-weight: 700; color: var(--tx2);
+  letter-spacing: .06em; padding: 10px 2px; user-select: none; }
+details.past[open] > summary { margin-bottom: 4px; }
+.hint { color: var(--tx3); font-size: .85rem; padding: 26px 4px; }
+
+/* パネル・フォーム */
+.panel { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+.p-h { display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: .95rem; margin-bottom: 8px; }
+.p-status { font-size: .9rem; color: var(--tx); margin-bottom: 6px; }
+.p-msg { font-size: .85rem; color: var(--accent); margin: 6px 0; }
+.fg { margin-bottom: 10px; }
+.fl { display: block; font-size: .78rem; color: var(--tx2); margin-bottom: 3px; }
+input[type=text], input[type=date], input[type=number], input[type=url], select, textarea {
+  width: 100%; font-family: inherit; font-size: 1rem; color: var(--tx); background: #fff;
+  border: 1px solid var(--bd2); border-radius: 8px; padding: 8px 10px; min-height: 40px; }
+input[type=file] { width: 100%; font-size: .85rem; min-height: 40px; }
+textarea { resize: vertical; line-height: 1.6; }
+textarea.note { margin-top: 6px; font-size: .95rem; }
+.fr2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+@media (max-width: 480px) { .fr2 { grid-template-columns: 1fr; } }
+.chks { display: flex; flex-wrap: wrap; gap: 0 14px; }
+.chks label, .tog { display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; min-height: 40px; cursor: pointer; white-space: nowrap; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+/* テーマ・設定 */
+.t-head { display: flex; align-items: center; gap: 8px; padding-right: 12px; }
+.t-head .card-main { flex: 1; }
+.ws { border: 1px solid var(--bd); border-radius: 8px; padding: 8px; margin-bottom: 8px; display: grid; gap: 6px; }
+.ws-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .85rem; }
+.addrow { display: flex; gap: 6px; margin-top: 4px; }
+.addrow input { flex: 1; min-width: 0; }
+
+/* 消込の「元に戻す」 */
+.undo { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: #1c2430; color: #fff;
+  border-radius: 999px; padding: 4px 6px 4px 16px; font-size: .85rem; display: flex; align-items: center; gap: 10px;
+  z-index: 50; max-width: calc(100vw - 24px); white-space: nowrap; }
+.undo button { background: transparent; color: #fff; border-color: rgba(255,255,255,.45); border-radius: 999px; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hd">
+    <div class="hd-title">学びレーダー</div>
+    <div class="hd-right">
+      <div class="hd-last" id="lastImport"></div>
+      <div class="hd-actions">
+        <button id="btnImport" data-act="import">⬇ 取込</button>
+        <button id="btnForm" data-act="form">＋ 登録</button>
+        <button id="btnSettings" data-act="settings">⚙ テーマ・設定</button>
+      </div>
+    </div>
+  </header>
+  <main id="app"></main>
+</div>
+<div class="undo" id="undoBar" hidden><span>消込しました</span><button data-act="undo">元に戻す</button></div>
+
+<script>
+'use strict';
+/* ══════════════════════════════════════════
+   学びレーダー OS（Phase 1）
+   - 単一HTML・依存ゼロ・ローカルファースト。正本は localStorage `learningRadar_v1`（1オブジェクトを丸ごと保存）
+   - 保存関数は saveData() に統一
+   - 静かなUI：強調は「締切接近」だけ。件数バッジ・催促・「0件」表示は置かない（空の節は見出しごと出さない）
+   - 「見過ごし」の消込だけは物理削除（URL＋開催日を settings.dismissed[] に残して再取込を防ぐ）
+══════════════════════════════════════════ */
+const DB_KEY = 'learningRadar_v1';
+
+/* ── Drive 取得の定数（URLは必ずこの定数を参照する。直書き禁止）── */
+const CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleusercontent.com';   // 既存OSと共通
+const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+const GDRIVE_FOLDER_ID = '1qOQXKraLlYA8BA3WM1dvNdVGzHasRWKP';   // 10_日次データ
+const GDRIVE_FILE_NAME = 'learning-events.json';
+const GDRIVE_TOKEN_KEY = 'gdrive_token_learningradar';          // このOS専用（他OSと衝突させない）
+const GDRIVE_FALLBACK_TOKEN_KEY = 'brief_viewer_token';         // 読むだけ（書き換えない）。同じ drive.readonly なので未接続時の代替に使う
+const GDRIVE_COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';   // 共有アイテム到達の要（外さない）
+const REDIRECT_URI = location.origin + (location.pathname.endsWith('/index.html') ? location.pathname : location.pathname.replace(/\/$/, '') + '/index.html');
+
+const KIND   = { seminar:'セミナー', training:'研修', course:'講座', expo:'展示会', conference:'学会', study:'勉強会', community:'コミュニティ' };
+const FORMAT = { onsite:'対面', online:'オンライン', hybrid:'ハイブリッド', archive:'アーカイブ' };
+const STATUS = { 'new':'新着', considering:'検討', applied:'申込済み', attended:'参加', passed:'見送り', missed:'見過ごし', expired:'終了' };
+const AXIS   = { fixed:'時期固定', play:'遊び', 'new':'新規' };
+const WD = ['日','月','火','水','木','金','土'];
+const DEFAULT_REVIEW_AT = '2026-12-01';
+
+/* ── 初期テーマ（初回起動時に themes が空なら投入。学びの軸の正本は Morning Brief 側で、ここは収集用の設定）── */
+function initialThemes() {
+  const T = (id, name, axisType, keywords, excludeWords, ws) => ({
+    id, name, keywords, excludeWords,
+    watchSources: ws.map(w => ({ name: w[0], url: w[1], memo: w[2] || '' })),
+    active: true, axisType, reviewAt: DEFAULT_REVIEW_AT });
+  return [
+    T('crisis', '危機管理', 'new',
+      ['危機管理 セミナー', 'クライシスマネジメント 研修', 'BCP 講座', '危機管理産業展'], [],
+      [['リスク対策アカデミー', 'https://academy.risktaisaku.com/event/', '毎月。対面講座は六本木'],
+       ['危機管理カンファレンス', 'https://risk-conference.net/', '春・秋の年2回、無料オンライン'],
+       ['SOMPOリスクマネジメント セミナー', 'https://www.sompo-rc.co.jp/seminars', '無料〜有料'],
+       ['JSSC 行事予定', 'https://jssc.gr.jp/yotei/', '詳細はPDF・メール問い合わせ'],
+       ['日本危機管理防災学会', 'https://www.jemaweb.org/', '研究大会11月'],
+       ['危機管理産業展 RISCON', 'https://www.kikikanri.biz/', '毎年9〜10月 ビッグサイト']]),
+    T('physical-ai', 'フィジカルAI', 'new',
+      ['フィジカルAI セミナー', 'フィジカルAI 展示会', 'ヒューマノイド', 'ロボット工学セミナー'], [],
+      [['ロボスタ', 'https://robotstart.info/', '無料オンラインセミナーシリーズ'],
+       ['日本ロボット学会 セミナー', 'https://www.rsj.or.jp/event/seminar/news/', '毎月オンライン・見逃し配信あり'],
+       ['NexTech Week', 'https://www.nextech-week.jp/', '秋11月幕張・春4月ビッグサイト'],
+       ['アールティ セミナー', 'https://rt-net.jp/', 'Isaacハンズオン']]),
+    T('pmi', 'PMI', 'new',
+      ['PMI M&A セミナー', 'ポストマージャーインテグレーション 研修', 'M&A 統合 講座'],
+      ['PMI日本支部', 'PMP', 'PMBOK', 'プロジェクトマネジメント協会'],
+      [['日本M&Aセンター セミナー', 'https://www.nihon-ma.co.jp/seminar/list.php?year=2026', 'PMI 1日研修会 毎月'],
+       ['東京都中小企業振興公社 PMI', 'https://www.tokyo-kosha.or.jp/support/revival/seminar.html#PMI', 'スクール年2期（募集5月・7月）・セミナー年2回'],
+       ['日経イベント PMI', 'https://events.nikkei.co.jp/tag/pmi/', '1月・9月に大型']]),
+    T('sensemaking', 'センスメイキング理論', 'new',
+      ['センスメイキング', '組織論 公開講座', '組織学会', '組織行動論'], [],
+      [['ビジネスリサーチラボ Peatix', 'https://peatix.com/group/9909/events', 'センスメイキング名義のほぼ唯一の定期発信源'],
+       ['組織学会', 'https://www.aaos.or.jp/conference', '年次大会10月・研究発表大会6月。自動取得不可'],
+       ['日経BS MBA Essentials', 'https://school.nikkei.co.jp/seminar/list?tag=122', '早稲田WBS教員の組織論講座']]),
+    T('succession', '承継', 'fixed',
+      ['事業承継 セミナー', 'ファミリービジネス 講座', '後継者 塾'],
+      ['税制', '自社株評価', 'M&A仲介', '求人'],
+      [['東商イベント検索', 'https://myevent.tokyo-cci.or.jp/tile.php?searching_name=事業承継', '支部単位で毎月'],
+       ['事業承継センター', 'https://www.jigyousyoukei.co.jp/seminar/future/', 'しながわ後継者塾・後継者塾ベーシック。年度初め募集'],
+       ['FBAA', 'https://fbaa.jp/archives/seminar', '定例は平日夜Zoom。基礎プログラムは9月中旬締切'],
+       ['中小企業大学校 東京校', 'https://www.smrj.go.jp/', '事業承継セミナー 年数回']]),
+    T('project-design', 'PJ設計', 'play',
+      ['PMAJ セミナー', 'Backlog World', 'プロジェクト立ち上げ ワークショップ', 'P2M'],
+      ['PMP', '動画講座'],
+      [['PMAJ イベントカレンダー', 'https://www.pmaj.or.jp/kyoukai/event_calendar.html', '平日夜の月例・特別講座'],
+       ['JBUG Doorkeeper', 'https://backlogworld.doorkeeper.jp/', '年1回の大会＋随時WS'],
+       ['コパイロツト', 'https://www.copilot.jp/seminar/', 'プロジェクトBoost!。次回未告知'],
+       ['PMI日本支部', 'https://www.pmi-japan.org/event-seminar/', '詳細は要ログイン・手動確認']]),
+    T('converge', 'フィジカル×サイバー融合', 'fixed',
+      ['Security Days', '危機管理産業展 サイバー', '重要インフラ 物理 サイバー', 'OTセキュリティ'],
+      ['製品紹介'],
+      [['Security Days', 'https://f2ff.jp/', '3月・10月'],
+       ['SECURITY SHOW', 'https://messe.nikkei.co.jp/ss/', '毎年3月 ビッグサイト'],
+       ['慶應 サイバーセキュリティ国際シンポ', 'https://symp.cysec-lab.keio.ac.jp/', '毎年10月末'],
+       ['全国警備業協会 お知らせ', 'https://www.ajssa.or.jp/news/', '会員向け。JSS社内の案内を転送してもらう運用'],
+       ['JNSA セミナー', 'https://www.jnsa.org/seminar/', '']]),
+  ];
+}
+
+/* ══ データ層 ══ */
+function defaultData() {
+  return { version: 1, events: [], themes: [],
+    settings: { reviewWeekday: 1, deadlineSoonDays: 7, newHighlightDays: 7, ignoreTitleWords: [], dismissed: [],
+                lastImportGeneratedAt: null, lastImportAt: null },
+    updatedAt: new Date().toISOString() };
+}
+function normalizeData(o) {
+  const d = defaultData();
+  if (!o || typeof o !== 'object') return d;
+  d.events = Array.isArray(o.events) ? o.events.filter(e => e && typeof e === 'object') : [];
+  d.themes = Array.isArray(o.themes) ? o.themes.filter(t => t && typeof t === 'object' && t.id) : [];
+  if (o.settings && typeof o.settings === 'object') Object.assign(d.settings, o.settings);
+  ['ignoreTitleWords', 'dismissed'].forEach(k => { if (!Array.isArray(d.settings[k])) d.settings[k] = []; });
+  const used = new Set();
+  d.events.forEach(e => {
+    if (!Array.isArray(e.themeIds)) e.themeIds = [];
+    if (!Array.isArray(e.statusHistory)) e.statusHistory = [];
+    if (typeof e.id !== 'string' || !/^[\w-]+$/.test(e.id) || used.has(e.id)) e.id = newId(used); else used.add(e.id);
+    if (!STATUS[e.status]) e.status = 'new';
+  });
+  d.themes.forEach(t => { ['keywords', 'excludeWords', 'watchSources'].forEach(k => { if (!Array.isArray(t[k])) t[k] = []; }); });
+  if (o.updatedAt) d.updatedAt = o.updatedAt;
+  return d;
+}
+function load() {
+  const raw = localStorage.getItem(DB_KEY);
+  let o = null;
+  if (raw) {
+    try { o = JSON.parse(raw); }
+    catch (e) { try { localStorage.setItem(DB_KEY + '_unreadable_' + Date.now().toString(36), raw); } catch (e2) {} }   /* 壊れたJSONは上書き前に退避 */
+  }
+  const d = normalizeData(o);
+  let seeded = false;
+  if (!d.themes.length) { d.themes = initialThemes(); seeded = true; }
+  return { d, seeded };
+}
+function saveData() {
+  S.updatedAt = new Date().toISOString();
+  try { localStorage.setItem(DB_KEY, JSON.stringify(S)); } catch (e) { console.warn('saveData failed:', e); }
+}
+
+/* ══ ユーティリティ ══ */
+const pad = n => String(n).padStart(2, '0');
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const str = v => v == null ? '' : String(v).trim();
+const num = (v, def) => { const n = parseInt(v, 10); return isNaN(n) ? def : n; };
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+function today() { return ymd(new Date()); }
+function parseD(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+const isDate = s => !!parseD(s);
+const dateOrNull = v => { const s = str(v); return isDate(s) ? s : null; };
+function addDays(s, n) { const d = parseD(s); d.setDate(d.getDate() + n); return ymd(d); }
+function diffDays(a, b) { return Math.round((parseD(b) - parseD(a)) / 86400000); }
+function isWeekdayDate(s) { const d = parseD(s); if (!d) return true; const w = d.getDay(); return w !== 0 && w !== 6; }
+function md(s) { const d = parseD(s); if (!d) return s || ''; const y = d.getFullYear(); return (y !== new Date().getFullYear() ? y + '/' : '') + (d.getMonth() + 1) + '/' + d.getDate(); }
+function mdt(iso) { const d = new Date(iso); return isNaN(d) ? '' : (d.getMonth() + 1) + '/' + d.getDate(); }
+function fmtRange(e) { return md(e.startDate) + (e.endDate && e.endDate !== e.startDate ? '〜' + md(e.endDate) : ''); }
+const safeUrl = u => /^https?:\/\//i.test(String(u || ''));
+const lines = s => String(s || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+const byId = id => S.events.find(e => e.id === id);
+const themeById = id => S.themes.find(t => t.id === id);
+
+/* ── 重複判定（取込時・手動登録時）──
+   第一キー：URL正規化＋開催日／第二キー：タイトル正規化＋開催日。
+   URLが同じでも開催日が違えば別レコード（同じページに毎月回・説明会と本講座が載る例があるため）。
+   照合先は events[] と settings.dismissed[]（消込済みの見過ごし）の両方 */
+function normUrl(u) {
+  let s = String(u || '').trim().toLowerCase();
+  if (!s) return '';
+  s = s.replace(/^https?:\/\//, '').replace(/^www\./, '');
+  s = s.split('#')[0].split('?')[0];
+  return s.replace(/\/+$/, '');
+}
+function normTitle(t) { return String(t || '').normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, ''); }
+function dupIndex() {
+  const u = new Set(), t = new Set();
+  const add = (url, title, sd) => {
+    if (!sd) return;
+    const nu = normUrl(url); if (nu) u.add(nu + '|' + sd);
+    const nt = normTitle(title); if (nt) t.add(nt + '|' + sd);
+  };
+  S.events.forEach(e => add(e.url, e.title, e.startDate));
+  S.settings.dismissed.forEach(d => add(d.url, d.title, d.startDate));
+  return { u, t, add };
+}
+function dupCheck(idx, e) {
+  const nu = normUrl(e.url);
+  if (nu && idx.u.has(nu + '|' + e.startDate)) return 'url';
+  const nt = normTitle(e.title);
+  if (nt && idx.t.has(nt + '|' + e.startDate)) return 'title';
+  return '';
+}
+/* タイトル除外：全テーマ共通の ignoreTitleWords と、そのイベントのテーマの excludeWords（取込時のみ。手動登録には適用しない） */
+const nfl = s => String(s || '').normalize('NFKC').toLowerCase();
+function isExcludedTitle(title, themeIds) {
+  const words = [...(S.settings.ignoreTitleWords || [])];
+  (themeIds || []).forEach(id => { const th = themeById(id); if (th) words.push(...(th.excludeWords || [])); });
+  const t = nfl(title);
+  return words.some(w => { const x = nfl(w).trim(); return x && t.includes(x); });
+}
+
+/* id は lr_ + 時刻36進 + 乱数4桁。一括取込で同時刻になるため既存idと突き合わせて衝突を避ける */
+function newId(used) {
+  let id;
+  do { id = 'lr_' + Date.now().toString(36) + pad(Math.floor(Math.random() * 100)) + pad(Math.floor(Math.random() * 100)); } while (used.has(id));
+  used.add(id);
+  return id;
+}
+function makeEvent(raw, used, defaults) {
+  const now = new Date().toISOString();
+  const sd = str(raw.startDate);
+  return {
+    id: newId(used),
+    title: str(raw.title), organizer: str(raw.organizer),
+    themeIds: Array.isArray(raw.themeIds) ? raw.themeIds.filter(x => typeof x === 'string' && x) : [],
+    kind: KIND[raw.kind] ? raw.kind : 'seminar',
+    format: FORMAT[raw.format] ? raw.format : 'onsite',
+    location: str(raw.location),
+    startDate: sd, endDate: dateOrNull(raw.endDate), time: str(raw.time),
+    applyDeadline: dateOrNull(raw.applyDeadline), fee: str(raw.fee), url: str(raw.url), summary: str(raw.summary),
+    weekday: isWeekdayDate(sd),                       /* 保存時に startDate から再計算（土日＝false） */
+    confidence: raw.confidence === 'high' || raw.confidence === 'low' ? raw.confidence : defaults.confidence,
+    source: ['auto', 'manual', 'seed'].includes(raw.source) ? raw.source : defaults.source,
+    foundAt: str(raw.foundAt) || now,
+    status: 'new', statusHistory: [{ status: 'new', at: now }],
+    note: str(raw.note), needsCheck: false,
+  };
+}
+
+/* ── 取込（Drive／ファイル／貼り付けの共通入口）── */
+function importPayload(data) {
+  let list = null, gen = null;
+  if (Array.isArray(data)) list = data;
+  else if (data && typeof data === 'object' && Array.isArray(data.newEvents)) { list = data.newEvents; gen = data.generatedAt || null; }
+  if (!list) return { error: '取り込める形式ではありません（newEvents が見つかりません）' };
+  if (gen && gen === S.settings.lastImportGeneratedAt) return { already: true };
+  const idx = dupIndex();
+  const used = new Set(S.events.map(e => e.id));
+  const r = { added: 0, dup: 0, excluded: 0, needsCheck: 0, invalid: 0 };
+  list.forEach(raw => {
+    if (!raw || typeof raw !== 'object' || !str(raw.title) || !isDate(str(raw.startDate))) { r.invalid++; return; }
+    const probe = { url: raw.url, title: raw.title, startDate: str(raw.startDate) };
+    if (dupCheck(idx, probe)) { r.dup++; return; }
+    if (isExcludedTitle(raw.title, Array.isArray(raw.themeIds) ? raw.themeIds : [])) { r.excluded++; return; }
+    const e = makeEvent(raw, used, { confidence: 'low', source: 'auto' });
+    e.needsCheck = !e.applyDeadline && !e.fee;        /* 締切・費用が両方空＝自動取得できなかったもの */
+    if (e.needsCheck) r.needsCheck++;
+    S.events.push(e);
+    idx.add(e.url, e.title, e.startDate);
+    r.added++;
+  });
+  if (gen) S.settings.lastImportGeneratedAt = gen;
+  S.settings.lastImportAt = new Date().toISOString();
+  saveData();
+  autoTransition();
+  return r;
+}
+function resultText(r) {
+  if (r.error) return r.error;
+  if (r.already) return '取込済みです';
+  const p = [];                                        /* 0 の項目は出さない（「0件」を表示しない） */
+  if (r.added) p.push('新着 ' + r.added + ' 件');
+  if (r.dup) p.push('重複 ' + r.dup + ' 件');
+  if (r.excluded) p.push('除外 ' + r.excluded + ' 件');
+  if (r.needsCheck) p.push('要手動確認 ' + r.needsCheck + ' 件');
+  if (r.invalid) p.push('形式不備 ' + r.invalid + ' 件');
+  if (!r.added) p.unshift('新しいイベントはありませんでした');
+  return p.join(' / ');
+}
+
+/* ── 自動遷移（起動時と取込後に1回）。見送り(passed)と見過ごし(missed)は必ず分ける ── */
+function autoTransition() {
+  const t = today(), now = new Date().toISOString();
+  let changed = false;
+  S.events.forEach(e => {
+    if (e.status === 'new' || e.status === 'considering') {
+      const lim = e.applyDeadline || e.startDate;      /* 締切が無いものは開催日で判定 */
+      if (lim && lim < t) { e.status = 'missed'; e.statusHistory.push({ status: 'missed', at: now, note: 'auto' }); changed = true; }
+    } else if (e.status === 'passed') {
+      const end = e.endDate || e.startDate;
+      if (end && end < t) { e.status = 'expired'; e.statusHistory.push({ status: 'expired', at: now, note: 'auto' }); changed = true; }
+    }
+    /* applied は自動で attended にしない（参加したかは本人が押す） */
+  });
+  if (changed) saveData();
+  return changed;
+}
+
+/* ══ Drive 取得（drive.readonly・読むだけ）══ */
+function gdriveErr(code) { const e = new Error(code); e.code = code; return e; }
+function gdriveConnect() {
+  try { sessionStorage.setItem('lr_after_auth', '1'); } catch (e) {}
+  const p = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: REDIRECT_URI, response_type: 'token',
+    scope: GDRIVE_SCOPE, prompt: 'select_account', include_granted_scopes: 'true' });
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + p.toString();
+}
+function gdriveHandleRedirect() {
+  const t = new URLSearchParams(location.hash.slice(1)).get('access_token');
+  if (!t) return false;
+  localStorage.setItem(GDRIVE_TOKEN_KEY, t);
+  history.replaceState(null, '', location.pathname);
+  return true;
+}
+function gdriveTokens() {
+  const a = [];
+  const own = localStorage.getItem(GDRIVE_TOKEN_KEY);
+  if (own) a.push({ key: GDRIVE_TOKEN_KEY, token: own });
+  const fb = localStorage.getItem(GDRIVE_FALLBACK_TOKEN_KEY);
+  if (fb && fb !== own) a.push({ key: GDRIVE_FALLBACK_TOKEN_KEY, token: fb });
+  return a;
+}
+async function gdriveFetch(url, token) {
+  let res;
+  try { res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } }); }
+  catch (e) { throw gdriveErr('network'); }
+  if (res.status === 401 || res.status === 403) throw gdriveErr('unauthorized');
+  if (!res.ok) throw gdriveErr('http');
+  return res;
+}
+/* 親フォルダ＋ファイル名で検索し createdTime 最新を採用（Coworkのコネクタは更新のたび同名新規作成するため）。
+   検索名は GDRIVE_FILE_NAME から作る。「learning-events (1).json」のような連番は許容し、別名のファイルは弾く */
+async function gdriveFindFile(token) {
+  const base = GDRIVE_FILE_NAME.replace(/\.json$/, '');
+  const q = encodeURIComponent("'" + GDRIVE_FOLDER_ID + "' in parents and name contains '" + base + "' and trashed=false");
+  const res = await gdriveFetch('https://www.googleapis.com/drive/v3/files?q=' + q
+    + '&fields=files(id,name,createdTime)&orderBy=createdTime+desc&pageSize=20' + GDRIVE_COMMON, token);
+  const d = await res.json();
+  const re = new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '( \\(\\d+\\))?\\.json$');
+  return (d.files || []).find(f => re.test(f.name)) || null;
+}
+async function gdriveLoad() {
+  const toks = gdriveTokens();
+  if (!toks.length) throw gdriveErr('noauth');
+  let last = null;
+  for (const t of toks) {
+    try {
+      const f = await gdriveFindFile(t.token);
+      if (!f) throw gdriveErr('notfound');
+      const res = await gdriveFetch('https://www.googleapis.com/drive/v3/files/' + f.id + '?alt=media' + GDRIVE_COMMON, t.token);
+      const txt = await res.text();
+      try { return JSON.parse(txt); } catch (e) { throw gdriveErr('badjson'); }
+    } catch (e) {
+      last = e;
+      if (e.code === 'unauthorized') { if (t.key === GDRIVE_TOKEN_KEY) localStorage.removeItem(GDRIVE_TOKEN_KEY); continue; }   /* 期限切れは次の候補へ */
+      throw e;
+    }
+  }
+  throw last || gdriveErr('noauth');
+}
+function driveErrText(err) {
+  const tail = 'ファイルを選ぶか、JSON を貼り付けてください。';
+  const c = err && err.code;
+  if (c === 'noauth') return 'Drive に未接続です。' + tail;
+  if (c === 'unauthorized') return 'Drive の接続が切れています。' + tail;
+  if (c === 'notfound') return 'Drive に ' + GDRIVE_FILE_NAME + ' が見つかりませんでした。' + tail;
+  if (c === 'badjson') return 'Drive のファイルを JSON として読めませんでした。' + tail;
+  return 'Drive から取得できませんでした。' + tail;
+}
+
+/* ══ 画面状態（保存しない）══ */
+const V = { view: 'home', panel: null, open: new Set(), themeOpen: new Set(), pastOpen: false, restoreOpen: false,
+            imp: { status: '', alt: false, paste: '' }, formData: null, formMsg: '', themeMsg: '', newThemeName: '', undo: null };
+let S;
+
+/* ══ ホーム ══ */
+function isFresh(e) {
+  const t = Date.parse(e.foundAt);
+  return !isNaN(t) && t >= Date.now() - num(S.settings.newHighlightDays, 7) * 86400000;
+}
+function evLabels(e) {
+  let s = '';
+  if (e.status === 'new' && isFresh(e)) s += '<span class="lbl">NEW</span>';
+  const d = parseD(e.startDate);
+  if (d && (d.getDay() === 0 || d.getDay() === 6)) s += '<span class="lbl">' + WD[d.getDay()] + '</span>';
+  if (e.needsCheck) s += '<span class="lbl">要手動確認</span>';
+  return s;
+}
+function evMeta(e, sec) {
+  const p = [];
+  if (sec === 'past') {                                /* 「この団体は毎年この時期」を振り返る用途：開催日と主催を先頭に */
+    p.push(esc(e.startDate) + (e.endDate && e.endDate !== e.startDate ? '〜' + esc(e.endDate) : ''));
+    if (e.organizer) p.push(esc(e.organizer));
+    p.push(STATUS[e.status] || '');
+  }
+  const tn = (e.themeIds || []).map(id => { const t = themeById(id); return t ? t.name : ''; }).filter(Boolean).join('／');
+  if (tn) p.push(esc(tn));
+  p.push(KIND[e.kind] || KIND.seminar);
+  p.push(FORMAT[e.format] || '');
+  if (sec !== 'past') {
+    p.push(esc(fmtRange(e)) + (e.confidence === 'low' ? '?' : ''));
+    p.push(e.applyDeadline ? '締切 ' + esc(md(e.applyDeadline)) : '締切 要確認');
+  }
+  if (e.fee) p.push(esc(e.fee));
+  return p.filter(Boolean).join(' ・ ');
+}
+function evButtons(e, sec) {
+  const b = (act, label, cls) => '<button data-act="' + act + '" data-id="' + e.id + '"' + (cls ? ' class="' + cls + '"' : '') + '>' + label + '</button>';
+  if (sec === 'missed') return b('dismiss', '消込');
+  if (sec === 'soon') return b('st-applied', '申込', 'pri') + b('st-passed', '見送り');
+  if (sec === 'new') return b('st-considering', '検討', 'pri') + b('st-passed', '見送り') + b('st-applied', '申込');
+  if (sec === 'considering') return b('st-applied', '申込', 'pri') + b('st-passed', '見送り') + (e.confidence === 'low' ? b('confirm', '確認済み') : '');
+  if (sec === 'applied') return b('st-attended', '参加', 'pri') + b('st-passed', '見送り');
+  if (sec === 'past' && e.status === 'passed') return b('st-considering', '検討に戻す');
+  return '';
+}
+function evDetail(e) {
+  const kv = (k, v) => v ? '<div class="kv"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>' : '';
+  const hist = (e.statusHistory || []).map(h =>
+    esc(mdt(h.at)) + ' ' + (STATUS[h.status] || esc(h.status)) + (h.note ? '（' + esc(h.note === 'auto' ? '自動' : h.note) + '）' : '')).join(' → ');
+  return '<div class="c-detail">'
+    + kv('主催', esc(e.organizer)) + kv('会場', esc(e.location)) + kv('時間', esc(e.time)) + kv('要約', esc(e.summary))
+    + kv('URL', safeUrl(e.url) ? '<a href="' + esc(e.url) + '" target="_blank" rel="noopener">' + esc(e.url) + '</a>' : esc(e.url))
+    + '<textarea class="note" data-f="note" data-id="' + e.id + '" rows="2" placeholder="メモ" aria-label="メモ">' + esc(e.note || '') + '</textarea>'
+    + '<div class="c-tools"><button data-act="copy" data-id="' + e.id + '">📋 コピー</button></div>'
+    + (hist ? '<div class="hist">' + hist + '</div>' : '')
+    + '</div>';
+}
+function cardHtml(e, sec) {
+  const open = V.open.has(e.id);
+  const cls = ['card'];
+  let extra = '';
+  if (sec === 'soon') {
+    cls.push('soon');
+    const n = diffDays(today(), e.applyDeadline);
+    extra = '<span class="soon-days">' + (n <= 0 ? '今日まで' : 'あと' + n + '日') + '</span>';
+  }
+  if (sec === 'new' && !isWeekdayDate(e.startDate)) cls.push('dim');   /* 土日開催は下に薄く */
+  const btns = evButtons(e, sec);
+  return '<div class="' + cls.join(' ') + '">'
+    + '<div class="card-main" role="button" tabindex="0" aria-expanded="' + open + '" data-act="toggle" data-id="' + e.id + '">'
+    + '<div class="c-title">' + extra + evLabels(e) + esc(e.title) + '</div>'
+    + '<div class="c-meta">' + evMeta(e, sec) + '</div></div>'
+    + (open ? evDetail(e) : '')
+    + (btns ? '<div class="c-btns">' + btns + '</div>' : '')
+    + '</div>';
+}
+function renderHome() {
+  const t = today(), lim = addDays(t, Math.max(0, num(S.settings.deadlineSoonDays, 7)));
+  const isSoon = e => (e.status === 'new' || e.status === 'considering') && e.applyDeadline && e.applyDeadline >= t && e.applyDeadline <= lim;
+  const by = f => (a, b) => { const x = f(a), y = f(b); return x < y ? -1 : x > y ? 1 : 0; };
+  const ev = S.events;
+  const missed = ev.filter(e => e.status === 'missed').sort(by(e => e.startDate));
+  const soon = ev.filter(isSoon).sort(by(e => e.applyDeadline + e.startDate));
+  const fresh = ev.filter(e => e.status === 'new' && !isSoon(e));
+  const cons = ev.filter(e => e.status === 'considering' && !isSoon(e)).sort(by(e => (e.applyDeadline || '9999-99-99') + e.startDate));
+  const applied = ev.filter(e => e.status === 'applied').sort(by(e => e.startDate));
+  const past = ev.filter(e => e.status === 'attended' || e.status === 'passed' || e.status === 'expired').sort(by(e => e.startDate)).reverse();
+  const sec = (title, list, key, cls) => list.length
+    ? '<section class="sec' + (cls ? ' ' + cls : '') + '"><h2 class="sec-h">' + title + '</h2>' + list.map(e => cardHtml(e, key)).join('') + '</section>' : '';
+  let h = sec('見過ごし', missed, 'missed', 'miss') + sec('締切接近', soon, 'soon');
+  if (fresh.length) {                                  /* 新着：テーマ別。各グループ内は平日開催が上・土日は下 */
+    const order = S.themes.map(x => x.id), map = new Map();
+    fresh.forEach(e => { const k = (e.themeIds || []).find(id => order.includes(id)) || ''; if (!map.has(k)) map.set(k, []); map.get(k).push(e); });
+    const keys = order.filter(k => map.has(k)); if (map.has('')) keys.push('');
+    h += '<section class="sec"><h2 class="sec-h">新着</h2>' + keys.map(k => {
+      const th = themeById(k);
+      const list = map.get(k).sort((a, b) => {
+        const wa = isWeekdayDate(a.startDate), wb = isWeekdayDate(b.startDate);
+        if (wa !== wb) return wa ? -1 : 1;
+        return a.startDate < b.startDate ? -1 : a.startDate > b.startDate ? 1 : 0;
+      });
+      return '<div class="grp-h">' + esc(th ? th.name : 'テーマなし') + '</div>' + list.map(e => cardHtml(e, 'new')).join('');
+    }).join('') + '</section>';
+  }
+  h += sec('検討中', cons, 'considering') + sec('申込済み', applied, 'applied');
+  if (past.length) h += '<details class="past" id="pastFold"' + (V.pastOpen ? ' open' : '') + '><summary>過去・見送り</summary>'
+    + past.map(e => cardHtml(e, 'past')).join('') + '</details>';
+  if (!ev.length && !V.panel) h += '<div class="hint">まだイベントがありません。右上の「⬇ 取込」または「＋ 登録」から追加できます。</div>';
+  return h;
+}
+
+/* ══ 取込パネル・手動登録フォーム（画面上部にインライン展開。モーダル不使用）══ */
+function importPanelHtml() {
+  return '<div class="panel"><div class="p-h"><span>取込</span><button data-act="closePanel">閉じる</button></div>'
+    + '<div class="p-status" id="impStatus">' + esc(V.imp.status) + '</div>'
+    + '<details class="fold" id="impAlt"' + (V.imp.alt ? ' open' : '') + '><summary>ファイル／貼り付けで取り込む</summary>'
+    + '<div class="fg"><label class="fl" for="impFile">ファイルを選ぶ（.json）</label><input type="file" id="impFile" accept=".json,application/json"></div>'
+    + '<div class="fg"><label class="fl" for="impPaste">JSON を貼り付け</label><textarea id="impPaste" rows="4">' + esc(V.imp.paste || '') + '</textarea></div>'
+    + '<div class="row"><button data-act="impPaste">貼り付けた内容を取り込む</button><button data-act="gdConnect">Google Drive に接続</button></div>'
+    + '</details></div>';
+}
+const FORM_FIELDS = ['title', 'organizer', 'kind', 'format', 'location', 'startDate', 'endDate', 'time', 'applyDeadline', 'fee', 'url', 'note'];
+function formPanelHtml() {
+  const f = V.formData || { kind: 'seminar', format: 'onsite', themeIds: [] };
+  const v = k => esc(f[k] || '');
+  const opt = (map, cur) => Object.keys(map).map(k => '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + map[k] + '</option>').join('');
+  const fg = (label, inner, k) => '<div class="fg"><label class="fl"' + (k ? ' for="f_' + k + '"' : '') + '>' + label + '</label>' + inner + '</div>';
+  const inp = (k, type, ph) => '<input type="' + type + '" id="f_' + k + '" value="' + v(k) + '"' + (ph ? ' placeholder="' + ph + '"' : '') + '>';
+  return '<div class="panel" id="evForm"><div class="p-h"><span>イベントを登録</span><button data-act="closePanel">閉じる</button></div>'
+    + fg('タイトル（必須）', inp('title', 'text'), 'title')
+    + fg('主催', inp('organizer', 'text'), 'organizer')
+    + fg('テーマ', '<div class="chks">' + S.themes.map(t => '<label><input type="checkbox" name="f_theme" value="' + esc(t.id) + '"'
+        + ((f.themeIds || []).includes(t.id) ? ' checked' : '') + '>' + esc(t.name) + '</label>').join('') + '</div>')
+    + '<div class="fr2">' + fg('種別', '<select id="f_kind">' + opt(KIND, f.kind) + '</select>', 'kind') + fg('形式', '<select id="f_format">' + opt(FORMAT, f.format) + '</select>', 'format') + '</div>'
+    + fg('会場', inp('location', 'text'), 'location')
+    + '<div class="fr2">' + fg('開催日（必須）', inp('startDate', 'date'), 'startDate') + fg('最終日', inp('endDate', 'date'), 'endDate') + '</div>'
+    + '<div class="fr2">' + fg('時間帯', inp('time', 'text', '19:00〜21:00'), 'time') + fg('申込締切', inp('applyDeadline', 'date'), 'applyDeadline') + '</div>'
+    + '<div class="fr2">' + fg('費用', inp('fee', 'text', '無料 / 66,000円'), 'fee') + fg('URL', inp('url', 'url', 'https://'), 'url') + '</div>'
+    + fg('メモ', '<textarea id="f_note" rows="2">' + v('note') + '</textarea>', 'note')
+    + (V.formMsg ? '<div class="p-msg">' + esc(V.formMsg) + '</div>' : '')
+    + '<div class="row"><button class="pri" data-act="saveForm">保存</button><button data-act="closePanel">キャンセル</button></div></div>';
+}
+function captureInputs() {                              /* 再描画で入力途中の値を失わないよう拾っておく */
+  if (document.getElementById('evForm')) {
+    const f = {};
+    FORM_FIELDS.forEach(k => { const el = document.getElementById('f_' + k); if (el) f[k] = el.value; });
+    f.themeIds = [...document.querySelectorAll('input[name="f_theme"]:checked')].map(x => x.value);
+    V.formData = f;
+  }
+  const p = document.getElementById('impPaste'); if (p) V.imp.paste = p.value;
+  const n = document.getElementById('newThemeName'); if (n) V.newThemeName = n.value;
+}
+function saveForm() {
+  captureInputs();
+  const f = V.formData || {};
+  const title = str(f.title), sd = str(f.startDate);
+  const fail = m => { V.formMsg = m; render(); };
+  if (!title) return fail('タイトルを入力してください');
+  if (!isDate(sd)) return fail('開催日を入力してください');
+  if (f.endDate && f.endDate < sd) return fail('最終日が開催日より前になっています');
+  const dk = dupCheck(dupIndex(), { url: f.url, title, startDate: sd });
+  if (dk === 'url') return fail('同じ URL が登録済みです（開催日も同じ）');
+  if (dk === 'title') return fail('同じタイトル・開催日のイベントが登録済みです');
+  const e = makeEvent(Object.assign({}, f, { source: 'manual', confidence: 'high' }), new Set(S.events.map(x => x.id)), { confidence: 'high', source: 'manual' });
+  S.events.push(e);
+  saveData();
+  autoTransition();
+  V.panel = null; V.formData = null; V.formMsg = '';
+  const fm = document.getElementById('evForm'); if (fm) fm.removeAttribute('id');   /* 保存済みの値を拾い直さない */
+  render();
+}
+async function startImport() {
+  V.view = 'home'; V.panel = 'import';
+  V.imp.status = 'Drive から取得しています…'; V.imp.alt = false;
+  render();
+  try {
+    const r = importPayload(await gdriveLoad());
+    V.imp.status = resultText(r);
+    if (r.error) V.imp.alt = true;
+  } catch (err) {                                       /* 未認可・通信失敗でも止まらず、ファイル選択／貼り付けに切り替える */
+    V.imp.status = driveErrText(err);
+    V.imp.alt = true;
+  }
+  render();
+}
+function importText(txt) {
+  let data;
+  try { data = JSON.parse(txt); } catch (e) { V.imp.status = 'JSON を読み取れませんでした'; V.imp.alt = true; render(); return; }
+  const r = importPayload(data);
+  V.imp.status = resultText(r);
+  V.imp.alt = !!r.error;
+  if (!r.error) { const p = document.getElementById('impPaste'); if (p) p.value = ''; V.imp.paste = ''; }
+  render();
+}
+
+/* ══ テーマ・設定 ══ */
+/* 「この3か月」：そのテーマで拾った件数と、検討以上に進んだ件数（事実表示のみ。0 のときは出さない） */
+function themeStats(tid) {
+  const d = new Date(); d.setMonth(d.getMonth() - 3);
+  const lim = d.getTime();
+  let found = 0, adv = 0;
+  S.events.forEach(e => {
+    if (!(e.themeIds || []).includes(tid)) return;
+    const t = Date.parse(e.foundAt);
+    if (isNaN(t) || t < lim) return;
+    found++;
+    if ((e.statusHistory || []).some(h => h.status === 'considering' || h.status === 'applied' || h.status === 'attended')) adv++;
+  });
+  return { found, adv };
+}
+function themeHeadHtml(th) {
+  const st = themeStats(th.id);
+  return '<div class="c-title"><span class="lbl">' + (AXIS[th.axisType] || AXIS['new']) + '</span>' + (th.active ? '' : '<span class="lbl">停止中</span>') + esc(th.name) + '</div>'
+    + (st.found ? '<div class="c-meta">この3か月：拾った ' + st.found + ' 件' + (st.adv ? ' / 検討に進んだ ' + st.adv + ' 件' : '') + '</div>' : '');
+}
+function themeCardHtml(th) {
+  const open = V.themeOpen.has(th.id), tid = esc(th.id);
+  let h = '<div class="card"><div class="t-head">'
+    + '<div class="card-main" role="button" tabindex="0" aria-expanded="' + open + '" data-act="ttoggle" data-tid="' + tid + '" id="th_' + tid + '">' + themeHeadHtml(th) + '</div>'
+    + '<label class="tog"><input type="checkbox" data-tf="active" data-tid="' + tid + '"' + (th.active ? ' checked' : '') + '>収集</label></div>';
+  if (open) {
+    const ws = (th.watchSources || []).map((w, i) =>
+      '<div class="ws">'
+      + '<input type="text" data-ws="name" data-tid="' + tid + '" data-i="' + i + '" value="' + esc(w.name) + '" placeholder="名前" aria-label="定点観測先の名前">'
+      + '<input type="url" data-ws="url" data-tid="' + tid + '" data-i="' + i + '" value="' + esc(w.url) + '" placeholder="https://" aria-label="定点観測先のURL">'
+      + '<input type="text" data-ws="memo" data-tid="' + tid + '" data-i="' + i + '" value="' + esc(w.memo) + '" placeholder="メモ（毎年3月・募集は5月など）" aria-label="定点観測先のメモ">'
+      + '<div class="ws-tools">' + (safeUrl(w.url) ? '<a href="' + esc(w.url) + '" target="_blank" rel="noopener">開く</a>' : '<span></span>')
+      + '<button data-act="wsDel" data-tid="' + tid + '" data-i="' + i + '">行を削除</button></div></div>').join('');
+    const axOpt = Object.keys(AXIS).map(k => '<option value="' + k + '"' + (k === th.axisType ? ' selected' : '') + '>' + AXIS[k] + '</option>').join('');
+    h += '<div class="c-detail">'
+      + '<div class="fg"><label class="fl">テーマ名</label><input type="text" data-tf="name" data-tid="' + tid + '" value="' + esc(th.name) + '" aria-label="テーマ名"></div>'
+      + '<div class="fg"><label class="fl">検索語（1行に1語）</label><textarea data-tf="keywords" data-tid="' + tid + '" rows="4" aria-label="検索語">' + esc((th.keywords || []).join('\n')) + '</textarea></div>'
+      + '<div class="fg"><label class="fl">除外語（1行に1語。タイトルに含むイベントは取り込みません）</label><textarea data-tf="excludeWords" data-tid="' + tid + '" rows="3" aria-label="除外語">' + esc((th.excludeWords || []).join('\n')) + '</textarea></div>'
+      + '<div class="fg"><label class="fl">定点観測先</label>' + ws + '<button data-act="wsAdd" data-tid="' + tid + '">＋ 行を追加</button></div>'
+      + '<div class="fr2"><div class="fg"><label class="fl">種類</label><select data-tf="axisType" data-tid="' + tid + '" aria-label="種類">' + axOpt + '</select></div>'
+      + '<div class="fg"><label class="fl">次の見直し日</label><input type="date" data-tf="reviewAt" data-tid="' + tid + '" value="' + esc(th.reviewAt || '') + '" aria-label="次の見直し日"></div></div>'
+      + '</div>';
+  }
+  return h + '</div>';
+}
+function renderSettings() {
+  const st = S.settings;
+  const wdOpt = WD.map((w, i) => '<option value="' + i + '"' + (i === num(st.reviewWeekday, 1) ? ' selected' : '') + '>' + w + '曜</option>').join('');
+  return '<div class="row" style="margin-bottom:4px"><button data-act="home">← ホームへ</button></div>'
+    + '<section class="sec"><h2 class="sec-h">テーマ</h2>' + S.themes.map(themeCardHtml).join('')
+    + '<div class="addrow"><input type="text" id="newThemeName" placeholder="新しいテーマ名" aria-label="新しいテーマ名" value="' + esc(V.newThemeName || '') + '"><button data-act="addTheme">＋ テーマを追加</button></div>'
+    + (V.themeMsg ? '<div class="p-msg">' + esc(V.themeMsg) + '</div>' : '') + '</section>'
+    + '<section class="sec"><h2 class="sec-h">設定</h2><div class="panel">'
+    + '<div class="fg"><label class="fl">レビュー曜日</label><select data-set="reviewWeekday" aria-label="レビュー曜日">' + wdOpt + '</select></div>'
+    + '<div class="fr2"><div class="fg"><label class="fl">締切を強調する日数（締切まで何日以内か）</label><input type="number" min="0" max="60" data-set="deadlineSoonDays" aria-label="締切強調日数" value="' + num(st.deadlineSoonDays, 7) + '"></div>'
+    + '<div class="fg"><label class="fl">「NEW」ラベルを付ける日数</label><input type="number" min="0" max="60" data-set="newHighlightDays" aria-label="新着強調日数" value="' + num(st.newHighlightDays, 7) + '"></div></div>'
+    + '<div class="fg"><label class="fl">取込時に無視するタイトル語（1行に1語・全テーマ共通）</label><textarea data-set="ignoreTitleWords" rows="3" aria-label="無視するタイトル語">' + esc((st.ignoreTitleWords || []).join('\n')) + '</textarea></div>'
+    + '<div class="row"><button data-act="export">全データをエクスポート</button></div>'
+    + '<details class="fold" id="restoreFold"' + (V.restoreOpen ? ' open' : '') + '><summary>詳細（復旧用）</summary>'
+    + '<div class="fg"><label class="fl" for="restoreFile">インポート（現在のデータを丸ごと置き換えます。直前の状態は自動退避）</label><input type="file" id="restoreFile" accept=".json,application/json"></div>'
+    + '</details></div></section>';
+}
+function themeIdFromName(name) {
+  let s = String(name).normalize('NFKC').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!s) s = 'theme_' + Date.now().toString(36);     /* 英数字にできない名前（日本語のみ等） */
+  let id = s, i = 2;
+  while (S.themes.some(t => t.id === id)) id = s + '-' + (i++);
+  return id;
+}
+
+/* ══ 共有用コピー（秘書向けプレーンテキスト）══ */
+function copyText(e) {
+  const d = parseD(e.startDate);
+  const ranged = e.endDate && e.endDate !== e.startDate;
+  let when = e.startDate + (d ? '（' + WD[d.getDay()] + '）' : '');     /* 曜日は開催初日のみ */
+  if (ranged) when += '〜' + e.endDate;
+  if (e.time) when += (ranged ? ' ' : '') + e.time;
+  const fm = FORMAT[e.format] || '';
+  const place = e.location ? e.location + (fm ? '（' + fm + '）' : '') : fm;
+  return ['【学びレーダー】', 'タイトル：' + e.title, '主催：' + (e.organizer || ''), '日時：' + when, '会場：' + place,
+          '費用：' + (e.fee || ''), '申込締切：' + (e.applyDeadline || '要確認'), 'URL：' + (e.url || '')].join('\n');
+}
+async function copyToClipboard(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch (e) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px;top:0;';
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy'); ta.remove(); return ok;
+    } catch (e2) { return false; }
+  }
+}
+
+/* ══ 復元ガード（my-apps共通：鮮度比較ダイアログ＋直前スナップショット。1day/index.html が参照実装）══ */
+const RG_OS = 'learning-radar';
+const RG_KEYS = [DB_KEY];
+const RG_SNAP_KEY = 'learningradar_pre_restore_snapshot';
+function rgStat(o) {
+  const ev = (o && Array.isArray(o.events)) ? o.events : [];
+  const d = new Date((o && o.updatedAt) || '');
+  const up = isNaN(d) ? '' : ymd(d) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  return { latest: up || '—', count: ev.length };
+}
+function rgConfirm(inc, cur, label, extra) {
+  extra = extra || {};
+  return new Promise(resolve => {
+    const rollback = (typeof extra.rollback === 'boolean') ? extra.rollback
+      : (cur.latest !== '—' && (inc.latest === '—' || inc.latest < cur.latest || inc.count < cur.count));
+    const ov = document.createElement('div');
+    ov.id = 'rgConfirmOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;color:#1a1a22;border-radius:10px;max-width:440px;width:100%;padding:20px;font-size:14px;line-height:1.7;box-shadow:0 8px 30px rgba(0,0,0,.25);';
+    let html = '<div style="font-weight:700;margin-bottom:10px;">' + label + '</div>'
+      + '<div style="border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin-bottom:10px;">'
+      + '読み込むデータ：最新 <b>' + esc(inc.latest) + '</b>・' + inc.count + '件<br>'
+      + '現在のデータ　：最新 <b>' + esc(cur.latest) + '</b>・' + cur.count + '件</div>';
+    if (rollback) {
+      html += '<div id="rgRollbackWarn" style="color:#d31f2c;font-weight:700;margin-bottom:8px;">⚠ 巻き戻りが発生します（読み込むデータの方が古い／少ない）</div>'
+        + '<div style="margin-bottom:6px;">続けるには「巻き戻す」と入力してください：</div>'
+        + '<input id="rgWord" type="text" autocomplete="off" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;margin-bottom:12px;font-size:14px;box-sizing:border-box;">';
+    } else {
+      html += '<div style="margin-bottom:12px;">現在のデータは上書きされます（直前の状態は自動退避されます）。</div>';
+    }
+    html += '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+      + '<button id="rgCancel">キャンセル</button>'
+      + '<button id="rgOk" style="border:none;background:' + (rollback ? '#d31f2c' : '#1c2430') + ';color:#fff;">' + (rollback ? '巻き戻して復元' : '復元する') + '</button></div>';
+    box.innerHTML = html;
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    const done = v => { ov.remove(); resolve(v); };
+    box.querySelector('#rgCancel').onclick = () => done(false);
+    box.querySelector('#rgOk').onclick = () => {
+      if (rollback) {
+        const w = box.querySelector('#rgWord');
+        if (w.value.trim() !== '巻き戻す') { w.style.borderColor = '#d31f2c'; w.focus(); return; }
+      }
+      done(true);
+    };
+  });
+}
+function downloadJson(obj, name) {
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' }));
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {}
+}
+function rgSnapshot() {
+  const snap = { os: RG_OS, savedAt: new Date().toISOString(), data: {} };
+  RG_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) snap.data[k] = v; });
+  try { localStorage.setItem(RG_SNAP_KEY, JSON.stringify(snap)); } catch (e) {}
+  downloadJson(snap, RG_OS + '-pre-restore-' + new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19) + '.json');
+}
+function rgShowUndo() {
+  if (document.getElementById('rgUndoBtn')) return;
+  const b = document.createElement('button');
+  b.id = 'rgUndoBtn';
+  b.textContent = '↩ 復元前に戻す';
+  b.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:99998;padding:10px 18px;border:none;border-radius:999px;background:#1a1a22;color:#fff;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);';
+  b.onclick = rgUndo;
+  document.body.appendChild(b);
+}
+function rgUndo() {
+  try {
+    const snap = JSON.parse(localStorage.getItem(RG_SNAP_KEY) || 'null');
+    if (!snap || !snap.data) { alert('復元前スナップショットが見つかりません'); return; }
+    if (!confirm('復元前（' + (snap.savedAt || '').slice(0, 16).replace('T', ' ') + '）の状態に戻します。よろしいですか？')) return;
+    RG_KEYS.forEach(k => { if (k in snap.data) localStorage.setItem(k, snap.data[k]); else localStorage.removeItem(k); });
+    location.reload();
+  } catch (e) { alert('戻せませんでした: ' + e.message); }
+}
+async function restoreFromText(txt) {
+  let o;
+  try { o = JSON.parse(txt); } catch (e) { V.themeMsg = 'JSON を読み取れませんでした'; render(); return; }
+  if (o && o.os === RG_OS && o.data && o.data[DB_KEY]) { try { o = JSON.parse(o.data[DB_KEY]); } catch (e) { o = null; } }   /* 退避スナップショットも読める */
+  if (!o || !Array.isArray(o.events) || !Array.isArray(o.themes)) { V.themeMsg = '学びレーダーのエクスポートではありません（events / themes が見つかりません）'; render(); return; }
+  if (!await rgConfirm(rgStat(o), rgStat(S), '学びレーダーのデータを置き換えます')) return;
+  rgSnapshot();
+  S = normalizeData(o);
+  if (!S.themes.length) S.themes = initialThemes();
+  saveData();
+  autoTransition();
+  V.themeMsg = ''; V.open.clear();
+  render();
+  rgShowUndo();
+}
+
+/* ══ 描画 ══ */
+function render() {
+  captureInputs();
+  const app = document.getElementById('app');
+  if (V.view === 'settings') app.innerHTML = renderSettings();
+  else app.innerHTML = (V.panel === 'import' ? importPanelHtml() : V.panel === 'form' ? formPanelHtml() : '') + renderHome();
+  const li = S.settings.lastImportAt ? new Date(S.settings.lastImportAt) : null;
+  document.getElementById('lastImport').textContent = (li && !isNaN(li))
+    ? '取込 ' + pad(li.getMonth() + 1) + '/' + pad(li.getDate()) + ' ' + pad(li.getHours()) + ':' + pad(li.getMinutes()) : '';
+  document.getElementById('btnImport').classList.toggle('on', V.view === 'home' && V.panel === 'import');
+  document.getElementById('btnForm').classList.toggle('on', V.view === 'home' && V.panel === 'form');
+  document.getElementById('btnSettings').classList.toggle('on', V.view === 'settings');
+}
+
+/* ══ 操作 ══ */
+function setStatus(id, status) {
+  const e = byId(id); if (!e || e.status === status) return;
+  e.status = status;
+  e.statusHistory.push({ status, at: new Date().toISOString() });
+  saveData();
+  render();
+}
+/* 見過ごしの消込：events[] から物理削除し、URL＋開催日を dismissed に残す（確認は出さず、5秒だけ「元に戻す」） */
+function dismiss(id) {
+  const i = S.events.findIndex(e => e.id === id); if (i < 0) return;
+  const e = S.events[i];
+  if (e.status !== 'missed') return;
+  const entry = { url: e.url || '', startDate: e.startDate, title: e.title || '', at: new Date().toISOString() };
+  S.events.splice(i, 1);
+  S.settings.dismissed.push(entry);
+  saveData();
+  V.open.delete(id);
+  if (V.undo) clearTimeout(V.undo.timer);
+  V.undo = { event: e, index: i, entry, timer: setTimeout(hideUndo, 5000) };
+  document.getElementById('undoBar').hidden = false;
+  render();
+}
+function hideUndo() {
+  if (V.undo) clearTimeout(V.undo.timer);
+  V.undo = null;
+  document.getElementById('undoBar').hidden = true;
+}
+function undoDismiss() {
+  const u = V.undo; if (!u) return;
+  const k = S.settings.dismissed.indexOf(u.entry);
+  if (k >= 0) S.settings.dismissed.splice(k, 1);
+  S.events.splice(Math.min(u.index, S.events.length), 0, u.event);
+  saveData();
+  hideUndo();
+  render();
+}
+function onAct(el) {
+  const act = el.dataset.act, id = el.dataset.id, tid = el.dataset.tid;
+  if (act === 'toggle') { V.open.has(id) ? V.open.delete(id) : V.open.add(id); render(); }
+  else if (act.indexOf('st-') === 0) setStatus(id, act.slice(3));
+  else if (act === 'confirm') { const e = byId(id); if (e) { e.confidence = 'high'; saveData(); render(); } }
+  else if (act === 'dismiss') dismiss(id);
+  else if (act === 'undo') undoDismiss();
+  else if (act === 'copy') {
+    const e = byId(id); if (!e) return;
+    copyToClipboard(copyText(e)).then(ok => {
+      const keep = el.textContent;
+      el.textContent = ok ? 'コピーしました' : 'コピーできませんでした';
+      setTimeout(() => { if (el.isConnected) el.textContent = keep; }, 1600);
+    });
+  }
+  else if (act === 'import') { if (V.view === 'home' && V.panel === 'import') { V.panel = null; render(); } else startImport(); }
+  else if (act === 'form') { V.panel = (V.view === 'home' && V.panel === 'form') ? null : 'form'; V.view = 'home'; V.formMsg = ''; render(); }
+  else if (act === 'settings') { V.view = V.view === 'settings' ? 'home' : 'settings'; V.themeMsg = ''; render(); }
+  else if (act === 'home') { V.view = 'home'; render(); }
+  else if (act === 'closePanel') { V.panel = null; V.formMsg = ''; render(); }
+  else if (act === 'saveForm') saveForm();
+  else if (act === 'impPaste') { captureInputs(); if (str(V.imp.paste)) importText(V.imp.paste); }
+  else if (act === 'gdConnect') gdriveConnect();
+  else if (act === 'ttoggle') { V.themeOpen.has(tid) ? V.themeOpen.delete(tid) : V.themeOpen.add(tid); render(); }
+  else if (act === 'wsAdd') { const th = themeById(tid); if (th) { th.watchSources.push({ name: '', url: '', memo: '' }); saveData(); render(); } }
+  else if (act === 'wsDel') { const th = themeById(tid); if (th) { th.watchSources.splice(+el.dataset.i, 1); saveData(); render(); } }
+  else if (act === 'addTheme') {
+    captureInputs();
+    const name = str(V.newThemeName);
+    if (!name) { V.themeMsg = 'テーマ名を入力してください'; render(); return; }
+    const th = { id: themeIdFromName(name), name, keywords: [], excludeWords: [], watchSources: [], active: true, axisType: 'new', reviewAt: DEFAULT_REVIEW_AT };
+    S.themes.push(th);
+    saveData();
+    V.themeOpen.add(th.id); V.themeMsg = '';
+    const n = document.getElementById('newThemeName'); if (n) n.value = '';
+    V.newThemeName = '';
+    render();
+  }
+  else if (act === 'export') downloadJson(S, 'learning-radar-' + today() + '.json');
+}
+document.addEventListener('click', ev => { const el = ev.target.closest('[data-act]'); if (el) onAct(el); });
+document.addEventListener('keydown', ev => {
+  if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[role="button"][data-act]')) { ev.preventDefault(); onAct(ev.target); }
+});
+/* メモは blur で保存（再描画しない＝入力の流れを切らない） */
+document.addEventListener('focusout', ev => {
+  const el = ev.target;
+  if (el.matches && el.matches('textarea[data-f="note"]')) {
+    const e = byId(el.dataset.id);
+    if (e && (e.note || '') !== el.value) { e.note = el.value; saveData(); }
+  }
+});
+/* テーマ・設定の各欄は変更確定（blur）で保存。再描画せず見出しだけ差し替える（次の欄のフォーカスを奪わない） */
+document.addEventListener('change', ev => {
+  const el = ev.target;
+  if (!el.matches) return;
+  if (el.id === 'impFile' || el.id === 'restoreFile') {
+    const file = el.files && el.files[0]; if (!file) return;
+    const isRestore = el.id === 'restoreFile';
+    const rd = new FileReader();
+    rd.onload = () => { isRestore ? restoreFromText(String(rd.result)) : importText(String(rd.result)); };
+    rd.readAsText(file);
+    el.value = '';
+    return;
+  }
+  if (el.dataset.set) {
+    const k = el.dataset.set, st = S.settings;
+    if (k === 'reviewWeekday') st.reviewWeekday = Math.min(6, Math.max(0, num(el.value, 1)));
+    else if (k === 'deadlineSoonDays' || k === 'newHighlightDays') { st[k] = Math.min(60, Math.max(0, num(el.value, 7))); el.value = st[k]; }
+    else if (k === 'ignoreTitleWords') st.ignoreTitleWords = lines(el.value);
+    saveData();
+    return;
+  }
+  const th = el.dataset.tid ? themeById(el.dataset.tid) : null;
+  if (!th) return;
+  if (el.dataset.tf) {
+    const k = el.dataset.tf;
+    if (k === 'active') th.active = el.checked;       /* 停止しても既存イベントは消さない */
+    else if (k === 'name') { const v = str(el.value); if (v) th.name = v; else el.value = th.name; }
+    else if (k === 'keywords' || k === 'excludeWords') th[k] = lines(el.value);
+    else if (k === 'axisType') th.axisType = AXIS[el.value] ? el.value : 'new';
+    else if (k === 'reviewAt') th.reviewAt = dateOrNull(el.value) || th.reviewAt;
+    saveData();
+    const head = document.getElementById('th_' + th.id); if (head) head.innerHTML = themeHeadHtml(th);
+  } else if (el.dataset.ws) {
+    const w = th.watchSources[+el.dataset.i];
+    if (w) { w[el.dataset.ws] = str(el.value); saveData(); }
+  }
+});
+document.addEventListener('toggle', ev => {             /* 折りたたみの開閉を再描画後も保つ */
+  const el = ev.target;
+  if (el.id === 'pastFold') V.pastOpen = el.open;
+  else if (el.id === 'impAlt') V.imp.alt = el.open;
+  else if (el.id === 'restoreFold') V.restoreOpen = el.open;
+}, true);
+/* 別タブで保存されたら読み直す（入力中は見送り、次の操作で反映） */
+window.addEventListener('storage', ev => {
+  if (ev.key !== DB_KEY) return;
+  const ae = document.activeElement;
+  if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+  S = load().d;
+  render();
+});
+
+/* ══ 起動 ══ */
+(function boot() {
+  const authed = gdriveHandleRedirect();
+  const r = load();
+  S = r.d;
+  if (r.seeded) saveData();                              /* 初回：7テーマを投入 */
+  autoTransition();
+  render();
+  let after = false;
+  try { after = sessionStorage.getItem('lr_after_auth') === '1'; sessionStorage.removeItem('lr_after_auth'); } catch (e) {}
+  if (authed && after) startImport();                    /* Drive接続から戻ったら、そのまま取込を続ける */
+})();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
