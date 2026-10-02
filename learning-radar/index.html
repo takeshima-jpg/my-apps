@@ -21,58 +21,121 @@ button, [role="button"], .btn, .nav a, .nav button, .tab, .tab-btn {
 .dense > button, .dense > .btn { flex-shrink: 0; }
 
 :root {
-  --bg: #f5f6f8; --card: #ffffff; --bd: #e2e5ea; --bd2: #cfd4dc;
-  --tx: #1c2430; --tx2: #566072; --tx3: #8b94a3;
-  --accent: #c2410c;                    /* 締切接近だけに使う */
-  --miss-bg: #fdf1f1; --miss-bd: #f3caca;
-  --radius: 10px;
+  --bg: #eef2f1; --card: #ffffff; --bd: #dce3e2; --bd2: #c7d0cf;
+  --tx: #15212b; --tx2: #4f5d69; --tx3: #8a96a0;
+  --radar: #0f766e; --radar-s: #e3f1ef;           /* レーダー帯と主ボタンの軸色 */
+  --accent: #c2410c; --accent-s: #fff1ea;          /* 危険色は「残り2日以内」だけに使う */
+  --miss-bg: #fbf0ee; --miss-bd: #efcfc8;
+  --radius: 12px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
-  background: var(--bg); color: var(--tx); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-wrap: anywhere; }
-.wrap { max-width: 720px; margin: 0 auto; padding: 14px 14px 90px; padding-top: max(14px, env(safe-area-inset-top)); }
+  background: var(--bg); color: var(--tx); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-wrap: anywhere;
+  font-feature-settings: "palt" 1; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 18px 16px 96px; padding-top: max(18px, env(safe-area-inset-top)); }
 
 /* ヘッダー */
-.hd { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 6px 10px; margin-bottom: 14px; }
-.hd-title { font-size: 1.15rem; font-weight: 700; }
-.hd-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; margin-left: auto; }
-.hd-last { font-size: .72rem; color: var(--tx3); min-height: 1.1em; }
+.hd { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 14px; }
+.hd-title { font-size: 1.35rem; font-weight: 800; letter-spacing: .02em; display: flex; align-items: center; gap: 10px; }
+.hd-title::before { content: ""; width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto;
+  background: radial-gradient(circle, var(--radar) 0 3px, transparent 3.5px), repeating-radial-gradient(circle, transparent 0 5px, rgba(15,118,110,.35) 5.5px 6.5px);
+  border: 1.5px solid var(--radar); }
+.hd-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.hd-last { font-size: .74rem; color: var(--tx3); font-variant-numeric: tabular-nums; }
 .hd-actions { display: flex; gap: 6px; }
 
 button { font-family: inherit; font-size: .875rem; color: var(--tx); background: var(--card); border: 1px solid var(--bd2);
-  border-radius: 8px; padding: 0 12px; cursor: pointer; white-space: nowrap; }
+  border-radius: 9px; padding: 0 13px; cursor: pointer; white-space: nowrap; transition: background .12s, border-color .12s; }
 button:hover { border-color: var(--tx3); }
+button:focus-visible, [role="button"]:focus-visible { outline: 2px solid var(--radar); outline-offset: 2px; }
 button.on { background: var(--tx); color: #fff; border-color: var(--tx); }
-button.pri { font-weight: 700; }
+button.pri { background: var(--tx); color: #fff; border-color: var(--tx); font-weight: 700; }
+button.pri:hover { background: #24343f; }
+button.sub { border-color: var(--tx); font-weight: 700; }
+button.sub:hover { background: var(--tx); color: #fff; }
+button.quiet { background: transparent; border-color: transparent; color: var(--tx2); font-weight: 500; padding: 0 8px; }
+button.quiet:hover { color: var(--tx); background: rgba(21,33,43,.05); }
 a { color: #1d4ed8; }
 
+/* レーダー帯：次の14日の締切を点で見せる（このOSの唯一の目立つ要素） */
+.radar { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 12px 12px 10px; margin-bottom: 6px; }
+.radar-h { display: flex; justify-content: space-between; align-items: baseline; font-size: .8rem; color: var(--tx2); margin: 0 2px 8px; }
+.radar-h b { color: var(--tx); font-size: .88rem; }
+.radar-g { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; }
+.rd { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 4px; border-radius: 8px; min-width: 0; }
+.rd.we { background: #f6f8f8; }
+.rd.td { background: var(--radar-s); }
+.rd-w { font-size: .66rem; color: var(--tx3); line-height: 1; }
+.rd-d { font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; color: var(--tx2); }
+.rd.td .rd-d, .rd.td .rd-w { color: var(--radar); }
+.rd-dots { display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 14px; }
+.dot { width: 12px; height: 12px; min-width: 12px; min-height: 12px; border-radius: 50%; padding: 0; border: 0; background: var(--radar); cursor: pointer; }
+.dot.hot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-s); }
+.dot.go { background: transparent; border: 2px solid var(--tx2); }
+.radar-k { display: flex; gap: 14px; flex-wrap: wrap; font-size: .7rem; color: var(--tx3); margin: 8px 2px 0; }
+.radar-k i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--radar); margin-right: 5px; vertical-align: 0; }
+.radar-k i.hot { background: var(--accent); } .radar-k i.go { background: transparent; border: 1.5px solid var(--tx2); }
+@media (max-width: 520px) { .radar-g { grid-template-columns: repeat(7, 1fr); row-gap: 6px; } }
+
+/* 決め切った週の締め */
+.done { background: var(--radar-s); color: var(--radar); border-radius: var(--radius); padding: 14px 16px; font-weight: 700; font-size: .95rem; margin: 16px 0 4px; }
+.done span { display: block; font-weight: 500; font-size: .8rem; color: var(--tx2); margin-top: 2px; }
+
 /* 節・カード */
-.sec { margin-top: 20px; }
-.sec-h { font-size: .8rem; font-weight: 700; color: var(--tx2); letter-spacing: .06em; margin: 0 2px 8px; }
-.sec.miss { background: var(--miss-bg); border: 1px solid var(--miss-bd); border-radius: var(--radius); padding: 10px 10px 2px; }
-.grp-h { font-size: .78rem; color: var(--tx3); margin: 10px 2px 6px; }
-.card { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; }
-.card.soon { border-left: 4px solid var(--accent); }
-.card.dim { opacity: .6; }
-.card-main { display: block; padding: 11px 14px 9px; cursor: pointer; min-width: 0; }
-.c-title { font-size: .97rem; font-weight: 600; line-height: 1.5; }
-.c-meta { font-size: .8rem; color: var(--tx2); margin-top: 2px; }
-.lbl { display: inline-block; font-size: .68rem; font-weight: 600; color: var(--tx2); border: 1px solid var(--bd2);
-  border-radius: 4px; padding: 0 5px; margin-right: 6px; vertical-align: 1px; line-height: 1.5; white-space: nowrap; }
-.soon-days { float: right; color: var(--accent); font-weight: 700; font-size: .85rem; margin-left: 8px; white-space: nowrap; }
-.c-btns { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 11px; }
-.c-detail { border-top: 1px solid var(--bd); padding: 10px 14px 12px; font-size: .9rem; }
+.sec { margin-top: 22px; }
+.sec-h { font-size: .95rem; font-weight: 800; color: var(--tx); margin: 0 2px 9px; }
+.sec-h small { font-weight: 500; font-size: .76rem; color: var(--tx3); margin-left: 8px; }
+.sec.miss { background: var(--miss-bg); border: 1px solid var(--miss-bd); border-radius: var(--radius); padding: 12px 10px 4px; }
+.grp-h { display: flex; align-items: center; gap: 7px; font-size: .82rem; font-weight: 700; color: var(--tx2); margin: 14px 2px 7px; }
+.grp-h::before { content: ""; width: 9px; height: 9px; border-radius: 3px; background: var(--th, var(--tx3)); }
+.card { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden;
+  display: grid; grid-template-columns: 58px 1fr auto; scroll-margin-top: 16px; }
+.card.hot { border-color: #f0c2ad; box-shadow: inset 4px 0 0 var(--accent); }
+.card.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { 0% { box-shadow: 0 0 0 3px var(--radar); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .card.flash { animation: none; } }
+.card.dim { opacity: .62; }
+.tile { grid-column: 1; grid-row: 1 / span 2; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 13px 0 10px;
+  border-right: 1px solid var(--bd); background: #fafbfb; font-variant-numeric: tabular-nums; }
+.tile-m { font-size: .68rem; color: var(--tx3); line-height: 1; }
+.tile-d { font-size: 1.45rem; font-weight: 800; line-height: 1.15; color: var(--tx); }
+.tile-w { font-size: .7rem; color: var(--tx2); line-height: 1; }
+.tile-w.we { color: #b4533a; }
+.tile-r { font-size: .64rem; color: var(--tx3); margin-top: 4px; }
+.card-main { grid-column: 2; grid-row: 1; display: block; padding: 11px 6px 8px 14px; cursor: pointer; min-width: 0; }
+.c-title { font-size: .98rem; font-weight: 700; line-height: 1.5; }
+.c-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: .79rem; color: var(--tx2); margin-top: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: var(--tx); }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--th, var(--tx3)); }
+.lbl { display: inline-block; font-size: .66rem; font-weight: 700; color: var(--radar); background: var(--radar-s);
+  border-radius: 4px; padding: 0 5px; margin-right: 6px; vertical-align: 2px; line-height: 1.6; white-space: nowrap; }
+.side { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 8px; padding: 11px 12px 11px 6px; }
+.dl { font-size: .76rem; color: var(--tx3); white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
+.dl b { display: block; font-size: .95rem; color: var(--tx); }
+.dl.hot b { color: var(--accent); }
+.c-btns { display: flex; align-items: center; gap: 2px; }
+.c-detail { grid-column: 2 / -1; grid-row: 3; border-top: 1px solid var(--bd); padding: 10px 14px 12px; font-size: .9rem; }
+.c-more { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .kv { display: flex; gap: 10px; margin-bottom: 4px; }
 .kv .k { flex: 0 0 3.2em; color: var(--tx3); font-size: .78rem; padding-top: 2px; }
 .kv .v { flex: 1; min-width: 0; white-space: pre-wrap; }
 .c-tools { margin-top: 8px; }
 .hist { margin-top: 8px; font-size: .74rem; color: var(--tx3); }
-details.past { margin-top: 22px; }
-details.past > summary, details.fold > summary { cursor: pointer; font-size: .8rem; font-weight: 700; color: var(--tx2);
-  letter-spacing: .06em; padding: 10px 2px; user-select: none; }
+.morebtn { width: 100%; background: transparent; border: 1px dashed var(--bd2); color: var(--tx2); margin-bottom: 8px; }
+details.past { margin-top: 26px; }
+details.past > summary, details.fold > summary { cursor: pointer; font-size: .9rem; font-weight: 800; color: var(--tx2);
+  padding: 10px 2px; user-select: none; }
 details.past[open] > summary { margin-bottom: 4px; }
 .hint { color: var(--tx3); font-size: .85rem; padding: 26px 4px; }
+@media (max-width: 560px) {
+  .card { grid-template-columns: 52px 1fr; }
+  .tile { grid-row: 1 / span 2; }
+  .side { grid-row: 2; grid-column: 2; flex-direction: row; align-items: center; padding: 0 12px 10px 14px; }
+  .dl { text-align: left; } .dl b { display: inline; margin-right: 6px; }
+  .c-detail { grid-column: 1 / -1; grid-row: 3; }
+  .hd-last { display: none; }
+}
 
 /* パネル・フォーム */
 .panel { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
@@ -489,7 +552,7 @@ function driveErrText(err) {
 
 /* ══ 画面状態（保存しない）══ */
 const V = { view: 'home', panel: null, open: new Set(), themeOpen: new Set(), pastOpen: false, restoreOpen: false,
-            imp: { status: '', alt: false, paste: '' }, formData: null, formMsg: '', themeMsg: '', newThemeName: '', undo: null, edit: null, renderTimer: null };
+            imp: { status: '', alt: false, paste: '' }, formData: null, formMsg: '', themeMsg: '', newThemeName: '', undo: null, edit: null, renderTimer: null, moreOpen: new Set(), flash: null };
 let S;
 
 /* ══ ホーム ══ */
@@ -497,13 +560,35 @@ function isFresh(e) {
   const t = Date.parse(e.foundAt);
   return !isNaN(t) && t >= Date.now() - num(S.settings.newHighlightDays, 7) * 86400000;
 }
-function evLabels(e) {
+function evLabels(e, sec) {
   let s = '';
-  if (e.status === 'new' && isFresh(e)) s += '<span class="lbl">NEW</span>';
-  const d = parseD(e.startDate);
-  if (d && (d.getDay() === 0 || d.getDay() === 6)) s += '<span class="lbl">' + WD[d.getDay()] + '</span>';
+  if (sec !== 'new' && sec !== 'soon' && e.status === 'new' && isFresh(e)) s += '<span class="lbl">新着</span>';   /* 新着の節では全件に付き意味が無いので出さない */
   if (e.needsCheck) s += '<span class="lbl">要手動確認</span>';
   return s;
+}
+/* テーマの色（設定順に割り当て。色は識別用で意味を持たせない） */
+const THEME_HUES = ['#8c5a3c', '#3b6ea8', '#6b5ba8', '#2f8073', '#9a6b1f', '#5c7a2e', '#a04c7a', '#4f6b7a'];
+function themeColor(id) { const i = S.themes.findIndex(t => t.id === id); return i < 0 ? 'var(--tx3)' : THEME_HUES[i % THEME_HUES.length]; }
+/* 開催日のカレンダー札 */
+function dateTile(e) {
+  const d = parseD(e.startDate);
+  if (!d) return '<div class="tile"><span class="tile-d">–</span></div>';
+  const we = d.getDay() === 0 || d.getDay() === 6;
+  const multi = e.endDate && e.endDate !== e.startDate;
+  return '<div class="tile"><span class="tile-m">' + (d.getMonth() + 1) + '月</span><span class="tile-d">' + d.getDate() + '</span>'
+    + '<span class="tile-w' + (we ? ' we' : '') + '">' + WD[d.getDay()] + '</span>'
+    + (multi ? '<span class="tile-r">〜' + esc(md(e.endDate)) + '</span>' : '') + '</div>';
+}
+/* 右上の締切表示。残り2日以内だけ危険色（フォン・レストルフ：目立つのは本当に危ないものだけ） */
+const HOT_DAYS = 2;
+function deadlineHtml(e, sec) {
+  if (sec === 'past') return '';
+  if (sec === 'applied') return '<div class="dl"><b>' + esc(md(e.startDate)) + '</b>参加予定</div>';
+  if (sec === 'missed') return '<div class="dl hot"><b>締切切れ</b>' + (e.applyDeadline ? esc(md(e.applyDeadline)) : '') + '</div>';
+  if (!e.applyDeadline) return '<div class="dl">締切<b>要確認</b></div>';
+  const n = diffDays(today(), e.applyDeadline);
+  if (sec === 'soon') return '<div class="dl' + (n <= HOT_DAYS ? ' hot' : '') + '"><b>' + (n <= 0 ? '今日まで' : 'あと' + n + '日') + '</b>' + esc(md(e.applyDeadline)) + '締切</div>';
+  return '<div class="dl">締切<b>' + esc(md(e.applyDeadline)) + '</b></div>';
 }
 function evMeta(e, sec) {
   const p = [];
@@ -512,28 +597,31 @@ function evMeta(e, sec) {
     if (e.organizer) p.push(esc(e.organizer));
     p.push(STATUS[e.status] || '');
   }
-  const tn = (e.themeIds || []).map(id => { const t = themeById(id); return t ? t.name : ''; }).filter(Boolean).join('／');
-  if (tn) p.push(esc(tn));
-  p.push(KIND[e.kind] || KIND.seminar);
-  p.push(FORMAT[e.format] || '');
-  if (sec !== 'past') {
-    p.push(esc(fmtRange(e)) + (e.confidence === 'low' ? '?' : ''));
-    p.push(e.applyDeadline ? '締切 ' + esc(md(e.applyDeadline)) : '締切 要確認');
-  }
-  if (e.fee) p.push(esc(e.fee));
-  return p.filter(Boolean).join(' ・ ');
+  if (sec !== 'new') (e.themeIds || []).forEach(id => {   /* 新着はテーマ見出しの下に並ぶので重ねて出さない */ const t = themeById(id); if (t) p.push('<span class="chip" style="--th:' + themeColor(id) + '">' + esc(t.name) + '</span>'); });
+  p.push('<span>' + (KIND[e.kind] || KIND.seminar) + (FORMAT[e.format] ? '／' + FORMAT[e.format] : '') + '</span>');
+  if (e.confidence === 'low') p.push('<span>日程は要確認</span>');
+  if (e.fee) p.push('<span>' + esc(e.fee) + '</span>');
+  return p.filter(Boolean).map(x => x.indexOf('<span') === 0 ? x : '<span>' + x + '</span>').join('');
+}
+function evActions(e, sec) {   /* [主, 控え, ...展開時のみ] */
+  if (sec === 'missed') return [['dismiss', '消込']];
+  if (sec === 'soon') return [['st-applied', '申込'], ['st-passed', '見送り'], ['st-considering', '検討中に置く']];
+  if (sec === 'new') return [['st-considering', '検討'], ['st-passed', '見送り'], ['st-applied', '申込済みにする']];
+  if (sec === 'considering') return [['st-applied', '申込'], ['st-passed', '見送り']].concat(e.confidence === 'low' ? [['confirm', '日程を確認済みにする']] : []);
+  if (sec === 'applied') return [['st-attended', '参加した'], ['st-passed', '行かない']];
+  if (sec === 'past' && e.status === 'passed') return [['st-considering', '検討に戻す']];
+  return [];
 }
 function evButtons(e, sec) {
-  const b = (act, label, cls) => '<button data-act="' + act + '" data-id="' + e.id + '"' + (cls ? ' class="' + cls + '"' : '') + '>' + label + '</button>';
-  if (sec === 'missed') return b('dismiss', '消込');
-  if (sec === 'soon') return b('st-applied', '申込', 'pri') + b('st-passed', '見送り');
-  if (sec === 'new') return b('st-considering', '検討', 'pri') + b('st-passed', '見送り') + b('st-applied', '申込');
-  if (sec === 'considering') return b('st-applied', '申込', 'pri') + b('st-passed', '見送り') + (e.confidence === 'low' ? b('confirm', '確認済み') : '');
-  if (sec === 'applied') return b('st-attended', '参加', 'pri') + b('st-passed', '見送り');
-  if (sec === 'past' && e.status === 'passed') return b('st-considering', '検討に戻す');
-  return '';
+  const a = evActions(e, sec);
+  const b = (x, cls) => '<button data-act="' + x[0] + '" data-id="' + e.id + '" class="' + cls + '">' + x[1] + '</button>';
+  return (a[1] ? b(a[1], 'quiet') : '') + (a[0] ? b(a[0], sec === 'new' ? 'sub' : 'pri') : '');   /* 濃い主ボタンは「今決める」節だけ */
 }
-function evDetail(e) {
+function evMoreButtons(e, sec) {
+  const a = evActions(e, sec).slice(2);
+  return a.length ? '<div class="c-more">' + a.map(x => '<button data-act="' + x[0] + '" data-id="' + e.id + '">' + x[1] + '</button>').join('') + '</div>' : '';
+}
+function evDetail(e, more) {
   const kv = (k, v) => v ? '<div class="kv"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>' : '';
   const hist = (e.statusHistory || []).map(h =>
     esc(mdt(h.at)) + ' ' + (STATUS[h.status] || esc(h.status)) + (h.note ? '（' + esc(h.note === 'auto' ? '自動' : h.note) + '）' : '')).join(' → ');
@@ -544,6 +632,7 @@ function evDetail(e) {
     + '<div class="p-msg" id="edmsg_' + e.id + '" hidden></div>'
     + '<textarea class="note" data-f="note" data-id="' + e.id + '" rows="2" placeholder="メモ" aria-label="メモ">' + esc(e.note || '') + '</textarea>'
     + '<div class="c-tools"><button data-act="copy" data-id="' + e.id + '">📋 コピー</button></div>'
+    + (more || '')
     + (hist ? '<div class="hist">' + hist + '</div>' : '')
     + '</div>';
 }
@@ -617,22 +706,42 @@ function commitEdit(inp) {
 function cardHtml(e, sec) {
   const open = V.open.has(e.id);
   const cls = ['card'];
-  let extra = '';
-  if (sec === 'soon') {
-    cls.push('soon');
-    const n = diffDays(today(), e.applyDeadline);
-    extra = '<span class="soon-days">' + (n <= 0 ? '今日まで' : 'あと' + n + '日') + '</span>';
-  }
+  if (sec === 'soon' && e.applyDeadline && diffDays(today(), e.applyDeadline) <= HOT_DAYS) cls.push('hot');
   if (sec === 'new' && !isWeekdayDate(e.startDate)) cls.push('dim');   /* 土日開催は下に薄く */
+  if (V.flash === e.id) cls.push('flash');
   const btns = evButtons(e, sec);
-  return '<div class="' + cls.join(' ') + '">'
+  return '<div class="' + cls.join(' ') + '" id="c_' + e.id + '">'
+    + dateTile(e)
     + '<div class="card-main" role="button" tabindex="0" aria-expanded="' + open + '" data-act="toggle" data-id="' + e.id + '">'
-    + '<div class="c-title">' + extra + evLabels(e) + esc(e.title) + '</div>'
+    + '<div class="c-title">' + evLabels(e, sec) + esc(e.title) + '</div>'
     + '<div class="c-meta">' + evMeta(e, sec) + '</div></div>'
-    + (open ? evDetail(e) : '')
-    + (btns ? '<div class="c-btns">' + btns + '</div>' : '')
+    + '<div class="side">' + deadlineHtml(e, sec) + (btns ? '<div class="c-btns">' + btns + '</div>' : '') + '</div>'
+    + (open ? evDetail(e, evMoreButtons(e, sec)) : '')
     + '</div>';
 }
+/* レーダー帯：今日から14日。締切（新着・検討中）を点、申込済みの開催日を輪で置く。点で該当カードへ飛ぶ */
+const RADAR_DAYS = 14;
+function radarHtml() {
+  const t = today(), days = [];
+  for (let i = 0; i < RADAR_DAYS; i++) days.push(addDays(t, i));
+  const hit = new Map(days.map(d => [d, []]));
+  S.events.forEach(e => {
+    if ((e.status === 'new' || e.status === 'considering') && e.applyDeadline && hit.has(e.applyDeadline))
+      hit.get(e.applyDeadline).push({ e, k: diffDays(t, e.applyDeadline) <= HOT_DAYS ? 'hot' : '' });
+    if (e.status === 'applied' && hit.has(e.startDate)) hit.get(e.startDate).push({ e, k: 'go' });
+  });
+  if (![...hit.values()].some(a => a.length)) return '';    /* 何も無い期間は帯ごと出さない */
+  const last = parseD(days[days.length - 1]);
+  const cols = days.map((d, i) => {
+    const dt = parseD(d), we = dt.getDay() === 0 || dt.getDay() === 6;
+    const dots = hit.get(d).slice(0, 4).map(x => '<button class="dot ' + x.k + '" data-act="jump" data-id="' + x.e.id + '" title="' + esc(x.e.title) + '" aria-label="' + esc(x.e.title) + '"></button>').join('');
+    return '<div class="rd' + (i === 0 ? ' td' : we ? ' we' : '') + '"><span class="rd-w">' + (i === 0 ? '今日' : WD[dt.getDay()]) + '</span><span class="rd-d">' + dt.getDate() + '</span><span class="rd-dots">' + dots + '</span></div>';
+  }).join('');
+  return '<section class="radar" aria-label="次の14日の締切"><div class="radar-h"><b>次の14日</b><span>〜' + (last.getMonth() + 1) + '/' + last.getDate() + '</span></div>'
+    + '<div class="radar-g">' + cols + '</div>'
+    + '<div class="radar-k"><span><i></i>申込締切</span><span><i class="hot"></i>残り' + HOT_DAYS + '日以内</span><span><i class="go"></i>参加予定</span></div></section>';
+}
+const NEW_PER_THEME = 3;
 function renderHome() {
   const t = today(), lim = addDays(t, Math.max(0, num(S.settings.deadlineSoonDays, 7)));
   const isSoon = e => (e.status === 'new' || e.status === 'considering') && e.applyDeadline && e.applyDeadline >= t && e.applyDeadline <= lim;
@@ -646,7 +755,10 @@ function renderHome() {
   const past = ev.filter(e => e.status === 'attended' || e.status === 'passed' || e.status === 'expired').sort(by(e => e.startDate)).reverse();
   const sec = (title, list, key, cls) => list.length
     ? '<section class="sec' + (cls ? ' ' + cls : '') + '"><h2 class="sec-h">' + title + '</h2>' + list.map(e => cardHtml(e, key)).join('') + '</section>' : '';
-  let h = sec('見過ごし', missed, 'missed', 'miss') + sec('締切接近', soon, 'soon');
+  let h = radarHtml();
+  if (ev.length && !missed.length && !soon.length && !fresh.length)
+    h += '<div class="done">今週決めることは済んでいます<span>次の収集は日曜21時です。</span></div>';
+  h += sec('見過ごし', missed, 'missed', 'miss') + sec('締切接近', soon, 'soon');
   if (fresh.length) {                                  /* 新着：テーマ別。各グループ内は平日開催が上・土日は下 */
     const order = S.themes.map(x => x.id), map = new Map();
     fresh.forEach(e => { const k = (e.themeIds || []).find(id => order.includes(id)) || ''; if (!map.has(k)) map.set(k, []); map.get(k).push(e); });
@@ -658,7 +770,11 @@ function renderHome() {
         if (wa !== wb) return wa ? -1 : 1;
         return a.startDate < b.startDate ? -1 : a.startDate > b.startDate ? 1 : 0;
       });
-      return '<div class="grp-h">' + esc(th ? th.name : 'テーマなし') + '</div>' + list.map(e => cardHtml(e, 'new')).join('');
+      const showAll = V.moreOpen.has(k), head = list.slice(0, NEW_PER_THEME), rest = list.slice(NEW_PER_THEME);   /* ミラー：1テーマ3件まで */
+      return '<div class="grp-h" style="--th:' + (th ? themeColor(k) : 'var(--tx3)') + '">' + esc(th ? th.name : 'テーマなし') + '</div>'
+        + head.map(e => cardHtml(e, 'new')).join('')
+        + (rest.length ? (showAll ? rest.map(e => cardHtml(e, 'new')).join('') : '')
+          + '<button class="morebtn" data-act="more" data-tid="' + esc(k) + '">' + (showAll ? 'たたむ' : 'このテーマのほかの候補も見る') + '</button>' : '');
     }).join('') + '</section>';
   }
   h += sec('検討中', cons, 'considering') + sec('申込済み', applied, 'applied');
@@ -998,6 +1114,13 @@ function undoDismiss() {
 function onAct(el) {
   const act = el.dataset.act, id = el.dataset.id, tid = el.dataset.tid;
   if (act === 'toggle') { V.open.has(id) ? V.open.delete(id) : V.open.add(id); render(); }
+  else if (act === 'more') { V.moreOpen.has(tid) ? V.moreOpen.delete(tid) : V.moreOpen.add(tid); render(); }
+  else if (act === 'jump') {
+    const e = byId(id); if (!e) return;
+    const k = (e.themeIds || [])[0]; if (k) V.moreOpen.add(k);        /* 折りたたみの中なら開く */
+    V.flash = id; render(); V.flash = null;
+    const c = document.getElementById('c_' + id); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
   else if (act.indexOf('st-') === 0) setStatus(id, act.slice(3));
   else if (act === 'edit') startEdit(el);
   else if (act === 'confirm') { const e = byId(id); if (e) { e.confidence = 'high'; saveData(); render(); } }
