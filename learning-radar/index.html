@@ -121,8 +121,8 @@ button.rd.td { background: var(--radar-s); } button.rd.we { background: #f6f8f8;
 /* カレンダー判定の1行。色は ok＝軸色、会食・出張・家ごはん枠＝濃い字、ルーチン・時間要確認＝控えめ */
 .ck { font-size: .74rem; font-weight: 600; line-height: 1.45; text-align: right; max-width: 12em; color: var(--tx2); }
 .ck.v-ok { color: var(--radar); }
-.ck.v-dinner, .ck.v-away, .ck.v-dinnerRule { color: var(--tx); }
-.ck.v-routine, .ck.v-unknown { color: var(--tx2); }
+.ck.v-dinner, .ck.v-away, .ck.v-dinnerRule, .ck.v-meeting { color: var(--tx); }
+.ck.v-routine, .ck.v-unknown, .ck.v-other { color: var(--tx2); }
 .c-btns { display: flex; align-items: center; gap: 2px; }
 .c-detail { grid-column: 2 / -1; grid-row: 3; border-top: 1px solid var(--bd); padding: 10px 14px 12px; font-size: .9rem; }
 .c-more { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -232,8 +232,9 @@ const KIND   = { seminar:'セミナー', training:'研修', course:'講座', exp
 const FORMAT = { onsite:'対面', online:'オンライン', hybrid:'ハイブリッド', archive:'アーカイブ' };
 const STATUS = { 'new':'新着', considering:'検討', applied:'申込済み', attended:'参加', passed:'見送り', missed:'見過ごし', expired:'終了' };
 const AXIS   = { fixed:'時期固定', play:'遊び', 'new':'新規' };
-/* カレンダー判定の6値と既定文言（label が空のときだけ使う。label があればそのまま出す） */
-const CHECK_VERDICTS = { ok:'重複なし', routine:'重複：ルーチン → 移動可', dinner:'重複：会食（確定）', away:'重複：出張・合宿', dinnerRule:'家ごはん枠に当たる', unknown:'時間 要確認' };
+/* カレンダー判定の区分と既定文言（label が空のときだけ使う。label があればそのまま出す）。
+   ここに無い区分も捨てずに label をそのまま控えめの色で出す（Cowork 側の区分追加に画面が追随できるように） */
+const CHECK_VERDICTS = { ok:'重複なし', routine:'重複：ルーチン → 移動可', dinner:'重複：会食（確定）', away:'重複：出張・合宿', dinnerRule:'家ごはん枠に当たる', meeting:'重複：打合せ', unknown:'時間 要確認' };
 const WD = ['日','月','火','水','木','金','土'];
 const DEFAULT_REVIEW_AT = '2026-12-01';
 
@@ -477,19 +478,44 @@ function importChecks(data) {
   const at = gen || new Date().toISOString();
   const atMs = Date.parse(at);
   const checks = S.settings.checks;
+  /* 照合キー：eventId → URL＋開催日 → タイトル＋開催日（取込の重複判定と同じ normUrl / normTitle）。
+     バックアップ未同期で Cowork が id を知らない場合でも当たるように */
+  const byUrl = new Map(), byTitle = new Map();
+  S.events.forEach(e => {
+    const nu = normUrl(e.url), nt = normTitle(e.title);
+    if (nu && !byUrl.has(nu + '|' + e.startDate)) byUrl.set(nu + '|' + e.startDate, e);
+    if (nt && !byTitle.has(nt + '|' + e.startDate)) byTitle.set(nt + '|' + e.startDate, e);
+  });
+  const match = c => {
+    const byIdHit = c.eventId != null && byId(str(c.eventId));
+    if (byIdHit) return { e: byIdHit, rank: 1 };
+    const sd = str(c.startDate);
+    if (!isDate(sd)) return null;
+    const nu = normUrl(c.url), nt = normTitle(c.title);
+    if (nu && byUrl.has(nu + '|' + sd)) return { e: byUrl.get(nu + '|' + sd), rank: 2 };
+    if (nt && byTitle.has(nt + '|' + sd)) return { e: byTitle.get(nt + '|' + sd), rank: 3 };
+    return null;
+  };
+  const rankNow = {};                                   /* このファイル内で同じ予定に複数当たったら、強いキーで当たった方を採る */
   data.checks.forEach(c => {
     if (!c || typeof c !== 'object') return;
-    const e = byId(str(c.eventId)); if (!e) return;                        /* 該当の無い判定は捨てる */
-    if (!CHECK_VERDICTS[c.verdict]) return;                                 /* 6値以外は読まない */
+    const hit = match(c); if (!hit) return;                                 /* どのキーにも当たらない判定は捨てる */
+    const e = hit.e;
+    const verdict = str(c.verdict);
+    const label = str(c.label) || CHECK_VERDICTS[verdict] || '';
+    if (!verdict || !label) return;                                         /* 出す文言が無いものだけ読まない */
+    if (rankNow[e.id] && rankNow[e.id] < hit.rank) return;
     const old = checks[e.id];
-    if (old && !isNaN(atMs) && Date.parse(old.checkedAt) > atMs) return;    /* 手元の判定の方が新しければ残す */
-    checks[e.id] = { verdict: c.verdict, label: str(c.label) || CHECK_VERDICTS[c.verdict], detail: str(c.detail),
+    if (!rankNow[e.id] && old && !isNaN(atMs) && Date.parse(old.checkedAt) > atMs) return;   /* 手元の判定の方が新しければ残す */
+    rankNow[e.id] = hit.rank;
+    checks[e.id] = { verdict, label, detail: str(c.detail),
       conflicts: Array.isArray(c.conflicts) ? c.conflicts : [],
       proposal: (c.proposal && typeof c.proposal === 'object' && !Array.isArray(c.proposal)) ? c.proposal : null,
       checkedAt: at };
   });
   Object.keys(checks).forEach(id => { if (!byId(id)) delete checks[id]; });
-  if (gen) S.settings.lastCheckGeneratedAt = gen;
+  const last = S.settings.lastCheckGeneratedAt;          /* 取込済みの時刻は新しい方へだけ進める（古いファイルを貼っても戻さない） */
+  if (gen && (!last || isNaN(Date.parse(last)) || isNaN(atMs) || atMs > Date.parse(last))) S.settings.lastCheckGeneratedAt = gen;
   saveData();
   return { at };
 }
@@ -644,7 +670,7 @@ const CHECK_SECS = ['soon', 'new', 'considering', 'applied'];
 function checkOf(e, sec) {
   if (!CHECK_SECS.includes(sec)) return null;
   const c = S.settings.checks && S.settings.checks[e.id];
-  return (c && CHECK_VERDICTS[c.verdict]) ? c : null;
+  return (c && c.verdict && c.label) ? c : null;
 }
 function checkStale(e, c) {                            /* 判定のあとに日程を変えていたら、古い判定だと添える */
   if (!e.updatedAt) return false;
@@ -653,7 +679,7 @@ function checkStale(e, c) {                            /* 判定のあとに日�
 }
 function checkHtml(e, sec) {
   const c = checkOf(e, sec); if (!c) return '';
-  return '<div class="ck v-' + c.verdict + '">' + esc(c.label) + (checkStale(e, c) ? '（日程変更前の判定）' : '') + '</div>';
+  return '<div class="ck ' + (CHECK_VERDICTS[c.verdict] ? 'v-' + c.verdict : 'v-other') + '">' + esc(c.label) + (checkStale(e, c) ? '（日程変更前の判定）' : '') + '</div>';
 }
 function fmtWhen(s) {                                   /* "2026-10-24T13:00" → "10/24（土）13:00" */
   const m = /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2}))?/.exec(str(s));

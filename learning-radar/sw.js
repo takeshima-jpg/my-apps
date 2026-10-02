@@ -4,7 +4,7 @@
 // - 【過去のSWキャッシュ事故の再発防止】版が変わったら自分の古いキャッシュを消す。
 //   他OSのキャッシュ・他オリジン（Drive API等）のリクエストには触らない
 // SW_VERSION: 更新時にこの値を変えると確実に更新サイクルが走る
-const SW_VERSION = '2026-10-03-1';
+const SW_VERSION = '2026-10-03-2';
 const CACHE_PREFIX = 'learning-radar-';
 const CACHE = CACHE_PREFIX + SW_VERSION;
 const KEEP = ['./index.html', './manifest.json'];
