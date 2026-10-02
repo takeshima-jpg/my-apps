@@ -402,7 +402,8 @@ function autoTransition() {
     return 'new';
   };
   S.events.forEach(e => {
-    const lim = e.applyDeadline || e.startDate;        /* 締切が無いものは開催日で判定 */
+    /* 締切が無いものは開催日で判定。会期のあるもの（endDate あり）は最終日まで待つ＝会期中の展示会を初日で見過ごしに落とさない */
+    const lim = e.applyDeadline || e.endDate || e.startDate;
     const end = e.endDate || e.startDate;
     if (e.status === 'new' || e.status === 'considering') { if (lim && lim < t) move(e, 'missed'); }
     else if (e.status === 'passed') { if (end && end < t) move(e, 'expired'); }
