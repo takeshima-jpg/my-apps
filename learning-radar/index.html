@@ -117,6 +117,12 @@ button.rd.td { background: var(--radar-s); } button.rd.we { background: #f6f8f8;
 .dl { font-size: .76rem; color: var(--tx3); white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
 .dl b { display: block; font-size: .95rem; color: var(--tx); }
 .dl.hot b { color: var(--accent); }
+.dlw { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 0; }
+/* カレンダー判定の1行。色は ok＝軸色、会食・出張・家ごはん枠＝濃い字、ルーチン・時間要確認＝控えめ */
+.ck { font-size: .74rem; font-weight: 600; line-height: 1.45; text-align: right; max-width: 12em; color: var(--tx2); }
+.ck.v-ok { color: var(--radar); }
+.ck.v-dinner, .ck.v-away, .ck.v-dinnerRule { color: var(--tx); }
+.ck.v-routine, .ck.v-unknown { color: var(--tx2); }
 .c-btns { display: flex; align-items: center; gap: 2px; }
 .c-detail { grid-column: 2 / -1; grid-row: 3; border-top: 1px solid var(--bd); padding: 10px 14px 12px; font-size: .9rem; }
 .c-more { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -136,6 +142,7 @@ details.past[open] > summary { margin-bottom: 4px; }
   .tile { grid-row: 1 / span 2; }
   .side { grid-row: 2; grid-column: 2; flex-direction: row; align-items: center; padding: 0 12px 10px 14px; }
   .dl { text-align: left; } .dl b { display: inline; margin-right: 6px; }
+  .dlw { flex: 1; align-items: flex-start; } .ck { text-align: left; max-width: none; }
   .c-detail { grid-column: 1 / -1; grid-row: 3; }
   .hd-last { display: none; }
 }
@@ -215,6 +222,7 @@ const CLIENT_ID = '450582924828-c89h2mia7e396dbilpthguhtb77p6fmr.apps.googleuser
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 const GDRIVE_FOLDER_ID = '1qOQXKraLlYA8BA3WM1dvNdVGzHasRWKP';   // 10_日次データ
 const GDRIVE_FILE_NAME = 'learning-events.json';
+const GDRIVE_CHECK_FILE_NAME = 'learning-check.json';   // Cowork のカレンダー判定（同じフォルダ・同名新規作成）
 const GDRIVE_TOKEN_KEY = 'gdrive_token_learningradar';          // このOS専用（他OSと衝突させない）
 const GDRIVE_FALLBACK_TOKEN_KEY = 'brief_viewer_token';         // 読むだけ（書き換えない）。同じ drive.readonly なので未接続時の代替に使う
 const GDRIVE_COMMON = '&includeItemsFromAllDrives=true&supportsAllDrives=true';   // 共有アイテム到達の要（外さない）
@@ -224,6 +232,8 @@ const KIND   = { seminar:'セミナー', training:'研修', course:'講座', exp
 const FORMAT = { onsite:'対面', online:'オンライン', hybrid:'ハイブリッド', archive:'アーカイブ' };
 const STATUS = { 'new':'新着', considering:'検討', applied:'申込済み', attended:'参加', passed:'見送り', missed:'見過ごし', expired:'終了' };
 const AXIS   = { fixed:'時期固定', play:'遊び', 'new':'新規' };
+/* カレンダー判定の6値と既定文言（label が空のときだけ使う。label があればそのまま出す） */
+const CHECK_VERDICTS = { ok:'重複なし', routine:'重複：ルーチン → 移動可', dinner:'重複：会食（確定）', away:'重複：出張・合宿', dinnerRule:'家ごはん枠に当たる', unknown:'時間 要確認' };
 const WD = ['日','月','火','水','木','金','土'];
 const DEFAULT_REVIEW_AT = '2026-12-01';
 
@@ -288,7 +298,7 @@ function initialThemes() {
 function defaultData() {
   return { version: 1, events: [], themes: [],
     settings: { reviewWeekday: 1, deadlineSoonDays: 7, newHighlightDays: 7, ignoreTitleWords: [], dismissed: [],
-                lastImportGeneratedAt: null, lastImportAt: null },
+                lastImportGeneratedAt: null, lastImportAt: null, checks: {}, lastCheckGeneratedAt: null },
     updatedAt: new Date().toISOString() };
 }
 function normalizeData(o) {
@@ -298,6 +308,8 @@ function normalizeData(o) {
   d.themes = Array.isArray(o.themes) ? o.themes.filter(t => t && typeof t === 'object' && t.id) : [];
   if (o.settings && typeof o.settings === 'object') Object.assign(d.settings, o.settings);
   ['ignoreTitleWords', 'dismissed'].forEach(k => { if (!Array.isArray(d.settings[k])) d.settings[k] = []; });
+  const ck = d.settings.checks;
+  if (!ck || typeof ck !== 'object' || Array.isArray(ck)) d.settings.checks = {};   /* 判定が無い旧データ */
   const used = new Set();
   d.events.forEach(e => {
     if (!Array.isArray(e.themeIds)) e.themeIds = [];
@@ -455,6 +467,40 @@ function resultText(r) {
   return p.join(' / ');
 }
 
+/* ── カレンダー判定（learning-check.json）の取込 ──
+   Cowork のチェッカーがカレンダーと突き合わせた結果。判定は参考情報で、ステータスは変えない。
+   予定ごとに新しい判定で上書きし、ファイルに無い予定の判定は残す（申込・見送り後も消さない）。
+   消込などで予定そのものが無くなった判定だけ片付ける。 */
+function importChecks(data) {
+  const gen = str(data.generatedAt);
+  if (gen && gen === S.settings.lastCheckGeneratedAt) return { already: true, at: gen };
+  const at = gen || new Date().toISOString();
+  const atMs = Date.parse(at);
+  const checks = S.settings.checks;
+  data.checks.forEach(c => {
+    if (!c || typeof c !== 'object') return;
+    const e = byId(str(c.eventId)); if (!e) return;                        /* 該当の無い判定は捨てる */
+    if (!CHECK_VERDICTS[c.verdict]) return;                                 /* 6値以外は読まない */
+    const old = checks[e.id];
+    if (old && !isNaN(atMs) && Date.parse(old.checkedAt) > atMs) return;    /* 手元の判定の方が新しければ残す */
+    checks[e.id] = { verdict: c.verdict, label: str(c.label) || CHECK_VERDICTS[c.verdict], detail: str(c.detail),
+      conflicts: Array.isArray(c.conflicts) ? c.conflicts : [],
+      proposal: (c.proposal && typeof c.proposal === 'object' && !Array.isArray(c.proposal)) ? c.proposal : null,
+      checkedAt: at };
+  });
+  Object.keys(checks).forEach(id => { if (!byId(id)) delete checks[id]; });
+  if (gen) S.settings.lastCheckGeneratedAt = gen;
+  saveData();
+  return { at };
+}
+/* 判定の取込結果は件数を出さず「いつ時点の判定か」だけ（静かなUI） */
+function checkResultText(r) {
+  const d = new Date(r.at);
+  const when = isNaN(d) ? '' : '（' + (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' 時点）';
+  return (r.already ? '判定は取込済みです' : '判定を取り込みました') + when;
+}
+const isCheckFile = d => !!d && typeof d === 'object' && !Array.isArray(d) && Array.isArray(d.checks) && !Array.isArray(d.newEvents);
+
 /* ── 自動遷移（起動時と取込後に1回）。見送り(passed)と見過ごし(missed)は必ず分ける ── */
 function autoTransition() {
   const t = today(), now = new Date().toISOString();
@@ -514,9 +560,9 @@ async function gdriveFetch(url, token) {
   return res;
 }
 /* 親フォルダ＋ファイル名で検索し createdTime 最新を採用（Coworkのコネクタは更新のたび同名新規作成するため）。
-   検索名は GDRIVE_FILE_NAME から作る。「learning-events (1).json」のような連番は許容し、別名のファイルは弾く */
-async function gdriveFindFile(token) {
-  const base = GDRIVE_FILE_NAME.replace(/\.json$/, '');
+   検索名は渡されたファイル名（既定は GDRIVE_FILE_NAME）から作る。「learning-events (1).json」のような連番は許容し、別名のファイルは弾く */
+async function gdriveFindFile(token, fileName) {
+  const base = (fileName || GDRIVE_FILE_NAME).replace(/\.json$/, '');
   const q = encodeURIComponent("'" + GDRIVE_FOLDER_ID + "' in parents and name contains '" + base + "' and trashed=false");
   const res = await gdriveFetch('https://www.googleapis.com/drive/v3/files?q=' + q
     + '&fields=files(id,name,createdTime)&orderBy=createdTime+desc&pageSize=20' + GDRIVE_COMMON, token);
@@ -524,13 +570,13 @@ async function gdriveFindFile(token) {
   const re = new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '( \\(\\d+\\))?\\.json$');
   return (d.files || []).find(f => re.test(f.name)) || null;
 }
-async function gdriveLoad() {
+async function gdriveLoad(fileName) {
   const toks = gdriveTokens();
   if (!toks.length) throw gdriveErr('noauth');
   let last = null;
   for (const t of toks) {
     try {
-      const f = await gdriveFindFile(t.token);
+      const f = await gdriveFindFile(t.token, fileName);
       if (!f) throw gdriveErr('notfound');
       const res = await gdriveFetch('https://www.googleapis.com/drive/v3/files/' + f.id + '?alt=media' + GDRIVE_COMMON, t.token);
       const txt = await res.text();
@@ -555,7 +601,7 @@ function driveErrText(err) {
 
 /* ══ 画面状態（保存しない）══ */
 const V = { view: 'home', panel: null, open: new Set(), themeOpen: new Set(), pastOpen: false, restoreOpen: false,
-            imp: { status: '', alt: false, paste: '' }, formData: null, formMsg: '', themeMsg: '', newThemeName: '', undo: null, edit: null, renderTimer: null, moreOpen: new Set(), flash: null };
+            imp: { status: '', alt: false, paste: '', check: '' }, formData: null, formMsg: '', themeMsg: '', newThemeName: '', undo: null, edit: null, renderTimer: null, moreOpen: new Set(), flash: null };
 let S;
 
 /* ══ ホーム ══ */
@@ -593,6 +639,33 @@ function deadlineHtml(e, sec) {
   if (sec === 'soon') return '<div class="dl' + (n <= HOT_DAYS ? ' hot' : '') + '"><b>' + (n <= 0 ? '今日まで' : 'あと' + n + '日') + '</b>' + esc(md(e.applyDeadline)) + '締切</div>';
   return '<div class="dl">締切<b>' + esc(md(e.applyDeadline)) + '</b></div>';
 }
+/* カレンダー判定：見過ごし・過去を除く節で、判定のあるカードにだけ出す（「未判定」は出さない） */
+const CHECK_SECS = ['soon', 'new', 'considering', 'applied'];
+function checkOf(e, sec) {
+  if (!CHECK_SECS.includes(sec)) return null;
+  const c = S.settings.checks && S.settings.checks[e.id];
+  return (c && CHECK_VERDICTS[c.verdict]) ? c : null;
+}
+function checkStale(e, c) {                            /* 判定のあとに日程を変えていたら、古い判定だと添える */
+  if (!e.updatedAt) return false;
+  const a = Date.parse(c.checkedAt), b = Date.parse(e.updatedAt);
+  return !isNaN(a) && !isNaN(b) && a < b;
+}
+function checkHtml(e, sec) {
+  const c = checkOf(e, sec); if (!c) return '';
+  return '<div class="ck v-' + c.verdict + '">' + esc(c.label) + (checkStale(e, c) ? '（日程変更前の判定）' : '') + '</div>';
+}
+function fmtWhen(s) {                                   /* "2026-10-24T13:00" → "10/24（土）13:00" */
+  const m = /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2}))?/.exec(str(s));
+  const d = m && parseD(m[1]);
+  return d ? (d.getMonth() + 1) + '/' + d.getDate() + '（' + WD[d.getDay()] + '）' + (m[2] ? m[2] + ':' + m[3] : '') : '';
+}
+function checkDetailHtml(e, sec, kv) {
+  const c = checkOf(e, sec); if (!c) return '';
+  const p = c.proposal;
+  return kv('判定', esc(c.detail || c.label))
+    + (p ? kv('移動案', esc((p.title ? str(p.title) + ' → ' : '') + (fmtWhen(p.to) || str(p.to)))) : '');
+}
 function evMeta(e, sec) {
   const p = [];
   if (sec === 'past') {                                /* 「この団体は毎年この時期」を振り返る用途：開催日と主催を先頭に */
@@ -624,13 +697,14 @@ function evMoreButtons(e, sec) {
   const a = evActions(e, sec).slice(2);
   return a.length ? '<div class="c-more">' + a.map(x => '<button data-act="' + x[0] + '" data-id="' + e.id + '">' + x[1] + '</button>').join('') + '</div>' : '';
 }
-function evDetail(e, more) {
+function evDetail(e, more, sec) {
   const kv = (k, v) => v ? '<div class="kv"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>' : '';
   const hist = (e.statusHistory || []).map(h =>
     esc(mdt(h.at)) + ' ' + (STATUS[h.status] || esc(h.status)) + (h.note ? '（' + esc(h.note === 'auto' ? '自動' : h.note) + '）' : '')).join(' → ');
   return '<div class="c-detail">'
     + kv('主催', esc(e.organizer)) + kv('要約', esc(e.summary))
     + kv('URL', safeUrl(e.url) ? '<a href="' + esc(e.url) + '" target="_blank" rel="noopener">' + esc(e.url) + '</a>' : esc(e.url))
+    + checkDetailHtml(e, sec, kv)
     + '<div class="edits fr2">' + ED_ORDER.map(k => '<div class="fg"><span class="fl">' + ED[k][0] + '</span>' + edBtn(e, k) + '</div>').join('') + '</div>'
     + '<div class="p-msg" id="edmsg_' + e.id + '" hidden></div>'
     + '<textarea class="note" data-f="note" data-id="' + e.id + '" rows="2" placeholder="メモ" aria-label="メモ">' + esc(e.note || '') + '</textarea>'
@@ -698,6 +772,7 @@ function commitEdit(inp) {
   if (k === 'endDate' && nv && nv < e.startDate) { say('最終日が開催日より前になっています'); return endEdit(inp, e, k); }
   if ((e[k] == null ? '' : e[k]) === (nv == null ? '' : nv)) return endEdit(inp, e, k);   /* 変更なし */
   e[k] = nv;
+  if (k === 'startDate' || k === 'endDate' || k === 'time') e.updatedAt = new Date().toISOString();   /* 日程を変えた時刻。カレンダー判定より新しければ「日程変更前の判定」と添える */
   if (k === 'startDate' && e.endDate && e.endDate < nv) e.endDate = null;      /* 開催日が最終日を越えたら単発扱いに */
   e.weekday = isWeekdayDate(e.startDate);
   if (k === 'applyDeadline' || k === 'startDate') e.confidence = 'high';        /* 本人が確認して入れた値 */
@@ -718,8 +793,8 @@ function cardHtml(e, sec) {
     + '<div class="card-main" role="button" tabindex="0" aria-expanded="' + open + '" data-act="toggle" data-id="' + e.id + '">'
     + '<div class="c-title">' + evLabels(e, sec) + esc(e.title) + '</div>'
     + '<div class="c-meta">' + evMeta(e, sec) + '</div></div>'
-    + '<div class="side">' + deadlineHtml(e, sec) + (btns ? '<div class="c-btns">' + btns + '</div>' : '') + '</div>'
-    + (open ? evDetail(e, evMoreButtons(e, sec)) : '')
+    + '<div class="side"><div class="dlw">' + deadlineHtml(e, sec) + checkHtml(e, sec) + '</div>' + (btns ? '<div class="c-btns">' + btns + '</div>' : '') + '</div>'
+    + (open ? evDetail(e, evMoreButtons(e, sec), sec) : '')
     + '</div>';
 }
 /* レーダー帯：今日から14日。締切（新着・検討中）を点、申込済みの開催日を輪で置く。点で該当カードへ飛ぶ */
@@ -797,6 +872,7 @@ function renderHome() {
 function importPanelHtml() {
   return '<div class="panel"><div class="p-h"><span>取込</span><button data-act="closePanel">閉じる</button></div>'
     + '<div class="p-status" id="impStatus">' + esc(V.imp.status) + '</div>'
+    + (V.imp.check ? '<div class="p-status" id="impCheck">' + esc(V.imp.check) + '</div>' : '')
     + '<details class="fold" id="impAlt"' + (V.imp.alt ? ' open' : '') + '><summary>ファイル／貼り付けで取り込む</summary>'
     + '<div class="fg"><label class="fl" for="impFile">ファイルを選ぶ（.json）</label><input type="file" id="impFile" accept=".json,application/json"></div>'
     + '<div class="fg"><label class="fl" for="impPaste">JSON を貼り付け</label><textarea id="impPaste" rows="4">' + esc(V.imp.paste || '') + '</textarea></div>'
@@ -855,7 +931,7 @@ function saveForm() {
 }
 async function startImport() {
   V.view = 'home'; V.panel = 'import';
-  V.imp.status = 'Drive から取得しています…'; V.imp.alt = false;
+  V.imp.status = 'Drive から取得しています…'; V.imp.alt = false; V.imp.check = '';
   render();
   try {
     const r = importPayload(await gdriveLoad());
@@ -865,11 +941,23 @@ async function startImport() {
     V.imp.status = driveErrText(err);
     V.imp.alt = true;
   }
+  try {                                                 /* 新着の成否にかかわらず、判定ファイルがあれば読む。無ければ何も出さない */
+    const cd = await gdriveLoad(GDRIVE_CHECK_FILE_NAME);
+    if (isCheckFile(cd)) { const cr = importChecks(cd); if (!cr.already) V.imp.check = checkResultText(cr); }
+  } catch (e) {}
   render();
 }
 function importText(txt) {
   let data;
   try { data = JSON.parse(txt); } catch (e) { V.imp.status = 'JSON を読み取れませんでした'; V.imp.alt = true; render(); return; }
+  V.imp.check = '';
+  if (isCheckFile(data)) {                              /* checks を持つJSON＝カレンダー判定 */
+    V.imp.status = checkResultText(importChecks(data));
+    V.imp.alt = false;
+    const p = document.getElementById('impPaste'); if (p) p.value = ''; V.imp.paste = '';
+    render();
+    return;
+  }
   const r = importPayload(data);
   V.imp.status = resultText(r);
   V.imp.alt = !!r.error;
