@@ -801,11 +801,12 @@ function collectAllOSData() {
     lecticaLogs:                jGet('lectica_experiment_logs_v1'),
     aixReviewWeekly:            bGet('aix_review_weekly'),    // markdown文字列 or オブジェクト
     aixReviewMonthly:           bGet('aix_review_monthly'),   // markdown文字列 or オブジェクト
+    learningRadar_v1:           jGet('learningRadar_v1'),     // 学びレーダー（events/themes/settingsの1オブジェクト丸ごと。Coworkの学びレーダー収集が読む）
   };
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-08-31';
+const BUILD_VER = '2026-10-02';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -840,6 +841,7 @@ function restoreAllOSData(data) {
   if (data.lecticaExperiments)         localStorage.setItem('lectica_experiments_master_v1',          JSON.stringify(data.lecticaExperiments));
   if (data.lecticaExperimentsMarkdown) localStorage.setItem('lectica_experiments_master_markdown_v1', data.lecticaExperimentsMarkdown);
   if (data.lecticaLogs)                localStorage.setItem('lectica_experiment_logs_v1',             JSON.stringify(data.lecticaLogs));
+  if (data.learningRadar_v1)           localStorage.setItem('learningRadar_v1',                       JSON.stringify(data.learningRadar_v1));
   // brief/review は markdown文字列 or オブジェクト。collect(bGet)と対称に：文字列は生のまま、オブジェクトはJSON化。
   const writeBrief = (val, key) => { if (val == null) return; localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val)); };
   writeBrief(data.aixReviewWeekly,  'aix_review_weekly');
@@ -1048,7 +1050,7 @@ const RG_KEYS = [
   'pos_v4', 'yaritai_items_v4', 'oneday_logs_v1', 'oneday_reviews_v1',
   'kouso_backlog_v1', 'kouso_archive_v1', 'su-v6-persons', 'hitomemo_profiles_v1',
   'lectica_experiments_master_v1', 'lectica_experiments_master_markdown_v1', 'lectica_experiment_logs_v1',
-  'aix_review_weekly', 'aix_review_monthly', 'reflectOS_v1',
+  'aix_review_weekly', 'aix_review_monthly', 'reflectOS_v1', 'learningRadar_v1',
 ];
 const RG_SNAP_KEY = 'taskos_pre_restore_snapshot';
 
@@ -1134,7 +1136,7 @@ function rgUndo() {
 function rgCountRows(data) {
   const n = v => Array.isArray(v) ? v.length : 0;
   const g = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch(e) { return null; } };
-  const pos = g('pos_v4'), ref = g('reflectOS_v1');
+  const pos = g('pos_v4'), ref = g('reflectOS_v1'), lr = g('learningRadar_v1');
   return [
     ['Shotタスク',    n(data.shotTaskOS),                                        n(g('shot-task-os-v1'))],
     ['Routineタスク', n(data.routineOS && data.routineOS.tasks),                  n(g('routineOS_tasks'))],
@@ -1146,6 +1148,7 @@ function rgCountRows(data) {
     ['構想ログ',      n(data.kosoLog && data.kosoLog.items),                      n(g('kouso_backlog_v1'))],
     ['SU人物',        n(data.socialUniverse),                                     n(g('su-v6-persons'))],
     ['ヒトメモ',      n(data.hitomemo),                                           n(g('hitomemo_profiles_v1'))],
+    ['学びレーダー',  n(data.learningRadar_v1 && data.learningRadar_v1.events),   n(lr && lr.events)],
     ['Reflectログ',   n(data.reflectOS_idb && data.reflectOS_idb.stores && data.reflectOS_idb.stores.logs), n(ref && ref.logs)],
   ];
 }
