@@ -1852,9 +1852,11 @@ function riPreview(){
     return;
   }
   riState.payload=ex.payload;
-  btn.disabled=false;
+  var actionable=out.cnt.add+out.cnt.update+out.cnt.stop+out.cnt.resume;   // 新規・変更・停止・復帰が1件も無ければ適用するものは無い
+  btn.disabled=!actionable;
   var head=[ex.payload.issuedAt?'発行 '+ex.payload.issuedAt.slice(0,16).replace('T',' '):'',ex.payload.source].filter(Boolean).join('　');
-  res.innerHTML=head?'<div class="ri-note" style="margin-bottom:8px;">'+esc(head)+'</div>':'';
+  res.innerHTML=(head?'<div class="ri-note" style="margin-bottom:8px;">'+esc(head)+'</div>':'')
+    +(actionable?'':'<div class="al al-i" style="margin-bottom:8px;">適用するものはありません（すべて適用済み・変更なし・エラーのいずれか）。</div>');
   pv.innerHTML=riTableHtml(out.rows);
 }
 function riApply(){
