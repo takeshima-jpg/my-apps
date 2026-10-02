@@ -787,7 +787,8 @@ function collectAllOSData() {
     shotTaskOS:     jGet('shot-task-os-v1'),
     routineOS:      { tasks:    jGet('routineOS_tasks'),
                       logs:     jGet('routineOS_logs'),
-                      holidays: jGet('routineOS_holidays') },
+                      holidays: jGet('routineOS_holidays'),
+                      appliedOps: jGet('routineOS_appliedOps') },   // 同期取込（ROUTINE-IMPORT）の適用済みopId（冪等化）
     projectOS:      jGet('pos_v4'),
     list100:        jGet('yaritai_items_v4'),
     onedayLogs:     jGet('oneday_logs_v1'),
@@ -830,6 +831,7 @@ function restoreAllOSData(data) {
   if (data.routineOS?.tasks)  localStorage.setItem('routineOS_tasks',     JSON.stringify(data.routineOS.tasks));
   if (data.routineOS?.logs)   localStorage.setItem('routineOS_logs',      JSON.stringify(data.routineOS.logs));
   if (data.routineOS?.holidays) localStorage.setItem('routineOS_holidays', JSON.stringify(data.routineOS.holidays));
+  if (Array.isArray(data.routineOS?.appliedOps)) localStorage.setItem('routineOS_appliedOps', JSON.stringify(data.routineOS.appliedOps));   // 無い旧バックアップでは現状を保つ（Routine OS自身の復元と同じ）
   if (data.projectOS)      localStorage.setItem('pos_v4',                 JSON.stringify(data.projectOS));
   if (data.list100)        localStorage.setItem('yaritai_items_v4',       JSON.stringify(data.list100));
   if (data.onedayLogs)     localStorage.setItem('oneday_logs_v1',         JSON.stringify(data.onedayLogs));
@@ -1046,7 +1048,7 @@ function handleAixTaskImport(e) {
 // ── 復元ガード（共通仕様：鮮度比較＋直前スナップショット＋アンドゥ。CLAUDE.md参照）──
 const RG_OS = 'task-os';
 const RG_KEYS = [
-  'shot-task-os-v1', 'routineOS_tasks', 'routineOS_logs', 'routineOS_holidays',
+  'shot-task-os-v1', 'routineOS_tasks', 'routineOS_logs', 'routineOS_holidays', 'routineOS_appliedOps',
   'pos_v4', 'yaritai_items_v4', 'oneday_logs_v1', 'oneday_reviews_v1',
   'kouso_backlog_v1', 'kouso_archive_v1', 'su-v6-persons', 'hitomemo_profiles_v1',
   'lectica_experiments_master_v1', 'lectica_experiments_master_markdown_v1', 'lectica_experiment_logs_v1',
