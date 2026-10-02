@@ -198,6 +198,26 @@ select,input,textarea{font-family:inherit;}
 .fl{font-size:14px;font-weight:700;color:var(--text2);margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:.04em;}
 .fi{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--r);font-size:16px;font-family:inherit;color:var(--text);}
 .fi:focus{outline:none;border-color:var(--blue);}
+/* 同期取込 */
+.btn:disabled{opacity:.45;cursor:default;}
+.ri-wrap{overflow-x:auto;}
+.ri-tbl{width:100%;border-collapse:collapse;font-size:14px;}
+.ri-tbl th{text-align:left;font-size:12px;color:var(--text3);font-weight:700;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.ri-tbl td{padding:9px 8px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.6;word-break:break-word;}
+.ri-tbl td:first-child,.ri-tbl td:last-child,.ri-tbl .sb2{white-space:nowrap;}
+@media(max-width:680px){   /* 狭い幅では1行を縦積みにする（列が詰まって文字が縦に折れるのを防ぐ） */
+  .ri-tbl thead{display:none;}
+  .ri-tbl tr{display:block;padding:10px 0;border-bottom:1px solid var(--border);}
+  .ri-tbl td{display:block;border-bottom:none;padding:2px 2px;}
+  .ri-tbl td:first-child{font-size:12px;color:var(--text3);}
+  .ri-tbl td:first-child .ri-note{display:inline;margin-left:8px;}
+  .ri-tbl td:nth-child(2){font-weight:700;}
+  .ri-tbl td:last-child{padding-top:6px;}
+}
+.ri-k{color:var(--text3);font-size:12px;margin-right:6px;white-space:nowrap;}
+.ri-note{font-size:12px;color:var(--text3);}
+.ri-err{color:var(--red-d);}
+.la-sync{background:var(--gray-l);color:var(--gray-d);}
 .fs{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--r);font-size:16px;font-family:inherit;color:var(--text);background:#fff;}
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .mo{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200;}
@@ -248,6 +268,7 @@ select,input,textarea{font-family:inherit;}
     <div class="ni" data-v="calendar" onclick="sv(this,'calendar')"><span class="ni-ico">◷</span>カレンダー</div>
     <div class="ni" data-v="monthly" onclick="sv(this,'monthly')"><span class="ni-ico">↺</span>月次レビュー</div>
     <div class="ni" data-v="holidays" onclick="sv(this,'holidays')"><span class="ni-ico">◇</span>祝日管理</div>
+    <div class="ni" data-v="sync" onclick="sv(this,'sync')"><span class="ni-ico">⬇</span>同期取込</div>
   </nav>
   <div class="sb-sep" style="margin:4px 14px;height:1px;background:var(--border);"></div>
   <div style="padding:6px 0 4px;">
@@ -316,6 +337,25 @@ select,input,textarea{font-family:inherit;}
 
   <div id="v-monthly" class="hid content"><div id="monthly-body"></div></div>
 
+
+  <div id="v-sync" class="hid content">
+    <div class="card" style="max-width:860px;">
+      <div class="ch"><span class="ct">同期取込（ROUTINE-IMPORT）</span></div>
+      <div style="padding:18px;">
+        <div class="fr">
+          <label class="fl" for="ri-text">取込ブロックを貼り付け</label>
+          <textarea class="fi" id="ri-text" rows="8" style="resize:vertical;font-size:14px;line-height:1.5;" placeholder="【ROUTINE-IMPORT】&#10;{ &quot;version&quot;: 1, &quot;ops&quot;: [ ... ] }&#10;【/ROUTINE-IMPORT】" oninput="riOnInput()"></textarea>
+          <div style="font-size:12px;color:var(--text3);margin-top:5px;">Cowork の「ルーチンチェック」が出したブロックをそのまま貼ります。前後に会話文が混ざっていても、ブロックの中だけを読みます。「適用」を押すまでデータは変わりません。</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn" onclick="riPreview()">プレビュー</button>
+          <button class="btn btn-p" id="ri-apply" onclick="riApply()" disabled>適用</button>
+        </div>
+        <div id="ri-result"></div>
+        <div id="ri-preview"></div>
+      </div>
+    </div>
+  </div>
 
   <div id="v-holidays" class="hid content">
     <div class="card" style="max-width:600px;">
@@ -418,6 +458,7 @@ function toast(msg) {
 
 // ========== STATE ==========
 var tasks=[], taskLogs=[], holidays=[], nid=1;
+var appliedOps=[];   // 同期取込で適用済みの opId（冪等化。保存キー routineOS_appliedOps）
 // holidays = [{ date: 'YYYY-MM-DD', name: '祝日名' }, ...]
 var filt={}, eid=null, calY=new Date().getFullYear(), calM=new Date().getMonth();
 var pendingAction=null; // {taskId, action:'complete'|'skip'|'postpone'}
@@ -445,7 +486,7 @@ var thisYear=today.getFullYear();
 
 var LN={1:'意思決定・経営',2:'重要運用',3:'改善・振り返り',4:'任意・保守'};
 var CY=['週次','隔週','月次','隔月','四半期','半期','年次','任意日','不定期'];
-var VTITLES={dashboard:'ダッシュボード',list:'タスク一覧',calendar:'カレンダー',monthly:'月次レビュー',holidays:'祝日管理'};
+var VTITLES={dashboard:'ダッシュボード',list:'タスク一覧',calendar:'カレンダー',monthly:'月次レビュー',holidays:'祝日管理',sync:'同期取込'};
 
 document.getElementById('td-disp').textContent=today.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
 
@@ -456,6 +497,7 @@ function saveData(silent){
     localStorage.setItem('routineOS_logs', JSON.stringify(taskLogs));
     localStorage.setItem('routineOS_holidays', JSON.stringify(holidays));
     localStorage.setItem('routineOS_nid', String(nid));
+    localStorage.setItem('routineOS_appliedOps', JSON.stringify(appliedOps));
     if(!silent) showToast();
   }catch(e){console.warn('save failed',e);}
 }
@@ -476,6 +518,7 @@ function loadData(){
       });
     }
     if(n) nid=parseInt(n)||1;
+    try{var ao=JSON.parse(localStorage.getItem('routineOS_appliedOps')||'[]');if(Array.isArray(ao))appliedOps=ao.map(String);}catch(e2){appliedOps=[];}
     if(!h) initDefaultHolidays();
     // nidが既存タスクの最大IDより小さい場合は補正
     if(tasks.length > 0){
@@ -657,6 +700,7 @@ function sv(el,v){closeSidebar();
   if(v==='calendar')rCal();
   if(v==='monthly')rMonthly();
   if(v==='holidays')rHol();
+  if(v==='sync')rSync();
 }
 function rAll(){
   if(curView==='dashboard')rDash();
@@ -1105,7 +1149,7 @@ function rMonthly(){
   function logRows(arr){
     if(!arr.length)return '<div class="empty">なし</div>';
     return arr.map(function(l){
-      var cls=l.action==='完了'?'la-done':l.action==='スキップ'?'la-skip':l.action==='延期'?'la-post':'la-stop';
+      var cls=l.action==='完了'?'la-done':l.action==='スキップ'?'la-skip':l.action==='延期'?'la-post':l.action==='同期取込'?'la-sync':'la-stop';
       return '<div class="log-row">'+
         '<span class="log-action '+cls+'">'+l.action+'</span>'+
         '<span style="flex:1;font-size:16px;font-weight:600;">'+esc(l.title)+'</span>'+
@@ -1202,7 +1246,7 @@ function exportBackup(){
   var y=now.getFullYear();
   var m=String(now.getMonth()+1).padStart(2,'0');
   var d=String(now.getDate()).padStart(2,'0');
-  var backup={exportedAt:now.toISOString(),tasks:tasks,taskLogs:taskLogs};
+  var backup={exportedAt:now.toISOString(),tasks:tasks,taskLogs:taskLogs,appliedOps:appliedOps};
   var blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -1213,7 +1257,7 @@ function exportBackup(){
 
 // ── 復元ガード（共通仕様：鮮度比較＋直前スナップショット＋アンドゥ。CLAUDE.md参照）──
 const RG_OS = 'routine-os';
-const RG_KEYS = ['routineOS_tasks', 'routineOS_logs', 'routineOS_holidays', 'routineOS_nid'];
+const RG_KEYS = ['routineOS_tasks', 'routineOS_logs', 'routineOS_holidays', 'routineOS_nid', 'routineOS_appliedOps'];
 const RG_SNAP_KEY = 'routine-os_pre_restore_snapshot';
 
 // 主データ({tasks, taskLogs})から {latest, count} を機械判定
@@ -1341,6 +1385,10 @@ function importBackup(e) {
       if (data.taskLogs) {
         taskLogs = data.taskLogs;
         localStorage.setItem('routineOS_logs', JSON.stringify(taskLogs));
+      }
+      if (Array.isArray(data.appliedOps)) {   // 同期取込の適用済み opId（無い旧バックアップでは現状を保つ）
+        appliedOps = data.appliedOps.map(String);
+        localStorage.setItem('routineOS_appliedOps', JSON.stringify(appliedOps));
       }
       alert('復元しました（' + (data.tasks||[]).length + '件）');
       rAll();
@@ -1520,6 +1568,302 @@ function importPreset(year){
     setTimeout(function(){res.innerHTML='';},4000);
   }
   saveData();rHol();
+}
+
+// ========== 同期取込（ROUTINE-IMPORT） ==========
+// Cowork の「ルーチンチェック」が出す提案ブロックを、人がプレビューして適用する取込口。
+// OSが正：Cowork は提案を渡すだけで、適用はこの画面で人が押す。delete は作らない（消さずに「停止」で止める）。
+// Phase 2（Drive の routine-sync.json を起動時に読む）で再利用できるよう、
+//   riExtract（テキスト→payload）と riRun（payload→差分行。commit=true で反映）を画面処理から切り離してある。
+var RI_APPLIED_MAX=500;
+var RI_FIELDS=['title','cycle','dept','layer','nextDate','deliverable','notifyMsg','url','note','addType','addBase','addDays','excludeWeekends','excludeHolidays','skippable'];
+var RI_LABELS={title:'タイトル',cycle:'サイクル',dept:'部門',layer:'レイヤー',nextDate:'次回日',deliverable:'成果物',notifyMsg:'通知文',url:'URL',note:'備考',addType:'加算タイプ',addBase:'加算基準',addDays:'加算日数',excludeWeekends:'土日除外',excludeHolidays:'祝日除外',skippable:'スキップ可',status:'ステータス'};
+var RI_ADD_TYPES=['calendar','business'];
+var RI_ADD_BASES=['from_next','from_last','from_ms','from_me','from_ys','fixed'];
+var riState={payload:null};
+
+/* JSON.parse が位置を返さないブラウザ向け：最初に文法が崩れる位置を返す（正しければ -1） */
+function riJsonErrorPos(s){
+  var i=0,n=s.length;
+  function ws(){while(i<n&&(s[i]===' '||s[i]==='\t'||s[i]==='\n'||s[i]==='\r'))i++;}
+  function fail(){throw {riPos:i};}
+  function str(){
+    i++;
+    for(;;){
+      if(i>=n)fail();
+      var c=s[i];
+      if(c==='"'){i++;return;}
+      if(c==='\\'){
+        i++;
+        if('"\\/bfnrtu'.indexOf(s[i]||'?')<0)fail();
+        if(s[i]==='u'){if(!/^[0-9a-fA-F]{4}$/.test(s.substr(i+1,4)))fail();i+=4;}
+        i++;continue;
+      }
+      if(c<' ')fail();
+      i++;
+    }
+  }
+  function val(){
+    ws();if(i>=n)fail();
+    var c=s[i];
+    if(c==='{'){
+      i++;ws();if(s[i]==='}'){i++;return;}
+      for(;;){ws();if(s[i]!=='"')fail();str();ws();if(s[i]!==':')fail();i++;val();ws();if(s[i]===','){i++;continue;}if(s[i]==='}'){i++;return;}fail();}
+    }
+    if(c==='['){
+      i++;ws();if(s[i]===']'){i++;return;}
+      for(;;){val();ws();if(s[i]===','){i++;continue;}if(s[i]===']'){i++;return;}fail();}
+    }
+    if(c==='"'){str();return;}
+    var m=/^(-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?|true|false|null)/.exec(s.slice(i,i+64));
+    if(!m)fail();
+    i+=m[0].length;
+  }
+  try{val();ws();if(i<n)fail();return -1;}
+  catch(e){return (e&&typeof e.riPos==='number')?e.riPos:-1;}
+}
+/* JSON を読む。失敗したら「ブロックの何行目・何文字目か」と該当行を添える（行は【ROUTINE-IMPORT】の行を1行目と数える） */
+function riParseJson(body){
+  try{return {data:JSON.parse(body)};}
+  catch(e){
+    var pos=riJsonErrorPos(body);
+    var where='';
+    if(pos>=0){
+      var before=body.slice(0,pos).split('\n');
+      var line=before.length, col=before[before.length-1].length+1;
+      var txt=(body.split('\n')[line-1]||'').trim();
+      where='ブロックの '+line+' 行目・'+col+' 文字目付近'+(txt?'\n　> '+txt.slice(0,90):'');
+    }
+    return {error:'JSON として読めません。'+(where?where+'\n':'')+'（'+String(e&&e.message||e)+'）'};
+  }
+}
+/* 貼り付けテキスト → payload。【ROUTINE-IMPORT】…【/ROUTINE-IMPORT】の中身だけを抜く（前後の会話文は無視） */
+function riExtract(text){
+  var src=String(text||'');
+  var re=/【ROUTINE-IMPORT】([\s\S]*?)【\/ROUTINE-IMPORT】/g,m,blocks=[];
+  while((m=re.exec(src)))blocks.push(m[1]);
+  if(!blocks.length){
+    if(src.indexOf('【ROUTINE-IMPORT】')>=0)return {error:'終わりの【/ROUTINE-IMPORT】が見つかりません。ブロックを最後まで貼り付けてください。'};
+    var t=src.trim();
+    if(t.charAt(0)==='{')blocks.push(t);            // マーカー無しの生JSONも受ける（Phase 2 のファイル形式）
+    else return {error:'【ROUTINE-IMPORT】…【/ROUTINE-IMPORT】のブロックが見つかりません。'};
+  }
+  var ops=[],meta=null;
+  for(var i=0;i<blocks.length;i++){
+    var body=blocks[i].replace(/^[ \t]*```[a-zA-Z]*[ \t]*$/gm,'');   // コードフェンスだけの行は読み飛ばす（行数は保つ）
+    var p=riParseJson(body);
+    if(p.error)return {error:(blocks.length>1?'ブロック'+(i+1)+'：':'')+p.error};
+    var d=p.data;
+    if(!d||typeof d!=='object'||Array.isArray(d)||!Array.isArray(d.ops))return {error:'ops（配列）が見つかりません。'};
+    if(d.version!==undefined&&Number(d.version)!==1)return {error:'未対応の version です：'+d.version+'（このOSが読めるのは 1）'};
+    if(!meta)meta={source:String(d.source||''),issuedAt:String(d.issuedAt||'')};
+    ops=ops.concat(d.ops);
+  }
+  return {payload:{version:1,source:meta.source,issuedAt:meta.issuedAt,ops:ops}};
+}
+
+function riFindTask(list,id){
+  if(id===undefined||id===null||id==='')return null;
+  for(var i=0;i<list.length;i++){if(String(list[i].id)===String(id))return list[i];}
+  return null;
+}
+function riCanon(v){return (v===undefined||v===null)?'':String(v);}
+function riShow(k,v){
+  if(v===undefined||v===null||v==='')return '（空）';
+  if(typeof v==='boolean')return v?'する':'しない';
+  if(k==='layer')return v+'. '+(LN[v]||'');
+  return String(v);
+}
+/* task / patch の値を既存タスクと同じ型・表記に揃える。使えない項目は書き込まず unknown に返す */
+function riNormFields(src){
+  var out={vals:{},unknown:[],error:''};
+  Object.keys(src).forEach(function(k){
+    if(out.error)return;
+    var v=src[k];
+    if(RI_FIELDS.indexOf(k)<0){out.unknown.push(k);return;}
+    if(k==='title'){
+      var ti=String(v==null?'':v).trim();
+      if(!ti){out.error='title が空です';return;}
+      out.vals.title=ti;
+    }else if(k==='cycle'){
+      var cy=normalizeCycle(v);
+      if(!cy){out.error='cycle が読めません：'+v+'（使える値：'+CY.join('／')+'）';return;}
+      out.vals.cycle=cy;
+    }else if(k==='layer'){
+      var la=parseInt(v,10);
+      if(!(la>=1&&la<=4)||String(la)!==String(v).trim()){out.error='layer は 1〜4 で指定します：'+v;return;}
+      out.vals.layer=la;
+    }else if(k==='nextDate'){
+      if(v===null||v===''){out.vals.nextDate='';return;}
+      var nd=normalizeDate(String(v));
+      if(!isValidDate(nd)){out.error='nextDate が日付として読めません：'+v;return;}
+      out.vals.nextDate=nd;
+    }else if(k==='addType'){
+      if(RI_ADD_TYPES.indexOf(v)<0){out.error='addType は '+RI_ADD_TYPES.join(' / ')+' のいずれかです：'+v;return;}
+      out.vals.addType=v;
+    }else if(k==='addBase'){
+      if(RI_ADD_BASES.indexOf(v)<0){out.error='addBase は '+RI_ADD_BASES.join(' / ')+' のいずれかです：'+v;return;}
+      out.vals.addBase=v;
+    }else if(k==='addDays'){
+      if(v===null||v===''){out.vals.addDays=null;return;}
+      var ad=Number(v);
+      if(!isFinite(ad)||Math.floor(ad)!==ad){out.error='addDays は整数で指定します：'+v;return;}
+      out.vals.addDays=ad;
+    }else if(k==='excludeWeekends'||k==='excludeHolidays'||k==='skippable'){
+      if(typeof v!=='boolean'){out.error=k+' は true / false で指定します：'+v;return;}
+      out.vals[k]=v;
+    }else{
+      out.vals[k]=String(v==null?'':v);                // dept / deliverable / notifyMsg / url / note
+    }
+  });
+  return out;
+}
+/* payload を現在のデータに当てて差分行を作る。commit=true のときだけ実データへ反映して保存する。
+   作業用コピーの上で順に処理するので、同じ id への複数 op も前の op の結果を踏まえて表示・適用される */
+function riRun(payload,commit){
+  var wTasks=JSON.parse(JSON.stringify(tasks)),wNid=nid;
+  wTasks.forEach(function(x){var n=parseInt(x.id,10)||0;if(wNid<=n)wNid=n+1;});   // 採番が既存idと衝突しないよう補正
+  var applied={},seen={},newly=[],changedIds=[],rows=[];
+  var cnt={add:0,update:0,stop:0,resume:0,skip:0,error:0};
+  var now=new Date().toISOString();
+  appliedOps.forEach(function(x){applied[x]=1;});
+  ((payload&&payload.ops)||[]).forEach(function(o,idx){
+    var row={n:idx+1,opId:'',op:'',target:'',changes:[],notes:[],state:'',error:''};
+    rows.push(row);
+    function err(msg){row.state='エラー';row.error=msg;cnt.error++;cnt.skip++;}
+    function nochange(){row.state='変更なし';cnt.skip++;newly.push(row.opId);}
+    if(!o||typeof o!=='object'||Array.isArray(o))return err('op の形が読めません');
+    row.op=String(o.op||'');
+    row.opId=(typeof o.opId==='string'||typeof o.opId==='number')?String(o.opId).trim():'';
+    var isIdOp=(row.op==='update'||row.op==='stop'||row.op==='resume');
+    var t=isIdOp?riFindTask(wTasks,o.id):null;
+    if(isIdOp)row.target=t?('#'+t.id+' '+t.title):('#'+riCanon(o.id));
+    else if(row.op==='add'&&o.task&&typeof o.task==='object')row.target=String(o.task.title||'');
+    if(!row.opId)return err('opId がありません');
+    if(seen[row.opId])return err('同じ opId がブロック内で重複しています');
+    seen[row.opId]=1;
+    if(applied[row.opId]){row.state='適用済み';cnt.skip++;return;}
+
+    if(row.op==='add'){
+      if(!o.task||typeof o.task!=='object'||Array.isArray(o.task))return err('task がありません');
+      var nf=riNormFields(o.task);
+      if(nf.error)return err(nf.error);
+      if(!nf.vals.title)return err('title がありません');
+      /* 既存の「タスク追加」と同じ既定値 */
+      var data={title:nf.vals.title,cycle:'月次',layer:1,nextDate:'',addType:'calendar',addBase:'from_next',addDays:null,
+        deliverable:'',notifyMsg:'',url:'',note:'',excludeWeekends:false,excludeHolidays:false,skippable:false};
+      Object.keys(nf.vals).forEach(function(k){data[k]=nf.vals[k];});
+      var computed=false;
+      if(!data.nextDate&&getRoutineInterval(data.cycle)){           // 次回日の指定が無ければサイクルから算出（今日起点）
+        var nx=calcNextRoutineDate({title:data.title,cycle:data.cycle},'');
+        if(nx){data.nextDate=nx;computed=true;}
+      }
+      var nt=Object.assign({id:wNid++,status:'未完了',lastScheduledDate:'',updatedAt:now},data);
+      wTasks.push(nt);
+      row.target='#'+nt.id+' '+nt.title;
+      ['cycle','layer','dept','nextDate','deliverable','notifyMsg','url','note','addType','addBase','addDays','excludeWeekends','excludeHolidays','skippable'].forEach(function(k){
+        var given=Object.prototype.hasOwnProperty.call(nf.vals,k);
+        if(!given&&!(k==='cycle'||k==='layer'||(k==='nextDate'&&computed)))return;   // 既定値のままの項目は表に出さない
+        row.changes.push({label:RI_LABELS[k],before:'',after:riShow(k,nt[k])+(k==='nextDate'&&computed?'（サイクルから算出）':'')});
+      });
+      var same=tasks.filter(function(x){return x.title===nt.title;});
+      if(same.length)row.notes.push('同じタイトルのタスクが既にあります（#'+same.map(function(x){return x.id;}).join('・#')+'）');
+      if(nf.unknown.length)row.notes.push('読み飛ばした項目：'+nf.unknown.join('、'));
+      row.state='新規';cnt.add++;newly.push(row.opId);changedIds.push(row.opId);
+      return;
+    }
+    if(isIdOp){
+      if(o.id===undefined||o.id===null||o.id==='')return err('id がありません');
+      if(!t)return err('id '+o.id+' のタスクが見つかりません');
+      if(row.op==='update'){
+        if(!o.patch||typeof o.patch!=='object'||Array.isArray(o.patch))return err('patch がありません');
+        var pf=riNormFields(o.patch);
+        if(pf.error)return err(pf.error);
+        if(pf.unknown.length)row.notes.push('読み飛ばした項目：'+pf.unknown.join('、')+(pf.unknown.indexOf('status')>=0?'（停止・復帰は op の stop / resume を使います）':''));
+        var keys=Object.keys(pf.vals).filter(function(k){return riCanon(t[k])!==riCanon(pf.vals[k]);});
+        if(!keys.length)return nochange();
+        keys.forEach(function(k){row.changes.push({label:RI_LABELS[k],before:riShow(k,t[k]),after:riShow(k,pf.vals[k])});t[k]=pf.vals[k];});
+        t.updatedAt=now;
+        row.state='変更';cnt.update++;newly.push(row.opId);changedIds.push(row.opId);
+        return;
+      }
+      if(row.op==='stop'){
+        if(t.status==='停止')return nochange();
+        row.changes.push({label:RI_LABELS.status,before:t.status||'未完了',after:'停止'});
+        t.status='停止';t.updatedAt=now;
+        row.state='停止';cnt.stop++;newly.push(row.opId);changedIds.push(row.opId);
+        return;
+      }
+      if(t.status!=='停止')return nochange();                        // resume
+      row.changes.push({label:RI_LABELS.status,before:'停止',after:'未完了'});
+      t.status='未完了';t.updatedAt=now;
+      row.state='復帰';cnt.resume++;newly.push(row.opId);changedIds.push(row.opId);
+      return;
+    }
+    return err(row.op==='delete'?'delete は使えません（消さずに stop で止めます）':'未対応の op です：'+(row.op||'（空）'));
+  });
+  var summary='追加'+cnt.add+'・変更'+cnt.update+'・停止'+cnt.stop+(cnt.resume?'・復帰'+cnt.resume:'')+'・スキップ'+cnt.skip;
+  if(commit&&newly.length){
+    tasks=wTasks;nid=wNid;
+    newly.forEach(function(id){appliedOps.push(id);});
+    if(appliedOps.length>RI_APPLIED_MAX)appliedOps=appliedOps.slice(-RI_APPLIED_MAX);   // 古いものから落とす
+    if(changedIds.length)addLog(null,'同期取込',{title:'同期取込',memo:summary+'｜opId：'+changedIds.join(', ')});
+    saveData();
+    rAll();
+  }
+  return {rows:rows,cnt:cnt,summary:summary,committed:!!(commit&&newly.length)};
+}
+
+/* ── 画面 ── */
+function rSync(){}                                        // 開いたときに描き直すものは無い（貼り付け途中の内容を保つ）
+function riOnInput(){                                     // 貼り直したらプレビューからやり直す
+  riState.payload=null;
+  document.getElementById('ri-apply').disabled=true;
+  document.getElementById('ri-result').innerHTML='';
+  document.getElementById('ri-preview').innerHTML='';
+}
+function riTableHtml(rows){
+  var cls={'新規':'s-done','変更':'s-pend','停止':'s-stop','復帰':'s-done','適用済み':'s-skip','変更なし':'s-skip','エラー':'s-ov'};
+  return '<div class="ri-wrap"><table class="ri-tbl"><thead><tr><th>op</th><th>対象</th><th>変更前 → 変更後</th><th>状態</th></tr></thead><tbody>'+
+    rows.map(function(r){
+      var body=r.error?'<span class="ri-err">'+esc(r.error)+'</span>':
+        r.changes.map(function(c){
+          return '<div><span class="ri-k">'+esc(c.label)+'</span>'+(c.before!==''?esc(c.before)+' → ':'')+'<b>'+esc(c.after)+'</b></div>';
+        }).join('');
+      var notes=r.notes.map(function(x){return '<div class="ri-note">'+esc(x)+'</div>';}).join('');
+      return '<tr><td>'+esc(r.op||'—')+'<div class="ri-note">'+esc(r.opId)+'</div></td>'+
+        '<td>'+esc(r.target||'—')+'</td>'+
+        '<td>'+body+notes+'</td>'+
+        '<td><span class="sb2 '+(cls[r.state]||'s-skip')+'">'+esc(r.state)+'</span></td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
+function riPreview(){
+  var res=document.getElementById('ri-result'),pv=document.getElementById('ri-preview'),btn=document.getElementById('ri-apply');
+  var ex=riExtract(document.getElementById('ri-text').value);
+  if(ex.error){
+    riState.payload=null;btn.disabled=true;pv.innerHTML='';
+    res.innerHTML='<div class="al al-d" style="white-space:pre-wrap;">'+esc(ex.error)+'</div>';
+    return;
+  }
+  var out=riRun(ex.payload,false);
+  if(!out.rows.length){
+    riState.payload=null;btn.disabled=true;pv.innerHTML='';
+    res.innerHTML='<div class="al al-i">ops が空です。</div>';
+    return;
+  }
+  riState.payload=ex.payload;
+  btn.disabled=false;
+  var head=[ex.payload.issuedAt?'発行 '+ex.payload.issuedAt.slice(0,16).replace('T',' '):'',ex.payload.source].filter(Boolean).join('　');
+  res.innerHTML=head?'<div class="ri-note" style="margin-bottom:8px;">'+esc(head)+'</div>':'';
+  pv.innerHTML=riTableHtml(out.rows);
+}
+function riApply(){
+  if(!riState.payload)return;
+  var out=riRun(riState.payload,true);
+  riState.payload=null;
+  document.getElementById('ri-apply').disabled=true;
+  document.getElementById('ri-result').innerHTML='<div class="al '+(out.committed?'al-g':'al-i')+'">'+esc(out.summary)+'</div>';
+  document.getElementById('ri-preview').innerHTML=riTableHtml(out.rows);
 }
 
 // ========== MODAL ==========
