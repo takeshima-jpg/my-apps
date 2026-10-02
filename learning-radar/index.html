@@ -63,20 +63,23 @@ a { color: #1d4ed8; }
 .radar-h { display: flex; justify-content: space-between; align-items: baseline; font-size: .8rem; color: var(--tx2); margin: 0 2px 8px; }
 .radar-h b { color: var(--tx); font-size: .88rem; }
 .radar-g { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; }
-.rd { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 4px; border-radius: 8px; min-width: 0; }
+.rd { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 4px; border-radius: 8px; min-width: 0; min-height: 44px; }
+button.rd { width: 100%; min-width: 0; height: auto; border: 1px solid transparent; background: transparent; font: inherit; color: inherit; justify-content: flex-start; padding: 6px 0 6px; }
+button.rd:hover { border-color: var(--bd2); background: #f7faf9; }
+button.rd.td { background: var(--radar-s); } button.rd.we { background: #f6f8f8; }
 .rd.we { background: #f6f8f8; }
 .rd.td { background: var(--radar-s); }
 .rd-w { font-size: .66rem; color: var(--tx3); line-height: 1; }
 .rd-d { font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; color: var(--tx2); }
 .rd.td .rd-d, .rd.td .rd-w { color: var(--radar); }
 .rd-dots { display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 14px; }
-.dot { width: 12px; height: 12px; min-width: 12px; min-height: 12px; border-radius: 50%; padding: 0; border: 0; background: var(--radar); cursor: pointer; }
+.dot { display: block; width: 10px; height: 10px; border-radius: 50%; background: var(--radar); pointer-events: none; }
 .dot.hot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-s); }
-.dot.go { background: transparent; border: 2px solid var(--tx2); }
+.dot.go { background: transparent; border: 2px solid var(--tx2); box-sizing: border-box; }
 .radar-k { display: flex; gap: 14px; flex-wrap: wrap; font-size: .7rem; color: var(--tx3); margin: 8px 2px 0; }
 .radar-k i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--radar); margin-right: 5px; vertical-align: 0; }
 .radar-k i.hot { background: var(--accent); } .radar-k i.go { background: transparent; border: 1.5px solid var(--tx2); }
-@media (max-width: 520px) { .radar-g { grid-template-columns: repeat(7, 1fr); row-gap: 6px; } }
+@media (max-width: 520px) { .radar { padding: 10px 8px 8px; } .radar-g { grid-template-columns: repeat(7, 1fr); column-gap: 2px; row-gap: 6px; } }
 
 /* 決め切った週の締め */
 .done { background: var(--radar-s); color: var(--radar); border-radius: var(--radius); padding: 14px 16px; font-weight: 700; font-size: .95rem; margin: 16px 0 4px; }
@@ -708,7 +711,7 @@ function cardHtml(e, sec) {
   const cls = ['card'];
   if (sec === 'soon' && e.applyDeadline && diffDays(today(), e.applyDeadline) <= HOT_DAYS) cls.push('hot');
   if (sec === 'new' && !isWeekdayDate(e.startDate)) cls.push('dim');   /* 土日開催は下に薄く */
-  if (V.flash === e.id) cls.push('flash');
+  if (V.flash && V.flash.has(e.id)) cls.push('flash');
   const btns = evButtons(e, sec);
   return '<div class="' + cls.join(' ') + '" id="c_' + e.id + '">'
     + dateTile(e)
@@ -734,8 +737,14 @@ function radarHtml() {
   const last = parseD(days[days.length - 1]);
   const cols = days.map((d, i) => {
     const dt = parseD(d), we = dt.getDay() === 0 || dt.getDay() === 6;
-    const dots = hit.get(d).slice(0, 4).map(x => '<button class="dot ' + x.k + '" data-act="jump" data-id="' + x.e.id + '" title="' + esc(x.e.title) + '" aria-label="' + esc(x.e.title) + '"></button>').join('');
-    return '<div class="rd' + (i === 0 ? ' td' : we ? ' we' : '') + '"><span class="rd-w">' + (i === 0 ? '今日' : WD[dt.getDay()]) + '</span><span class="rd-d">' + dt.getDate() + '</span><span class="rd-dots">' + dots + '</span></div>';
+    const items = hit.get(d);
+    const dots = items.slice(0, 4).map(x => '<span class="dot ' + x.k + '"></span>').join('');
+    const cls = 'rd' + (i === 0 ? ' td' : we ? ' we' : '');
+    const inner = '<span class="rd-w">' + (i === 0 ? '今日' : WD[dt.getDay()]) + '</span><span class="rd-d">' + dt.getDate() + '</span><span class="rd-dots">' + dots + '</span>';
+    if (!items.length) return '<div class="' + cls + '">' + inner + '</div>';
+    /* フィッツ：押せるのは日付のマス全体（点は印）。押すとその日のカードを全部光らせて先頭へ */
+    const label = (dt.getMonth() + 1) + '/' + dt.getDate() + '：' + items.map(x => x.e.title).join('／');
+    return '<button class="' + cls + ' rd-hit" data-act="jumpday" data-day="' + d + '" title="' + esc(label) + '" aria-label="' + esc(label) + '">' + inner + '</button>';
   }).join('');
   return '<section class="radar" aria-label="次の14日の締切"><div class="radar-h"><b>次の14日</b><span>〜' + (last.getMonth() + 1) + '/' + last.getDate() + '</span></div>'
     + '<div class="radar-g">' + cols + '</div>'
@@ -1115,11 +1124,16 @@ function onAct(el) {
   const act = el.dataset.act, id = el.dataset.id, tid = el.dataset.tid;
   if (act === 'toggle') { V.open.has(id) ? V.open.delete(id) : V.open.add(id); render(); }
   else if (act === 'more') { V.moreOpen.has(tid) ? V.moreOpen.delete(tid) : V.moreOpen.add(tid); render(); }
-  else if (act === 'jump') {
-    const e = byId(id); if (!e) return;
-    const k = (e.themeIds || [])[0]; if (k) V.moreOpen.add(k);        /* 折りたたみの中なら開く */
-    V.flash = id; render(); V.flash = null;
-    const c = document.getElementById('c_' + id); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  else if (act === 'jumpday') {
+    const d = el.dataset.day;
+    const ids = S.events.filter(e => ((e.status === 'new' || e.status === 'considering') && e.applyDeadline === d)
+      || (e.status === 'applied' && e.startDate === d)).map(e => e.id);
+    if (!ids.length) return;
+    ids.forEach(x => { const e = byId(x); const k = e && (e.themeIds || [])[0]; if (k) V.moreOpen.add(k); });   /* 折りたたみの中なら開く */
+    V.flash = new Set(ids); render(); V.flash = null;
+    const first = ids.map(x => document.getElementById('c_' + x)).filter(Boolean)
+      .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0];
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
   else if (act.indexOf('st-') === 0) setStatus(id, act.slice(3));
   else if (act === 'edit') startEdit(el);
