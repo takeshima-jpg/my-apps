@@ -86,7 +86,14 @@ input[type=text], input[type=date], input[type=number], input[type=url], select,
   border: 1px solid var(--bd2); border-radius: 8px; padding: 8px 10px; min-height: 40px; }
 input[type=file] { width: 100%; font-size: .85rem; min-height: 40px; }
 textarea { resize: vertical; line-height: 1.6; }
-textarea.note { margin-top: 6px; font-size: .95rem; }
+textarea.note { margin-top: 6px; }
+/* 展開カード内のインライン編集：値をタップすると同じ場所で入力欄に変わる（メモ欄と同じ箱） */
+.edits { margin-top: 8px; }
+.edits .fg { margin-bottom: 8px; }
+button.ed { display: block; width: 100%; text-align: left; font-size: 1rem; font-weight: 400; line-height: 1.6;
+  padding: 8px 10px; border: 1px solid var(--bd2); border-radius: 8px; background: #fff; white-space: normal; }
+button.ed.ed-empty { color: var(--tx3); }
+input.edin { min-height: 44px; }
 .fr2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
 @media (max-width: 480px) { .fr2 { grid-template-columns: 1fr; } }
 .chks { display: flex; flex-wrap: wrap; gap: 0 14px; }
@@ -386,14 +393,22 @@ function resultText(r) {
 function autoTransition() {
   const t = today(), now = new Date().toISOString();
   let changed = false;
-  S.events.forEach(e => {
-    if (e.status === 'new' || e.status === 'considering') {
-      const lim = e.applyDeadline || e.startDate;      /* 締切が無いものは開催日で判定 */
-      if (lim && lim < t) { e.status = 'missed'; e.statusHistory.push({ status: 'missed', at: now, note: 'auto' }); changed = true; }
-    } else if (e.status === 'passed') {
-      const end = e.endDate || e.startDate;
-      if (end && end < t) { e.status = 'expired'; e.statusHistory.push({ status: 'expired', at: now, note: 'auto' }); changed = true; }
+  const move = (e, st) => { e.status = st; e.statusHistory.push({ status: st, at: now, note: 'auto' }); changed = true; };
+  const beforeMissed = e => {                           /* 見過ごしになる直前の状態（新着か検討） */
+    for (let i = e.statusHistory.length - 1; i >= 0; i--) {
+      const s = e.statusHistory[i].status;
+      if (s === 'new' || s === 'considering') return s;
     }
+    return 'new';
+  };
+  S.events.forEach(e => {
+    const lim = e.applyDeadline || e.startDate;        /* 締切が無いものは開催日で判定 */
+    const end = e.endDate || e.startDate;
+    if (e.status === 'new' || e.status === 'considering') { if (lim && lim < t) move(e, 'missed'); }
+    else if (e.status === 'passed') { if (end && end < t) move(e, 'expired'); }
+    /* 日付・締切を直して期限内に戻った場合は元の節へ戻す（見過ごしのカードで締切を入れ直したときなど） */
+    else if (e.status === 'missed') { if (lim && lim >= t) move(e, beforeMissed(e)); }
+    else if (e.status === 'expired') { if (end && end >= t) move(e, 'passed'); }
     /* applied は自動で attended にしない（参加したかは本人が押す） */
   });
   if (changed) saveData();
@@ -473,7 +488,7 @@ function driveErrText(err) {
 
 /* ══ 画面状態（保存しない）══ */
 const V = { view: 'home', panel: null, open: new Set(), themeOpen: new Set(), pastOpen: false, restoreOpen: false,
-            imp: { status: '', alt: false, paste: '' }, formData: null, formMsg: '', themeMsg: '', newThemeName: '', undo: null };
+            imp: { status: '', alt: false, paste: '' }, formData: null, formMsg: '', themeMsg: '', newThemeName: '', undo: null, edit: null, renderTimer: null };
 let S;
 
 /* ══ ホーム ══ */
@@ -522,12 +537,81 @@ function evDetail(e) {
   const hist = (e.statusHistory || []).map(h =>
     esc(mdt(h.at)) + ' ' + (STATUS[h.status] || esc(h.status)) + (h.note ? '（' + esc(h.note === 'auto' ? '自動' : h.note) + '）' : '')).join(' → ');
   return '<div class="c-detail">'
-    + kv('主催', esc(e.organizer)) + kv('会場', esc(e.location)) + kv('時間', esc(e.time)) + kv('要約', esc(e.summary))
+    + kv('主催', esc(e.organizer)) + kv('要約', esc(e.summary))
     + kv('URL', safeUrl(e.url) ? '<a href="' + esc(e.url) + '" target="_blank" rel="noopener">' + esc(e.url) + '</a>' : esc(e.url))
+    + '<div class="edits fr2">' + ED_ORDER.map(k => '<div class="fg"><span class="fl">' + ED[k][0] + '</span>' + edBtn(e, k) + '</div>').join('') + '</div>'
+    + '<div class="p-msg" id="edmsg_' + e.id + '" hidden></div>'
     + '<textarea class="note" data-f="note" data-id="' + e.id + '" rows="2" placeholder="メモ" aria-label="メモ">' + esc(e.note || '') + '</textarea>'
     + '<div class="c-tools"><button data-act="copy" data-id="' + e.id + '">📋 コピー</button></div>'
     + (hist ? '<div class="hist">' + hist + '</div>' : '')
     + '</div>';
+}
+/* ── 展開カード内のインライン編集（日付・締切・費用など）──
+   値をタップ → その場で入力欄に変わる → blur か Enter で保存（Esc で取消）。モーダルは使わない。
+   編集は statusHistory には積まない（ステータスではないため）。保存後に autoTransition を走らせる。 */
+const ED = { startDate: ['開催日', 'date'], endDate: ['最終日', 'date'], time: ['時間帯', 'text'],
+             applyDeadline: ['申込締切', 'date'], fee: ['費用', 'text'], location: ['会場', 'text'] };
+const ED_ORDER = ['startDate', 'endDate', 'time', 'applyDeadline', 'fee', 'location'];
+function edBtn(e, k) {
+  const v = e[k], empty = (v == null || v === '');
+  let txt = empty ? (k === 'applyDeadline' ? '要確認' : '—') : String(v);
+  if (!empty && ED[k][1] === 'date') { const d = parseD(v); if (d) txt += '（' + WD[d.getDay()] + '）'; }
+  return '<button class="ed' + (empty ? ' ed-empty' : '') + '" data-act="edit" data-id="' + e.id + '" data-k="' + k + '" aria-label="' + ED[k][0] + 'を編集">' + esc(txt) + '</button>';
+}
+function edInput(e, k) {
+  return '<input class="edin" type="' + ED[k][1] + '" data-ed="' + k + '" data-id="' + e.id + '" value="' + esc(e[k] == null ? '' : e[k]) + '" aria-label="' + ED[k][0] + '">';
+}
+/* 保存後の全体再描画は少し待つ（続けて隣の欄をタップできるように）。入力中は割り込まない */
+function scheduleRender() {
+  clearTimeout(V.renderTimer);
+  V.renderTimer = setTimeout(function tick() {
+    const ae = document.activeElement;
+    if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.closest('#app')) { V.renderTimer = setTimeout(tick, 400); return; }
+    V.renderTimer = null;
+    render();
+  }, 300);
+}
+function startEdit(btn) {
+  const e = byId(btn.dataset.id), k = btn.dataset.k;
+  if (!e || !ED[k]) return;
+  clearTimeout(V.renderTimer);
+  V.edit = { id: e.id, k };
+  const msg = document.getElementById('edmsg_' + e.id); if (msg) msg.hidden = true;
+  btn.outerHTML = edInput(e, k);
+  const inp = document.querySelector('input[data-ed="' + k + '"][data-id="' + e.id + '"]');
+  if (inp) { inp.focus(); if (inp.type === 'text') inp.select(); }
+}
+function endEdit(inp, e, k) {
+  if (inp.isConnected) inp.outerHTML = edBtn(e, k);
+  scheduleRender();
+}
+function cancelEdit(inp) {
+  const ed = V.edit; if (!ed) return;
+  V.edit = null;
+  const e = byId(ed.id);
+  if (e) endEdit(inp, e, ed.k); else scheduleRender();
+}
+function commitEdit(inp) {
+  const ed = V.edit;
+  if (!ed || ed.id !== inp.dataset.id || ed.k !== inp.dataset.ed) return;
+  V.edit = null;
+  const e = byId(ed.id), k = ed.k;
+  if (!e) { scheduleRender(); return; }
+  const isD = ED[k][1] === 'date', raw = str(inp.value);
+  const nv = isD ? (raw ? dateOrNull(raw) : null) : raw;
+  const say = m => { const el = document.getElementById('edmsg_' + e.id); if (el) { el.textContent = m; el.hidden = false; } };
+  if (isD && raw && !nv) { say('日付として読めませんでした'); return endEdit(inp, e, k); }
+  if (k === 'startDate' && !nv) { say('開催日は空にできません'); return endEdit(inp, e, k); }
+  if (k === 'endDate' && nv && nv < e.startDate) { say('最終日が開催日より前になっています'); return endEdit(inp, e, k); }
+  if ((e[k] == null ? '' : e[k]) === (nv == null ? '' : nv)) return endEdit(inp, e, k);   /* 変更なし */
+  e[k] = nv;
+  if (k === 'startDate' && e.endDate && e.endDate < nv) e.endDate = null;      /* 開催日が最終日を越えたら単発扱いに */
+  e.weekday = isWeekdayDate(e.startDate);
+  if (k === 'applyDeadline' || k === 'startDate') e.confidence = 'high';        /* 本人が確認して入れた値 */
+  if (e.needsCheck && (e.applyDeadline || e.fee)) e.needsCheck = false;         /* 締切か費用が入ったら「要手動確認」を外す */
+  saveData();
+  autoTransition();
+  endEdit(inp, e, k);
 }
 function cardHtml(e, sec) {
   const open = V.open.has(e.id);
@@ -860,6 +944,7 @@ async function restoreFromText(txt) {
 
 /* ══ 描画 ══ */
 function render() {
+  clearTimeout(V.renderTimer); V.renderTimer = null; V.edit = null;
   captureInputs();
   const app = document.getElementById('app');
   if (V.view === 'settings') app.innerHTML = renderSettings();
@@ -913,6 +998,7 @@ function onAct(el) {
   const act = el.dataset.act, id = el.dataset.id, tid = el.dataset.tid;
   if (act === 'toggle') { V.open.has(id) ? V.open.delete(id) : V.open.add(id); render(); }
   else if (act.indexOf('st-') === 0) setStatus(id, act.slice(3));
+  else if (act === 'edit') startEdit(el);
   else if (act === 'confirm') { const e = byId(id); if (e) { e.confidence = 'high'; saveData(); render(); } }
   else if (act === 'dismiss') dismiss(id);
   else if (act === 'undo') undoDismiss();
@@ -951,11 +1037,18 @@ function onAct(el) {
 }
 document.addEventListener('click', ev => { const el = ev.target.closest('[data-act]'); if (el) onAct(el); });
 document.addEventListener('keydown', ev => {
+  if (ev.target.matches && ev.target.matches('input[data-ed]')) {
+    if (ev.isComposing || ev.keyCode === 229) return;           /* 日本語変換の確定 Enter では保存しない */
+    if (ev.key === 'Enter') { ev.preventDefault(); commitEdit(ev.target); }
+    else if (ev.key === 'Escape') { ev.preventDefault(); cancelEdit(ev.target); }
+    return;
+  }
   if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[role="button"][data-act]')) { ev.preventDefault(); onAct(ev.target); }
 });
-/* メモは blur で保存（再描画しない＝入力の流れを切らない） */
+/* メモとインライン編集は blur で保存（その場で保存し、入力の流れを切らない） */
 document.addEventListener('focusout', ev => {
   const el = ev.target;
+  if (el.matches && el.matches('input[data-ed]')) { commitEdit(el); return; }
   if (el.matches && el.matches('textarea[data-f="note"]')) {
     const e = byId(el.dataset.id);
     if (e && (e.note || '') !== el.value) { e.note = el.value; saveData(); }
