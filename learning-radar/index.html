@@ -26,6 +26,10 @@ button, [role="button"], .btn, .nav a, .nav button, .tab, .tab-btn {
   --radar: #0f766e; --radar-s: #e3f1ef;           /* レーダー帯と主ボタンの軸色 */
   --accent: #c2410c; --accent-s: #fff1ea;          /* 危険色は「残り2日以内」だけに使う */
   --miss-bg: #fbf0ee; --miss-bd: #efcfc8;
+  --ck-ok-fg: var(--radar); --ck-ok-bg: #e6f4f1;       /* 判定の帯：空き */
+  --ck-warn-fg: #92400e;    --ck-warn-bg: #fef3c7;     /*           ルーチン移動で可 */
+  --ck-ng-fg: #b91c1c;      --ck-ng-bg: #fee2e2;       /*           重複（打合せ・会食・出張・家ごはん枠） */
+  --ck-q-fg: var(--tx2);    --ck-q-bg: #f1f3f5;        /*           時間要確認・その他 */
   --radius: 12px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -118,11 +122,18 @@ button.rd.td { background: var(--radar-s); } button.rd.we { background: #f6f8f8;
 .dl b { display: block; font-size: .95rem; color: var(--tx); }
 .dl.hot b { color: var(--accent); }
 .dlw { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 0; }
-/* カレンダー判定の1行。色は ok＝軸色、会食・出張・家ごはん枠＝濃い字、ルーチン・時間要確認＝控えめ */
-.ck { font-size: .74rem; font-weight: 600; line-height: 1.45; text-align: right; max-width: 12em; color: var(--tx2); }
-.ck.v-ok { color: var(--radar); }
-.ck.v-dinner, .ck.v-away, .ck.v-dinnerRule, .ck.v-meeting { color: var(--tx); }
-.ck.v-routine, .ck.v-unknown, .ck.v-other { color: var(--tx2); }
+/* カレンダー判定の帯：本文列（タイトル・メタ行の下）に全幅で置く。色だけに頼らず、記号＋短い言葉のバッジを左に添える */
+.ckb { grid-column: 2; grid-row: 2; align-self: start; display: flex; align-items: flex-start; gap: 10px; min-width: 0;
+  margin: 0 6px 10px 14px; padding: 8px 12px; border-radius: 8px; border: 1px solid transparent; cursor: pointer;
+  font-size: .92rem; font-weight: 600; line-height: 1.5; color: var(--ck-q-fg); background: var(--ck-q-bg); }
+.ckb-badge { flex: 0 0 auto; font-size: .8rem; font-weight: 800; white-space: nowrap; line-height: 1.5; padding: 1px 8px;
+  border-radius: 999px; background: rgba(255, 255, 255, .75); }
+.ckb-label { flex: 1; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }   /* 長い会議名は2行で「…」。全文は展開表示 */
+.ckb-stale { flex: 0 0 auto; align-self: center; font-size: .72rem; font-weight: 500; color: var(--tx3); white-space: nowrap; }
+.ckb.k-ok { color: var(--ck-ok-fg); background: var(--ck-ok-bg); }
+.ckb.k-warn { color: var(--ck-warn-fg); background: var(--ck-warn-bg); }
+.ckb.k-ng { color: var(--ck-ng-fg); background: var(--ck-ng-bg); }
+.ckb.k-q { color: var(--ck-q-fg); background: var(--ck-q-bg); border: 1px dashed var(--bd2); }
 .c-btns { display: flex; align-items: center; gap: 2px; }
 .c-detail { grid-column: 2 / -1; grid-row: 3; border-top: 1px solid var(--bd); padding: 10px 14px 12px; font-size: .9rem; }
 .c-more { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -142,8 +153,9 @@ details.past[open] > summary { margin-bottom: 4px; }
   .tile { grid-row: 1 / span 2; }
   .side { grid-row: 2; grid-column: 2; flex-direction: row; align-items: center; padding: 0 12px 10px 14px; }
   .dl { text-align: left; } .dl b { display: inline; margin-right: 6px; }
-  .dlw { flex: 1; align-items: flex-start; } .ck { text-align: left; max-width: none; }
-  .c-detail { grid-column: 1 / -1; grid-row: 3; }
+  .dlw { flex: 1; align-items: flex-start; }
+  .ckb { grid-column: 1 / -1; grid-row: 3; margin: 0 10px 10px; flex-wrap: wrap; row-gap: 4px; }
+  .c-detail { grid-column: 1 / -1; grid-row: 4; }
   .hd-last { display: none; }
 }
 
@@ -677,9 +689,17 @@ function checkStale(e, c) {                            /* 判定のあとに日�
   const a = Date.parse(c.checkedAt), b = Date.parse(e.updatedAt);
   return !isNaN(a) && !isNaN(b) && a < b;
 }
+/* 判定の帯のバッジと配色。ここに無い区分（unknown・未知の区分）は「？ 時間要確認」の灰色 */
+const CHECK_BADGE = { ok: ['k-ok', '◯ 空き'], routine: ['k-warn', '△ ルーチン移動で可'],
+  meeting: ['k-ng', '✕ 重複'], dinner: ['k-ng', '✕ 重複'], away: ['k-ng', '✕ 重複'], dinnerRule: ['k-ng', '✕ 重複'] };
 function checkHtml(e, sec) {
   const c = checkOf(e, sec); if (!c) return '';
-  return '<div class="ck ' + (CHECK_VERDICTS[c.verdict] ? 'v-' + c.verdict : 'v-other') + '">' + esc(c.label) + (checkStale(e, c) ? '（日程変更前の判定）' : '') + '</div>';
+  const [k, badge] = CHECK_BADGE[c.verdict] || ['k-q', '？ 時間要確認'];
+  return '<div class="ckb ' + k + '" data-act="toggle" data-id="' + e.id + '">'   /* 帯を押しても展開（全文と移動案は展開表示） */
+    + '<span class="ckb-badge">' + badge + '</span>'
+    + '<span class="ckb-label" title="' + esc(c.label) + '">' + esc(c.label) + '</span>'
+    + (checkStale(e, c) ? '<span class="ckb-stale">（日程変更前の判定）</span>' : '')
+    + '</div>';
 }
 function fmtWhen(s) {                                   /* "2026-10-24T13:00" → "10/24（土）13:00" */
   const m = /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2}))?/.exec(str(s));
@@ -819,7 +839,8 @@ function cardHtml(e, sec) {
     + '<div class="card-main" role="button" tabindex="0" aria-expanded="' + open + '" data-act="toggle" data-id="' + e.id + '">'
     + '<div class="c-title">' + evLabels(e, sec) + esc(e.title) + '</div>'
     + '<div class="c-meta">' + evMeta(e, sec) + '</div></div>'
-    + '<div class="side"><div class="dlw">' + deadlineHtml(e, sec) + checkHtml(e, sec) + '</div>' + (btns ? '<div class="c-btns">' + btns + '</div>' : '') + '</div>'
+    + checkHtml(e, sec)
+    + '<div class="side"><div class="dlw">' + deadlineHtml(e, sec) + '</div>' + (btns ? '<div class="c-btns">' + btns + '</div>' : '') + '</div>'
     + (open ? evDetail(e, evMoreButtons(e, sec), sec) : '')
     + '</div>';
 }
