@@ -97,7 +97,8 @@ button.rd.td { background: var(--radar-s); } button.rd.we { background: #f6f8f8;
 .grp-h { display: flex; align-items: center; gap: 7px; font-size: .82rem; font-weight: 700; color: var(--tx2); margin: 14px 2px 7px; }
 .grp-h::before { content: ""; width: 9px; height: 9px; border-radius: 3px; background: var(--th, var(--tx3)); }
 .card { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden;
-  display: grid; grid-template-columns: 58px 1fr auto; scroll-margin-top: 16px; }
+  scroll-margin-top: 16px; }
+.card.ev { display: grid; grid-template-columns: 58px 1fr auto; }   /* イベントカードだけのグリッド（テーマ設定のカードには掛けない） */
 .card.hot { border-color: #f0c2ad; box-shadow: inset 4px 0 0 var(--accent); }
 .card.flash { animation: flash 1.2s ease-out; }
 @keyframes flash { 0% { box-shadow: 0 0 0 3px var(--radar); } 100% { box-shadow: 0 0 0 0 transparent; } }
@@ -149,7 +150,7 @@ details.past > summary, details.fold > summary { cursor: pointer; font-size: .9r
 details.past[open] > summary { margin-bottom: 4px; }
 .hint { color: var(--tx3); font-size: .85rem; padding: 26px 4px; }
 @media (max-width: 560px) {
-  .card { grid-template-columns: 52px 1fr; }
+  .card.ev { grid-template-columns: 52px 1fr; }
   .tile { grid-row: 1 / span 2; }
   .side { grid-row: 2; grid-column: 2; flex-direction: row; align-items: center; padding: 0 12px 10px 14px; }
   .dl { text-align: left; } .dl b { display: inline; margin-right: 6px; }
@@ -829,7 +830,7 @@ function commitEdit(inp) {
 }
 function cardHtml(e, sec) {
   const open = V.open.has(e.id);
-  const cls = ['card'];
+  const cls = ['card', 'ev'];
   if (sec === 'soon' && e.applyDeadline && diffDays(today(), e.applyDeadline) <= HOT_DAYS) cls.push('hot');
   if (sec === 'new' && !isWeekdayDate(e.startDate)) cls.push('dim');   /* 土日開催は下に薄く */
   if (V.flash && V.flash.has(e.id)) cls.push('flash');
