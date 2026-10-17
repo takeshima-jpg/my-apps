@@ -129,6 +129,7 @@ nav { padding: 4px 8px; display: flex; flex-direction: column; gap: 1px; }
 .badge-実行中 { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
 .badge-完了   { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
 .badge-廃棄   { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.badge-PJ化   { background: #ecfeff; color: #0e7490; border: 1px solid #cffafe; }
 .badge-pri-S  { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; }
 .badge-pri-A  { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 800; }
 .badge-pri-B  { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; font-weight: 800; }
@@ -514,6 +515,56 @@ textarea.form-control { resize: vertical; min-height: 56px; }
 .empty-state { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 14px; }
 .empty-icon { font-size: 32px; margin-bottom: 10px; }
 .priority-inherited { font-size: 9px; color: var(--text4); font-style: italic; }
+
+/* ─── v2: GOサイン・由来・関連・記録 ─────────────────────── */
+.home-card-gosign { font-size: 12px; color: var(--text4); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log-title-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.log-latest { font-size: 11px; color: var(--text4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-sub-line { font-size: 12px; color: var(--text3); margin: 0 0 8px; }
+.rel-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; margin: 0 4px 4px 0;
+  border-radius: 9999px; font-size: 11px;
+  background: var(--bg3); color: var(--text2); border: 1px solid var(--border);
+}
+.rel-chip b { font-family: monospace; color: #2563eb; }
+.log-rec-box { margin: 10px 0 6px; }
+.log-rec-add { display: flex; gap: 6px; margin-bottom: 6px; }
+.log-rec-add input { flex: 1; min-width: 0; background: var(--bg3); border: 1px solid var(--border2); border-radius: 7px; padding: 6px 10px; font-size: 13px; color: var(--text); }
+.log-rec-add input:focus { border-color: var(--blue); background: var(--bg); }
+.log-rec-row { font-size: 13px; color: var(--text2); padding: 3px 0; border-bottom: 1px solid var(--bg3); word-break: break-word; }
+.log-rec-row:last-child { border-bottom: none; }
+.log-rec-date { font-family: monospace; font-size: 11px; color: var(--text3); margin-right: 4px; }
+.log-rec-kind { font-size: 11px; font-weight: 700; color: var(--text3); margin-right: 2px; }
+.log-rec-more { background: none; color: var(--blue); font-size: 12px; padding: 2px 0; }
+.import-undo { margin-top: 16px; font-size: 12px; }
+.import-undo a { color: var(--text3); text-decoration: underline; cursor: pointer; }
+.ai-parse-status { white-space: pre-wrap; }
+
+/* ─── スマホ幅 ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  body { flex-direction: column; height: auto; min-height: 100vh; overflow: auto; }
+  #sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  #sidebar .sidebar-section-label, #sidebar .sidebar-footer, #sidebar > div[style*="border-top"] { display: none; }
+  #sidebar .sidebar-logo { border-bottom: none; padding: 8px 10px; }
+  #sidebar nav { flex-direction: row; flex-wrap: wrap; flex: 1; padding: 4px; }
+  #sidebar .nav-btn { width: auto; padding: 6px 8px; font-size: 13px; white-space: nowrap; }
+  #sidebar .nav-btn .nav-icon { display: none; }
+  #sidebar .sidebar-logo span { display: none; }
+  #sidebar .sidebar-add { border-top: none; padding: 4px 8px; }
+  #sidebar > div[style*="flex-direction:column"] { flex-direction: row !important; padding: 4px 8px !important; }
+  #sidebar > div[style*="flex-direction:column"] > button { width: auto !important; }
+  #main { padding: 16px; overflow: visible; }
+  .log-item-header { flex-wrap: wrap; }
+  .log-meta { flex-wrap: wrap; }
+  .log-detail-grid { grid-template-columns: 1fr; }
+  .log-child-item { flex-wrap: wrap; }
+  .log-actions { flex-wrap: wrap; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-col2 { grid-column: span 1; }
+  .ai-import-wrap { padding: 14px; }
+  .ai-btn-row { flex-wrap: wrap; }
+}
 </style>
 </head>
 <body>
@@ -579,7 +630,7 @@ textarea.form-control { resize: vertical; min-height: 56px; }
         <label class="form-label">種別</label>
         <select class="form-control" id="f-type" onchange="onTypeChange()">
           <option value="構想">構想 (G)</option>
-          <option value="実行">実行 (E)</option>
+          <option value="実行">試し (E)</option>
         </select>
       </div>
       <div class="form-group" id="f-priority-group">
@@ -600,7 +651,7 @@ textarea.form-control { resize: vertical; min-height: 56px; }
       <div class="form-group">
         <label class="form-label">ステータス</label>
         <select class="form-control" id="f-status">
-          <option>検討中</option><option>待機</option><option>実行中</option><option>完了</option><option>廃棄</option>
+          <option>検討中</option><option>待機</option><option>実行中</option><option>PJ化</option><option>完了</option><option>廃棄</option>
         </select>
       </div>
       <div class="form-group form-col2">
@@ -610,6 +661,10 @@ textarea.form-control { resize: vertical; min-height: 56px; }
       <div class="form-group form-col2">
         <label class="form-label">目的/概要</label>
         <textarea class="form-control" id="f-purpose" rows="2"></textarea>
+      </div>
+      <div class="form-group form-col2" id="f-gosign-group">
+        <label class="form-label">GOサイン（やる／やらないを分けるもの）</label>
+        <input class="form-control" id="f-gosign" type="text">
       </div>
       <div class="form-group">
         <label class="form-label">成功条件</label>
@@ -687,7 +742,12 @@ function toast(msg) {
 // ═══════════════════════════════════════════════════════
 const STORAGE_KEY = 'kouso_backlog_v1';
 const ARCHIVE_KEY = 'kouso_archive_v1';
-const STATUSES    = ['検討中','待機','実行中','完了','廃棄'];
+const STATUSES    = ['検討中','待機','実行中','PJ化','完了','廃棄'];
+const LOG_KINDS   = ['気づき','判断','統合','派生','PJ化','見直し'];
+const REL_KINDS   = ['派生元','統合先','関連'];
+const ORIGIN_KINDS = ['種','壁打ち','1day','本人'];
+const DEFAULT_CREATED = '2026/04/22'; // 実データの最古レビュー日
+const LASTIMPORT_KEY = 'kouso_backup_lastimport';
 const PRIORITIES  = ['S','A','B','C'];
 const PRI_LABEL   = {S:'今期コア',A:'重要',B:'探索',C:'保留'};
 const PRI_COLOR   = {S:'#b91c1c',A:'#1d4ed8',B:'#6d28d9',C:'#6b7280'};
@@ -698,6 +758,7 @@ let currentView = 'home';
 let editingId   = null;
 let expandedHome = new Set();
 let expandedLog  = new Set();
+let expandedRecAll = new Set();
 let filterSearch = '';
 let filterPriority = '';
 let filterStatus   = '';
@@ -715,12 +776,36 @@ function load() {
       if (!i.prereq) i.prereq = '';
       if (!i.trigger) i.trigger = '';
     });
+    migrateV2(raw);
   } catch { items = []; }
   try {
     const raw2 = localStorage.getItem(ARCHIVE_KEY);
     archives = raw2 ? JSON.parse(raw2) : [];
   } catch { archives = []; }
 }
+// v2 移行（冪等）：createdAt 補完／log・relations を [] に。値は一切変えない（review・origin も触らない）
+function migrateV2(raw) {
+  const needs = items.some(i => !i.createdAt || !Array.isArray(i.log) || (i.type==='構想' && !Array.isArray(i.relations)));
+  if (!needs) return;
+  if (raw) {
+    const d = new Date();
+    const key = 'kouso_backup_v2migration_' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+    if (localStorage.getItem(key) === null) { try { localStorage.setItem(key, raw); } catch(e) {} }
+  }
+  items.forEach(i => {
+    if (i.type==='構想' && !i.createdAt) i.createdAt = i.review || DEFAULT_CREATED;
+  });
+  items.forEach(i => {
+    if (i.type!=='構想' && !i.createdAt) {
+      const p = items.find(x => x.id===i.parentId);
+      i.createdAt = (p && p.createdAt) || DEFAULT_CREATED;
+    }
+    if (!Array.isArray(i.log)) i.log = [];
+    if (i.type==='構想' && !Array.isArray(i.relations)) i.relations = [];
+  });
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch(e) {}
+}
+
 function doExportJSON() {
   const data = { items, archives, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -906,7 +991,7 @@ function updateBadges() {
 // ─── HOME ─────────────────────────────────────────────────
 function renderHome() {
   const el = document.getElementById('view-home');
-  const kousos = items.filter(i=>i.type==='構想'&&i.status!=='廃棄'&&i.status!=='完了');
+  const kousos = items.filter(i=>i.type==='構想'&&i.status!=='廃棄'&&i.status!=='完了'&&i.status!=='PJ化');
   const groups = [
     { key:'S', label:'S — 今期コア', cls:'home-pri-s', items: kousos.filter(i=>i.priority==='S').sort((a,b)=>a.id.localeCompare(b.id)) },
     { key:'A', label:'A — 重要',     cls:'home-pri-a', items: kousos.filter(i=>i.priority==='A').sort((a,b)=>a.id.localeCompare(b.id)) },
@@ -947,9 +1032,10 @@ function renderHome() {
             <span class="home-toggle-arrow">▶</span>
           </div>
           ${k.purpose?`<div class="home-card-purpose">${esc(k.purpose)}</div>`:''}
+          ${k.goSign?`<div class="home-card-gosign">GOサイン：${esc(k.goSign)}</div>`:''}
           <div class="home-card-children">
             ${children.length===0
-              ? '<div class="home-empty">実行単位なし</div>'
+              ? '<div class="home-empty">試しなし</div>'
               : childrenHtml}
             <div style="margin-top:8px;display:flex;gap:6px">
               <button class="btn-edit" onclick="event.stopPropagation();openModal('${esc(k.id)}')">編集</button>
@@ -995,9 +1081,13 @@ function renderList() {
   const listHtml = filtered.map(k => {
     const children = items.filter(i=>i.type==='実行'&&i.parentId===k.id);
     const isOpen = expandedLog.has(k.id);
+    const log = Array.isArray(k.log) ? k.log : [];
+    const rels = Array.isArray(k.relations) ? k.relations : [];
+    const latest = log.length ? log[log.length-1] : null;
 
     const detailFields = [
       {label:'目的/概要', value:k.purpose},
+      {label:'GOサイン', value:k.goSign},
       {label:'成功条件', value:k.success},
       {label:'実行トリガー', value:k.trigger},
       {label:'前提条件', value:k.prereq},
@@ -1007,6 +1097,31 @@ function renderList() {
         <span class="log-detail-label">${esc(f.label)}</span>
         <span class="log-detail-value">${esc(f.value)}</span>
       </div>`).join('');
+
+    const originHtml = k.origin && k.origin.kind
+      ? `<div class="log-sub-line">由来：${k.origin.kind==='種'?'🌱':''}${esc(k.origin.kind)} ${esc(shortDate(k.origin.date))}${k.origin.note?'　'+esc(k.origin.note):''}</div>`
+      : '';
+    const relHtml = rels.length
+      ? `<div class="log-sub-line">${rels.map(r=>`<button class="rel-chip dense" onclick="openRelated('${esc(r.id)}')">${esc(r.kind)} <b>${esc(r.id)}</b></button>`).join('')}</div>`
+      : '';
+    const pjHtml = k.status==='PJ化'
+      ? `<div class="log-sub-line">→ Project OS${k.projectName?'『'+esc(k.projectName)+'』':''}</div>`
+      : '';
+
+    const showAll = expandedRecAll.has(k.id);
+    const recs = [...log].reverse();
+    const recShown = showAll ? recs : recs.slice(0,5);
+    const recHtml = `
+      <div class="log-rec-box">
+        <div class="log-children-label">記録</div>
+        <div class="log-rec-add dense">
+          <input id="rec-in-${esc(k.id)}" type="text" placeholder="気づき・判断を1行で…" onkeydown="if(event.key==='Enter'&&!event.isComposing){addRecord('${esc(k.id)}','気づき')}">
+          <button class="btn-edit" onclick="addRecord('${esc(k.id)}','気づき')">気づき</button>
+          <button class="btn-edit" onclick="addRecord('${esc(k.id)}','判断')">判断</button>
+        </div>
+        ${recShown.map(r=>`<div class="log-rec-row"><span class="log-rec-date">${esc(shortDate(r.date))}</span><span class="log-rec-kind">${esc(r.kind)}</span>｜${esc(r.text)}</div>`).join('')}
+        ${recs.length>5&&!showAll?`<button class="log-rec-more dense" onclick="expandedRecAll.add('${esc(k.id)}');renderList()">すべて見る（${recs.length}件）</button>`:''}
+      </div>`;
 
     const childrenHtml = children.map(e => {
       const parentPri = k.priority;
@@ -1030,11 +1145,14 @@ function renderList() {
     }).join('');
 
     return `
-      <div class="log-item${isOpen?' open':''}">
+      <div class="log-item${isOpen?' open':''}" id="log-${esc(k.id)}">
         <div class="log-item-header" onclick="toggleLog('${esc(k.id)}')">
           <span class="log-toggle">▶</span>
           <span class="log-id">${esc(k.id)}</span>
-          <span class="log-title">${esc(k.title)}</span>
+          <div class="log-title-wrap">
+            <span class="log-title">${esc(k.title)}</span>
+            ${latest?`<span class="log-latest">${esc(shortDate(latest.date))} ${esc(latest.kind)}｜${esc(clip(latest.text,40))}</span>`:''}
+          </div>
           <div class="log-meta">
             ${priBadge(k.priority||'A')}
             ${statusBadge(k.status)}
@@ -1043,15 +1161,18 @@ function renderList() {
         </div>
         <div class="log-item-body">
           ${detailHtml?`<div class="log-detail-grid">${detailHtml}</div>`:''}
+          ${originHtml}${relHtml}${pjHtml}
+          ${recHtml}
           ${k.review?`<div style="font-size:10px;color:var(--text3);margin-bottom:8px">最終レビュー: ${esc(k.review)}</div>`:''}
           ${children.length>0?`<div class="log-children">
-            <div class="log-children-label">実行単位 (${children.length})</div>
+            <div class="log-children-label">試し (${children.length})</div>
             ${childrenHtml}
-          </div>`:'<div style="font-size:13px;color:var(--text4);margin:6px 0">実行単位なし</div>'}
+          </div>`:'<div style="font-size:13px;color:var(--text4);margin:6px 0">試しなし</div>'}
           <div class="log-actions">
             <button class="btn-edit" onclick="openModal('${esc(k.id)}')">編集</button>
             <button class="btn-del" onclick="deleteItem('${esc(k.id)}')">削除</button>
-            <button class="btn-edit" onclick="openModal(null,'${esc(k.id)}')" style="background:#ede9fe;color:#5b21b6;border-color:#ddd6fe">＋ 実行追加</button>
+            <button class="btn-edit" onclick="openModal(null,'${esc(k.id)}')" style="background:#ede9fe;color:#5b21b6;border-color:#ddd6fe">＋ 試しを追加</button>
+            <button class="btn-edit" onclick="copyOneKoso('${esc(k.id)}')">📋 この構想</button>
           </div>
         </div>
       </div>`;
@@ -1073,11 +1194,101 @@ function renderList() {
         <option value="" ${!filterStatus?'selected':''}>全ステータス</option>
         ${STATUSES.map(s=>`<option value="${s}" ${filterStatus===s?'selected':''}>${s}</option>`).join('')}
       </select>
+      <button class="btn-edit" onclick="copyAllKoso()">📋 壁打ち用</button>
     </div>
     <div class="log-list">
       ${listHtml||'<div class="empty-state"><div class="empty-icon">🔍</div>該当する構想がありません</div>'}
     </div>`;
 }
+
+// 'YYYY/MM/DD' → 'M/D'
+function shortDate(d) {
+  const p = String(d||'').split(/[\/-]/);
+  return p.length===3 ? (parseInt(p[1],10)+'/'+parseInt(p[2],10)) : String(d||'');
+}
+function clip(s, n) { s = String(s||''); return s.length>n ? s.slice(0,n)+'…' : s; }
+
+function addRecord(id, kind) {
+  const inp = document.getElementById('rec-in-'+id);
+  const text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  const k = items.find(i=>i.id===id);
+  if (!k) return;
+  if (!Array.isArray(k.log)) k.log = [];
+  k.log.push({date:today(), kind, text, src:'本人'});
+  k.review = today();
+  save();
+  renderList();
+  showToast(kind+'を記録しました');
+}
+
+function openRelated(id) {
+  const k = items.find(i=>i.id===id&&i.type==='構想');
+  if (!k) { showToast(id+' が見つかりません'); return; }
+  if ((filterPriority&&k.priority!==filterPriority)||(filterStatus&&k.status!==filterStatus)||filterSearch) {
+    filterSearch=''; filterPriority=''; filterStatus='';
+  }
+  expandedLog.add(id);
+  renderList();
+  const el = document.getElementById('log-'+id);
+  if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ─── 壁打ち用コピー ───────────────────────────────────────
+function latestRecLine(k) {
+  const log = Array.isArray(k.log) ? k.log : [];
+  if (!log.length) return '';
+  const r = log[log.length-1];
+  return '最新：'+shortDate(r.date)+' '+r.kind+'｜'+clip(r.text,40);
+}
+function buildAllKosoText() {
+  const head = '【構想ログ 現在地 '+today()+'】';
+  const rows = items.filter(i=>i.type==='構想'&&['検討中','待機','実行中'].includes(i.status))
+    .sort((a,b)=>priOrder(a.priority)-priOrder(b.priority)||a.id.localeCompare(b.id))
+    .map(k => ({pri:k.priority||'A', line:[k.id, k.priority||'A', k.title, 'GOサイン：'+(k.goSign||'未設定'), latestRecLine(k)].filter(Boolean).join('｜')}));
+  const total = () => [head, ...rows.map(r=>r.line)].join('\n').length;
+  // 800字を超えたら C → B の順に（下から）行を落とす
+  ['C','B'].forEach(p => {
+    while (total()>800) {
+      let idx = -1;
+      rows.forEach((r,i)=>{ if (r.pri===p) idx = i; });
+      if (idx<0) break;
+      rows.splice(idx,1);
+    }
+  });
+  while (total()>800 && rows.length) rows.pop();
+  return [head, ...rows.map(r=>r.line)].join('\n');
+}
+function buildOneKosoText(id) {
+  const k = items.find(i=>i.id===id);
+  if (!k) return '';
+  const kids = items.filter(i=>i.type==='実行'&&i.parentId===id);
+  const log = (Array.isArray(k.log)?k.log:[]).slice(-3).reverse();
+  const lines = [
+    '【構想 '+k.id+'】'+k.title,
+    '目的：'+(k.purpose||''),
+    'GOサイン：'+(k.goSign||'未設定'),
+  ];
+  if (kids.length) { lines.push('試し：'); kids.forEach(e=>lines.push('- '+e.id+' '+e.title+'（'+e.status+'）')); }
+  if (log.length) { lines.push('記録（直近3件）：'); log.forEach(r=>lines.push('- '+shortDate(r.date)+' '+r.kind+'｜'+r.text)); }
+  let t = lines.join('\n');
+  if (t.length>400) t = t.slice(0,399)+'…';
+  return t;
+}
+function copyText(t, okMsg) {
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.cssText = 'position:fixed;left:-9999px;top:0;';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast(okMsg); } catch(e) { showToast('コピーできませんでした'); }
+    ta.remove();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(()=>showToast(okMsg), fallback);
+  } else fallback();
+}
+function copyAllKoso() { const t = buildAllKosoText(); copyText(t, '壁打ち用にコピーしました（'+t.length+'字）'); }
+function copyOneKoso(id) { const t = buildOneKosoText(id); copyText(t, id+' をコピーしました（'+t.length+'字）'); }
 
 function toggleLog(id) {
   if (expandedLog.has(id)) expandedLog.delete(id);
@@ -1116,36 +1327,58 @@ function renderArchive() {
 }
 
 // ─── AI IMPORT VIEW ───────────────────────────────────────
+let aiImportStatus = { text:'', cls:'' };
 function renderAiImport() {
   const el = document.getElementById('view-ai-import');
+  let hasUndo = false;
+  try { hasUndo = localStorage.getItem(LASTIMPORT_KEY) !== null; } catch(e) {}
   el.innerHTML = `
     <div class="page-header">
-      <div class="page-title">AIインポート</div>
-      <div class="page-sub">AIと壁打ちして整理した構想を一括登録</div>
+      <div class="page-title">取り込む</div>
+      <div class="page-sub">構想見直し・壁打ちの結果（気づき・判断・統合・派生）を構想ログへ反映</div>
     </div>
     <div class="ai-import-wrap">
       <div class="ai-import-desc">
-        AIとの壁打ちで整理した内容を貼り付けて「登録」してください。
+        Cowork・壁打ちが出した【KOSO-IMPORT】を貼り付けて「登録」してください。IDのあるブロックは<strong>更新</strong>、「新規」は新しく作ります。直前の状態は自動で退避され、下のリンクから戻せます。
       </div>
-      <div style="font-size:13px;color:var(--text3);margin-bottom:10px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;line-height:1.8">
-        <strong>入力フォーマット例：</strong><br>
-        【構想】<br>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:10px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;line-height:1.8;overflow-x:auto">
+        <strong>書式例：</strong><br>
+        【KOSO-IMPORT】<br>
+        ■ 構想 G03<br>
+        GOサイン：〇〇〇（空欄・（変更なし）は触らない／（空にする）で空に）<br>
+        関連：派生元 G01<br>
+        記録：気づき｜〇〇〇<br>
+        記録：判断｜〇〇〇<br>
+        <br>
+        ■ 構想 新規<br>
         タイトル：〇〇〇<br>
         目的/概要：〇〇〇<br>
-        成功条件：〇〇〇<br>
-        実行トリガー：〇〇〇<br>
-        前提条件：〇〇〇<br>
-        戦略優先順位：A<br>
+        戦略優先順位：B<br>
+        由来：壁打ち 2026-10-16<br>
         <br>
-        【実行単位】<br>
-        1. タイトル：〇〇〇　目的/概要：〇〇〇　成功条件：〇〇〇<br>
-        2. タイトル：〇〇〇　目的/概要：〇〇〇　成功条件：〇〇〇
+        ■ 試し 新規　親：G03<br>
+        タイトル：〇〇〇<br>
+        成功条件：〇〇〇<br>
+        <br>
+        ■ 試し E07<br>
+        ステータス：完了<br>
+        <br>
+        ■ 統合：G02 → G05<br>
+        理由：〇〇〇<br>
+        <br>
+        ■ 廃棄：G04<br>
+        理由：〇〇〇（必須）<br>
+        学び：〇〇〇<br>
+        <br>
+        ■ PJ化：G01 → PJ名<br>
+        <span style="color:var(--text4)">※ 旧書式（【構想】で始まるもの）も従来どおり新規作成として受け付けます。</span>
       </div>
-      <textarea class="ai-textarea" id="ai-input" placeholder="ここにAIとの壁打ち結果を貼り付けてください..."></textarea>
+      <textarea class="ai-textarea" id="ai-input" placeholder="ここに【KOSO-IMPORT】を貼り付けてください..."></textarea>
       <div class="ai-btn-row">
         <button class="btn-secondary" onclick="registerAiInput()">登録</button>
-        <span class="ai-parse-status" id="ai-parse-status"></span>
+        <span class="ai-parse-status ${esc(aiImportStatus.cls)}" id="ai-parse-status">${esc(aiImportStatus.text)}</span>
       </div>
+      ${hasUndo?`<div class="import-undo"><a onclick="undoLastImport()">直前の取り込みを元に戻す</a></div>`:''}
     </div>`;
 }
 
@@ -1204,25 +1437,25 @@ function parseAiText(text) {
   return result;
 }
 
+function setAiStatus(text, cls) {
+  aiImportStatus = { text, cls };
+  const el = document.getElementById('ai-parse-status');
+  if (el) { el.textContent = text; el.className = 'ai-parse-status ' + cls; }
+}
+
 function registerAiInput() {
   const text = document.getElementById('ai-input').value.trim();
-  const statusEl = document.getElementById('ai-parse-status');
-  if (!text) {
-    statusEl.textContent = '入力が空です';
-    statusEl.className = 'ai-parse-status err';
-    return;
-  }
+  if (!text) { setAiStatus('入力が空です', 'err'); return; }
+  if (text.split('\n')[0].trim().startsWith('【KOSO-IMPORT】')) { registerKosoImport(text); return; }
   let d;
   try {
     d = parseAiText(text);
   } catch(err) {
-    statusEl.textContent = `解析エラー: ${err.message}`;
-    statusEl.className = 'ai-parse-status err';
+    setAiStatus(`解析エラー: ${err.message}`, 'err');
     return;
   }
   if (!d || !d.title) {
-    statusEl.textContent = '【構想】セクションが見つかりません';
-    statusEl.className = 'ai-parse-status err';
+    setAiStatus('【構想】セクションが見つかりません', 'err');
     return;
   }
   const gId = genId('構想');
@@ -1232,6 +1465,8 @@ function registerAiInput() {
     trigger: d.trigger, prereq: d.prereq,
     priority: d.priority, status: '検討中',
     review: today(),
+    createdAt: today(), log: [], relations: [],
+    origin: {kind:'取り込み', date: today()},
   });
   d.executions.forEach(e => {
     items.push({
@@ -1240,13 +1475,265 @@ function registerAiInput() {
       trigger: '', prereq: '',
       priority: d.priority, status: '検討中',
       review: today(),
+      createdAt: today(), log: [],
     });
   });
   save();
   document.getElementById('ai-input').value = '';
-  statusEl.textContent = '';
+  aiImportStatus = { text:'', cls:'' };
   showToast(`登録しました：G1件 E${d.executions.length}件`);
   setView('list');
+}
+
+// ═══════════════════════════════════════════════════════
+// KOSO-IMPORT（IDあり更新・新規・試し・統合・廃棄・PJ化／1段階）
+// ═══════════════════════════════════════════════════════
+const KI_KEYS = {
+  'タイトル':'title',
+  '目的/概要':'purpose', '目的・概要':'purpose', '概要':'purpose', '目的':'purpose',
+  '成功条件':'success',
+  'GOサイン':'goSign',
+  '実行トリガー':'trigger', 'トリガー':'trigger',
+  '前提条件':'prereq', '前提':'prereq',
+  '戦略優先順位':'priority', '優先順位':'priority', '優先度':'priority',
+  'ステータス':'status',
+  '由来':'origin',
+  '関連':'relations',
+  '記録':'log',
+  '理由':'reason',
+  '学び':'learn',
+};
+const KI_LABEL = { title:'タイトル', purpose:'目的/概要', success:'成功条件', goSign:'GOサイン', trigger:'実行トリガー', prereq:'前提条件', priority:'優先順位', status:'ステータス', origin:'由来' };
+const KI_CLEARABLE = ['goSign','trigger','prereq','purpose','success'];
+
+// 貼り付け文字列 → ブロック配列（解析のみ・データは触らない）
+function parseKosoImport(text) {
+  const lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+  const blocks = [];
+  let cur = null;
+  lines.slice(1).forEach(raw => {
+    const line = raw.replace(/　/g, ' ').trim();
+    if (/^■/.test(line)) {
+      cur = { head: raw.trim(), headN: line, fields: [] };
+      blocks.push(cur);
+      return;
+    }
+    if (!cur || !line) return;
+    const m = line.match(/^([^：:]+?)\s*[：:]\s*(.*)$/);
+    if (!m) return;
+    const key = KI_KEYS[m[1].trim()];
+    if (key) cur.fields.push({ key, value: m[2].trim() });
+  });
+  blocks.forEach(b => {
+    const h = b.headN;
+    let m;
+    if ((m = h.match(/^■\s*(構想|試し|実行)\s*(新規|[GEge]\d+)(?:\s*親\s*[：:]\s*([Gg]\d+))?/))) {
+      b.op = m[2]==='新規' ? 'new' : 'update';
+      b.type = m[1]==='構想' ? '構想' : '実行';
+      b.id = m[2]==='新規' ? '' : m[2].toUpperCase();
+      b.parent = m[3] ? m[3].toUpperCase() : '';
+    } else if ((m = h.match(/^■\s*統合\s*[：:]\s*([Gg]\d+)\s*(?:→|->|⇒|＞)\s*([Gg]\d+)/))) {
+      b.op = 'merge'; b.from = m[1].toUpperCase(); b.to = m[2].toUpperCase();
+    } else if ((m = h.match(/^■\s*廃棄\s*[：:]\s*([GEge]\d+)/))) {
+      b.op = 'discard'; b.id = m[1].toUpperCase();
+    } else if ((m = h.match(/^■\s*PJ化\s*[：:]\s*([Gg]\d+)\s*(?:→|->|⇒)\s*(.+)$/))) {
+      b.op = 'pj'; b.id = m[1].toUpperCase(); b.pjName = m[2].trim();
+    } else {
+      b.op = 'unknown';
+    }
+  });
+  return blocks;
+}
+
+function kiNormDate(s) {
+  const m = String(s||'').match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  return m ? m[1]+'/'+m[2].padStart(2,'0')+'/'+m[3].padStart(2,'0') : '';
+}
+// 直近3件に同じ text があれば入れない
+function kiPushLog(item, kind, text) {
+  if (!Array.isArray(item.log)) item.log = [];
+  if (item.log.slice(-3).some(r => r && r.text === text)) return false;
+  item.log.push({ date: today(), kind, text, src: '取り込み' });
+  return true;
+}
+function kiAddRelation(item, kind, id) {
+  if (!Array.isArray(item.relations)) item.relations = [];
+  if (item.relations.some(r => r.kind===kind && r.id===id)) return false;
+  item.relations.push({ kind, id });
+  return true;
+}
+
+// 1ブロック分を item に反映（更新・新規共通）。変更内容のラベル配列を返す
+function kiApplyFields(item, fields, isNew) {
+  const isG = item.type === '構想';
+  const changed = [];
+  let logN = 0, relN = 0;
+  fields.forEach(({key, value}) => {
+    if (key==='reason' || key==='learn') return;
+    if (key==='log') {
+      if (!value) return;
+      const m = value.match(/^([^｜|]+?)\s*[｜|]\s*(.+)$/);
+      const kind = m && LOG_KINDS.includes(m[1].trim()) ? m[1].trim() : '気づき';
+      const body = m ? m[2].trim() : value;
+      if (kiPushLog(item, kind, body)) logN++;
+      return;
+    }
+    if (!value || value==='（変更なし）' || value==='(変更なし)') return;
+    const clear = value==='（空にする）' || value==='(空にする)';
+    if (key==='relations') {
+      if (!isG) return;
+      const m = value.split(/\s+/);
+      const kind = m[0], id = (m[1]||'').toUpperCase();
+      if (!REL_KINDS.includes(kind) || !items.some(i => i.id===id)) return;
+      if (kiAddRelation(item, kind, id)) relN++;
+      return;
+    }
+    if (key==='origin') {
+      if (!isG || clear) return;
+      if (item.origin && item.origin.kind) return; // 由来は変わらない
+      const m = value.split(/\s+/);
+      if (!ORIGIN_KINDS.includes(m[0])) return;
+      item.origin = { kind: m[0], date: kiNormDate(m[1]) || today() };
+      changed.push('由来');
+      return;
+    }
+    if (key==='priority') {
+      if (!isG || clear) return;
+      const p = value.slice(0,1).toUpperCase();
+      if (PRIORITIES.includes(p) && item.priority!==p) { item.priority = p; changed.push(KI_LABEL[key]); }
+      return;
+    }
+    if (key==='status') {
+      if (STATUSES.includes(value) && item.status!==value) { item.status = value; changed.push(KI_LABEL[key]); }
+      return;
+    }
+    if (!isG && (key==='goSign' || key==='trigger' || key==='prereq')) return;
+    if (clear) {
+      if (!KI_CLEARABLE.includes(key)) return;
+      if (item[key]) { item[key] = ''; changed.push(KI_LABEL[key]); }
+      return;
+    }
+    if (item[key] !== value) { item[key] = value; changed.push(KI_LABEL[key]); }
+  });
+  if (relN) changed.push('関連'+relN+'件');
+  if (logN) changed.push('記録'+logN+'件');
+  return changed;
+}
+
+// 1ブロック適用。成功時 {summary}、失敗時 {error} を返す（失敗時はデータを変えない）
+function applyKosoBlock(b) {
+  const fv = k => { const f = b.fields.filter(x=>x.key===k).pop(); return f ? f.value : ''; };
+  const findG = id => items.find(i => i.id===id && i.type==='構想');
+
+  if (b.op==='update') {
+    const item = items.find(i => i.id===b.id && i.type===b.type);
+    if (!item) return { error: true };
+    const changed = kiApplyFields(item, b.fields, false);
+    if (!changed.length) return { summary: b.id+' 変更なし' };
+    if (item.type==='構想') item.review = today();
+    return { summary: b.id+' 更新（'+changed.join('・')+'）' };
+  }
+
+  if (b.op==='new') {
+    const title = fv('title');
+    if (!title || title==='（変更なし）' || title==='（空にする）') return { error: true };
+    let parent = null;
+    if (b.type==='実行') {
+      parent = b.parent ? findG(b.parent) : null;
+      if (!parent) return { error: true };
+    }
+    const dup = items.find(i => i.type===b.type && i.title===title);
+    const item = {
+      id: genId(b.type), type: b.type,
+      parentId: parent ? parent.id : '-',
+      title: '', purpose: '', success: '', trigger: '', prereq: '',
+      priority: parent ? (parent.priority||'A') : 'A',
+      status: '検討中',
+      review: b.type==='構想' ? today() : '',
+      createdAt: today(), log: [],
+    };
+    if (b.type==='構想') { item.goSign = ''; item.relations = []; }
+    kiApplyFields(item, b.fields, true);
+    if (parent) item.priority = parent.priority || 'A';
+    if (b.type==='構想' && !(item.origin && item.origin.kind)) item.origin = { kind:'取り込み', date: today() };
+    items.push(item);
+    return { summary: item.id+' 新規'+(parent?'（親 '+parent.id+'）':'')+(dup?'（同名 '+dup.id+' あり）':'') };
+  }
+
+  if (b.op==='merge') {
+    const from = findG(b.from), to = findG(b.to);
+    if (!from || !to || from===to) return { error: true };
+    const reason = fv('reason');
+    const r = reason ? '（理由：'+reason+'）' : '';
+    from.status = '完了';
+    kiAddRelation(from, '統合先', to.id);
+    kiPushLog(from, '統合', '→ '+to.id+' に統合'+r);
+    kiPushLog(to, '統合', from.id+' を統合'+r);
+    from.review = today(); to.review = today();
+    return { summary: from.id+'→'+to.id+' 統合' };
+  }
+
+  if (b.op==='discard') {
+    const item = items.find(i => i.id===b.id);
+    const reason = fv('reason');
+    if (!item || !reason) return { error: true };
+    const learn = fv('learn');
+    const already = item.status==='廃棄' && archives.some(a => a.id===item.id && a.reason===reason);
+    item.status = '廃棄';
+    if (item.type==='構想') item.review = today();
+    if (already) return { summary: item.id+' 廃棄済み（アーカイブは追加せず）' };
+    archives.push({ id:item.id, title:item.title, priority:item.priority||'A', type:item.type, reason, learn, date: today() });
+    return { summary: item.id+' 廃棄' };
+  }
+
+  if (b.op==='pj') {
+    const item = findG(b.id);
+    if (!item || !b.pjName) return { error: true };
+    item.status = 'PJ化';
+    item.projectName = b.pjName;
+    const pj = findPosProject(b.pjName);
+    if (pj && pj.id) item.projectId = pj.id;
+    kiPushLog(item, 'PJ化', '→ Project OS「'+b.pjName+'」');
+    item.review = today();
+    return { summary: item.id+' PJ化' };
+  }
+
+  return { error: true };
+}
+
+function registerKosoImport(text) {
+  const blocks = parseKosoImport(text);
+  const pre = { items: JSON.parse(JSON.stringify(items)), archives: JSON.parse(JSON.stringify(archives)) };
+  const summaries = [], errors = [];
+  blocks.forEach(b => {
+    let r;
+    try { r = applyKosoBlock(b); } catch(e) { r = { error: true }; }
+    if (r.error) errors.push('読めませんでした：' + b.head);
+    else summaries.push(r.summary);
+  });
+  if (!summaries.length) {
+    setAiStatus(['【KOSO-IMPORT】の中に読めるブロックがありません', ...errors].join('\n'), 'err');
+    return;
+  }
+  try { localStorage.setItem(LASTIMPORT_KEY, JSON.stringify({ items: pre.items, archives: pre.archives, at: new Date().toISOString() })); } catch(e) {}
+  save();
+  const summary = summaries.join('／');
+  aiImportStatus = { text: [summary, ...errors].join('\n'), cls: errors.length ? 'err' : 'ok' };
+  renderCurrentView();
+  showToast(summary.length <= 60 ? summary : ('取り込みました：' + summaries.length + '件' + (errors.length ? '（読めない ' + errors.length + '件）' : '')));
+}
+
+function undoLastImport() {
+  let snap = null;
+  try { snap = JSON.parse(localStorage.getItem(LASTIMPORT_KEY) || 'null'); } catch(e) {}
+  if (!snap || !Array.isArray(snap.items)) { renderAiImport(); return; }
+  items = snap.items;
+  archives = Array.isArray(snap.archives) ? snap.archives : [];
+  save();
+  try { localStorage.removeItem(LASTIMPORT_KEY); } catch(e) {}
+  aiImportStatus = { text:'', cls:'' };
+  renderCurrentView();
+  showToast('戻しました');
 }
 
 // ─── CRUD ─────────────────────────────────────────────────
@@ -1309,6 +1796,7 @@ function openModal(id, defaultParentId) {
   document.getElementById('f-priority').value = item ? (item.priority||'A') : 'A';
   document.getElementById('f-title').value = item ? item.title : '';
   document.getElementById('f-purpose').value = item ? item.purpose : '';
+  document.getElementById('f-gosign').value = item ? (item.goSign||'') : '';
   document.getElementById('f-success').value = item ? item.success : '';
   document.getElementById('f-trigger').value = item ? item.trigger : '';
   document.getElementById('f-prereq').value  = item ? item.prereq  : '';
@@ -1345,6 +1833,7 @@ function updateFormForType() {
   // 構想のみ: priority, trigger, prereq, review
   // 実行のみ: parent
   document.getElementById('f-priority-group').style.display = isG ? '' : 'none';
+  document.getElementById('f-gosign-group').style.display   = isG ? '' : 'none';
   document.getElementById('f-parent-group').style.display   = isG ? 'none' : '';
   document.getElementById('f-trigger-group').style.display  = isG ? '' : 'none';
   document.getElementById('f-prereq-group').style.display   = isG ? '' : 'none';
@@ -1353,6 +1842,17 @@ function updateFormForType() {
 
 function closeModal() { document.getElementById('modal').classList.remove('open'); editingId = null; }
 function closeModalOutside(e) { if(e.target===document.getElementById('modal')) closeModal(); }
+
+// Project OS（pos_v4）から同名PJを探す（読むだけ・書かない）
+function findPosProject(name) {
+  try {
+    const pos = JSON.parse(localStorage.getItem('pos_v4') || 'null');
+    const list = pos && Array.isArray(pos.projects) ? pos.projects : (Array.isArray(pos) ? pos : []);
+    const n = String(name||'').trim();
+    const hit = list.find(p => p && (String(p.title||'').trim()===n || String(p.name||'').trim()===n));
+    return hit ? { id: hit.id!=null ? String(hit.id) : '', name: String(hit.title||hit.name||'') } : null;
+  } catch(e) { return null; }
+}
 
 function saveItem() {
   const title = document.getElementById('f-title').value.trim();
@@ -1378,6 +1878,7 @@ function saveItem() {
     title,
     priority,
     purpose: document.getElementById('f-purpose').value.trim(),
+    goSign:  isG ? document.getElementById('f-gosign').value.trim() : '',
     success: document.getElementById('f-success').value.trim(),
     trigger: isG ? document.getElementById('f-trigger').value.trim() : '',
     prereq:  isG ? document.getElementById('f-prereq').value.trim()  : '',
@@ -1385,14 +1886,26 @@ function saveItem() {
     review:  isG ? document.getElementById('f-review').value.replace(/-/g,'/') : '',
   };
 
+  if (!isG) delete data.goSign;
   const prevItem = editingId ? items.find(i=>i.id===editingId) : null;
   const wasDiscard = newStatus==='廃棄' && (!prevItem||prevItem.status!=='廃棄');
+  const becamePj  = isG && newStatus==='PJ化' && (!prevItem||prevItem.status!=='PJ化');
 
+  let saved;
   if (editingId) {
+    // モーダルで編集しない項目（origin/createdAt/relations/log/projectId/projectName）を引き継ぐ
     const idx = items.findIndex(i=>i.id===editingId);
-    if(idx>=0) items[idx] = data;
+    if(idx>=0) { saved = {...prevItem, ...data}; items[idx] = saved; }
   } else {
-    items.push(data);
+    saved = {...data, createdAt: today(), log: []};
+    if (isG) { saved.relations = []; saved.origin = {kind:'本人', date: today()}; }
+    items.push(saved);
+  }
+  if (becamePj && saved) {
+    if (!Array.isArray(saved.log)) saved.log = [];
+    saved.log.push({date:today(), kind:'PJ化', text:'→ Project OS', src:'本人'});
+    const pj = findPosProject(saved.title);
+    if (pj) { saved.projectName = pj.name; saved.projectId = pj.id; }
   }
   save();
   closeModal();
