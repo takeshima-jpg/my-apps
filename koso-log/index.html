@@ -540,6 +540,13 @@ textarea.form-control { resize: vertical; min-height: 56px; }
 .import-undo { margin-top: 16px; font-size: 12px; }
 .import-undo a { color: var(--text3); text-decoration: underline; cursor: pointer; }
 .ai-parse-status { white-space: pre-wrap; }
+.ai-textarea { min-height: 220px; }
+.ai-format { margin-top: 14px; }
+.ai-format summary { font-size: 12px; color: var(--text3); cursor: pointer; list-style: none; padding: 6px 0; min-height: 44px; display: flex; align-items: center; }
+.ai-format summary::-webkit-details-marker { display: none; }
+.ai-format summary::before { content: '▸ '; }
+.ai-format[open] summary::before { content: '▾ '; }
+.ai-format-body { font-size: 13px; color: var(--text3); background: var(--bg2); border: 1px solid var(--border); border-radius: 7px; padding: 10px 12px; line-height: 1.8; white-space: pre-wrap; overflow-x: auto; }
 
 /* ─── スマホ幅 ─────────────────────────────────────────────── */
 @media (max-width: 640px) {
@@ -1339,39 +1346,7 @@ function renderAiImport() {
     </div>
     <div class="ai-import-wrap">
       <div class="ai-import-desc">
-        Cowork・壁打ちが出した【KOSO-IMPORT】を貼り付けて「登録」してください。IDのあるブロックは<strong>更新</strong>、「新規」は新しく作ります。直前の状態は自動で退避され、下のリンクから戻せます。
-      </div>
-      <div style="font-size:13px;color:var(--text3);margin-bottom:10px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;line-height:1.8;overflow-x:auto">
-        <strong>書式例：</strong><br>
-        【KOSO-IMPORT】<br>
-        ■ 構想 G03<br>
-        GOサイン：〇〇〇（空欄・（変更なし）は触らない／（空にする）で空に）<br>
-        関連：派生元 G01<br>
-        記録：気づき｜〇〇〇<br>
-        記録：判断｜〇〇〇<br>
-        <br>
-        ■ 構想 新規<br>
-        タイトル：〇〇〇<br>
-        目的/概要：〇〇〇<br>
-        戦略優先順位：B<br>
-        由来：壁打ち 2026-10-16<br>
-        <br>
-        ■ 試し 新規　親：G03<br>
-        タイトル：〇〇〇<br>
-        成功条件：〇〇〇<br>
-        <br>
-        ■ 試し E07<br>
-        ステータス：完了<br>
-        <br>
-        ■ 統合：G02 → G05<br>
-        理由：〇〇〇<br>
-        <br>
-        ■ 廃棄：G04<br>
-        理由：〇〇〇（必須）<br>
-        学び：〇〇〇<br>
-        <br>
-        ■ PJ化：G01 → PJ名<br>
-        <span style="color:var(--text4)">※ 旧書式（【構想】で始まるもの）も従来どおり新規作成として受け付けます。</span>
+        Cowork・壁打ちが出した【KOSO-IMPORT】を貼って「登録」。IDのあるブロックは<strong>更新</strong>、「新規」は新しく作ります。直前の状態は自動で退避されます。
       </div>
       <textarea class="ai-textarea" id="ai-input" placeholder="ここに【KOSO-IMPORT】を貼り付けてください..."></textarea>
       <div class="ai-btn-row">
@@ -1379,7 +1354,41 @@ function renderAiImport() {
         <span class="ai-parse-status ${esc(aiImportStatus.cls)}" id="ai-parse-status">${esc(aiImportStatus.text)}</span>
       </div>
       ${hasUndo?`<div class="import-undo"><a onclick="undoLastImport()">直前の取り込みを元に戻す</a></div>`:''}
+      <details class="ai-format">
+        <summary>書式例を見る</summary>
+        <div class="ai-format-body">【KOSO-IMPORT】
+■ 構想 G03
+GOサイン：〇〇〇（空欄・（変更なし）は触らない／（空にする）で空に）
+関連：派生元 G01
+記録：気づき｜〇〇〇
+記録：判断｜〇〇〇
+
+■ 構想 新規
+タイトル：〇〇〇
+目的/概要：〇〇〇
+戦略優先順位：B
+由来：壁打ち 2026-10-16
+
+■ 試し 新規　親：G03
+タイトル：〇〇〇
+成功条件：〇〇〇
+
+■ 試し E07
+ステータス：完了
+
+■ 統合：G02 → G05
+理由：〇〇〇
+
+■ 廃棄：G04
+理由：〇〇〇（必須）
+学び：〇〇〇
+
+■ PJ化：G01 → PJ名
+<span style="color:var(--text4)">※ 旧書式（【構想】で始まるもの）も従来どおり新規作成として受け付けます。</span></div>
+      </details>
     </div>`;
+  const ta = document.getElementById('ai-input');
+  if (ta && window.matchMedia('(min-width: 700px)').matches) ta.focus();
 }
 
 function parseAiText(text) {
