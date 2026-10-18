@@ -29,6 +29,7 @@ button, [role="button"], .btn, .nav a, .nav button, .tab, .tab-btn {
   --ck-ok-fg: var(--radar); --ck-ok-bg: #e6f4f1;       /* 判定の帯：空き */
   --ck-warn-fg: #92400e;    --ck-warn-bg: #fef3c7;     /*           ルーチン移動で可 */
   --ck-ng-fg: #b91c1c;      --ck-ng-bg: #fee2e2;       /*           重複（打合せ・会食・出張・家ごはん枠） */
+  --ck-area-fg: #9a3412;    --ck-area-bg: #ffedd5;     /*           エリア違い（時間ではなく場所の理由。重複の赤とは分ける） */
   --ck-q-fg: var(--tx2);    --ck-q-bg: #f1f3f5;        /*           時間要確認・その他 */
   --radius: 12px;
 }
@@ -134,6 +135,7 @@ button.rd.td { background: var(--radar-s); } button.rd.we { background: #f6f8f8;
 .ckb.k-ok { color: var(--ck-ok-fg); background: var(--ck-ok-bg); }
 .ckb.k-warn { color: var(--ck-warn-fg); background: var(--ck-warn-bg); }
 .ckb.k-ng { color: var(--ck-ng-fg); background: var(--ck-ng-bg); }
+.ckb.k-area { color: var(--ck-area-fg); background: var(--ck-area-bg); }
 .ckb.k-q { color: var(--ck-q-fg); background: var(--ck-q-bg); border: 1px dashed var(--bd2); }
 .c-btns { display: flex; align-items: center; gap: 2px; }
 .c-detail { grid-column: 2 / -1; grid-row: 3; border-top: 1px solid var(--bd); padding: 10px 14px 12px; font-size: .9rem; }
@@ -247,7 +249,7 @@ const STATUS = { 'new':'新着', considering:'検討', applied:'申込済み', a
 const AXIS   = { fixed:'時期固定', play:'遊び', 'new':'新規' };
 /* カレンダー判定の区分と既定文言（label が空のときだけ使う。label があればそのまま出す）。
    ここに無い区分も捨てずに label をそのまま控えめの色で出す（Cowork 側の区分追加に画面が追随できるように） */
-const CHECK_VERDICTS = { ok:'重複なし', routine:'重複：ルーチン → 移動可', dinner:'重複：会食（確定）', away:'重複：出張・合宿', dinnerRule:'家ごはん枠に当たる', meeting:'重複：打合せ', unknown:'時間 要確認' };
+const CHECK_VERDICTS = { ok:'重複なし', routine:'重複：ルーチン → 移動可', dinner:'重複：会食（確定）', away:'重複：出張・合宿', dinnerRule:'家ごはん枠に当たる', meeting:'重複：打合せ', area:'エリア違い', unknown:'時間 要確認' };
 const WD = ['日','月','火','水','木','金','土'];
 const DEFAULT_REVIEW_AT = '2026-12-01';
 
@@ -690,12 +692,14 @@ function checkStale(e, c) {                            /* 判定のあとに日�
   const a = Date.parse(c.checkedAt), b = Date.parse(e.updatedAt);
   return !isNaN(a) && !isNaN(b) && a < b;
 }
-/* 判定の帯のバッジと配色。ここに無い区分（unknown・未知の区分）は「？ 時間要確認」の灰色 */
+/* 判定の帯のバッジと配色。unknown は「？ 時間要確認」、ここに無い区分は CHECK_BADGE_OTHER（灰色の中立バッジ） */
 const CHECK_BADGE = { ok: ['k-ok', '◯ 空き'], routine: ['k-warn', '△ ルーチン移動で可'],
-  meeting: ['k-ng', '✕ 重複'], dinner: ['k-ng', '✕ 重複'], away: ['k-ng', '✕ 重複'], dinnerRule: ['k-ng', '✕ 重複'] };
+  meeting: ['k-ng', '✕ 重複'], dinner: ['k-ng', '✕ 重複'], away: ['k-ng', '✕ 重複'], dinnerRule: ['k-ng', '✕ 重複'],
+  area: ['k-area', '△ エリア違い'], unknown: ['k-q', '？ 時間要確認'] };
+const CHECK_BADGE_OTHER = ['k-q', '・ その他'];   /* ここに無い区分は灰色の中立バッジ＋label（Cowork 側の区分追加に追随するための既定動作） */
 function checkHtml(e, sec) {
   const c = checkOf(e, sec); if (!c) return '';
-  const [k, badge] = CHECK_BADGE[c.verdict] || ['k-q', '？ 時間要確認'];
+  const [k, badge] = CHECK_BADGE[c.verdict] || CHECK_BADGE_OTHER;
   return '<div class="ckb ' + k + '" data-act="toggle" data-id="' + e.id + '">'   /* 帯を押しても展開（全文と移動案は展開表示） */
     + '<span class="ckb-badge">' + badge + '</span>'
     + '<span class="ckb-label" title="' + esc(c.label) + '">' + esc(c.label) + '</span>'
