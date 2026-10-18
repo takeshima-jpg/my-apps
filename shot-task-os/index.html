@@ -345,6 +345,8 @@ select option { background: var(--surface); }
 .lx-flabel { flex-shrink: 0; min-width: 84px; color: var(--text3); font-weight: 700; }
 .lx-fval { color: var(--text); white-space: pre-line; word-break: break-word; }
 .lx-field.lx-review .lx-fval { color: var(--purple, #7c5cff); }
+.lx-cnt { font-size: 12px; color: var(--text3); margin: 0 0 4px 92px; }   /* これまで N回（最終 m/d） */
+@media (max-width: 600px) { .lx-cnt { margin-left: 0; } }
 
 /* ACTIONS */
 .task-actions {
@@ -1224,18 +1226,51 @@ function lecticaFields(memo) {
   if (!f.q && !f.exp && !f.scene && !f.done && !f.review) return null;
   return f;
 }
+/* ── Lectica実施回数：保存値ではなく lectica_experiment_logs_v1 から毎回数える（全OS共通ロジック・各OSに同じ形で複製）──
+   count＝主実験として実施した件数／related＝関連実験として付いた件数／last＝そのどちらかの最新日（YYYY-MM-DD）。
+   ID比較は大文字小文字を無視。ログが読めない・配列でないときは0件（行を出さない） */
+function lxPracticeStats(expId, logs){
+  const id = String(expId == null ? '' : expId).trim().toUpperCase();
+  const out = { count: 0, related: 0, total: 0, last: '' };
+  if (!id) return out;
+  if (logs === undefined) logs = (function(){ try { return JSON.parse(localStorage.getItem('lectica_experiment_logs_v1') || 'null'); } catch (e) { return null; } })();
+  if (!Array.isArray(logs)) return out;
+  logs.forEach(function(l){
+    if (!l || typeof l !== 'object') return;
+    const main = String(l.experimentId || '').toUpperCase() === id;
+    const rel = String(l.relatedExperimentId || '').toUpperCase() === id;
+    if (!main && !rel) return;
+    if (main) out.count++; else out.related++;
+    const d = String(l.date || '');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d > out.last) out.last = d;
+  });
+  out.total = out.count + out.related;
+  return out;
+}
+/* "これまで N回（最終 m/d）"。0回は空文字（行ごと出さない） */
+function lxPracticeLine(st, prefix){
+  if (!st || !st.total) return '';
+  const md = st.last ? (Number(st.last.slice(5, 7)) + '/' + Number(st.last.slice(8, 10))) : '';
+  return (prefix == null ? 'これまで ' : prefix) + st.total + '回' + (md ? '（最終 ' + md + '）' : '');
+}
 // Lectica実験内容を開かずに読める形で展開（既定展開・折りたたみ無し）。
 // t.lecticaDetail（同期が保存する✦今日の実験の構造化全文）があれば全文カード、無い旧Shotはmemoパース表示（後方互換）。
 function renderLecticaDetail(t) {
   const d = (t && typeof t === 'object' && t.lecticaDetail) ? t.lecticaDetail : null;
   const memo = (t && typeof t === 'object') ? t.memo : t;
   const row = (lbl, val, extra) => val ? `<div class="lx-field${extra||''}"><span class="lx-flabel">${escH(lbl)}</span><span class="lx-fval">${escH(val)}</span></div>` : '';
+  /* 実施回数（ログから導出）。lecticaDetail の実験ID → 無ければ memo の「実験ID：」から */
+  const memoId = (String(memo || '').match(/実験ID[：:]\s*([A-Za-z]\d+)/) || [])[1] || '';
+  const expId = (d && d.experimentId) || memoId;
+  const cnt = lxPracticeLine(lxPracticeStats(expId));
+  const cntRow = cnt ? `<div class="lx-cnt">${escH(cnt)}</div>` : '';
   if (d) {
     const rel = d.relatedExperimentId ? ` × ${d.relatedExperimentId}「${d.relatedExperimentTitle||''}」` : '';
     const odai = `${d.experimentId||''}「${d.title||''}」${rel}`;
     const samples = (d.samples||[]).map((sm,i)=>`<div class="lx-sample">${['①','②','③','④','⑤'][i]||'・'} ${escH(sm)}</div>`).join('');
     return `<div class="lx-detail">`
       + row('お題', odai)
+      + cntRow
       + row('重点の問い', d.focusQuestion)
       + (samples ? `<div class="lx-field"><span class="lx-flabel">やり方</span><span class="lx-fval lx-fval-samples"><span class="lx-samples-note">（どれでも・自分流でも可）</span>${samples}</span></div>` : '')
       + row('なぜ今', d.whyNow)
@@ -1243,8 +1278,8 @@ function renderLecticaDetail(t) {
       + `</div>`;
   }
   const f = lecticaFields(memo);
-  if (!f) return null;
-  return `<div class="lx-detail">${row('重点の問い', f.q)}${row('実験', f.exp)}${row('使う場面', f.scene)}${row('完了条件', f.done)}${row('今日振り返るなら', f.review, ' lx-review')}</div>`;
+  if (!f) return cntRow ? `<div class="lx-detail">${cntRow}</div>` : null;   /* 中身が読めない旧Shotでも、実験IDが取れれば回数だけ出す */
+  return `<div class="lx-detail">${row('重点の問い', f.q)}${row('実験', f.exp)}${cntRow}${row('使う場面', f.scene)}${row('完了条件', f.done)}${row('今日振り返るなら', f.review, ' lx-review')}</div>`;
 }
 // Lecticaの完了✔は確認を挟む（開くボタン隣での誤爆対策）。
 function lecticaComplete(id) { if (confirm('この実験を完了にしますか？')) changeStatus(id, 'done'); }

@@ -1525,6 +1525,34 @@ function lxCopyFallback(txt,done){
   }catch(e){ done(false); }
 }
 function lxReadLogs(){try{const r=localStorage.getItem(LX_LOGS_KEY);return r?JSON.parse(r):[];}catch(e){return [];}}
+/* ── Lectica実施回数：保存値ではなく lectica_experiment_logs_v1 から毎回数える（全OS共通ロジック・各OSに同じ形で複製）──
+   count＝主実験として実施した件数／related＝関連実験として付いた件数／last＝そのどちらかの最新日（YYYY-MM-DD）。
+   ID比較は大文字小文字を無視。ログが読めない・配列でないときは0件（行を出さない） */
+function lxPracticeStats(expId, logs){
+  const id = String(expId == null ? '' : expId).trim().toUpperCase();
+  const out = { count: 0, related: 0, total: 0, last: '' };
+  if (!id) return out;
+  if (logs === undefined) logs = (function(){ try { return JSON.parse(localStorage.getItem('lectica_experiment_logs_v1') || 'null'); } catch (e) { return null; } })();
+  if (!Array.isArray(logs)) return out;
+  logs.forEach(function(l){
+    if (!l || typeof l !== 'object') return;
+    const main = String(l.experimentId || '').toUpperCase() === id;
+    const rel = String(l.relatedExperimentId || '').toUpperCase() === id;
+    if (!main && !rel) return;
+    if (main) out.count++; else out.related++;
+    const d = String(l.date || '');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d > out.last) out.last = d;
+  });
+  out.total = out.count + out.related;
+  return out;
+}
+/* "これまで N回（最終 m/d）"。0回は空文字（行ごと出さない） */
+function lxPracticeLine(st, prefix){
+  if (!st || !st.total) return '';
+  const md = st.last ? (Number(st.last.slice(5, 7)) + '/' + Number(st.last.slice(8, 10))) : '';
+  return (prefix == null ? 'これまで ' : prefix) + st.total + '回' + (md ? '（最終 ' + md + '）' : '');
+}
+
 // 実験中の自動整理：直近14日にログが無い「実験中」を「未着手」に戻す（1日1回）
 // 「実験中＝最近実際に回している実験」に意味を保つ。完了・保留は触らない。
 function lxAutoRevertStale(){
@@ -1608,6 +1636,7 @@ function lxSaveLog(){
     lxWriteLogs(logs);
     const map={continue:'active',complete:'completed',change:'active',pause:'paused'};
     if(map[fm.result])lxSetField(fm.experimentId,'status',map[fm.result]);
+    lxTouchRidExps([fm.experimentId]);   /* R系なら探求ボードの実験の更新日だけ進める（回数はログから数える） */
     S.lxForm=null; toast('実績を記録しました'); ra(); updateNav();
   }catch(e){ alert('記録エラー: '+e.message); }
 }
@@ -1694,6 +1723,24 @@ function lxImportPanel(master){
   return box;
 }
 
+/* R系ID（rid）に一致する探求ボード実験と親の問いの updatedAt を進める。回数は lxPracticeStats がログから数えるので保存しない。
+   保存値 practiceCount／lastPracticedAt は他所で読まれる可能性があるため消さずに残置（以後は更新しない） */
+function lxTouchRidExps(ids){
+  try{
+    const rids=(ids||[]).filter(function(id){return id&&/^R/i.test(id);});
+    if(!rids.length)return;
+    (async function(){
+      let touched=false;
+      for(const rid of rids){
+        const x=S.experiments.find(function(b){return b&&(b.rid||'').toUpperCase()===String(rid).toUpperCase();});
+        if(!x)continue;
+        await tkSave('experiments',x);touched=true;
+        if(x.questionId){const qq=S.questions.find(function(b){return b&&b.id===x.questionId;});if(qq)await tkSave('questions',qq);}
+      }
+      if(touched){ra();updateNav();}
+    })();
+  }catch(_e){}
+}
 function lxImportSave(master){
   // 戻り値：取り込み成功=true／失敗・キャンセル=false（取り込むタブの自動判別が結果表示に使う）
   try{
@@ -1722,22 +1769,8 @@ function lxImportSave(master){
     lxWriteLogs(logs);
     const stMap={continue:'active',complete:'completed',change:'active',pause:'paused'};
     if(!isReflectExp&&stMap[parsed.result])lxSetField(parsed.experimentId,'status',stMap[parsed.result]);
-    // R系連動：主実験/関連実験のR系IDに一致するridを持つ探求ボード実験の実践回数・最終実践日・更新日を進め、親の問いの更新日も動かす
-    try{
-      const rids=[parsed.experimentId,parsed.relatedExperimentId].filter(function(id){return id&&/^R/i.test(id);});
-      if(rids.length){(async function(){
-        let touched=false;
-        for(const rid of rids){
-          const x=S.experiments.find(function(b){return b&&(b.rid||'').toUpperCase()===rid.toUpperCase();});
-          if(!x)continue;
-          x.practiceCount=(x.practiceCount||0)+1;
-          if(!x.lastPracticedAt||x.lastPracticedAt<parsed.date)x.lastPracticedAt=parsed.date;
-          await tkSave('experiments',x);touched=true;
-          if(x.questionId){const qq=S.questions.find(function(b){return b&&b.id===x.questionId;});if(qq)await tkSave('questions',qq);}
-        }
-        if(touched){ra();updateNav();}
-      })();}
-    }catch(_e){}
+    // R系連動：実践回数・最終実践日はログから数えるので、ここでは探求ボード実験と親の問いの更新日だけ進める
+    lxTouchRidExps([parsed.experimentId,parsed.relatedExperimentId]);
     S.lxImport=null; toast('取り込みました：'+parsed.experimentId+'（'+parsed.date+'）'); ra(); updateNav();
     return true;
   }catch(e){ alert('取り込みエラー: '+e.message); return false; }
@@ -1755,7 +1788,11 @@ function lxCard(e,logs,master){
   const lgs=logs||[];
   const directN=lgs.filter(function(l){return l&&l.experimentId===e.id;}).length;
   const relN=lgs.filter(function(l){return l&&l.relatedExperimentId===e.id;}).length;
-  if(directN+relN>0)top.appendChild(Sp({css:'font-size:11px;color:#475569;border:1px solid var(--bd);border-radius:10px;padding:1px 7px'},'実施'+directN+'回'+(relN>0?'＋関連'+relN:'')));
+  if(directN+relN>0){
+    top.appendChild(Sp({css:'font-size:11px;color:#475569;border:1px solid var(--bd);border-radius:10px;padding:1px 7px'},'実施'+directN+'回'+(relN>0?'＋関連'+relN:'')));
+    const lastD=lxPracticeStats(e.id,lgs).last;
+    if(lastD)top.appendChild(Sp({css:'font-size:11px;color:var(--di)'},'最終 '+Number(lastD.slice(5,7))+'/'+Number(lastD.slice(8,10))));
+  }
   const stcol=({not_started:'#94a3b8',active:'#2a6a3a',completed:'#1a6050',paused:'#b09040',skipped:'#94a3b8'})[e.status]||'#94a3b8';
   top.appendChild(Sp({css:'font-size:11px;margin-left:auto;color:'+stcol+';font-weight:700'},(LX_STATUS_LABEL[e.status]||e.status)+(e.status==='skipped'&&e.skipReason?'・'+e.skipReason:'')));
   card.appendChild(top);
@@ -1849,7 +1886,21 @@ function renderLectica(){
     if(S.lxCat!=='all')list=list.filter(function(e){return e.category===S.lxCat;});
     const q=(S.lxQ||'').trim();
     if(q)list=list.filter(function(e){return (e.title+e.description).indexOf(q)>=0;});
-    f.appendChild(D({cls:'sec-lbl',css:'margin-bottom:10px'},'実験（'+list.length+'件）'));
+    if(S.lxSort==='count'){   /* 実施回数順（多い順・同数は最終実施日が新しい順・それも同じならマスター順） */
+      const st={};list.forEach(function(e){st[e.id]=lxPracticeStats(e.id,logs);});
+      list=list.map(function(e,i){return {e:e,i:i};}).sort(function(a,b){
+        const x=st[a.e.id],y=st[b.e.id];
+        return (y.total-x.total)||(y.last<x.last?-1:y.last>x.last?1:0)||(a.i-b.i);
+      }).map(function(o){return o.e;});
+    }
+    const lh=D({css:'display:flex;align-items:center;gap:8px;margin-bottom:10px'});
+    lh.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0;flex:1'},'実験（'+list.length+'件）'));
+    const so=Sel({css:'font-size:12px;padding:4px 6px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx)'});
+    so.setAttribute('aria-label','並び替え');
+    [['','既定の順'],['count','実施回数順']].forEach(function(p){so.appendChild(Opt(p[0],p[1],(S.lxSort||'')===p[0]));});
+    so.addEventListener('change',function(){S.lxSort=so.value;ra();});
+    lh.appendChild(so);
+    f.appendChild(lh);
     if(!list.length){f.appendChild(D({cls:'empty'},'該当する実験がありません'));return f;}
     const wrap=D({});
     list.forEach(function(e){wrap.appendChild(lxCard(e,logs,master));});
@@ -2361,7 +2412,11 @@ function tkECard(x){
   const thN=tkThemeNames(x.themeIds);const src=tkSrcLog(x);
   if(thN.length||src)card.appendChild(D({cls:'tk-meta'},(thN.length?'テーマ：'+thN.join('・'):'')+(thN.length&&src?' ／ ':'')+(src?'元ログ：'+src:'')));
   if(x.status==='active'&&(x.scene||x.observation||x.deadline))card.appendChild(D({cls:'tk-meta'},[x.scene?(tkIsReview(x)?'背景：':'場面：')+x.scene:'',x.observation?(tkIsReview(x)?'成否の見方：':'観察：')+x.observation:'',x.deadline?(tkIsReview(x)?'検証日：':'期限：')+x.deadline:''].filter(Boolean).join(' ／ ')));
-  if(x.practiceCount)card.appendChild(D({cls:'tk-meta'},'実践'+x.practiceCount+'回'+(x.lastPracticedAt?('・最終 '+x.lastPracticedAt):'')));
+  if(x.rid){   /* R系：保存値ではなく Lectica ログから数える（取り込み・手入力・他経路のログすべてが反映される） */
+    const ps=lxPracticeStats(x.rid);
+    if(ps.total){const md=ps.last?(Number(ps.last.slice(5,7))+'/'+Number(ps.last.slice(8,10))):'';
+      card.appendChild(D({cls:'tk-meta'},'実践'+ps.total+'回'+(ps.related?'（'+ps.count+'＋関連'+ps.related+'）':'')+(md?'・最終 '+md:'')));}
+  }else if(x.practiceCount)card.appendChild(D({cls:'tk-meta'},'実践'+x.practiceCount+'回'+(x.lastPracticedAt?('・最終 '+x.lastPracticedAt):'')));
   if(x.learning)card.appendChild(D({css:'font-size:13px;color:var(--go);margin-top:4px'},'学び：'+x.learning));
   if(x.status==='candidate')card.appendChild(tkOps(['実験中にする',()=>tkSetEStatus(x,'active')],['問いへ紐づける',()=>tkLinkModal([x.id])],['編集',()=>tkExpForm(null,x)],['完了',()=>tkSetEStatus(x,'complete')],['やらない',()=>tkSetEStatus(x,'discarded'),true]));
   else if(x.status==='active')card.appendChild(tkOps(['振り返る',()=>tkReviewModal(x)],['問いへ紐づける',()=>tkLinkModal([x.id])],['編集',()=>tkExpForm(null,x)],['候補へ戻す',()=>tkSetEStatus(x,'candidate')],['やらない',()=>tkSetEStatus(x,'discarded'),true]));

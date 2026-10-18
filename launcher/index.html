@@ -120,6 +120,9 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .lx-card .lx-title { font-weight: 700; color: #0e7490; font-size: 14.5px; margin-bottom: 7px; display: flex; align-items: baseline; gap: 10px; }
 .lx-card .lx-row { display: flex; gap: 10px; }
 .lx-card .lx-k { flex: 0 0 auto; font-size: 12px; color: #0e7490; font-weight: 700; min-width: 3.5em; cursor: default; }
+.lx-cnt { font-size: 12px; color: var(--text3, #8a8f98); margin: 1px 0 4px 4.5em; }   /* これまで N回（最終 m/d） */
+@media (max-width: 480px) { .lx-cnt { margin-left: 0; } }
+.lx-cnt-today { font-size: 12px; color: var(--text3, #8a8f98); margin: 2px 0 6px; }
 .lx-card details.lx-smpwrap { margin: 6px 0; }
 .lx-card details.lx-smpwrap > summary { cursor: pointer; user-select: none; list-style: revert; }
 .lx-card .lx-sub { font-size: 12px; color: var(--text3, #64748b); margin-left: 4.5em; }
@@ -628,6 +631,33 @@ const BRIEF_FILE_FOLDER = { daily:BRIEF_FOLDER_DAILY, weekly:BRIEF_FOLDER_PERIOD
    通常経路（Task OS同期）はbrief文字列のみ格納のため、JSONで無い場合は
    brief_viewer_tokenがあればdaily-brief.jsonをセッション1回だけ取得して補う。 */
 function _lxEsc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* ── Lectica実施回数：保存値ではなく lectica_experiment_logs_v1 から毎回数える（全OS共通ロジック・各OSに同じ形で複製）──
+   count＝主実験として実施した件数／related＝関連実験として付いた件数／last＝そのどちらかの最新日（YYYY-MM-DD）。
+   ID比較は大文字小文字を無視。ログが読めない・配列でないときは0件（行を出さない） */
+function lxPracticeStats(expId, logs){
+  const id = String(expId == null ? '' : expId).trim().toUpperCase();
+  const out = { count: 0, related: 0, total: 0, last: '' };
+  if (!id) return out;
+  if (logs === undefined) logs = (function(){ try { return JSON.parse(localStorage.getItem('lectica_experiment_logs_v1') || 'null'); } catch (e) { return null; } })();
+  if (!Array.isArray(logs)) return out;
+  logs.forEach(function(l){
+    if (!l || typeof l !== 'object') return;
+    const main = String(l.experimentId || '').toUpperCase() === id;
+    const rel = String(l.relatedExperimentId || '').toUpperCase() === id;
+    if (!main && !rel) return;
+    if (main) out.count++; else out.related++;
+    const d = String(l.date || '');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d > out.last) out.last = d;
+  });
+  out.total = out.count + out.related;
+  return out;
+}
+/* "これまで N回（最終 m/d）"。0回は空文字（行ごと出さない） */
+function lxPracticeLine(st, prefix){
+  if (!st || !st.total) return '';
+  const md = st.last ? (Number(st.last.slice(5, 7)) + '/' + Number(st.last.slice(8, 10))) : '';
+  return (prefix == null ? 'これまで ' : prefix) + st.total + '回' + (md ? '（最終 ' + md + '）' : '');
+}
 function lectinFromStorage(){
   try {
     const raw = localStorage.getItem('aix_draft_latest');
@@ -664,7 +694,11 @@ function renderLectinCard(){
   if (!nx.experimentId && !nx.title) { el.style.display='none'; el.innerHTML=''; return; }
   const isNew = Array.isArray(nx.samples) && nx.samples.length>0;
   const rel = nx.relatedExperimentId ? ' × '+_lxEsc(nx.relatedExperimentId)+'「'+_lxEsc(nx.relatedExperimentTitle||'')+'」' : '';
+  const cntMain = lxPracticeLine(lxPracticeStats(nx.experimentId));
+  const cntRel = nx.relatedExperimentId ? lxPracticeLine(lxPracticeStats(nx.relatedExperimentId), _lxEsc(nx.relatedExperimentId) + '：これまで ') : '';
   let body = '<div class="lx-row"><span class="lx-k">お題</span><span>'+_lxEsc(nx.experimentId)+'「'+_lxEsc(nx.title)+'」'+rel+'</span></div>'
+    + (cntMain?'<div class="lx-cnt">'+cntMain+'</div>':'')
+    + (cntRel?'<div class="lx-cnt">'+cntRel+'</div>':'')
     + (nx.focusQuestion?'<div class="lx-sub">（重点の問い：'+_lxEsc(nx.focusQuestion)+'）</div>':'');
   if (isNew) {
     body += '<details class="lx-smpwrap" open><summary class="lx-k">やり方サンプル（どれでも・自分流でも可）</summary>'
@@ -971,8 +1005,13 @@ function renderTodayLectica(){
   if (p.completionCondition) rows.push(['完了条件', p.completionCondition]);
   const expId = p.experimentId || p.selectedExperimentId || '';   // 新名優先・旧名後方互換
   const already = readShotTasks().some(t => t && t.dueDate === todayKey() && expId && (t.memo || '').indexOf('実験ID：' + expId) >= 0);
+  const cntToday = lxPracticeLine(lxPracticeStats(expId));
+  const relId = p.relatedExperimentId || '';
+  const cntTodayRel = relId ? lxPracticeLine(lxPracticeStats(relId), escHtml(relId) + '：これまで ') : '';
   area.innerHTML =
     '<div class="lx-row"><span class="task-tag lectica">今日の実験</span> <b>' + escHtml(name || '(実験名なし)') + '</b></div>'
+    + (cntToday ? '<div class="lx-cnt-today">' + cntToday + '</div>' : '')
+    + (cntTodayRel ? '<div class="lx-cnt-today">' + cntTodayRel + '</div>' : '')
     + rows.map(r => '<div class="lx-detail"><span class="lx-detail-k">' + escHtml(r[0]) + '</span>' + escHtml(r[1]) + '</div>').join('')
     + '<div class="lx-actions">'
     + (already
