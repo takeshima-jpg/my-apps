@@ -882,7 +882,7 @@ function renderHome() {
   const missed = ev.filter(e => e.status === 'missed').sort(by(e => e.startDate));
   const soon = ev.filter(isSoon).sort(by(e => e.applyDeadline + e.startDate));
   const fresh = ev.filter(e => e.status === 'new' && !isSoon(e));
-  const cons = ev.filter(e => e.status === 'considering' && !isSoon(e)).sort(by(e => (e.applyDeadline || '9999-99-99') + e.startDate));
+  const cons = ev.filter(e => e.status === 'considering' && !isSoon(e)).sort(by(e => (e.startDate || '9999-99-99') + (e.applyDeadline || '9999-99-99')));   /* 開催日順（同日は締切が早い方が上） */
   const applied = ev.filter(e => e.status === 'applied').sort(by(e => e.startDate));
   const past = ev.filter(e => e.status === 'attended' || e.status === 'passed' || e.status === 'expired').sort(by(e => e.startDate)).reverse();
   const sec = (title, list, key, cls) => list.length
