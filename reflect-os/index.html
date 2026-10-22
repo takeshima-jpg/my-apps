@@ -1399,7 +1399,7 @@ function buildQRow(line, ckId, r){
 function buildExpRow(line, ckId, r){
   const st=S.checks[ckId]||'todo'; // todo / doing / done / skip
   const row=D({cls:'cl-row'+(st==='doing'?' cl-doing':st==='done'?' cl-done':st==='skip'?' cl-skip':'')});
-  const lbl=D({cls:'cl-label'});lbl.textContent=line.replace(/^[・\-\d\.）\)\s]+/,'');
+  const lbl=D({cls:'cl-label'});lbl.textContent=tkCleanLine(line);
   const thNames=(r.themes||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
   const from=D({cls:'cl-from'});from.textContent=r.date+' / '+(r.title||'')+(thNames.length?' ／ '+thNames.join('・'):'');
   // 状態ボタン
@@ -2329,7 +2329,37 @@ function tkSnapshot(){
    既存ログ内の question/nextExp・checks は削除しない（互換維持）。 */
 const TK_QMAP={important:'focus',todo:'candidate',done:'resolved',skip:'discarded'};
 const TK_EMAP={doing:'active',todo:'candidate',done:'complete',skip:'discarded'};
-const tkCleanLine=l=>l.replace(/^[・\-\d\.\)）\s]+/,'').trim();
+/* 行頭の箇条書き記号（・ - * • ● ■ ◆ 等）と、番号（「1.」「1)」「1）」「(1)」「（1）」「①」）だけを取る。
+   本文の数字（「10月」「1人」「2026/12/20」「1.5倍」）は残す。番号は1〜2桁＋区切り記号のときだけ番号とみなす（「1、」は番号扱いしない） */
+const TK_LEAD_RE=/^\s*(?:[・\-‐－–—*＊•●■◆]\s*)*(?:(?:\d{1,2}[.．](?!\d)|\d{1,2}[)）]|[(（]\d{1,2}[)）]|[①-⑳])\s*)?/;
+const tkCleanLine=l=>String(l||'').replace(TK_LEAD_RE,'').trim();
+/* 旧 tkCleanLine（行頭の数字まで消していた）で作られた問い・実験の題名を、元ログ行から1回だけ直す。
+   現在の題名＝旧ロジックの結果（手で直していない）かつ新ロジックと違うときだけ置換。merged・元ログ不明は触らない */
+async function tkFixCleanLineTitles(){
+  const DONE='reflect_cleanline_fix_done',BK='reflect_backup_cleanline_20261022';
+  try{if(localStorage.getItem(DONE))return;}catch(e){return;}
+  const old=l=>l.replace(/^[・\-\d\.\)）\s]+/,'').trim();   /* 比較専用 */
+  const lineOf=(ck,field)=>{
+    const m=/^[qe]_(.+)_(\d+)$/.exec(ck||'');if(!m)return null;
+    const r=S.logs.find(x=>x.id===m[1]);if(!r||!r[field])return null;
+    return r[field].split(/\n/).filter(l=>l.trim())[+m[2]]??null;   /* tkMigrate と同じ行の数え方 */
+  };
+  const fixes=[];
+  [['questions','question','q_'],['experiments','nextExp','e_']].forEach(([store,field,pre])=>{
+    S[store].forEach(it=>{
+      if(!it.sourceCk||!it.sourceCk.startsWith(pre)||it.status==='merged')return;
+      const line=lineOf(it.sourceCk,field);if(line==null)return;
+      const nt=tkCleanLine(line);
+      if(nt&&it.title===old(line)&&it.title!==nt)fixes.push([store,it,nt]);
+    });
+  });
+  if(fixes.length){
+    try{if(localStorage.getItem(BK)===null){const v=localStorage.getItem('reflectOS_v1');if(v!==null)localStorage.setItem(BK,v);}}catch(e){console.warn('退避失敗のため修復を見送り',e);return;}
+    for(const [store,it,nt] of fixes){it.title=nt;await dbput(store,it);}
+  }
+  try{localStorage.setItem(DONE,new Date().toISOString());}catch(e){}
+  if(fixes.length)toast('問い・実験の題名を '+fixes.length+' 件直しました（先頭の数字）');
+}
 async function tkMigrate(){
   const seenQ=new Set(S.questions.map(q=>q.sourceCk).filter(Boolean));
   const seenE=new Set(S.experiments.map(x=>x.sourceCk).filter(Boolean));
@@ -3083,6 +3113,7 @@ async function boot(){
     S.questions=await dball('questions');
     S.experiments=await dball('experiments');
     S.principles=await dball('principles');
+    await tkFixCleanLineTitles();   /* 先頭の数字が消えた題名を元ログから1回だけ修復（退避キーあり・手で直した題名は触らない） */
     await tkMigrate();   /* 既存ログ→探求ボードの冪等移行（初回はスナップショットDL） */
     await tkAutoAssignRids();   /* 追補J：旧extId移行＋R001〜R003のrid自動割当（冪等・手動優先） */
   }catch(e){console.warn(e);}
