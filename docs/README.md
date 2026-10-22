@@ -77,6 +77,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [drive-cleanup-運用.md](specs/drive-cleanup-運用.md) | drive_cleanup.py の週1手動運用手順書（dry-run→本番・掃除ルール） | 🔧運用中（手順書） |
 | [claude-code-minutes-triage-spec.md](specs/claude-code-minutes-triage-spec.md) | 議事録→OS振り分け（inbox triage）の手順書。「inboxを振り分けて」で発動 | 🔧運用中（手順書） |
 | [claude-code-sheets-integration-spec.md](specs/claude-code-sheets-integration-spec.md) | スプレッドシート連携（Project OS直接取り込み＋シート更新ツール）の設計・手順 | 🔧運用中（手順書） |
+| [claude-code-reflect-os-active-limit-5-spec.md](specs/claude-code-reflect-os-active-limit-5-spec.md) | Reflect OS 探求ボードの「実験中」上限を3→5に（TK_MAX_ACTIVE_E 定数化・入れ替えモーダル見出し「実験中は最大5件です」・見出し「実験中 n / 5」・壁打ちプロンプト定数の文言）。重点の問いの上限3・決定検証の枠外扱い・reflect_focus_v1 形式は不変。Task OS は確認のみ | ✅実装済み 2026-10-22 |
 
 ## prompts/ — 壁打ち・Coworkプロンプト
 
