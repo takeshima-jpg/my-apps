@@ -1108,8 +1108,9 @@ function renderList() {
     const originHtml = k.origin && k.origin.kind
       ? `<div class="log-sub-line">由来：${k.origin.kind==='種'?'🌱':''}${esc(k.origin.kind)} ${esc(shortDate(k.origin.date))}${k.origin.note?'　'+esc(k.origin.note):''}</div>`
       : '';
-    const relHtml = rels.length
-      ? `<div class="log-sub-line">${rels.map(r=>`<button class="rel-chip dense" onclick="openRelated('${esc(r.id)}')">${esc(r.kind)} <b>${esc(r.id)}</b></button>`).join('')}</div>`
+    const lkChips = kosoLinkLabels(k.links);   /* 紐づけ（受信箱・取り込み由来）。押しても遷移しない */
+    const relHtml = (rels.length || lkChips.length)
+      ? `<div class="log-sub-line">${rels.map(r=>`<button class="rel-chip dense" onclick="openRelated('${esc(r.id)}')">${esc(r.kind)} <b>${esc(r.id)}</b></button>`).join('')}${lkChips.map(s=>`<span class="rel-chip dense">${esc(s)}</span>`).join('')}</div>`
       : '';
     const pjHtml = k.status==='PJ化'
       ? `<div class="log-sub-line">→ Project OS${k.projectName?'『'+esc(k.projectName)+'』':''}</div>`
@@ -1452,20 +1453,49 @@ function setAiStatus(text, cls) {
   if (el) { el.textContent = text; el.className = 'ai-parse-status ' + cls; }
 }
 
-function registerAiInput() {
-  const text = document.getElementById('ai-input').value.trim();
-  if (!text) { setAiStatus('入力が空です', 'err'); return; }
-  if (text.split('\n')[0].trim().startsWith('【KOSO-IMPORT】')) { registerKosoImport(text); return; }
+/* 取り込みの本体（textarea・画面に依存しない）。画面の「登録」と受信箱（inboxApply）の両方が使う。
+   返り値 {ok, kind:'empty'|'koso'|'legacy', summary, errors:[], touchedIds:[], message}
+   KOSO-IMPORT は従来どおり取り込み前を kouso_backup_lastimport に退避する（受信箱経由でも「直前の取り込みを元に戻す」が効く）。
+   opts.links：触った構想・試しに紐づけを付ける（PJ化の projectId は補わない＝本人が決める） */
+function kosoImportText(text, opts) {
+  opts = opts || {};
+  text = String(text||'').trim();
+  const res = { ok:false, kind:'', summary:'', errors:[], touchedIds:[], message:'' };
+  if (!text) { res.kind='empty'; res.message='入力が空です'; return res; }
+  if (text.split('\n')[0].trim().startsWith('【KOSO-IMPORT】')) {
+    res.kind = 'koso';
+    const blocks = parseKosoImport(text);
+    const pre = { items: JSON.parse(JSON.stringify(items)), archives: JSON.parse(JSON.stringify(archives)) };
+    const summaries = [];
+    blocks.forEach(b => {
+      let r;
+      try { r = applyKosoBlock(b); } catch(e) { r = { error: true }; }
+      if (r.error) res.errors.push('読めませんでした：' + b.head);
+      else { summaries.push(r.summary); (r.ids||[]).forEach(id => { if (!res.touchedIds.includes(id)) res.touchedIds.push(id); }); }
+    });
+    if (!summaries.length) {
+      res.message = ['【KOSO-IMPORT】の中に読めるブロックがありません', ...res.errors].join('\n');
+      return res;
+    }
+    kosoAttachLinks(res.touchedIds, opts.links);
+    try { localStorage.setItem(LASTIMPORT_KEY, JSON.stringify({ items: pre.items, archives: pre.archives, at: new Date().toISOString() })); } catch(e) {}
+    save();
+    res.ok = true;
+    res.summary = summaries.join('／');
+    res.message = [res.summary, ...res.errors].join('\n');
+    return res;
+  }
+  res.kind = 'legacy';
   let d;
   try {
     d = parseAiText(text);
   } catch(err) {
-    setAiStatus(`解析エラー: ${err.message}`, 'err');
-    return;
+    res.message = `解析エラー: ${err.message}`;
+    return res;
   }
   if (!d || !d.title) {
-    setAiStatus('【構想】セクションが見つかりません', 'err');
-    return;
+    res.message = '【構想】セクションが見つかりません';
+    return res;
   }
   const gId = genId('構想');
   items.push({
@@ -1477,20 +1507,42 @@ function registerAiInput() {
     createdAt: today(), log: [], relations: [],
     origin: {kind:'取り込み', date: today()},
   });
+  res.touchedIds.push(gId);
   d.executions.forEach(e => {
+    const eId = genId('実行');
     items.push({
-      id: genId('実行'), type: '実行', parentId: gId,
+      id: eId, type: '実行', parentId: gId,
       title: e.title, purpose: e.purpose, success: e.success,
       trigger: '', prereq: '',
       priority: d.priority, status: '検討中',
       review: today(),
       createdAt: today(), log: [],
     });
+    res.touchedIds.push(eId);
   });
+  kosoAttachLinks(res.touchedIds, opts.links);
   save();
+  res.ok = true;
+  res.summary = 'G1件 E' + d.executions.length + '件';
+  return res;
+}
+
+function registerAiInput() {
+  const text = document.getElementById('ai-input').value.trim();
+  if (!text) { setAiStatus('入力が空です', 'err'); return; }
+  /* 本文に「紐づけ：」行があれば、受信箱と同じように触った構想・試しに付ける */
+  const r = kosoImportText(text, { links: inboxParseLinks(text) });
+  if (r.kind === 'koso') {
+    if (!r.ok) { setAiStatus(r.message, 'err'); return; }
+    aiImportStatus = { text: r.message, cls: r.errors.length ? 'err' : 'ok' };
+    renderCurrentView();
+    showToast(r.summary.length <= 60 ? r.summary : ('取り込みました：' + r.summary.split('／').length + '件' + (r.errors.length ? '（読めない ' + r.errors.length + '件）' : '')));
+    return;
+  }
+  if (!r.ok) { setAiStatus(r.message, 'err'); return; }
   document.getElementById('ai-input').value = '';
   aiImportStatus = { text:'', cls:'' };
-  showToast(`登録しました：G1件 E${d.executions.length}件`);
+  showToast(`登録しました：${r.summary}`);
   setView('list');
 }
 
@@ -1640,7 +1692,7 @@ function applyKosoBlock(b) {
     const changed = kiApplyFields(item, b.fields, false);
     if (!changed.length) return { summary: b.id+' 変更なし' };
     if (item.type==='構想') item.review = today();
-    return { summary: b.id+' 更新（'+changed.join('・')+'）' };
+    return { summary: b.id+' 更新（'+changed.join('・')+'）', ids: [item.id] };
   }
 
   if (b.op==='new') {
@@ -1666,7 +1718,7 @@ function applyKosoBlock(b) {
     if (parent) item.priority = parent.priority || 'A';
     if (b.type==='構想' && !(item.origin && item.origin.kind)) item.origin = { kind:'取り込み', date: today() };
     items.push(item);
-    return { summary: item.id+' 新規'+(parent?'（親 '+parent.id+'）':'')+(dup?'（同名 '+dup.id+' あり）':'') };
+    return { summary: item.id+' 新規'+(parent?'（親 '+parent.id+'）':'')+(dup?'（同名 '+dup.id+' あり）':''), ids: [item.id] };
   }
 
   if (b.op==='merge') {
@@ -1679,7 +1731,7 @@ function applyKosoBlock(b) {
     kiPushLog(from, '統合', '→ '+to.id+' に統合'+r);
     kiPushLog(to, '統合', from.id+' を統合'+r);
     from.review = today(); to.review = today();
-    return { summary: from.id+'→'+to.id+' 統合' };
+    return { summary: from.id+'→'+to.id+' 統合', ids: [from.id, to.id] };
   }
 
   if (b.op==='discard') {
@@ -1690,9 +1742,9 @@ function applyKosoBlock(b) {
     const already = item.status==='廃棄' && archives.some(a => a.id===item.id && a.reason===reason);
     item.status = '廃棄';
     if (item.type==='構想') item.review = today();
-    if (already) return { summary: item.id+' 廃棄済み（アーカイブは追加せず）' };
+    if (already) return { summary: item.id+' 廃棄済み（アーカイブは追加せず）', ids: [item.id] };
     archives.push({ id:item.id, title:item.title, priority:item.priority||'A', type:item.type, reason, learn, date: today() });
-    return { summary: item.id+' 廃棄' };
+    return { summary: item.id+' 廃棄', ids: [item.id] };
   }
 
   if (b.op==='pj') {
@@ -1704,33 +1756,13 @@ function applyKosoBlock(b) {
     if (pj && pj.id) item.projectId = pj.id;
     kiPushLog(item, 'PJ化', '→ Project OS「'+b.pjName+'」');
     item.review = today();
-    return { summary: item.id+' PJ化' };
+    return { summary: item.id+' PJ化', ids: [item.id] };
   }
 
   return { error: true };
 }
 
-function registerKosoImport(text) {
-  const blocks = parseKosoImport(text);
-  const pre = { items: JSON.parse(JSON.stringify(items)), archives: JSON.parse(JSON.stringify(archives)) };
-  const summaries = [], errors = [];
-  blocks.forEach(b => {
-    let r;
-    try { r = applyKosoBlock(b); } catch(e) { r = { error: true }; }
-    if (r.error) errors.push('読めませんでした：' + b.head);
-    else summaries.push(r.summary);
-  });
-  if (!summaries.length) {
-    setAiStatus(['【KOSO-IMPORT】の中に読めるブロックがありません', ...errors].join('\n'), 'err');
-    return;
-  }
-  try { localStorage.setItem(LASTIMPORT_KEY, JSON.stringify({ items: pre.items, archives: pre.archives, at: new Date().toISOString() })); } catch(e) {}
-  save();
-  const summary = summaries.join('／');
-  aiImportStatus = { text: [summary, ...errors].join('\n'), cls: errors.length ? 'err' : 'ok' };
-  renderCurrentView();
-  showToast(summary.length <= 60 ? summary : ('取り込みました：' + summaries.length + '件' + (errors.length ? '（読めない ' + errors.length + '件）' : '')));
-}
+/* 旧 registerKosoImport は kosoImportText（KOSO-IMPORT の分岐）へ移した（2026-10-26 受信箱対応） */
 
 function undoLastImport() {
   let snap = null;
@@ -1948,9 +1980,123 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/* ══ 受信箱 共通部品 v1 ══
+   各OSはこのブロックをそのままコピーし、INBOX_OS と（ブロックの外に書く）inboxApply だけ差し替える。
+   ・Drive を読むのは Task OS だけ。各OSは localStorage の import_inbox_v1 から自分宛て（targetOS）を取り、
+     既存の貼り付けパーサで取り込む（書式は変えない）
+   ・inboxApply(block, links, item) は OS ごとに実装し { ok:true, summary } / { ok:false, summary } を返す。
+     ok:false は done にしない（保留に残り、次回また試す）
+   ・起動時は「自分のデータの読み込みが終わった後」に inboxProcess('load') を呼ぶ（Task OS を経由しなかった日の保険）
+   ・Task OS からの合図（postMessage 'myapps-inbox-process'）でも動き、結果を親へ 'myapps-inbox-result' で返す
+   ・同じ id は二度と処理しない（import_inbox_done_v1）。未知の行・未知のフィールドは無視 */
+const INBOX_OS = 'koso';                       // このOSの targetOS 名（各OSで差し替える）
+const INBOX_KEY='import_inbox_v1', INBOX_DONE='import_inbox_done_v1', INBOX_LOG='import_inbox_log_v1';
+const INBOX_DONE_MAX=2000, INBOX_LOG_DAYS=60;
+function inboxYmd(d){ d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function inboxRead(){ try{ const o=JSON.parse(localStorage.getItem(INBOX_KEY)||'null'); return (o&&Array.isArray(o.items))?o:{items:[]}; }catch(e){ return {items:[]}; } }
+function inboxDoneList(){ try{ const a=JSON.parse(localStorage.getItem(INBOX_DONE)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function inboxDoneSet(){ return new Set(inboxDoneList().map(d=>d&&d.id)); }
+function inboxLogList(){ try{ const a=JSON.parse(localStorage.getItem(INBOX_LOG)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+/* 取り込み済みにする：done に追記（新しい順・最大2000）／pending から除く／log に追記（直近60日） */
+function inboxMarkDone(item, summary, links){
+  const now=new Date();
+  const done=inboxDoneList().filter(d=>d&&d.id!==item.id);
+  done.unshift({ id:item.id, os:INBOX_OS, doneAt:now.toISOString(), summary:summary||'' });
+  localStorage.setItem(INBOX_DONE, JSON.stringify(done.slice(0,INBOX_DONE_MAX)));
+  const box=inboxRead();
+  box.items=(box.items||[]).filter(it=>it&&it.id!==item.id);
+  box.updatedAt=now.toISOString();
+  localStorage.setItem(INBOX_KEY, JSON.stringify(box));
+  const from=new Date(now); from.setDate(from.getDate()-INBOX_LOG_DAYS); const fromYmd=inboxYmd(from);
+  const log=inboxLogList().filter(x=>x&&x.id!==item.id&&String(x.date||'')>=fromYmd);
+  log.unshift({ date:inboxYmd(now), os:INBOX_OS, title:item.title||'', summary:summary||'', links:links||item.links||{}, id:item.id });
+  localStorage.setItem(INBOX_LOG, JSON.stringify(log));
+}
+/* 「紐づけ：」行を読む。書式：紐づけ：S03 ③JSS承継税制／PJ：{id} {名前}／人：{id} {名前}, {id} {名前}／問い：{id}
+   ID は英数字（数字を1つ以上含む）。ID が無ければ名前だけ。空のものは入れない。行が無ければ {} */
+function inboxParseLinks(block){
+  const out={};
+  const line=String(block||'').split(/\r?\n/).map(s=>s.trim()).find(s=>/^紐づけ[：:]/.test(s));
+  if(!line) return out;
+  const isId=s=>/^[A-Za-z0-9_-]*\d[A-Za-z0-9_-]*$/.test(s);
+  const idName=s=>{ const t=String(s||'').trim(); if(!t) return null; const m=t.match(/^(\S+)\s+(.+)$/);
+    if(m&&isId(m[1])) return {id:m[1], name:m[2].trim()}; return isId(t)&&!/[^\x00-\x7F]/.test(t)&&/^[A-Za-z]/.test(t)&&t.length<=12?{id:t, name:''}:{id:'', name:t}; };
+  line.replace(/^紐づけ[：:]\s*/,'').split('／').map(s=>s.trim()).filter(Boolean).forEach(part=>{
+    let m;
+    if((m=part.match(/^PJ[：:]\s*(.*)$/i))){ const r=idName(m[1]); if(r){ if(r.id) out.projectId=r.id; if(r.name) out.projectName=r.name; } }
+    else if((m=part.match(/^人[：:]\s*(.*)$/))){
+      const ids=[], names=[];
+      m[1].split(/[,、，]/).forEach(p=>{ const r=idName(p); if(!r) return; if(r.id) ids.push(r.id); if(r.name) names.push(r.name); });
+      if(ids.length) out.personIds=ids; if(names.length) out.personNames=names;
+    }
+    else if((m=part.match(/^問い[：:]\s*(\S+)/))){ out.questionId=m[1]; }
+    else if((m=part.match(/^(S\d+)\b/))){ out.strategyGoalId=m[1]; }
+  });
+  return out;
+}
+/* 自分宛ての未処理を取り込む。重なって呼ばれても順番に1回ずつ（同じ item を二重に取り込まない） */
+let _inboxChain=Promise.resolve();
+function inboxProcess(trigger){
+  const run=async()=>{
+    const box=inboxRead(); const done=inboxDoneSet();
+    const mine=(box.items||[]).filter(it=>it&&it.id&&it.targetOS===INBOX_OS&&!done.has(it.id));
+    const results=[];
+    for(const it of mine){
+      try{
+        if(inboxDoneSet().has(it.id)) continue;
+        const links=Object.assign({}, inboxParseLinks(it.block||''), it.links||{});   /* item.links 優先 */
+        const r=await inboxApply(it.block||'', links, it);
+        if(r&&r.ok){ inboxMarkDone(it, r.summary, links); results.push({id:it.id, ok:true, summary:r.summary||''}); }
+        else results.push({id:it.id, ok:false, summary:(r&&r.summary)||'取り込めませんでした'});
+      }catch(e){ results.push({id:it.id, ok:false, summary:'エラー: '+((e&&e.message)||e)}); }
+    }
+    if(window.parent!==window){ try{ window.parent.postMessage({type:'myapps-inbox-result', os:INBOX_OS, trigger, results}, location.origin); }catch(e){} }
+    return results;
+  };
+  const p=_inboxChain.then(run, run);
+  _inboxChain=p.catch(()=>{});
+  return p;
+}
+window.addEventListener('message', ev=>{ if(ev.origin!==location.origin) return; if(ev.data&&ev.data.type==='myapps-inbox-process') inboxProcess('message'); });
+/* ══ 受信箱 共通部品 v1 ここまで ══ */
+
+/* ?inbox=1（Task OS の非表示 iframe）では確認・警告を出さない（confirm は「やめる」扱い） */
+if (new URLSearchParams(location.search).get('inbox') === '1') { window.alert = m => console.warn('[inbox]', m); window.confirm = () => false; }
+async function inboxApply(block, links, item) {
+  load();   /* 別タブで編集された後でも最新から（保存は操作ごとに済んでいる） */
+  const r = kosoImportText(block, { silent: true, links });
+  if (!r.ok) return { ok:false, summary: r.message.split('\n')[0] || '取り込めませんでした' };
+  try { renderCurrentView(); } catch(e) {}
+  return { ok:true, summary: [r.summary, ...r.errors].join('／') };
+}
+/* 戦略目標の対応表（記録の地図 §D-1。Reflect OS・Project OS と同じ内容。地図が変わったら Claude Code が直す） */
+const STRATEGY_GOALS = {
+  S01:{no:'①', name:'関連当事者取引解消（借金返済）'},
+  S02:{no:'②', name:'3AHD構想作成'},
+  S03:{no:'③', name:'JSS承継税制'},
+  S04:{no:'④', name:'IPO準備'},
+  S05:{no:'⑤', name:'仲間づくり'},
+};
+/* 触った構想・試しに links を付ける（空の項目は落とす。projectId はレコードの projectId に補わない） */
+function kosoAttachLinks(ids, links) {
+  const l = links || {}, out = {};
+  ['strategyGoalId','projectId','projectName','questionId'].forEach(k => { if (l[k]) out[k] = String(l[k]); });
+  ['personIds','personNames'].forEach(k => { if (Array.isArray(l[k]) && l[k].length) out[k] = l[k].slice(); });
+  if (!Object.keys(out).length) return;
+  items.forEach(i => { if ((ids||[]).includes(i.id)) i.links = Object.assign({}, out); });
+}
+function kosoLinkLabels(l) {
+  if (!l || typeof l !== 'object') return [];
+  const a = [];
+  if (l.strategyGoalId) { const g = STRATEGY_GOALS[l.strategyGoalId]; a.push(l.strategyGoalId + (g ? ' ' + g.no + g.name : '')); }
+  (l.personNames || []).forEach(n => a.push('👤 ' + n));
+  return a;
+}
+
 // ─── INIT ─────────────────────────────────────────────────
 load();
 setView('home');
+inboxProcess('load');   /* 受信箱：自分宛て（targetOS:'koso'）の未処理を取り込む。無ければ何もしない */
 </script>
   <script>
     if ('serviceWorker' in navigator) {
