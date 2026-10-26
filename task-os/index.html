@@ -2461,7 +2461,11 @@ function homeInboxCard(){
   const pend=(inboxRead().items||[]).filter(it=>it&&it.id&&!done.has(it.id)).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   if(!rows.length&&!pend.length) return '';
   const md=s=>{ const m=String(s||'').match(/^\d{4}-(\d{2})-(\d{2})/); return m?(+m[1])+'/'+(+m[2]):''; };
-  const linkLine=l=>{ l=l||{}; const a=[l.strategyGoalId, l.projectName||l.projectId].concat(l.personNames||[]).filter(Boolean); return a.length?'｜紐づけ：'+a.join('・'):''; };
+  /* PJ は名前で出す（id しか無ければ pos_v4 から引く。引けなければ出さない＝実IDは見せない） */
+  let pjs=null; const pjName=l=>{ if(l.projectName) return l.projectName; if(!l.projectId) return '';
+    if(!pjs){ try{ pjs=(JSON.parse(localStorage.getItem('pos_v4')||'{}').projects)||[]; }catch(e){ pjs=[]; } }
+    const p=pjs.find(x=>x&&String(x.id)===String(l.projectId)); return p&&p.name||''; };
+  const linkLine=l=>{ l=l||{}; const a=[l.strategyGoalId, pjName(l)].concat(l.personNames||[]).filter(Boolean); return a.length?'｜紐づけ：'+a.join('・'):''; };
   const tgt=os=>INBOX_TARGETS[os]||{label:os||'?', nav:''};
   let html='';
   rows.forEach(r=>{
