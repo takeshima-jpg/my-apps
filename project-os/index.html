@@ -849,6 +849,17 @@ textarea.fc.tall { min-height: 130px; }
 .mv-del{flex-shrink:0;border:none;background:none;color:var(--gray2,#ccc);cursor:pointer;font-size:.9rem;padding:0 4px}
 .mv-del:hover{color:var(--red)}
 .mv-empty{font-size:.8rem;color:var(--gray3);padding:10px 4px}
+/* 戦略目標・Reflect の問い・関係者・答え合わせ印・予測（すべて任意。薄く小さく） */
+.pj-chip{display:inline-block;font-family:inherit;font-size:.68rem;font-weight:400;color:var(--gray4);border:1px solid var(--gray2,#d1d5db);border-radius:10px;padding:1px 8px;margin-left:8px;vertical-align:middle;line-height:1.5;letter-spacing:0;white-space:nowrap}
+.pj-sh{font-size:.8rem;color:var(--gray4);margin:0 0 8px 12px;overflow-wrap:anywhere}
+.mv-ac{display:block;min-height:44px;border:none;background:none;font-family:inherit;font-size:.7rem;color:var(--gray3);cursor:pointer;padding:0;white-space:nowrap;text-align:left}
+.mv-ac.on{color:var(--navy);font-weight:700}
+.mv-pred{display:block;font-size:.75rem;color:var(--gray3);margin-top:2px}
+.sh-pick{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.sh-pick button{min-height:44px;font-family:inherit;font-size:.8rem;padding:0 12px;border:1px solid var(--gray2,#d1d5db);border-radius:8px;background:#fff;cursor:pointer;color:var(--gray5,#333)}
+.sh-cur{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.sh-cur span{display:inline-flex;align-items:center;gap:4px;font-size:.8rem;border:1px solid var(--gray2,#d1d5db);border-radius:12px;padding:0 0 0 10px}
+.sh-cur button{min-width:44px;min-height:44px;border:none;background:none;cursor:pointer;color:var(--gray3);font-size:.9rem}
 .det-fold{margin-top:14px;border:1px solid var(--gray1,#e5e7eb);border-radius:10px;background:#fff}
 .det-fold summary{cursor:pointer;font-size:.8rem;color:var(--gray4);padding:10px 14px;user-select:none}
 .det-fold-b{padding:4px 14px 14px}
@@ -1686,7 +1697,7 @@ function sparkContextPJ(p){
   const nf=nearFork(p);
   const ms=[...(p.moves||[])].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
   const build=(mit,k)=>{
-    const head=['【PJ】'+p.name,'ゴール：'+(p.goal||'未設定'),'現在の問い：'+(p.question||'未設定'),'次の一手：'+(p.nextMove||'未設定')]
+    const head=(sgLabel(p.strategyGoalId)?['戦略目標：'+sgLabel(p.strategyGoalId)]:[]).concat(['【PJ】'+p.name,'ゴール：'+(p.goal||'未設定'),'現在の問い：'+(p.question||'未設定'),'次の一手：'+(p.nextMove||'未設定')])
       .concat(mit.map(x=>x[0]+'：'+x[1]));
     if(nf)head.push('接近分岐：'+nf.title+' あと'+nf.days+'日（'+nf.date+'）');
     return head.concat(k?['直近の動き：'].concat(ms.slice(0,k).map(m=>'- '+m.date+' '+m.kind+'：'+m.text)):[]).join('\n');
@@ -1723,21 +1734,25 @@ function sparkCopy(pid){const p=proj(pid);if(!p)return;copyText(sparkContextPJ(p
 function sparkCopyAll(){copyText(sparkContextAll(),'全PJ横断コンテキスト');}
 
 /* ══ v2 Phase 2：PROJECT-IMPORT（壁打ちからの取り込み。表記ゆれ・空行に寛容） ══ */
-function piParse(){
-  const raw=($$('pi-paste').value||'');
-  const st=$$('pi-status');
+/* 解析だけ（画面に依存しない）。返り値 {pjName, items, error, noPj}。
+   「答え合わせ: する」は直前の「次の一手」に answerCheck、「予測: …」は直前の「決定」に prediction（直前が無ければ無視） */
+function piParseText(raw){
+  raw=String(raw||'');
   const m=raw.match(/-{2,}\s*PROJECT-IMPORT\s*-{2,}([\s\S]*?)(?:-{2,}\s*END\s*-{2,}|$)/i);
   const body=(m?m[1]:raw).trim();
-  if(!body){st.textContent='貼り付け内容が空です';return;}
+  if(!body)return {pjName:null,items:[],error:'貼り付け内容が空です'};
   let pjName=null;const items=[];
   const coreLast={};   /* v2.3 核・見立ての上書きラベル：同じラベルが複数あれば最後を採用 */
   body.split(/\n/).map(l=>l.trim()).filter(Boolean).forEach(l=>{
-    const mm=l.match(/^(PJ|プロジェクト|決定|学び|分岐|次の一手|問い|ゴール|注意論点|注意点|成功条件|悪い未来|センターピン)\s*[:：]\s*(.*)$/i);
+    const mm=l.match(/^(PJ|プロジェクト|決定|学び|分岐|次の一手|問い|ゴール|注意論点|注意点|成功条件|悪い未来|センターピン|答え合わせ|予測)\s*[:：]\s*(.*)$/i);
     if(!mm)return;   /* ラベル行以外は無視（寛容） */
     const isPj=/^pj$/i.test(mm[1])||mm[1]==='プロジェクト';
     const val=mm[2].trim();
     if(isPj){if(val)pjName=val;return;}
     if(!val)return;   /* 空値は無視（クリアには使わない＝誤消去防止） */
+    const lastOf=k=>{for(let i=items.length-1;i>=0;i--){if(items[i].kind===k)return items[i];}return null;};
+    if(mm[1]==='答え合わせ'){ const t=lastOf('次の一手'); if(t&&/^(する|あり|true|yes|on|○)$/i.test(val))t.answerCheck=true; return; }
+    if(mm[1]==='予測'){ const t=lastOf('決定'); if(t)t.prediction=val; return; }
     const cf=PI_CORE_FIELDS[mm[1]];
     if(cf){coreLast[cf[0]]={kind:'見立て',field:cf[0],label:cf[1],text:val};return;}
     const it={kind:mm[1],text:val};
@@ -1748,10 +1763,25 @@ function piParse(){
     items.push(it);
   });
   Object.values(coreLast).forEach(c=>items.push(c));
-  if(!pjName){st.textContent='「PJ: プロジェクト名」の行が見つかりません';return;}
-  if(!items.length){st.textContent='取り込むラベル行（決定/学び/分岐/次の一手/問い/ゴール/注意論点/成功条件/悪い未来/センターピン）がありません';return;}
-  const key=pjName.toLowerCase();
-  const cands=S.projects.filter(p=>p.name.toLowerCase().includes(key)||key.includes(p.name.toLowerCase()));
+  const noItems='取り込むラベル行（決定/学び/分岐/次の一手/問い/ゴール/注意論点/成功条件/悪い未来/センターピン）がありません';
+  if(!pjName)return {pjName:null,items,error:'「PJ: プロジェクト名」の行が見つかりません',noPj:true,noItems:!items.length?noItems:''};
+  if(!items.length)return {pjName,items,error:noItems};
+  return {pjName,items,error:''};
+}
+/* PJ名の部分一致（piParse と受信箱で同じ） */
+function piCands(pjName){
+  const key=String(pjName||'').toLowerCase();
+  if(!key)return [];
+  return S.projects.filter(p=>p.name&&(p.name.toLowerCase().includes(key)||key.includes(p.name.toLowerCase())));
+}
+function piParse(){
+  const raw=($$('pi-paste').value||'');
+  const st=$$('pi-status');
+  const r=piParseText(raw);
+  if(r.error){st.textContent=r.error;return;}
+  const items=r.items, pjName=r.pjName;
+  items.links=inboxParseLinks(raw);   /* 本文に「紐づけ：」行があればムーブに付ける（受信箱と同じ） */
+  const cands=piCands(pjName);
   if(!cands.length){st.textContent='該当するPJが見つかりません：'+pjName;return;}
   if(cands.length>1){
     /* 曖昧：選択UI（モーダルなし・その場でボタン提示） */
@@ -1765,19 +1795,23 @@ function piParse(){
 /* v2.3：PROJECT-IMPORTの核・見立てラベル → PJフィールド（データキーは既存のまま） */
 const PI_CORE_FIELDS={'ゴール':['goal','ゴール'],'注意論点':['attentionIssue','注意論点'],'注意点':['attentionIssue','注意論点'],
   '成功条件':['successConditions','成功条件'],'悪い未来':['badFuture','悪い未来'],'センターピン':['centerPin','センターピン']};
-function piApply(pid,items){
-  const p=proj(pid);if(!p||!items)return;
-  let n=0,coreN=0,same=0;
+function piApply(pid,items,opts){
+  opts=opts||{};
+  const p=proj(pid);if(!p||!items)return null;
+  let n=0,coreN=0,same=0;const moveIds=[];
   items.forEach(it=>{
     if(it.kind==='見立て'){
       /* 上書き（置換）。旧値と同じなら何もしない。旧→新を「見立て更新」ムーブとして履歴に残す（削除しない原則） */
       const old=String(p[it.field]||'').trim();
       if(old===it.text.trim()){same++;return;}
       p[it.field]=it.text;
-      pushMove(p,'見立て更新',old?`${it.label}更新：「${old}」→「${it.text}」`:`${it.label}設定：「${it.text}」`);
+      moveIds.push(pushMove(p,'見立て更新',old?`${it.label}更新：「${old}」→「${it.text}」`:`${it.label}設定：「${it.text}」`).id);
       coreN++;n++;return;
     }
     const mv=pushMove(p,it.kind,it.text,it.forkDate);
+    moveIds.push(mv.id);
+    if(it.kind==='次の一手'&&it.answerCheck)mv.answerCheck=true;   /* IMPORT の「答え合わせ: する」 */
+    if(it.kind==='決定'&&it.prediction)mv.prediction=it.prediction;   /* IMPORT の「予測:」（入力欄は作らない） */
     if(it.kind==='次の一手')p.nextMove=it.text;   /* 核3行に同期（旧値はムーブ履歴に残存） */
     if(it.kind==='問い')p.question=it.text;
     if(it.kind==='分岐'){
@@ -1786,11 +1820,15 @@ function piApply(pid,items){
     }
     n++;
   });
+  inboxAttachLinks(p,moveIds,opts.links||items.links);
   touchProj(pid);save();
   window.__piPending=null;
-  const st=$$('pi-status');if(st)st.textContent='✓ '+p.name+' に '+n+'件取り込みました（問い・次の一手は核に同期'+(coreN?'／核・見立て'+coreN+'項目を置換し旧→新を履歴に記録':'')+(same?'／'+same+'項目は変更なしのためスキップ':'')+'）';
-  const ta=$$('pi-paste');if(ta)ta.value='';
-  toast(p.name+' に '+n+'件取り込みました');
+  if(!opts.silent){
+    const st=$$('pi-status');if(st)st.textContent='✓ '+p.name+' に '+n+'件取り込みました（問い・次の一手は核に同期'+(coreN?'／核・見立て'+coreN+'項目を置換し旧→新を履歴に記録':'')+(same?'／'+same+'項目は変更なしのためスキップ':'')+'）';
+    const ta=$$('pi-paste');if(ta)ta.value='';
+    toast(p.name+' に '+n+'件取り込みました');
+  }
+  return {n,coreN,same,moveIds};
 }
 
 /* ══ v2 Phase 3：共有用エクスポート（前田さんPJ等・読み取り専用の共有）══
@@ -1986,6 +2024,13 @@ function quickAdd(pid,kind){
   touchProj(pid);save();renderDetail();
   toast(kind+'を記録しました');
 }
+/* 「次の一手」に答え合わせの印（予測帳＝VISION見直し担当へ流す対象）。既定オフ */
+function toggleAnswerCheck(pid,mid){
+  const p=proj(pid);if(!p)return;
+  const m=(p.moves||[]).find(x=>x.id===mid);if(!m||m.kind!=='次の一手')return;
+  m.answerCheck=!m.answerCheck;
+  touchProj(pid);save();renderDetail();
+}
 function delMove(pid,mid){
   if(!confirm('このムーブを削除しますか？'))return;
   const p=proj(pid);if(!p)return;
@@ -1994,9 +2039,12 @@ function delMove(pid,mid){
   touchProj(pid);save();renderDetail();
 }
 function coreHtml(p){
+  const rq=f=>{ if(f!=='question'||!p.reflectQuestionId)return '';
+    const q=pjReflectQuestion(p.reflectQuestionId);
+    return `<span class="pj-chip" title="${esc(q?'Reflect の問い：'+q.title:'Reflect の問い（id '+p.reflectQuestionId+'）')}">◇ Reflect の問い</span>`; };
   return `<div class="core-wrap">`+CORE_DEFS.map(([f,lbl])=>`
     <div class="core-row" onclick="coreEdit('${p.id}','${f}',this)" title="クリックで編集">
-      <div class="core-lbl">${lbl}</div>
+      <div class="core-lbl">${lbl}${rq(f)}</div>
       <div class="core-val${p[f]?'':' core-empty'}">${esc(p[f])||'クリックで入力'}</div>
     </div>`).join('')+`</div>`;
 }
@@ -2062,7 +2110,7 @@ function movesHtml(p){
     <div class="mv-row">
       <span class="mv-date">${esc(m.date)}</span>
       ${badge(m.kind,MOVE_BD[m.kind]||'bd-gray')}
-      <span class="mv-text">${esc(m.text)}${m.forkDate?` <span class="mv-fork">@${esc(m.forkDate)}</span>`:''}</span>
+      <span class="mv-text">${esc(m.text)}${m.forkDate?` <span class="mv-fork">@${esc(m.forkDate)}</span>`:''}${m.kind==='決定'&&m.prediction?`<span class="mv-pred">予測：${esc(m.prediction)}</span>`:''}${m.kind==='次の一手'?`<button class="mv-ac${m.answerCheck?' on':''}" onclick="toggleAnswerCheck('${p.id}','${m.id}')" title="予測帳で答え合わせする一手に印を付ける（もう一度押すと外す）" aria-pressed="${m.answerCheck?'true':'false'}">⚖ 答え合わせ</button>`:''}</span>
       <button class="mv-del" onclick="delMove('${p.id}','${m.id}')" title="削除">×</button>
     </div>`).join(''):'<div class="mv-empty">まだムーブがありません。上の欄に1行書いて種類ボタンを押すだけ。</div>')+`</div>`;
 }
@@ -2094,7 +2142,7 @@ function forkNoticeHtml(p){
 }
 function renderDetail() {
   const p = proj(detId); if(!p){nav('dash');return;}
-  $$('det-name').textContent = p.name;
+  $$('det-name').innerHTML = esc(p.name)+(sgLabel(p.strategyGoalId)?`<span class="pj-chip">${esc(sgLabel(p.strategyGoalId))}</span>`:'');
   $$('det-meta').innerHTML =
     badge(p.status,ST[p.status]||'bd-gray') +
     badge(p.priority,PRI[p.priority]||'bd-gray') +
@@ -2104,7 +2152,9 @@ function renderDetail() {
     `<button class="hc-spark" onclick="sparkCopy('${p.id}')" title="このPJの核とムーブをコピーして壁打ちへ">🗣 壁打ちへ持っていく</button>` +
     `<button class="hc-spark" onclick="shareModal('${p.id}')" title="共有相手向けに項目を選んで書き出す">⇪ 共有用に書き出す</button>`;
   $$('tab-bar').innerHTML = '';
+  const shN=pjStakeholderNames(p);
   $$('tab-panes').innerHTML = `<div class="det-one">
+    ${shN.length?`<div class="pj-sh">👤 ${esc(shN.join('・'))}</div>`:''}
     ${coreHtml(p)}
     ${forkNoticeHtml(p)}
     ${mitateHtml(p)}
@@ -2453,7 +2503,10 @@ function openProjModal(pid){
     <div class="fg"><label class="fl">成功条件</label>${ta('fsc',p?.successConditions)}</div>
     <div class="fg"><label class="fl">悪い未来</label>${ta('fbf',p?.badFuture,'このプロジェクトが失敗したらどうなるか')}</div>
     <div class="fg"><label class="fl">センターピン</label>${ta('fcp',p?.centerPin,'成功の鍵となる最重要ポイント')}</div>
-    <div class="fg"><label class="fl">重点項目の呼び方</label>${sel('fpl',['フェーズ（順番に進む段階）','重点テーマ（並列の重点）'],p?.phaseLabel==='theme'?'重点テーマ（並列の重点）':'フェーズ（順番に進む段階）')}</div>`,
+    <div class="fg"><label class="fl">重点項目の呼び方</label>${sel('fpl',['フェーズ（順番に進む段階）','重点テーマ（並列の重点）'],p?.phaseLabel==='theme'?'重点テーマ（並列の重点）':'フェーズ（順番に進む段階）')}</div>
+    <div class="fg"><label class="fl">戦略目標</label><select class="fc" id="fsg"><option value="">（なし）</option>${Object.keys(STRATEGY_GOALS).map(k=>`<option value="${k}"${p?.strategyGoalId===k?' selected':''}>${esc(sgLabel(k))}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Reflect の問い（問いのID）</label>${inp('frq',p?.reflectQuestionId,'Reflect OS の問いのID（任意）')}</div>
+    <div class="fg"><label class="fl">関係者（ヒトメモ）</label><div class="sh-cur" id="fsh-cur"></div>${inp('fsh','','名前を入力するとヒトメモから候補が出ます')}<div class="sh-pick" id="fsh-pick"></div></div>`,
   ()=>{
     const name=g('fn'); if(!name){alert('プロジェクト名を入力してください');return;}
     const data={name,status:g('fst'),priority:g('fpr'),
@@ -2462,11 +2515,33 @@ function openProjModal(pid){
       badFuture:g('fbf'),centerPin:g('fcp'),
       phaseLabel:(g('fpl')||'').indexOf('重点テーマ')===0?'theme':'phase',   /* phases の中身は変えない */
       updatedAt:today()};
-    if(p) Object.assign(proj(pid),data);
-    else S.projects.push({id:uid(),...data,stakeholders:[],issues:[],forks:[],decisions:[],learnings:[],events:[],constraints:[]});
+    let tgt;
+    if(p){ tgt=proj(pid); Object.assign(tgt,data); }
+    else { tgt={id:uid(),...data,stakeholders:[],issues:[],forks:[],decisions:[],learnings:[],events:[],constraints:[]}; S.projects.push(tgt); }
+    /* 任意の3項目：空なら項目ごと持たない（既存PJのデータ形を変えない） */
+    const sg=g('fsg'), rqid=g('frq'), shIds=(window.__pjShIds||[]).slice();
+    if(sg)tgt.strategyGoalId=sg; else delete tgt.strategyGoalId;
+    if(rqid)tgt.reflectQuestionId=rqid; else delete tgt.reflectQuestionId;
+    if(shIds.length)tgt.stakeholderIds=shIds; else delete tgt.stakeholderIds;
+    window.__pjShIds=null;
     save(); closeModal(); render();
   });
+  /* 関係者：ヒトメモの名前で絞り込み（最大5件）→選ぶと id を保存。ヒトメモに無い名前は保存しない */
+  window.__pjShIds=(p&&Array.isArray(p.stakeholderIds))?p.stakeholderIds.slice():[];
+  pjShRender();
+  const shIn=$$('fsh'); if(shIn) shIn.addEventListener('input',pjShRender);
 }
+function pjShRender(){
+  const ids=window.__pjShIds||[]; const ppl=pjReadPeople();
+  const cur=$$('fsh-cur'), pick=$$('fsh-pick'); if(!cur||!pick)return;
+  cur.innerHTML=ids.map(id=>{ const nm=pjPersonName(ppl.find(x=>String(x.id)===String(id))); return nm?`<span>${esc(nm)}<button type="button" onclick="pjShDel('${esc(id)}')" title="外す">×</button></span>`:''; }).join('');
+  const k=pjNormName(($$('fsh')||{}).value||'');
+  if(!k){ pick.innerHTML=''; return; }
+  const hit=ppl.filter(x=>x&&x.id&&!ids.includes(String(x.id))&&pjNormName(x.name).includes(k)).slice(0,5);
+  pick.innerHTML=hit.length?hit.map(x=>`<button type="button" onclick="pjShAdd('${esc(String(x.id))}')">${esc(pjPersonName(x))}</button>`).join(''):'<span style="font-size:.75rem;color:var(--gray3);align-self:center;">ヒトメモに該当なし</span>';
+}
+function pjShAdd(id){ const a=window.__pjShIds||(window.__pjShIds=[]); if(!a.includes(id))a.push(id); const i=$$('fsh'); if(i)i.value=''; pjShRender(); }
+function pjShDel(id){ window.__pjShIds=(window.__pjShIds||[]).filter(x=>x!==id); pjShRender(); }
 
 /* 壁打ち（sparkCopy）・共有（shareModal）は現状 phases を出力していないため変更不要。
    将来 phases を出力する場合は見出しに phaseWord(p) を使うこと（画面とCoworkで呼び方を揃える）。 */
@@ -3601,10 +3676,149 @@ function renderVision() {
 }
 
 
+/* ══ 受信箱 共通部品 v1 ══
+   各OSはこのブロックをそのままコピーし、INBOX_OS と（ブロックの外に書く）inboxApply だけ差し替える。
+   ・Drive を読むのは Task OS だけ。各OSは localStorage の import_inbox_v1 から自分宛て（targetOS）を取り、
+     既存の貼り付けパーサで取り込む（書式は変えない）
+   ・inboxApply(block, links, item) は OS ごとに実装し { ok:true, summary } / { ok:false, summary } を返す。
+     ok:false は done にしない（保留に残り、次回また試す）
+   ・起動時は「自分のデータの読み込みが終わった後」に inboxProcess('load') を呼ぶ（Task OS を経由しなかった日の保険）
+   ・Task OS からの合図（postMessage 'myapps-inbox-process'）でも動き、結果を親へ 'myapps-inbox-result' で返す
+   ・同じ id は二度と処理しない（import_inbox_done_v1）。未知の行・未知のフィールドは無視 */
+const INBOX_OS = 'project';                       // このOSの targetOS 名（各OSで差し替える）
+const INBOX_KEY='import_inbox_v1', INBOX_DONE='import_inbox_done_v1', INBOX_LOG='import_inbox_log_v1';
+const INBOX_DONE_MAX=2000, INBOX_LOG_DAYS=60;
+function inboxYmd(d){ d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function inboxRead(){ try{ const o=JSON.parse(localStorage.getItem(INBOX_KEY)||'null'); return (o&&Array.isArray(o.items))?o:{items:[]}; }catch(e){ return {items:[]}; } }
+function inboxDoneList(){ try{ const a=JSON.parse(localStorage.getItem(INBOX_DONE)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function inboxDoneSet(){ return new Set(inboxDoneList().map(d=>d&&d.id)); }
+function inboxLogList(){ try{ const a=JSON.parse(localStorage.getItem(INBOX_LOG)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+/* 取り込み済みにする：done に追記（新しい順・最大2000）／pending から除く／log に追記（直近60日） */
+function inboxMarkDone(item, summary, links){
+  const now=new Date();
+  const done=inboxDoneList().filter(d=>d&&d.id!==item.id);
+  done.unshift({ id:item.id, os:INBOX_OS, doneAt:now.toISOString(), summary:summary||'' });
+  localStorage.setItem(INBOX_DONE, JSON.stringify(done.slice(0,INBOX_DONE_MAX)));
+  const box=inboxRead();
+  box.items=(box.items||[]).filter(it=>it&&it.id!==item.id);
+  box.updatedAt=now.toISOString();
+  localStorage.setItem(INBOX_KEY, JSON.stringify(box));
+  const from=new Date(now); from.setDate(from.getDate()-INBOX_LOG_DAYS); const fromYmd=inboxYmd(from);
+  const log=inboxLogList().filter(x=>x&&x.id!==item.id&&String(x.date||'')>=fromYmd);
+  log.unshift({ date:inboxYmd(now), os:INBOX_OS, title:item.title||'', summary:summary||'', links:links||item.links||{}, id:item.id });
+  localStorage.setItem(INBOX_LOG, JSON.stringify(log));
+}
+/* 「紐づけ：」行を読む。書式：紐づけ：S03 ③JSS承継税制／PJ：{id} {名前}／人：{id} {名前}, {id} {名前}／問い：{id}
+   ID は英数字（数字を1つ以上含む）。ID が無ければ名前だけ。空のものは入れない。行が無ければ {} */
+function inboxParseLinks(block){
+  const out={};
+  const line=String(block||'').split(/\r?\n/).map(s=>s.trim()).find(s=>/^紐づけ[：:]/.test(s));
+  if(!line) return out;
+  const isId=s=>/^[A-Za-z0-9_-]*\d[A-Za-z0-9_-]*$/.test(s);
+  const idName=s=>{ const t=String(s||'').trim(); if(!t) return null; const m=t.match(/^(\S+)\s+(.+)$/);
+    if(m&&isId(m[1])) return {id:m[1], name:m[2].trim()}; return isId(t)&&!/[^\x00-\x7F]/.test(t)&&/^[A-Za-z]/.test(t)&&t.length<=12?{id:t, name:''}:{id:'', name:t}; };
+  line.replace(/^紐づけ[：:]\s*/,'').split('／').map(s=>s.trim()).filter(Boolean).forEach(part=>{
+    let m;
+    if((m=part.match(/^PJ[：:]\s*(.*)$/i))){ const r=idName(m[1]); if(r){ if(r.id) out.projectId=r.id; if(r.name) out.projectName=r.name; } }
+    else if((m=part.match(/^人[：:]\s*(.*)$/))){
+      const ids=[], names=[];
+      m[1].split(/[,、，]/).forEach(p=>{ const r=idName(p); if(!r) return; if(r.id) ids.push(r.id); if(r.name) names.push(r.name); });
+      if(ids.length) out.personIds=ids; if(names.length) out.personNames=names;
+    }
+    else if((m=part.match(/^問い[：:]\s*(\S+)/))){ out.questionId=m[1]; }
+    else if((m=part.match(/^(S\d+)\b/))){ out.strategyGoalId=m[1]; }
+  });
+  return out;
+}
+/* 自分宛ての未処理を取り込む。重なって呼ばれても順番に1回ずつ（同じ item を二重に取り込まない） */
+let _inboxChain=Promise.resolve();
+function inboxProcess(trigger){
+  const run=async()=>{
+    const box=inboxRead(); const done=inboxDoneSet();
+    const mine=(box.items||[]).filter(it=>it&&it.id&&it.targetOS===INBOX_OS&&!done.has(it.id));
+    const results=[];
+    for(const it of mine){
+      try{
+        if(inboxDoneSet().has(it.id)) continue;
+        const links=Object.assign({}, inboxParseLinks(it.block||''), it.links||{});   /* item.links 優先 */
+        const r=await inboxApply(it.block||'', links, it);
+        if(r&&r.ok){ inboxMarkDone(it, r.summary, links); results.push({id:it.id, ok:true, summary:r.summary||''}); }
+        else results.push({id:it.id, ok:false, summary:(r&&r.summary)||'取り込めませんでした'});
+      }catch(e){ results.push({id:it.id, ok:false, summary:'エラー: '+((e&&e.message)||e)}); }
+    }
+    if(window.parent!==window){ try{ window.parent.postMessage({type:'myapps-inbox-result', os:INBOX_OS, trigger, results}, location.origin); }catch(e){} }
+    return results;
+  };
+  const p=_inboxChain.then(run, run);
+  _inboxChain=p.catch(()=>{});
+  return p;
+}
+window.addEventListener('message', ev=>{ if(ev.origin!==location.origin) return; if(ev.data&&ev.data.type==='myapps-inbox-process') inboxProcess('message'); });
+/* ══ 受信箱 共通部品 v1 ここまで ══ */
+
+/* ?inbox=1（非表示 iframe）では確認・警告を出さない（confirm は「やめる」扱い）。サイドバー常駐の iframe は通常どおり */
+if(new URLSearchParams(location.search).get('inbox')==='1'){ window.alert=m=>console.warn('[inbox]',m); window.confirm=()=>false; }
+async function inboxApply(block, links, item){
+  /* 常駐 iframe の S は古いことがある（別タブで Project を編集した後など）。取り込む直前に読み直す */
+  try{ const raw=localStorage.getItem(KEY); if(raw) S=JSON.parse(raw); }catch(e){}
+  const r=piParseText(block);
+  if(r.error&&!(r.noPj&&links&&links.projectId&&!r.noItems)) return {ok:false, summary:r.error};
+  let p=(links&&links.projectId)?proj(String(links.projectId)):null;
+  if(!p){
+    if(!r.pjName) return {ok:false, summary:'該当するPJが見つかりません：'+(links&&links.projectId||'')};
+    const cands=piCands(r.pjName);
+    if(cands.length===1) p=cands[0];
+    else if(!cands.length) return {ok:false, summary:'該当するPJが見つかりません：'+r.pjName};
+    else return {ok:false, summary:'複数のPJに一致：'+cands.map(x=>x.name).join('／')+'（紐づけ行に PJ の実IDを書いてください）'};
+  }
+  const res=piApply(p.id, r.items, {silent:true, links});
+  if(!res) return {ok:false, summary:'取り込めませんでした'};
+  try{ render(); }catch(e){}
+  return {ok:true, summary:p.name+' に '+res.n+'件'+(res.coreN?'（見立て'+res.coreN+'）':'')};
+}
+
+/* 戦略目標の対応表（記録の地図 §D-1。地図が変わったら Claude Code がここを直す。Reflect OS と同じ内容） */
+const STRATEGY_GOALS={
+  S01:{no:'①', name:'関連当事者取引解消（借金返済）'},
+  S02:{no:'②', name:'3AHD構想作成'},
+  S03:{no:'③', name:'JSS承継税制'},
+  S04:{no:'④', name:'IPO準備'},
+  S05:{no:'⑤', name:'仲間づくり'},
+};
+function sgLabel(id){ if(!id)return ''; const g=STRATEGY_GOALS[id]; return g?id+' '+g.no+g.name:String(id); }
+/* ヒトメモ・Reflect は読むだけ（書かない） */
+function pjNormName(s){ return String((s&&s.value)||s||'').replace(/[（(][^）)]*[）)]/g,'').replace(/さん$/,'').replace(/\s+/g,'').normalize('NFKC').toLowerCase(); }
+function pjReadPeople(){ try{ const a=JSON.parse(localStorage.getItem('hitomemo_profiles_v1')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function pjPersonName(x){ return x?String((x.name&&x.name.value)||x.name||'').replace(/[（(][^）)]*[）)]/g,'').trim():''; }
+function pjStakeholderNames(p){
+  const ids=(p&&Array.isArray(p.stakeholderIds))?p.stakeholderIds:[]; if(!ids.length)return [];
+  const ppl=pjReadPeople();
+  return ids.map(id=>pjPersonName(ppl.find(x=>x&&String(x.id)===String(id)))).filter(Boolean);
+}
+function pjReflectQuestion(id){
+  try{ const o=JSON.parse(localStorage.getItem('reflectOS_v1')||'null'); return ((o&&o.questions)||[]).find(q=>q&&q.id===id)||null; }catch(e){ return null; }
+}
+/* 取り込みで作ったムーブに links を付ける（projectId／projectName はPJ自身なので付けない）。人は名前の一致が1つだけなら id を補う */
+function inboxAttachLinks(p, moveIds, links){
+  const l=Object.assign({}, links||{}), out={};
+  if((!l.personIds||!l.personIds.length)&&l.personNames&&l.personNames.length){
+    const ppl=pjReadPeople(); const ids=[];
+    l.personNames.forEach(n=>{ const k=pjNormName(n); const hit=k?ppl.filter(x=>x&&x.id&&pjNormName(x.name)===k):[]; if(hit.length===1) ids.push(String(hit[0].id)); });
+    if(ids.length===l.personNames.length) l.personIds=ids;
+  }
+  if(l.strategyGoalId) out.strategyGoalId=String(l.strategyGoalId);
+  ['personIds','personNames'].forEach(k=>{ if(Array.isArray(l[k])&&l[k].length) out[k]=l[k].slice(); });
+  if(l.questionId) out.questionId=String(l.questionId);
+  if(!Object.keys(out).length||!p) return;
+  (p.moves||[]).forEach(m=>{ if((moveIds||[]).includes(m.id)) m.links=Object.assign({}, out); });
+}
+
 /* ══════════════════════════════════
    BOOT
 ══════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', ()=>{migrateProjectItems();nav('dash');renderVision();});
+document.addEventListener('DOMContentLoaded', ()=>{migrateProjectItems();nav('dash');renderVision();
+  inboxProcess('load');   /* 受信箱：自分宛て（targetOS:'project'）の未処理を取り込む。無ければ何もしない */
+});
 </script>
   <script>
     if ('serviceWorker' in navigator) {
