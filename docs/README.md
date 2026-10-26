@@ -21,6 +21,8 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-sparring-buttons-spec.md](specs/claude-code-sparring-buttons-spec.md) | reflect-osに壁打ちプロンプトのコピーボタンを追加 | ✅実装済み 2026-07-11 `b6e6574` |
 | [claude-code-weekly-facts-spec.md](specs/claude-code-weekly-facts-spec.md) | tools/weekly_facts.py（週次「事実の差分」）＋Cowork追補 | ✅実装済み 2026-07-10 `4cfc2f6`／2026-07-17 に単一バックアップ＋週窓方式の新版へ差し替え（旧版は tools/archive/、運用は tools/README.md §2） |
 | [claude-code-cockpit-autoimport-spec.md](specs/claude-code-cockpit-autoimport-spec.md) | コックピット起動時にAIタスクを1日1回自動取り込み（非表示iframe＋postMessage） | ⏹受信箱に統合 2026-10-26（claude-code-shared-inbox-spec.md へ） |
+| [claude-code-reflect-inbox-links-spec.md](specs/claude-code-reflect-inbox-links-spec.md) | 受信箱 2/8：Reflect OS の受け口（共通部品 v1・reflectImportText に切り出し・inbox=1 はダイアログなし）＋取り込んだログ・問い・実験・Lecticaログに紐づけ links を保存し薄いチップで表示 | ✅実装済み 2026-10-26（STRATEGY_GOALS は申し送り 10/26 の①〜⑤＋依頼書の S01 名。Lectica の重複判定は既存どおり 実験ID＋実行日＋気づき） |
+| [claude-code-project-inbox-links-spec.md](specs/claude-code-project-inbox-links-spec.md) | 受信箱 3/8：Project OS の受け口＋ムーブに links、PJ に戦略目標 S-ID・Reflect問いID・関係者ヒトメモID、次の一手に答え合わせ印、決定ムーブに prediction | 🕒未実装 |
 | [claude-code-launcher-pwa-spec.md](specs/claude-code-launcher-pwa-spec.md) | コックピットのPWA化＋自作SVGアイコン（ホーム追加・standalone表示） | ✅実装済み 2026-07-12 `89f825e` |
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |
 | [claude-code-cockpit-brief-colors-spec.md](specs/claude-code-cockpit-brief-colors-spec.md) | 今日タブのBrief見出しをbrief-viewerと同じカテゴリ色分けに | ✅実装済み 2026-07-12 `90d5303` |

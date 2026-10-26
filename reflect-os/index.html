@@ -278,6 +278,9 @@ nav{display:flex;flex-direction:column;gap:0;}
 .expand-body.open{display:block}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
 .chip{padding:3px 10px;font-size:13px;background:var(--bg);color:var(--di);border:1px solid var(--bd);border-radius:12px;cursor:pointer;font-family:var(--serif)}
+/* 紐づけ（links）：薄いチップ1行。押しても遷移しない */
+.lk-row{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 2px;min-width:0}
+.lk-chip{font-size:11px;color:var(--di);border:1px solid var(--bd);border-radius:10px;padding:1px 8px;line-height:1.5;max-width:100%;overflow-wrap:anywhere}
 .chip:hover{border-color:var(--mu)}
 .chip.on{background:var(--go-lt);color:var(--go);border-color:var(--go-bd)}
 .sldr-row{display:flex;align-items:center;gap:8px}
@@ -650,6 +653,7 @@ function logCard(r){
     }
     item.appendChild(uwrap);
   }
+  { const lk=rfLinkChips(r.links); if(lk) item.appendChild(lk); }   /* 紐づけ（あるときだけ） */
   // 気づき・学び：全文（閉じている間はCSSで2行にクランプ、カードクリックで全文）
   if(r.lesson){const d=D({cls:'log-lesson'});d.textContent=r.lesson.trim();item.appendChild(d);}
   // 経緯（trace）：デフォルト折りたたみ。本体はクリーンなまま、掘りたいときだけ軌跡を出す
@@ -1274,10 +1278,15 @@ function parseAiReflect(text){
   return entries;
 }
 
-async function registerAiInput(){
-  const text = document.getElementById('ai-input').value.trim();
-  let statusEl = document.getElementById('ai-parse-status');
-  if(!text){ statusEl.textContent='入力が空です'; statusEl.className='ai-status err'; return; }
+/* 取り込みの本体（textarea・status 要素に依存しない）。画面の「登録する」と受信箱（inboxApply）の両方が使う。
+   返り値：{ok, kind, message, summary, parts, logIds, questionIds, experimentIds, lecticaLogIds}
+   kind：'empty'（空）／'parse'（解析エラー）／'none'（タイプ行も REFLECT-IMPORT も無い）／'dup'（決定検証がすべて既取り込み）／'fail'（何も登録できず）／'ok'
+   opts.silent：Lectica の失敗を alert でなく message に返す */
+async function reflectImportText(text, opts){
+  opts=opts||{};
+  text=String(text||'').trim();
+  const res={ok:false,kind:'',message:'',summary:'',parts:[],logIds:[],questionIds:[],experimentIds:[],lecticaLogIds:[]};
+  if(!text){ res.kind='empty'; res.message='入力が空です'; return res; }
   // 自動判別：---REFLECT-IMPORT--- → Lectica実績 ／ 【振り返り】等 → 汎用登録 ／ 両方 → 両方処理
   const hasLectica = /---REFLECT-IMPORT---/.test(text);
   // Lecticaブロック内の「気づき：」等の行を汎用パーサが誤認識しないよう、除いた残りで判定する
@@ -1291,11 +1300,11 @@ async function registerAiInput(){
   if(genericText){
     try { entries = parseAiReflect(genericText); }
     catch(err){
-      if(!hasLectica && !decisions.length){ statusEl.textContent='解析エラー: '+err.message; statusEl.className='ai-status err'; return; }
+      if(!hasLectica && !decisions.length){ res.kind='parse'; res.message='解析エラー: '+err.message; return res; }
     }
   }
   if(!entries.length && !hasLectica && !decisions.length){
-    statusEl.textContent='【振り返り】などのタイプ行も ---REFLECT-IMPORT--- ブロックも見つかりません'; statusEl.className='ai-status err'; return;
+    res.kind='none'; res.message='【振り返り】などのタイプ行も ---REFLECT-IMPORT--- ブロックも見つかりません'; return res;
   }
 
   // 汎用ブロックの登録（従来ロジックのまま）
@@ -1303,6 +1312,7 @@ async function registerAiInput(){
     await dbput('logs', r);
     const i = S.logs.findIndex(x=>x.id===r.id);
     if(i>=0) S.logs[i]=r; else S.logs.unshift(r);
+    res.logIds.push(r.id);
   }
   if(entries.length){
     S.logs.sort((a,b)=>b.date.localeCompare(a.date));
@@ -1310,7 +1320,13 @@ async function registerAiInput(){
     const unlinked=entries.filter(e=>!(e.themes&&e.themes.length));
     if(unlinked.length) S._unlinkedNotice=unlinked.length;
     /* 新規動線：取り込んだ問い・次の実験を探求ボードの候補へ即時反映（冪等・旧checks方式にだけ残らない） */
-    try{ await tkMigrate(); }catch(e){}
+    try{
+      const mg=await tkMigrate();
+      /* 今回のログから生まれたものだけを拾う（起動時の取りこぼし分は混ぜない） */
+      const mine=x=>x&&(x.sourceLogIds||[]).some(id=>res.logIds.includes(id));
+      (mg&&mg.questionIds||[]).forEach(id=>{ if(mine(S.questions.find(q=>q.id===id))) res.questionIds.push(id); });
+      (mg&&mg.experimentIds||[]).forEach(id=>{ if(mine(S.experiments.find(x=>x.id===id))) res.experimentIds.push(id); });
+    }catch(e){}
   }
 
   // 決定検証の登録（expType='review'・active で保管。同一タイトル＋同一検証日は二重取り込みしない）
@@ -1324,31 +1340,63 @@ async function registerAiInput(){
   }
 
   // Lectica実績の登録（Lecticaタブの lxParseImport / lxImportSave を共有。複製しない）
-  let lecticaOk=false;
+  let lecticaOk=false; const lx={};
   if(hasLectica){
     S.lxImport={text:text};
-    lecticaOk = lxImportSave()===true;   // 実験ID検証・重複確認・ステータス更新は既存挙動のまま（失敗はalert）
+    lecticaOk = lxImportSave(undefined,{silent:!!opts.silent,out:lx})===true;   // 実験ID検証・重複確認・ステータス更新は既存挙動のまま（画面では失敗はalert）
     if(!lecticaOk) S.lxImport=null;      // 失敗時にLecticaタブへ取り込みパネルが残らないよう後始末
+    if(lecticaOk&&lx.logId) res.lecticaLogIds.push(lx.logId);
   }
+
+  if(entries.length) res.parts.push('振り返り'+entries.length+'件');
+  if(dcAdded) res.parts.push('意思決定検証'+dcAdded+'件');
+  if(lecticaOk) res.parts.push('Lectica実績1件');
+  /* 受信箱向けの要約：振り返り1件・問い1件・実験1件／Lectica L042 1件 */
+  const sum=[];
+  if(entries.length) sum.push('振り返り'+entries.length+'件');
+  if(res.questionIds.length) sum.push('問い'+res.questionIds.length+'件');
+  if(res.experimentIds.length) sum.push('実験'+res.experimentIds.length+'件');
+  if(dcAdded) sum.push('意思決定検証'+dcAdded+'件');
+  let lxSum='';
+  if(lecticaOk) lxSum='Lectica '+(lx.experimentId||'')+' 1件';
+  else if(lx.dup) lxSum='Lectica '+(lx.experimentId||'')+' 重複のため追加なし';
+  else if(hasLectica&&opts.silent&&lx.error&&(sum.length)) lxSum='Lectica 取り込めず（'+lx.error+'）';
+  res.summary=[sum.join('・'),lxSum].filter(Boolean).join('／');
+  if(!res.parts.length){
+    if(lx.dup&&!entries.length&&!dcAdded){ res.ok=true; res.kind='ok'; return res; }   /* 受信箱：同じ実践ログは足さないが、取り込み済みとして閉じる */
+    const dup = decisions.length && !dcAdded;
+    res.kind = dup ? 'dup' : 'fail';
+    res.message = dup ? '既に取り込み済みです（同じ決定・同じ検証日）' : (lx.error||'登録できませんでした（内容を確認してください）');
+    if(dup){ res.ok=true; res.summary='既に取り込み済み（同じ決定・同じ検証日）'; }
+    return res;
+  }
+  res.ok=true; res.kind='ok';
+  return res;
+}
+
+async function registerAiInput(){
+  const text = document.getElementById('ai-input').value.trim();
+  let statusEl = document.getElementById('ai-parse-status');
+  if(!text){ statusEl.textContent='入力が空です'; statusEl.className='ai-status err'; return; }
+  const r = await reflectImportText(text);
+  if(r.kind==='parse'||r.kind==='none'){ statusEl.textContent=r.message; statusEl.className='ai-status err'; return; }
+  /* 本文に「紐づけ：」行があれば、受信箱と同じように links を付ける（行は本文に残る） */
+  if(r.parts.length){ try{ const lk=inboxParseLinks(text); if(Object.keys(lk).length) await inboxAttachLinks(r, lk); }catch(e){ console.warn('紐づけの保存に失敗',e); } }
 
   // 結果表示（lxImportSave成功時はra()でDOMが再構築されるため要素を取り直す）
   statusEl = document.getElementById('ai-parse-status');
   const input = document.getElementById('ai-input');
-  const parts=[];
-  if(entries.length) parts.push('振り返り'+entries.length+'件');
-  if(dcAdded) parts.push('意思決定検証'+dcAdded+'件');
-  if(lecticaOk) parts.push('Lectica実績1件');
-  if(!parts.length){
+  if(!r.parts.length){
     if(statusEl){
       /* 決定検証がすべて重複スキップだった場合はエラーでなく既取り込みとして伝える */
-      const dup = decisions.length && !dcAdded;
+      const dup = r.kind==='dup';
       statusEl.textContent = dup ? '既に取り込み済みです（同じ決定・同じ検証日）' : '登録できませんでした（内容を確認してください）';
       statusEl.className = dup ? 'ai-status ok' : 'ai-status err';
       if(dup && input) input.value='';
     }
     return;
   }
-  if(statusEl){ statusEl.textContent = parts.join('＋')+'を登録しました ✓'; statusEl.className='ai-status ok'; }
+  if(statusEl){ statusEl.textContent = r.parts.join('＋')+'を登録しました ✓'; statusEl.className='ai-status ok'; }
   if(input) input.value='';
   setTimeout(()=>{S.tab='home';ra();updateNav();},800);
 }
@@ -1735,8 +1783,11 @@ function lxTouchRidExps(ids){
     })();
   }catch(_e){}
 }
-function lxImportSave(master){
+function lxImportSave(master,opts){
   // 戻り値：取り込み成功=true／失敗・キャンセル=false（取り込むタブの自動判別が結果表示に使う）
+  // opts.silent（受信箱）：alert／confirm を出さず、理由を opts.out.error、重複を opts.out.dup、作ったログIDを opts.out.logId に入れる
+  opts=opts||{}; const out=opts.out||{};
+  const alert=function(m){ if(opts.silent){ out.error=m; } else window.alert(m); };
   try{
     const parsed=lxParseImport(S.lxImport&&S.lxImport.text);
     if(!parsed){ alert('取り込みブロックが見つかりません。---REFLECT-IMPORT--- 〜 ---END--- を含めて貼り付けてください。'); return false; }
@@ -1749,10 +1800,13 @@ function lxImportSave(master){
     if(!(parsed.usedScene||parsed.insight||parsed.nextChange||parsed.actualAction)){ alert('使った場面・気づき・次回変えること・実際にやったこと のいずれかが必要です。'); return false; }
     const logs=lxReadLogs();
     const dup=logs.some(function(l){return l&&l.experimentId===parsed.experimentId&&l.date===parsed.date&&(l.insight||'')===(parsed.insight||'');});
+    if(dup&&opts.silent){ out.dup=true; out.experimentId=parsed.experimentId; return false; }   /* 受信箱：重複は足さない（確認ダイアログは出さない） */
     if(dup&&!confirm('同じ実験・同じ日・同じ気づきのログが既にあります。それでも取り込みますか？')) return false;
     const now=new Date().toISOString();
+    const newLogId='log_'+(parsed.date||tod()).replace(/-/g,'')+'_'+Math.random().toString(36).slice(2,8);
+    out.logId=newLogId; out.experimentId=parsed.experimentId;
     logs.unshift({
-      id:'log_'+(parsed.date||tod()).replace(/-/g,'')+'_'+Math.random().toString(36).slice(2,8),
+      id:newLogId,
       experimentId:parsed.experimentId,relatedExperimentId:parsed.relatedExperimentId||'',date:parsed.date,source:'import',
       ...(parsed.relatedNote?{relatedNote:parsed.relatedNote}:{}),   /* 追補K：再演の印を保存ログへ引き継ぐ */
       usedScene:parsed.usedScene||'',
@@ -1765,7 +1819,7 @@ function lxImportSave(master){
     if(!isReflectExp&&stMap[parsed.result])lxSetField(parsed.experimentId,'status',stMap[parsed.result]);
     // R系連動：実践回数・最終実践日はログから数えるので、ここでは探求ボード実験と親の問いの更新日だけ進める
     lxTouchRidExps([parsed.experimentId,parsed.relatedExperimentId]);
-    S.lxImport=null; toast('取り込みました：'+parsed.experimentId+'（'+parsed.date+'）'); ra(); updateNav();
+    S.lxImport=null; if(!opts.silent)toast('取り込みました：'+parsed.experimentId+'（'+parsed.date+'）'); ra(); updateNav();
     return true;
   }catch(e){ alert('取り込みエラー: '+e.message); return false; }
 }
@@ -1795,6 +1849,9 @@ function lxCard(e,logs,master){
   card.appendChild(D({css:'font-size:12px;color:var(--di);margin-bottom:8px'},'完了条件：'+e.completionCondition));
   const nLogs=logs.filter(function(l){return l.experimentId===e.id;}).length;
   if(nLogs)card.appendChild(D({css:'font-size:11px;color:var(--di);margin-bottom:8px'},'記録 '+nLogs+'件'));
+  { /* この実験の実践ログに付いた紐づけ（重複は1つに） */
+    const lk=rfLinkChips(logs.filter(function(l){return l&&l.experimentId===e.id&&l.links;}).map(function(l){return l.links;}));
+    if(lk){ lk.style.marginBottom='8px'; card.appendChild(lk); } }
   const btns=D({css:'display:flex;flex-wrap:wrap;gap:6px'});
   function b(label,fn){const x=Bt({cls:'btn-g',css:'font-size:12px'},label);x.addEventListener('click',fn);btns.appendChild(x);}
   b('Shot Taskに追加',function(){lxAddShotTask(e);ra();});
@@ -2371,7 +2428,7 @@ async function tkMigrate(){
       newE.push({id:uid(),questionId:null,title,themeIds:(r.themes||[]).slice(),status:st,scene:'',observation:'',deadline:'',result:'',learning:'',sourceLogIds:[r.id],sourceCk:ck,createdAt:r.date||tod(),updatedAt:r.date||tod(),completedAt:(st==='complete'||st==='discarded')?(r.date||tod()):null});
     });
   });
-  if(!newQ.length&&!newE.length)return;
+  if(!newQ.length&&!newE.length)return {questionIds:[],experimentIds:[]};
   const first=!(await dbget('settings','tankyuMigrated'));
   if(first)tkSnapshot();   /* 初回のみ、書き込む前に保険を取る */
   for(const q of newQ)await dbput('questions',q);
@@ -2381,6 +2438,7 @@ async function tkMigrate(){
     await dbput('settings',{id:'tankyuMigrated',value:{version:1,at:new Date().toISOString(),questions:newQ.length,experiments:newE.length}});
     toast('探求ボードへ移行：問い'+newQ.length+'件・実験'+newE.length+'件（移行前スナップショットをDLしました）');
   }
+  return {questionIds:newQ.map(q=>q.id),experimentIds:newE.map(x=>x.id)};
 }
 
 /* ── 探求ボード描画 ── */
@@ -2399,6 +2457,7 @@ function tkQCard(q,expandedDefault){
     const thN=tkThemeNames(q.themeIds);
     if(thN.length)card.appendChild(D({cls:'tk-meta'},'テーマ：'+thN.join('・')));
     if(q.hypothesis)card.appendChild(D({css:'font-size:13px;margin-top:6px;line-height:1.6'},'仮説：'+q.hypothesis));
+    { const lk=rfLinkChips(q.links); if(lk) card.appendChild(lk); }   /* 紐づけ（あるときだけ） */
     /* 問いカード内の関連実験 */
     const exps=S.experiments.filter(x=>x.questionId===q.id&&x.status!=='discarded'&&!tkIsReview(x));
     const act=exps.filter(x=>x.status==='active');
@@ -2437,6 +2496,7 @@ function tkECard(x){
   const ds=tkDueSoon(x);
   if(ds&&(x.status==='active'||x.status==='candidate'))card.appendChild(D({cls:'tk-meta'},(tkIsReview(x)?'検証日':'期限')+'：'+ds.date+'（あと'+ds.days+'日）'));
   if(x.questionId){const lq=S.questions.find(q=>q.id===x.questionId);if(lq)card.appendChild(D({cls:'tk-meta'},'問い：'+lq.title));}
+  { const lk=rfLinkChips(x.links); if(lk) card.appendChild(lk); }   /* 紐づけ（あるときだけ） */
   const thN=tkThemeNames(x.themeIds);const src=tkSrcLog(x);
   if(thN.length||src)card.appendChild(D({cls:'tk-meta'},(thN.length?'テーマ：'+thN.join('・'):'')+(thN.length&&src?' ／ ':'')+(src?'元ログ：'+src:'')));
   if(x.status==='active'&&(x.scene||x.observation||x.deadline))card.appendChild(D({cls:'tk-meta'},[x.scene?(tkIsReview(x)?'背景：':'場面：')+x.scene:'',x.observation?(tkIsReview(x)?'成否の見方：':'観察：')+x.observation:'',x.deadline?(tkIsReview(x)?'検証日：':'期限：')+x.deadline:''].filter(Boolean).join(' ／ ')));
@@ -3093,6 +3153,164 @@ document.addEventListener('DOMContentLoaded',function(){
   });
 });
 
+/* ══ 受信箱 共通部品 v1 ══
+   各OSはこのブロックをそのままコピーし、INBOX_OS と（ブロックの外に書く）inboxApply だけ差し替える。
+   ・Drive を読むのは Task OS だけ。各OSは localStorage の import_inbox_v1 から自分宛て（targetOS）を取り、
+     既存の貼り付けパーサで取り込む（書式は変えない）
+   ・inboxApply(block, links, item) は OS ごとに実装し { ok:true, summary } / { ok:false, summary } を返す。
+     ok:false は done にしない（保留に残り、次回また試す）
+   ・起動時は「自分のデータの読み込みが終わった後」に inboxProcess('load') を呼ぶ（Task OS を経由しなかった日の保険）
+   ・Task OS からの合図（postMessage 'myapps-inbox-process'）でも動き、結果を親へ 'myapps-inbox-result' で返す
+   ・同じ id は二度と処理しない（import_inbox_done_v1）。未知の行・未知のフィールドは無視 */
+const INBOX_OS = 'reflect';                       // このOSの targetOS 名（各OSで差し替える）
+const INBOX_KEY='import_inbox_v1', INBOX_DONE='import_inbox_done_v1', INBOX_LOG='import_inbox_log_v1';
+const INBOX_DONE_MAX=2000, INBOX_LOG_DAYS=60;
+function inboxYmd(d){ d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function inboxRead(){ try{ const o=JSON.parse(localStorage.getItem(INBOX_KEY)||'null'); return (o&&Array.isArray(o.items))?o:{items:[]}; }catch(e){ return {items:[]}; } }
+function inboxDoneList(){ try{ const a=JSON.parse(localStorage.getItem(INBOX_DONE)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function inboxDoneSet(){ return new Set(inboxDoneList().map(d=>d&&d.id)); }
+function inboxLogList(){ try{ const a=JSON.parse(localStorage.getItem(INBOX_LOG)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+/* 取り込み済みにする：done に追記（新しい順・最大2000）／pending から除く／log に追記（直近60日） */
+function inboxMarkDone(item, summary, links){
+  const now=new Date();
+  const done=inboxDoneList().filter(d=>d&&d.id!==item.id);
+  done.unshift({ id:item.id, os:INBOX_OS, doneAt:now.toISOString(), summary:summary||'' });
+  localStorage.setItem(INBOX_DONE, JSON.stringify(done.slice(0,INBOX_DONE_MAX)));
+  const box=inboxRead();
+  box.items=(box.items||[]).filter(it=>it&&it.id!==item.id);
+  box.updatedAt=now.toISOString();
+  localStorage.setItem(INBOX_KEY, JSON.stringify(box));
+  const from=new Date(now); from.setDate(from.getDate()-INBOX_LOG_DAYS); const fromYmd=inboxYmd(from);
+  const log=inboxLogList().filter(x=>x&&x.id!==item.id&&String(x.date||'')>=fromYmd);
+  log.unshift({ date:inboxYmd(now), os:INBOX_OS, title:item.title||'', summary:summary||'', links:links||item.links||{}, id:item.id });
+  localStorage.setItem(INBOX_LOG, JSON.stringify(log));
+}
+/* 「紐づけ：」行を読む。書式：紐づけ：S03 ③JSS承継税制／PJ：{id} {名前}／人：{id} {名前}, {id} {名前}／問い：{id}
+   ID は英数字（数字を1つ以上含む）。ID が無ければ名前だけ。空のものは入れない。行が無ければ {} */
+function inboxParseLinks(block){
+  const out={};
+  const line=String(block||'').split(/\r?\n/).map(s=>s.trim()).find(s=>/^紐づけ[：:]/.test(s));
+  if(!line) return out;
+  const isId=s=>/^[A-Za-z0-9_-]*\d[A-Za-z0-9_-]*$/.test(s);
+  const idName=s=>{ const t=String(s||'').trim(); if(!t) return null; const m=t.match(/^(\S+)\s+(.+)$/);
+    if(m&&isId(m[1])) return {id:m[1], name:m[2].trim()}; return isId(t)&&!/[^\x00-\x7F]/.test(t)&&/^[A-Za-z]/.test(t)&&t.length<=12?{id:t, name:''}:{id:'', name:t}; };
+  line.replace(/^紐づけ[：:]\s*/,'').split('／').map(s=>s.trim()).filter(Boolean).forEach(part=>{
+    let m;
+    if((m=part.match(/^PJ[：:]\s*(.*)$/i))){ const r=idName(m[1]); if(r){ if(r.id) out.projectId=r.id; if(r.name) out.projectName=r.name; } }
+    else if((m=part.match(/^人[：:]\s*(.*)$/))){
+      const ids=[], names=[];
+      m[1].split(/[,、，]/).forEach(p=>{ const r=idName(p); if(!r) return; if(r.id) ids.push(r.id); if(r.name) names.push(r.name); });
+      if(ids.length) out.personIds=ids; if(names.length) out.personNames=names;
+    }
+    else if((m=part.match(/^問い[：:]\s*(\S+)/))){ out.questionId=m[1]; }
+    else if((m=part.match(/^(S\d+)\b/))){ out.strategyGoalId=m[1]; }
+  });
+  return out;
+}
+/* 自分宛ての未処理を取り込む。重なって呼ばれても順番に1回ずつ（同じ item を二重に取り込まない） */
+let _inboxChain=Promise.resolve();
+function inboxProcess(trigger){
+  const run=async()=>{
+    const box=inboxRead(); const done=inboxDoneSet();
+    const mine=(box.items||[]).filter(it=>it&&it.id&&it.targetOS===INBOX_OS&&!done.has(it.id));
+    const results=[];
+    for(const it of mine){
+      try{
+        if(inboxDoneSet().has(it.id)) continue;
+        const links=Object.assign({}, inboxParseLinks(it.block||''), it.links||{});   /* item.links 優先 */
+        const r=await inboxApply(it.block||'', links, it);
+        if(r&&r.ok){ inboxMarkDone(it, r.summary, links); results.push({id:it.id, ok:true, summary:r.summary||''}); }
+        else results.push({id:it.id, ok:false, summary:(r&&r.summary)||'取り込めませんでした'});
+      }catch(e){ results.push({id:it.id, ok:false, summary:'エラー: '+((e&&e.message)||e)}); }
+    }
+    if(window.parent!==window){ try{ window.parent.postMessage({type:'myapps-inbox-result', os:INBOX_OS, trigger, results}, location.origin); }catch(e){} }
+    return results;
+  };
+  const p=_inboxChain.then(run, run);
+  _inboxChain=p.catch(()=>{});
+  return p;
+}
+window.addEventListener('message', ev=>{ if(ev.origin!==location.origin) return; if(ev.data&&ev.data.type==='myapps-inbox-process') inboxProcess('message'); });
+/* ══ 受信箱 共通部品 v1 ここまで ══ */
+
+/* 起動（データの読み込み）が終わるまで受信箱は待つ。?inbox=1（Task OS の非表示 iframe）ではダイアログを出さない */
+const RF_INBOX_MODE=new URLSearchParams(location.search).get('inbox')==='1';
+if(RF_INBOX_MODE){ window.alert=m=>console.warn('[inbox]',m); window.confirm=()=>false; }   /* 非表示 iframe では確認・警告を出さない（confirm は「やめる」扱い） */
+let _rfBootDone; const RF_BOOT=new Promise(r=>{_rfBootDone=r;});
+async function inboxApply(block, links, item){
+  await RF_BOOT;
+  const r = await reflectImportText(block, {silent:true});
+  if(!r.ok) return {ok:false, summary:r.message||r.summary||'取り込めませんでした'};
+  await inboxAttachLinks(r, links);
+  try{ ra(); updateNav(); }catch(e){}
+  return {ok:true, summary:r.summary};
+}
+
+/* 戦略目標の対応表（記録の地図 §D-1。地図が変わったら Claude Code がここを直す。Project OS と同じ内容） */
+const STRATEGY_GOALS={
+  S01:{no:'①', name:'関連当事者取引解消（借金返済）'},
+  S02:{no:'②', name:'3AHD構想作成'},
+  S03:{no:'③', name:'JSS承継税制'},
+  S04:{no:'④', name:'IPO準備'},
+  S05:{no:'⑤', name:'仲間づくり'},
+};
+/* 名前の照合（ヒトメモの lxNormName と同じ：括弧注記・さん・空白を除き NFKC・小文字） */
+function rfNormName(s){ return String((s&&s.value)||s||'').replace(/[（(][^）)]*[）)]/g,'').replace(/さん$/,'').replace(/\s+/g,'').normalize('NFKC').toLowerCase(); }
+function rfReadPos(){ try{ const o=JSON.parse(localStorage.getItem('pos_v4')||'null'); return (o&&Array.isArray(o.projects))?o.projects:[]; }catch(e){ return []; } }
+function rfReadPeople(){ try{ const a=JSON.parse(localStorage.getItem('hitomemo_profiles_v1')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+/* 名前だけのとき、PJ（pos_v4）・人（ヒトメモ）の一致が1つだけなら ID を補う。どちらにも書かない。空の項目は落とす */
+function rfResolveLinks(links){
+  const l=Object.assign({}, links||{}), out={};
+  if(!l.projectId&&l.projectName){
+    const key=String(l.projectName).trim().toLowerCase();
+    const hit=rfReadPos().filter(p=>p&&p.id&&String(p.name||'').trim().toLowerCase()===key);
+    if(hit.length===1) l.projectId=String(hit[0].id);
+  }
+  if((!l.personIds||!l.personIds.length)&&l.personNames&&l.personNames.length){
+    const ppl=rfReadPeople(); const ids=[];
+    l.personNames.forEach(n=>{ const k=rfNormName(n); const hit=k?ppl.filter(p=>p&&p.id&&rfNormName(p.name)===k):[]; if(hit.length===1) ids.push(String(hit[0].id)); });
+    if(ids.length===l.personNames.length) l.personIds=ids;   /* 全員そろったときだけ（名前との並びを崩さない） */
+  }
+  ['strategyGoalId','projectId','projectName','questionId'].forEach(k=>{ if(l[k]) out[k]=String(l[k]); });
+  ['personIds','personNames'].forEach(k=>{ if(Array.isArray(l[k])&&l[k].length) out[k]=l[k].slice(); });
+  return out;
+}
+/* 取り込みで作った ログ・問い・実験・Lectica実践ログ に links を付ける。問いには questionId を付けない（元の問いの意味なので） */
+async function inboxAttachLinks(r, links){
+  const lk=rfResolveLinks(links);
+  if(!Object.keys(lk).length) return;
+  const lkQ=Object.assign({}, lk); delete lkQ.questionId;
+  for(const id of (r.logIds||[])){ const x=S.logs.find(z=>z&&z.id===id); if(x){ x.links=lk; await dbput('logs', x); } }
+  for(const id of (r.questionIds||[])){ const x=S.questions.find(z=>z&&z.id===id); if(x&&Object.keys(lkQ).length){ x.links=lkQ; await dbput('questions', x); } }
+  for(const id of (r.experimentIds||[])){ const x=S.experiments.find(z=>z&&z.id===id); if(x){ x.links=lk; await dbput('experiments', x); } }
+  if((r.lecticaLogIds||[]).length){
+    const logs=lxReadLogs(); let ch=false;
+    logs.forEach(l=>{ if(l&&r.lecticaLogIds.includes(l.id)){ l.links=lk; ch=true; } });
+    if(ch) lxWriteLogs(logs);
+  }
+}
+/* 紐づけのチップ1行：S03 ③JSS承継税制／PJ 名前／👤 名前。links を複数渡すと重複を除いて並べる。何も無ければ null */
+function rfLinkChips(links){
+  const arr=(Array.isArray(links)?links:[links]).filter(l=>l&&typeof l==='object');
+  if(!arr.length) return null;
+  const labels=[];
+  const add=s=>{ if(s&&!labels.includes(s)) labels.push(s); };
+  let pos=null, ppl=null;
+  arr.forEach(l=>{
+    if(l.strategyGoalId){ const g=STRATEGY_GOALS[l.strategyGoalId]; add(l.strategyGoalId+(g?' '+g.no+g.name:'')); }
+    let pn=l.projectName||'';
+    if(!pn&&l.projectId){ pos=pos||rfReadPos(); const p=pos.find(x=>x&&String(x.id)===String(l.projectId)); pn=p&&p.name||''; }
+    if(pn) add('PJ '+pn);
+    let names=(l.personNames||[]).slice();
+    if(!names.length&&(l.personIds||[]).length){ ppl=ppl||rfReadPeople(); names=l.personIds.map(id=>{ const p=ppl.find(x=>x&&String(x.id)===String(id)); return p?String((p.name&&p.name.value)||p.name||'').replace(/[（(][^）)]*[）)]/g,'').trim():''; }).filter(Boolean); }
+    names.forEach(n=>add('👤 '+n));
+  });
+  if(!labels.length) return null;
+  const row=D({cls:'lk-row'});
+  labels.forEach(s=>row.appendChild(Sp({cls:'lk-chip'},s)));
+  return row;
+}
+
 async function boot(){
   try{const v=await dbget('settings','vision');if(v?.value)S.vision=v.value;}catch(e){}
   try{
@@ -3113,6 +3331,8 @@ async function boot(){
   }catch(e){console.warn(e);}
   tkMirrorFocus();   /* 初期化完了時に重点スナップショットをlocalStorageへ（空でも書く） */
   renderV26();ra();updateNav();
+  _rfBootDone();
+  inboxProcess('load');   /* 受信箱：自分宛て（targetOS:'reflect'）の未処理を取り込む。無ければ何もしない */
 }
 boot();
 </script>
