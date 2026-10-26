@@ -405,6 +405,9 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .yl-lbl { font-size: .82rem; color: var(--text2); }
 .yl-alert { margin-top: 10px; padding: 9px 12px; border-radius: 8px; background: rgba(255,92,92,0.1); color: var(--sat-bad); font-weight: 700; font-size: .92rem; }
 .log-yumi { font-size: .9rem; }
+/* 紐づけ（受信箱の下書きを承認したログだけ）：薄いチップ1行 */
+.log-lk { display:flex; flex-wrap:wrap; gap:4px; }
+.log-lk span { font-size:11px; color:var(--text3); border:1px solid var(--border); border-radius:10px; padding:1px 8px; overflow-wrap:anywhere; }
 .log-yumi.yes { color: var(--sat-great); }
 .log-yumi.no { color: var(--text3); }
 .cp-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
@@ -1428,6 +1431,7 @@ function buildCard(log) {
     <div class="log-events truncated">${escHtml(log.events||'')}</div>
     ${uneaseHtml}
     ${yumiHtml}
+    ${odLinkHtml(log.links)}
     ${(tagsHtml||flagsHtml) ? `<div class="log-footer">${tagsHtml}${flagsHtml}</div>` : ''}
   `;
 
@@ -1971,7 +1975,7 @@ function _aixLoadDrafts() {
   try {
     const logs = (typeof state !== 'undefined' && state && Array.isArray(state.logs)) ? state.logs : JSON.parse(localStorage.getItem(DB_KEY) || '[]');
     const logged = new Set((logs||[]).filter(l => l && !l.archived && l.date).map(l => l.date));
-    result = result.filter(d => { const k = d && (d.targetDate || d.date); return !k || !logged.has(k); });
+    result = result.filter(d => { const k = d && (d.targetDate || d.date); return !k || !logged.has(k) || !!(d && d.inboxId); });
   } catch(e) {}
   return result;
 }
@@ -2124,10 +2128,12 @@ function aixApproveByIdx(i) {
     if (tags.length) log.tags = [...new Set([...(log.tags||[]), ...tags])];
     if (flags.length) log.flags = [...new Set([...(log.flags||[]), ...flags])];
     if (yumi) { log.yumiLoad = yumi; if (yumiNote) log.yumiLoadNote = yumiNote; else if (yumi === 'no') delete log.yumiLoadNote; }
+    if (d.links && Object.keys(d.links).length) log.links = { ...(log.links || {}), ...d.links };   /* 受信箱の下書き由来 */
     log.updatedAt = new Date().toISOString();
   } else {
     const nl = { id: Date.now().toString(), date: targetDate, satisfaction, events, unease, tags, flags, archived: false, createdAt: new Date().toISOString() };
     if (yumi) { nl.yumiLoad = yumi; if (yumiNote) nl.yumiLoadNote = yumiNote; }
+    if (d.links && Object.keys(d.links).length) nl.links = { ...d.links };   /* 受信箱の下書き由来 */
     state.logs.push(nl);
   }
   saveData();
@@ -2142,10 +2148,138 @@ function aixDismissByIdx(i) {
   renderAixDraftList(); updateAixBadge();
 }
 
+/* ══ 受信箱 共通部品 v1 ══
+   各OSはこのブロックをそのままコピーし、INBOX_OS と（ブロックの外に書く）inboxApply だけ差し替える。
+   ・Drive を読むのは Task OS だけ。各OSは localStorage の import_inbox_v1 から自分宛て（targetOS）を取り、
+     既存の貼り付けパーサで取り込む（書式は変えない）
+   ・inboxApply(block, links, item) は OS ごとに実装し { ok:true, summary } / { ok:false, summary } を返す。
+     ok:false は done にしない（保留に残り、次回また試す）
+   ・起動時は「自分のデータの読み込みが終わった後」に inboxProcess('load') を呼ぶ（Task OS を経由しなかった日の保険）
+   ・Task OS からの合図（postMessage 'myapps-inbox-process'）でも動き、結果を親へ 'myapps-inbox-result' で返す
+   ・同じ id は二度と処理しない（import_inbox_done_v1）。未知の行・未知のフィールドは無視 */
+const INBOX_OS = 'oneday';                       // このOSの targetOS 名（各OSで差し替える）
+const INBOX_KEY='import_inbox_v1', INBOX_DONE='import_inbox_done_v1', INBOX_LOG='import_inbox_log_v1';
+const INBOX_DONE_MAX=2000, INBOX_LOG_DAYS=60;
+function inboxYmd(d){ d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function inboxRead(){ try{ const o=JSON.parse(localStorage.getItem(INBOX_KEY)||'null'); return (o&&Array.isArray(o.items))?o:{items:[]}; }catch(e){ return {items:[]}; } }
+function inboxDoneList(){ try{ const a=JSON.parse(localStorage.getItem(INBOX_DONE)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function inboxDoneSet(){ return new Set(inboxDoneList().map(d=>d&&d.id)); }
+function inboxLogList(){ try{ const a=JSON.parse(localStorage.getItem(INBOX_LOG)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+/* 取り込み済みにする：done に追記（新しい順・最大2000）／pending から除く／log に追記（直近60日） */
+function inboxMarkDone(item, summary, links){
+  const now=new Date();
+  const done=inboxDoneList().filter(d=>d&&d.id!==item.id);
+  done.unshift({ id:item.id, os:INBOX_OS, doneAt:now.toISOString(), summary:summary||'' });
+  localStorage.setItem(INBOX_DONE, JSON.stringify(done.slice(0,INBOX_DONE_MAX)));
+  const box=inboxRead();
+  box.items=(box.items||[]).filter(it=>it&&it.id!==item.id);
+  box.updatedAt=now.toISOString();
+  localStorage.setItem(INBOX_KEY, JSON.stringify(box));
+  const from=new Date(now); from.setDate(from.getDate()-INBOX_LOG_DAYS); const fromYmd=inboxYmd(from);
+  const log=inboxLogList().filter(x=>x&&x.id!==item.id&&String(x.date||'')>=fromYmd);
+  log.unshift({ date:inboxYmd(now), os:INBOX_OS, title:item.title||'', summary:summary||'', links:links||item.links||{}, id:item.id });
+  localStorage.setItem(INBOX_LOG, JSON.stringify(log));
+}
+/* 「紐づけ：」行を読む。書式：紐づけ：S03 ③JSS承継税制／PJ：{id} {名前}／人：{id} {名前}, {id} {名前}／問い：{id}
+   ID は英数字（数字を1つ以上含む）。ID が無ければ名前だけ。空のものは入れない。行が無ければ {} */
+function inboxParseLinks(block){
+  const out={};
+  const line=String(block||'').split(/\r?\n/).map(s=>s.trim()).find(s=>/^紐づけ[：:]/.test(s));
+  if(!line) return out;
+  const isId=s=>/^[A-Za-z0-9_-]*\d[A-Za-z0-9_-]*$/.test(s);
+  const idName=s=>{ const t=String(s||'').trim(); if(!t) return null; const m=t.match(/^(\S+)\s+(.+)$/);
+    if(m&&isId(m[1])) return {id:m[1], name:m[2].trim()}; return isId(t)&&!/[^\x00-\x7F]/.test(t)&&/^[A-Za-z]/.test(t)&&t.length<=12?{id:t, name:''}:{id:'', name:t}; };
+  line.replace(/^紐づけ[：:]\s*/,'').split('／').map(s=>s.trim()).filter(Boolean).forEach(part=>{
+    let m;
+    if((m=part.match(/^PJ[：:]\s*(.*)$/i))){ const r=idName(m[1]); if(r){ if(r.id) out.projectId=r.id; if(r.name) out.projectName=r.name; } }
+    else if((m=part.match(/^人[：:]\s*(.*)$/))){
+      const ids=[], names=[];
+      m[1].split(/[,、，]/).forEach(p=>{ const r=idName(p); if(!r) return; if(r.id) ids.push(r.id); if(r.name) names.push(r.name); });
+      if(ids.length) out.personIds=ids; if(names.length) out.personNames=names;
+    }
+    else if((m=part.match(/^問い[：:]\s*(\S+)/))){ out.questionId=m[1]; }
+    else if((m=part.match(/^(S\d+)\b/))){ out.strategyGoalId=m[1]; }
+  });
+  return out;
+}
+/* 自分宛ての未処理を取り込む。重なって呼ばれても順番に1回ずつ（同じ item を二重に取り込まない） */
+let _inboxChain=Promise.resolve();
+function inboxProcess(trigger){
+  const run=async()=>{
+    const box=inboxRead(); const done=inboxDoneSet();
+    const mine=(box.items||[]).filter(it=>it&&it.id&&it.targetOS===INBOX_OS&&!done.has(it.id));
+    const results=[];
+    for(const it of mine){
+      try{
+        if(inboxDoneSet().has(it.id)) continue;
+        const links=Object.assign({}, inboxParseLinks(it.block||''), it.links||{});   /* item.links 優先 */
+        const r=await inboxApply(it.block||'', links, it);
+        if(r&&r.ok){ inboxMarkDone(it, r.summary, links); results.push({id:it.id, ok:true, summary:r.summary||''}); }
+        else results.push({id:it.id, ok:false, summary:(r&&r.summary)||'取り込めませんでした'});
+      }catch(e){ results.push({id:it.id, ok:false, summary:'エラー: '+((e&&e.message)||e)}); }
+    }
+    if(window.parent!==window){ try{ window.parent.postMessage({type:'myapps-inbox-result', os:INBOX_OS, trigger, results}, location.origin); }catch(e){} }
+    return results;
+  };
+  const p=_inboxChain.then(run, run);
+  _inboxChain=p.catch(()=>{});
+  return p;
+}
+window.addEventListener('message', ev=>{ if(ev.origin!==location.origin) return; if(ev.data&&ev.data.type==='myapps-inbox-process') inboxProcess('message'); });
+/* ══ 受信箱 共通部品 v1 ここまで ══ */
+
+/* ?inbox=1（Task OS の非表示 iframe）では確認・警告を出さない（confirm は「やめる」扱い） */
+if (new URLSearchParams(location.search).get('inbox') === '1') { window.alert = m => console.warn('[inbox]', m); window.confirm = () => false; }
+/* block：AIX 下書きと同じ JSON {targetDate, events, unease, flags}。oneday_logs_v1 には書かず aix_drafts に下書きとして足す
+   （同じ targetDate の下書きは置き換え）。保存は本人が AIX 承認フォームで「保存」したとき */
+async function inboxApply(block, links, item) {
+  let d = null;
+  try { d = JSON.parse(String(block || '').trim()); } catch(e) {}
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return { ok:false, summary:'JSON として読めません（{"targetDate":"YYYY-MM-DD","events":"…"}）' };
+  const td = String(d.targetDate || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(td)) return { ok:false, summary:'targetDate（YYYY-MM-DD）がありません' };
+  /* 隠れている下書きも消さないよう、表示用の絞り込みを通さず生の一覧に足す */
+  let drafts = [];
+  try { const a = JSON.parse(localStorage.getItem('aix_drafts') || 'null'); if (Array.isArray(a)) drafts = a; } catch(e) {}
+  if (!drafts.length) {
+    const single = localStorage.getItem('oneday_aix_draft');
+    if (single) { const t = new Date(); t.setDate(t.getDate()-1); drafts = [{ targetDate: t.toLocaleDateString('sv'), events: single, generatedAt: new Date().toISOString() }]; }
+  }
+  const nd = { targetDate: td, events: String(d.events || ''), generatedAt: new Date().toISOString(), inboxId: (item && item.id) || '' };
+  if (d.unease) nd.unease = String(d.unease);
+  if (Array.isArray(d.flags) && d.flags.length) nd.flags = d.flags.slice();
+  const lk = {}; const l = links || {};
+  ['strategyGoalId','projectId','projectName','questionId'].forEach(k => { if (l[k]) lk[k] = String(l[k]); });
+  ['personIds','personNames'].forEach(k => { if (Array.isArray(l[k]) && l[k].length) lk[k] = l[k].slice(); });
+  if (Object.keys(lk).length) nd.links = lk;
+  drafts = drafts.filter(x => !(x && (x.targetDate || x.date) === td));
+  drafts.push(nd);
+  _aixSaveDrafts(drafts);
+  try { updateAixBadge(); if (document.getElementById('aix-view') && document.getElementById('aix-view').style.display === 'block') renderAixDraftList(); } catch(e) {}
+  return { ok:true, summary: Number(td.slice(5,7)) + '/' + Number(td.slice(8,10)) + ' の下書きを追加（承認待ち）' };
+}
+/* 戦略目標の対応表（記録の地図 §D-1。Reflect・Project・KOSOLog・ヒトメモと同じ内容。地図が変わったら Claude Code が直す） */
+const STRATEGY_GOALS = {
+  S01:{no:'①', name:'関連当事者取引解消（借金返済）'},
+  S02:{no:'②', name:'3AHD構想作成'},
+  S03:{no:'③', name:'JSS承継税制'},
+  S04:{no:'④', name:'IPO準備'},
+  S05:{no:'⑤', name:'仲間づくり'},
+};
+function odLinkHtml(l) {
+  if (!l || typeof l !== 'object') return '';
+  const a = [];
+  if (l.strategyGoalId) { const g = STRATEGY_GOALS[l.strategyGoalId]; a.push(l.strategyGoalId + (g ? ' ' + g.no + g.name : '')); }
+  if (l.projectName) a.push('PJ ' + l.projectName);
+  (l.personNames || []).forEach(n => a.push('👤 ' + n));
+  return a.length ? '<div class="log-lk">' + a.map(s => '<span>' + escHtml(s) + '</span>').join('') + '</div>' : '';
+}
+
 loadData();
 render();
 bindEvents();
 updateAixBadge();
+inboxProcess('load');   /* 受信箱：自分宛て（targetOS:'oneday'）を下書きに足す。無ければ何もしない */
 window.addEventListener('storage', function(e) {
   if (e.key === 'aix_drafts' || e.key === 'oneday_aix_draft') { updateAixBadge(); }
 });

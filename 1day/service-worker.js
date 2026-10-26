@@ -1,6 +1,6 @@
 // ネットワーク優先戦略 - 常に最新を取得（HTTPキャッシュも無視）
 // SW_VERSION: 更新時にこの値を変えると確実に更新サイクルが走る
-const SW_VERSION = '2026-06-18-2';
+const SW_VERSION = '2026-10-26-1';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil((async () => {
   const keys = await caches.keys();
