@@ -1319,7 +1319,7 @@ async function reflectImportText(text, opts){
      ■ 実験 {実ID または R001}　題名／問い（実ID・（外す））／ステータス（候補・実験中・振り返り待ち・完了・変更・保留・やらない・原則化）／場面／観察／期限／結果／学び／記録
      ■ 統合：問い {A}, {B} → 新規「題名」　　理由
      ■ 統合：実験 {A}, {B} → 新規「題名」　　理由
-   値が空・（変更なし）＝触らない／（空にする）＝空文字（題名は不可）／記録：種類｜本文 ＝ notes[] に追記（直近3件に同じ本文があれば入れない）
+   値が空・（変更なし）＝触らない／（空にする）＝空文字（題名は不可）／記録：種類｜本文 ＝ notes[] に追記（全件に同じ種類＋本文があれば入れない）
    新規作成はしない（新規は従来の REFLECT-IMPORT）。上限（重点3・実験中5）を超える昇格は入れ替えず、そのブロックだけ保留 */
 const RF_UPDATE_BK='reflect_backup_lastupdate';
 /* 本文から【REFLECT-UPDATE】の区間を切り出す。区間は次の【…】行か ---REFLECT-IMPORT--- か【/REFLECT-UPDATE】まで。残りは従来の取り込みへ */
@@ -1368,13 +1368,13 @@ function rfStatusKey(v, dict){
   return (k&&k!=='merged')?k:null;
 }
 function rfFindE(id){ const s=String(id||''); return S.experiments.find(x=>x&&(x.id===s||(x.rid&&x.rid.toUpperCase()===s.toUpperCase())))||null; }
-/* notes に追記（直近3件に同じ本文があれば入れない）。追記したら true */
+/* notes に追記（全件に同じ種類＋本文（前後空白除去）があれば入れない）。追記したら true */
 function rfPushNote(o, value, before){
   const m=String(value||'').match(/^([^｜|]+?)\s*[｜|]\s*(.+)$/);
   const kind=m?m[1].trim():'記録', text=(m?m[2]:value).trim();
   if(!text) return false;
   if(!Array.isArray(o.notes)) o.notes=[];
-  if(o.notes.slice(-3).some(n=>n&&n.text===text)) return false;
+  if(o.notes.some(n=>n&&String(n.kind||'').trim()===kind&&String(n.text||'').trim()===text)) return false;
   if(before) before();   /* 実際に追記する直前（退避） */
   o.notes.push({date:tod(), kind, text, src:'取り込み'});
   return true;

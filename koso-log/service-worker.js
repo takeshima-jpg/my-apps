@@ -1,6 +1,6 @@
 // ネットワーク優先戦略 - 常に最新を取得（失敗時も必ずResponseを返す）
 // SW_VERSION: 更新時にこの値を変えると確実に更新サイクルが走る
-const SW_VERSION = '2026-10-26-1';
+const SW_VERSION = '2026-10-26-2';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))

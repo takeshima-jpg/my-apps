@@ -1610,12 +1610,16 @@ function kiNormDate(s) {
   const m = String(s||'').match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
   return m ? m[1]+'/'+m[2].padStart(2,'0')+'/'+m[3].padStart(2,'0') : '';
 }
-// 直近3件に同じ text があれば入れない
+// 全件に同じ kind＋text（前後空白除去）があれば入れない（直近3件だと4行以上のブロックを2回貼ると全部二重になっていた）
 function kiPushLog(item, kind, text) {
   if (!Array.isArray(item.log)) item.log = [];
-  if (item.log.slice(-3).some(r => r && r.text === text)) return false;
+  if (kiHasLog(item, kind, text)) return false;
   item.log.push({ date: today(), kind, text, src: '取り込み' });
   return true;
+}
+function kiHasLog(item, kind, text) {
+  const k = String(kind || '').trim(), t = String(text || '').trim();
+  return (item.log || []).some(r => r && String(r.kind || '').trim() === k && String(r.text || '').trim() === t);
 }
 function kiAddRelation(item, kind, id) {
   if (!Array.isArray(item.relations)) item.relations = [];
@@ -1628,7 +1632,7 @@ function kiAddRelation(item, kind, id) {
 function kiApplyFields(item, fields, isNew) {
   const isG = item.type === '構想';
   const changed = [];
-  let logN = 0, relN = 0;
+  let logN = 0, relN = 0, dupN = 0;
   fields.forEach(({key, value}) => {
     if (key==='reason' || key==='learn') return;
     if (key==='log') {
@@ -1636,7 +1640,7 @@ function kiApplyFields(item, fields, isNew) {
       const m = value.match(/^([^｜|]+?)\s*[｜|]\s*(.+)$/);
       const kind = m && LOG_KINDS.includes(m[1].trim()) ? m[1].trim() : '気づき';
       const body = m ? m[2].trim() : value;
-      if (kiPushLog(item, kind, body)) logN++;
+      if (kiPushLog(item, kind, body)) logN++; else dupN++;
       return;
     }
     if (!value || value==='（変更なし）' || value==='(変更なし)') return;
@@ -1678,6 +1682,7 @@ function kiApplyFields(item, fields, isNew) {
   });
   if (relN) changed.push('関連'+relN+'件');
   if (logN) changed.push('記録'+logN+'件');
+  changed.dupLog = dupN;   /* 重複で入れなかった記録の数（要約用・changed の件数には数えない） */
   return changed;
 }
 
@@ -1690,7 +1695,7 @@ function applyKosoBlock(b) {
     const item = items.find(i => i.id===b.id && i.type===b.type);
     if (!item) return { error: true };
     const changed = kiApplyFields(item, b.fields, false);
-    if (!changed.length) return { summary: b.id+' 変更なし' };
+    if (!changed.length) return { summary: b.id+' 変更なし'+(changed.dupLog?'（記録 0件（重複））':'') };
     if (item.type==='構想') item.review = today();
     return { summary: b.id+' 更新（'+changed.join('・')+'）', ids: [item.id] };
   }
@@ -2093,8 +2098,35 @@ function kosoLinkLabels(l) {
   return a;
 }
 
+/* 既存の記録の重複を起動時に1回だけ整理（2026-10-26）。kind＋text が同じ要素の2つ目以降を除く（最初の1件と日付を残す）。
+   実行前に退避（同名キーがあれば作らない）。実行済みフラグで二度走らない */
+const LOGDEDUPE_BK = 'kouso_backup_logdedupe_20261026', LOGDEDUPE_FLAG = 'kouso_logdedupe_done';
+function kosoLogDedupeOnce() {
+  if (localStorage.getItem(LOGDEDUPE_FLAG)) return;
+  let n = 0;
+  const plan = items.map(i => {
+    if (!Array.isArray(i.log) || i.log.length < 2) return null;
+    const seen = new Set(), keep = [];
+    i.log.forEach(r => {
+      const key = String(r && r.kind || '').trim() + '\u0000' + String(r && r.text || '').trim();
+      if (r && seen.has(key)) { n++; return; }
+      seen.add(key); keep.push(r);
+    });
+    return keep.length < i.log.length ? keep : null;
+  });
+  if (n > 0) {
+    try { if (localStorage.getItem(LOGDEDUPE_BK) === null) localStorage.setItem(LOGDEDUPE_BK, localStorage.getItem(STORAGE_KEY) || '[]'); }
+    catch (e) { console.warn('退避できないため記録の整理を見送り', e); return; }
+    items.forEach((i, idx) => { if (plan[idx]) i.log = plan[idx]; });
+    save();
+    setTimeout(() => showToast('記録の重複 ' + n + ' 件を整理しました'), 300);
+  }
+  try { localStorage.setItem(LOGDEDUPE_FLAG, new Date().toISOString().slice(0, 10)); } catch (e) {}
+}
+
 // ─── INIT ─────────────────────────────────────────────────
 load();
+kosoLogDedupeOnce();
 setView('home');
 inboxProcess('load');   /* 受信箱：自分宛て（targetOS:'koso'）の未処理を取り込む。無ければ何もしない */
 </script>
