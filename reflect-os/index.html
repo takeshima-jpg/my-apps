@@ -336,6 +336,11 @@ nav{display:flex;flex-direction:column;gap:0;}
 .tk-qcard.focus{border-left:3px solid var(--go)}
 .tk-qtitle{font-size:15px;color:var(--tx);cursor:pointer;line-height:1.5}
 .tk-meta{font-size:12px;color:var(--mu);margin-top:4px}
+/* REFLECT-UPDATE の記録（notes）：新しい順・最大3件を薄く */
+.tk-notes{margin-top:6px;font-size:12px;color:var(--di);line-height:1.6}
+.tk-notes div{overflow-wrap:anywhere}
+/* 「直前の更新を元に戻す」（取り込む画面。inbox=1 では出さない） */
+.rf-undo{display:inline-flex;align-items:center;min-height:44px;font-size:12px;color:var(--mu);text-decoration:underline;cursor:pointer;margin-top:6px}
 .tk-ecard{background:#f0f5f1;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:13px;line-height:1.5}
 .tk-st{display:inline-block;font-size:11px;border-radius:9px;padding:1px 8px;margin-right:6px;white-space:nowrap}
 .tk-warn{display:inline-block;font-size:11px;color:#b05050;background:#faf0f0;border-radius:9px;padding:1px 8px;margin-left:6px;white-space:nowrap}
@@ -1160,7 +1165,8 @@ function renderAiImport(){
     '<div class="ai-btn-row">' +
       '<button class="btn-p" onclick="registerAiInput()">登録する</button>' +
       '<span class="ai-status" id="ai-parse-status"></span>' +
-    '</div>';
+    '</div>' +
+    ((localStorage.getItem(RF_UPDATE_BK)!==null&&!RF_INBOX_MODE)?'<div><a class="rf-undo" onclick="rfUndoLastUpdate()">直前の更新を元に戻す</a></div>':'');
   return wrap;
 }
 
@@ -1285,6 +1291,208 @@ function parseAiReflect(text){
 async function reflectImportText(text, opts){
   opts=opts||{};
   text=String(text||'').trim();
+  const sp=rfSplitUpdate(text);
+  if(sp.update===null) return reflectImportLegacy(text, opts);   /* REFLECT-UPDATE が無ければ従来どおり */
+  const res={ok:false,kind:'',message:'',summary:'',parts:[],logIds:[],questionIds:[],experimentIds:[],lecticaLogIds:[]};
+  /* 従来ブロック（【振り返り】・---REFLECT-IMPORT--- 等）が混ざっていれば先に従来どおり処理（「直前の更新を元に戻す」は UPDATE だけを戻す） */
+  let lg=null;
+  if(/【|---REFLECT-IMPORT---/.test(sp.rest)) lg=await reflectImportLegacy(sp.rest, opts);
+  if(lg){ ['logIds','questionIds','experimentIds','lecticaLogIds'].forEach(k=>res[k].push(...(lg[k]||[]))); res.parts.push(...(lg.parts||[])); }
+  const up=await rfApplyUpdate(sp.update);
+  up.questionIds.forEach(id=>{ if(!res.questionIds.includes(id)) res.questionIds.push(id); });
+  up.experimentIds.forEach(id=>{ if(!res.experimentIds.includes(id)) res.experimentIds.push(id); });
+  if(up.changed) res.parts.push('探求ボードの更新'+up.changed+'件');
+  const lgSum=lg?(lg.ok?lg.summary:(lg.kind==='none'?'':lg.message)):'';
+  res.summary=[lgSum, up.summary].filter(Boolean).join('／');
+  res.message=res.summary;
+  if(up.limits.length){ res.kind='limit'; return res; }   /* summary に入れ替えが必要な理由も含まれる */   /* 入れ替えは本人が決める＝保留 */
+  if(lg&&!lg.ok&&lg.kind!=='none'){ res.kind='fail'; return res; }   /* 従来ブロックの失敗は保留（UPDATE は冪等なので再試行してよい） */
+  if(!up.readable&&!(lg&&lg.ok)){ res.kind='none'; res.message=['【REFLECT-UPDATE】の中に読めるブロックがありません'].concat(up.errors).join('\n'); return res; }
+  res.ok=true; res.kind=res.parts.length?'ok':'nochange';
+  if(!res.summary) res.summary='変更なし';
+  return res;
+}
+
+/* ══ REFLECT-UPDATE（探求ボードの「直し」を ID 付きで取り込む。KOSO-IMPORT と同じ方式）══
+   書式：先頭行【REFLECT-UPDATE】、ブロックは行頭「■ 」
+     ■ 問い {実ID}　　題名／ステータス（候補・重点・解消・破棄）／仮説／記録
+     ■ 実験 {実ID または R001}　題名／問い（実ID・（外す））／ステータス（候補・実験中・振り返り待ち・完了・変更・保留・やらない・原則化）／場面／観察／期限／結果／学び／記録
+     ■ 統合：問い {A}, {B} → 新規「題名」　　理由
+     ■ 統合：実験 {A}, {B} → 新規「題名」　　理由
+   値が空・（変更なし）＝触らない／（空にする）＝空文字（題名は不可）／記録：種類｜本文 ＝ notes[] に追記（直近3件に同じ本文があれば入れない）
+   新規作成はしない（新規は従来の REFLECT-IMPORT）。上限（重点3・実験中5）を超える昇格は入れ替えず、そのブロックだけ保留 */
+const RF_UPDATE_BK='reflect_backup_lastupdate';
+/* 本文から【REFLECT-UPDATE】の区間を切り出す。区間は次の【…】行か ---REFLECT-IMPORT--- か【/REFLECT-UPDATE】まで。残りは従来の取り込みへ */
+function rfSplitUpdate(text){
+  const lines=String(text||'').split(/\r?\n/);
+  if(!lines.some(l=>l.trim().startsWith('【REFLECT-UPDATE】'))) return {update:null, rest:text};
+  const up=[], rest=[]; let inUp=false;
+  lines.forEach(l=>{
+    const t=l.trim();
+    if(t.startsWith('【REFLECT-UPDATE】')){ inUp=true; return; }
+    if(inUp&&t.startsWith('【/REFLECT-UPDATE】')){ inUp=false; return; }
+    if(inUp&&(/^【[^】]+】/.test(t)||/^-{2,}\s*REFLECT-IMPORT/.test(t))) inUp=false;
+    (inUp?up:rest).push(l);
+  });
+  return {update:up.join('\n'), rest:rest.join('\n').trim()};
+}
+const RF_UQ_KEYS={'題名':'title','タイトル':'title','ステータス':'status','状態':'status','仮説':'hypothesis','記録':'note'};
+const RF_UE_KEYS={'題名':'title','タイトル':'title','問い':'questionId','ステータス':'status','状態':'status','場面':'scene','観察':'observation','期限':'deadline','結果':'result','学び':'learning','記録':'note'};
+/* 区間 → ブロック配列（解析のみ・データは触らない） */
+function rfParseUpdate(body){
+  const blocks=[]; let cur=null;
+  String(body||'').split(/\r?\n/).forEach(raw=>{
+    const l=raw.replace(/　/g,' ').trim();
+    if(/^■/.test(l)){ cur={head:l, fields:[]}; blocks.push(cur); return; }
+    if(!cur||!l) return;
+    const m=l.match(/^([^：:]+?)\s*[：:]\s*(.*)$/);
+    if(m) cur.fields.push({key:m[1].trim(), value:m[2].trim()});
+  });
+  blocks.forEach(b=>{
+    let m;
+    if((m=b.head.match(/^■\s*統合\s*[：:]\s*(問い|実験)\s+(.+?)\s*(?:→|->|⇒)\s*新規\s*[「『"“](.+?)[」』"”]\s*$/))){
+      b.op='merge'; b.kind=m[1]==='問い'?'q':'e'; b.ids=m[2].split(/[,、，\s]+/).map(s=>s.trim()).filter(Boolean); b.title=m[3].trim();
+    }else if((m=b.head.match(/^■\s*(問い|実験)\s+(\S+)\s*$/))){
+      b.op='update'; b.kind=m[1]==='問い'?'q':'e'; b.id=m[2];
+    }else b.op='unknown';
+  });
+  return blocks;
+}
+const rfNoChg=v=>v===''||/^[（(]変更なし[)）]$/.test(v);
+const rfClear=v=>/^[（(]空にする[)）]$/.test(v);
+/* 日本語の表示名（TK_QST／TK_EST）または英字キー → キー。統合済み（merged）は直接は付けない */
+function rfStatusKey(v, dict){
+  const s=String(v||'').trim();
+  if(dict[s]&&s!=='merged') return s;
+  const k=Object.keys(dict).find(k=>dict[k]===s);
+  return (k&&k!=='merged')?k:null;
+}
+function rfFindE(id){ const s=String(id||''); return S.experiments.find(x=>x&&(x.id===s||(x.rid&&x.rid.toUpperCase()===s.toUpperCase())))||null; }
+/* notes に追記（直近3件に同じ本文があれば入れない）。追記したら true */
+function rfPushNote(o, value, before){
+  const m=String(value||'').match(/^([^｜|]+?)\s*[｜|]\s*(.+)$/);
+  const kind=m?m[1].trim():'記録', text=(m?m[2]:value).trim();
+  if(!text) return false;
+  if(!Array.isArray(o.notes)) o.notes=[];
+  if(o.notes.slice(-3).some(n=>n&&n.text===text)) return false;
+  if(before) before();   /* 実際に追記する直前（退避） */
+  o.notes.push({date:tod(), kind, text, src:'取り込み'});
+  return true;
+}
+/* 区間を適用。返り値 {summary, changed, readable, errors[], limits[], questionIds[], experimentIds[]} */
+async function rfApplyUpdate(body){
+  const out={summary:'', changed:0, readable:0, errors:[], limits:[], questionIds:[], experimentIds:[]};
+  const sums=[];
+  const pre=localStorage.getItem('reflectOS_v1'); let bk=false;
+  const backup=()=>{ if(bk) return; bk=true; try{ if(pre!==null) localStorage.setItem(RF_UPDATE_BK, pre); }catch(e){} };   /* 1件でも適用する直前に1回だけ */
+  const bad=(b,why)=>{ const s='読めませんでした：'+b.head+(why?'（'+why+'）':''); out.errors.push(s); sums.push(s); };
+  for(const b of rfParseUpdate(body)){
+    try{
+      if(b.op==='update'&&b.kind==='q'){
+        const q=S.questions.find(x=>x&&x.id===b.id);
+        if(!q||q.status==='merged'){ bad(b,'問いの実IDが見つかりません'); continue; }
+        const p={}; const notes=[]; let err='';
+        b.fields.forEach(({key,value})=>{
+          const k=RF_UQ_KEYS[key]; if(!k||err) return;
+          if(k==='note'){ if(!rfNoChg(value)) notes.push(value); return; }
+          if(rfNoChg(value)) return;
+          if(k==='title'){ if(!rfClear(value)) p.title=value; return; }
+          if(k==='status'){ const st=rfStatusKey(value,TK_QST); if(!st||!['candidate','focus','resolved','discarded'].includes(st)) err='ステータス名が読めません：'+value; else p.status=st; return; }
+          p[k]=rfClear(value)?'':value;
+        });
+        if(err){ bad(b,err); continue; }
+        out.readable++;
+        if(p.status==='focus'&&q.status!=='focus'&&tkFocusQs().length>=TK_MAX_FOCUS_Q){
+          const s='重点の問いが'+TK_MAX_FOCUS_Q+'件のため入れ替えが必要です（どれを候補へ戻すか本人が決める）：問い '+b.id; out.limits.push(s); sums.push(s); continue;
+        }
+        const ch=[];
+        if(p.title!==undefined&&p.title!==q.title){ backup(); q.title=p.title; ch.push('題名'); }
+        if(p.status!==undefined&&p.status!==q.status){ backup(); ch.push('ステータス（'+(TK_QST[q.status]||q.status)+'→'+TK_QST[p.status]+'）'); q.status=p.status; q.completedAt=(p.status==='resolved'||p.status==='discarded')?tod():null; }
+        if(p.hypothesis!==undefined&&p.hypothesis!==(q.hypothesis||'')){ backup(); q.hypothesis=p.hypothesis; ch.push('仮説'); }
+        let nN=0; notes.forEach(v=>{ if(rfPushNote(q,v,backup)) nN++; }); if(nN) ch.push('記録'+nN+'件');
+        if(ch.length){ await tkSave('questions',q); out.changed++; out.questionIds.push(q.id); }
+        sums.push('問い '+b.id+' '+(ch.length?ch.join('・'):'変更なし'));
+        continue;
+      }
+      if(b.op==='update'&&b.kind==='e'){
+        const x=rfFindE(b.id);
+        if(!x||x.status==='merged'){ bad(b,'実験の実IDが見つかりません'); continue; }
+        const p={}; const notes=[]; let err='';
+        b.fields.forEach(({key,value})=>{
+          const k=RF_UE_KEYS[key]; if(!k||err) return;
+          if(k==='note'){ if(!rfNoChg(value)) notes.push(value); return; }
+          if(rfNoChg(value)) return;
+          if(k==='title'){ if(!rfClear(value)) p.title=value; return; }
+          if(k==='questionId'){
+            if(/^[（(]外す[)）]$/.test(value)||rfClear(value)){ p.questionId=null; return; }
+            if(!S.questions.some(q=>q&&q.id===value&&q.status!=='merged')){ err='つなぎ先の問いの実IDが見つかりません：'+value; return; }
+            p.questionId=value; return;
+          }
+          if(k==='status'){ const st=rfStatusKey(value,TK_EST); if(!st) err='ステータス名が読めません：'+value; else p.status=st; return; }
+          if(k==='deadline'){ if(rfClear(value)){ p.deadline=''; return; } if(!/^\d{4}-\d{2}-\d{2}$/.test(value)){ err='期限は YYYY-MM-DD で：'+value; return; } p.deadline=value; return; }
+          p[k]=rfClear(value)?'':value;
+        });
+        if(err){ bad(b,err); continue; }
+        out.readable++;
+        if(p.status==='active'&&x.status!=='active'&&!tkIsReview(x)&&tkActiveEs().length>=TK_MAX_ACTIVE_E){
+          const s='実験中が'+TK_MAX_ACTIVE_E+'件のため入れ替えが必要です（どれを候補へ戻すか本人が決める）：実験 '+b.id; out.limits.push(s); sums.push(s); continue;
+        }
+        const ch=[];
+        if(p.questionId!==undefined&&(p.questionId||null)!==(x.questionId||null)){ backup(); ch.push(p.questionId?'問い付け替え':'問い外し'); x.questionId=p.questionId; }
+        if(p.title!==undefined&&p.title!==x.title){ backup(); x.title=p.title; ch.push('題名'); }
+        if(p.status!==undefined&&p.status!==x.status){ backup(); ch.push('ステータス（'+(TK_EST[x.status]||x.status)+'→'+TK_EST[p.status]+'）'); x.status=p.status; x.completedAt=(['complete','discarded','changed','paused'].includes(p.status))?tod():null; }
+        [['scene','場面'],['observation','観察'],['deadline','期限'],['result','結果'],['learning','学び']].forEach(([k,lb])=>{
+          if(p[k]!==undefined&&p[k]!==(x[k]||'')){ backup(); x[k]=p[k]; ch.push(lb); }
+        });
+        let nN=0; notes.forEach(v=>{ if(rfPushNote(x,v,backup)) nN++; }); if(nN) ch.push('記録'+nN+'件');
+        if(ch.length){ await tkSave('experiments',x); out.changed++; out.experimentIds.push(x.id); }
+        sums.push('実験 '+b.id+' '+(ch.length?ch.join('・'):'変更なし'));
+        continue;
+      }
+      if(b.op==='merge'){
+        const reason=(b.fields.find(f=>f.key==='理由')||{}).value||'';
+        const isQ=b.kind==='q';
+        const src=b.ids.map(id=>isQ?S.questions.find(q=>q&&q.id===id):rfFindE(id));
+        if(b.ids.length<2||src.some(o=>!o)){ bad(b,'統合元の実IDが見つかりません'); continue; }
+        /* 冪等：すでに同じ題名の統合先へ統合済みなら何もしない */
+        const into=src[0].mergedIntoId?(isQ?S.questions:S.experiments).find(o=>o&&o.id===src[0].mergedIntoId):null;
+        if(src.every(o=>o.status==='merged'&&o.mergedIntoId&&o.mergedIntoId===src[0].mergedIntoId)&&into&&into.title===b.title){
+          out.readable++; sums.push('統合 '+(isQ?'問い':'実験')+src.length+'→『'+b.title+'』変更なし'); continue;
+        }
+        if(src.some(o=>o.status==='merged')){ bad(b,'すでに別の統合先へ統合済みです'); continue; }
+        out.readable++;
+        backup();
+        const n=isQ?await tkMergeQuestions(src,{title:b.title}):await tkMergeExperiments(src,{title:b.title});
+        if(reason&&rfPushNote(n,'統合｜'+reason)) await tkSave(isQ?'questions':'experiments',n);
+        out.changed++; (isQ?out.questionIds:out.experimentIds).push(n.id);
+        sums.push('統合 '+(isQ?'問い':'実験')+src.length+'→新規『'+b.title+'』');
+        continue;
+      }
+      bad(b,'');
+    }catch(e){ bad(b,(e&&e.message)||String(e)); }
+  }
+  out.summary=sums.join('／');
+  return out;
+}
+/* 「直前の更新を元に戻す」：退避した reflectOS_v1 の生文字列へ戻し、画面の状態を読み直す（1世代） */
+async function rfUndoLastUpdate(){
+  const b=localStorage.getItem(RF_UPDATE_BK); if(b===null) return;
+  localStorage.setItem('reflectOS_v1', b);
+  localStorage.removeItem(RF_UPDATE_BK);
+  const priOrd={S:0,A:1,B:2,C:3};
+  S.themes=(await dball('themes')).sort((a,c)=>(priOrd[a.priority]||9)-(priOrd[c.priority]||9));
+  S.logs=(await dball('logs')).sort((a,c)=>c.date.localeCompare(a.date));
+  S.checks={}; (await dball('checks')).forEach(c=>{S.checks[c.id]=c.state||(c.done?'done':'todo');});
+  S.questions=await dball('questions'); S.experiments=await dball('experiments'); S.principles=await dball('principles');
+  tkMirrorFocus();
+  toast('直前の更新を元に戻しました');
+  ra(); updateNav();
+}
+
+/* 従来の取り込み（【振り返り】・【意思決定ログ】・---REFLECT-IMPORT---）。reflectImportText から呼ばれる */
+async function reflectImportLegacy(text, opts){
+  opts=opts||{};
+  text=String(text||'').trim();
   const res={ok:false,kind:'',message:'',summary:'',parts:[],logIds:[],questionIds:[],experimentIds:[],lecticaLogIds:[]};
   if(!text){ res.kind='empty'; res.message='入力が空です'; return res; }
   // 自動判別：---REFLECT-IMPORT--- → Lectica実績 ／ 【振り返り】等 → 汎用登録 ／ 両方 → 両方処理
@@ -1382,6 +1590,9 @@ async function registerAiInput(){
   if(r.kind==='parse'||r.kind==='none'){ statusEl.textContent=r.message; statusEl.className='ai-status err'; return; }
   /* 本文に「紐づけ：」行があれば、受信箱と同じように links を付ける（行は本文に残る） */
   if(r.parts.length){ try{ const lk=inboxParseLinks(text); if(Object.keys(lk).length) await inboxAttachLinks(r, lk); }catch(e){ console.warn('紐づけの保存に失敗',e); } }
+  /* REFLECT-UPDATE：上限で入れ替えが必要（他のブロックは適用済み）／同じ内容で変更なし */
+  if(r.kind==='limit'||r.kind==='fail'&&r.summary){ ra(); statusEl=document.getElementById('ai-parse-status'); if(statusEl){ statusEl.textContent=r.message; statusEl.className='ai-status err'; } return; }
+  if(r.kind==='nochange'){ statusEl=document.getElementById('ai-parse-status'); if(statusEl){ statusEl.textContent='変更はありませんでした（'+r.summary+'）'; statusEl.className='ai-status ok'; } return; }
 
   // 結果表示（lxImportSave成功時はra()でDOMが再構築されるため要素を取り直す）
   statusEl = document.getElementById('ai-parse-status');
@@ -1396,7 +1607,7 @@ async function registerAiInput(){
     }
     return;
   }
-  if(statusEl){ statusEl.textContent = r.parts.join('＋')+'を登録しました ✓'; statusEl.className='ai-status ok'; }
+  if(statusEl){ statusEl.textContent = r.parts.join('＋')+'を登録しました ✓'+(r.parts.some(p=>/^探求ボードの更新/.test(p))?'（'+r.summary+'）':''); statusEl.className='ai-status ok'; }
   if(input) input.value='';
   setTimeout(()=>{S.tab='home';ra();updateNav();},800);
 }
@@ -2001,6 +2212,14 @@ const tkActiveEs=()=>S.experiments.filter(x=>x.status==='active'&&!tkIsReview(x)
 const tkThemeNames=ids=>(ids||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
 const tkSrcLog=o=>{const r=S.logs.find(l=>(o.sourceLogIds||[]).includes(l.id));return r?(r.date+' / '+(r.title||'')):'';};
 
+/* 記録（notes・REFLECT-UPDATE で追記）：新しい順・最大3件を薄く。無ければ出さない */
+function tkNotesEl(o){
+  const ns=(o&&Array.isArray(o.notes))?o.notes.slice(-3).reverse():[];
+  if(!ns.length) return null;
+  const w=D({cls:'tk-notes'});
+  ns.forEach(n=>w.appendChild(D({},String(n.date||'').slice(5).replace('-','/')+' '+(n.kind?n.kind+'｜':'')+(n.text||''))));
+  return w;
+}
 async function tkSave(store,rec){rec.updatedAt=new Date().toISOString();await dbput(store,rec);const arr=store==='questions'?S.questions:store==='experiments'?S.experiments:S.principles;const i=arr.findIndex(x=>x.id===rec.id);if(i>=0)arr[i]=rec;else arr.push(rec);if(store==='questions'||store==='experiments')tkMirrorFocus();}
 
 /* ── 重点スナップショットをlocalStorageへミラー（Task OS HOME表示用の読み取り専用の写し）──
@@ -2240,13 +2459,33 @@ function tkMergeQModal(ids){
   tkFld(m.box,'統合後の扱い',tkRadioRow([['candidate','候補にする'],['focus','重点にする']],'candidate',v=>dst=v));
   m.btns('統合する',async()=>{
     const title=ti.value.trim();if(!title){alert('統合後の問いを入力してください');return;}
-    const nq={id:uid(),title,themeIds,status:'candidate',hypothesis:hy.value.trim(),sourceLogIds:[...new Set(qs.flatMap(q=>q.sourceLogIds||[]))],mergedIntoId:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
-    await tkSave('questions',nq);
-    for(const q of qs){q.status='merged';q.mergedIntoId=nq.id;q.completedAt=tod();await tkSave('questions',q);}
-    for(const x of S.experiments.filter(x=>ids.includes(x.questionId))){x.questionId=nq.id;await tkSave('experiments',x);}
+    const nq=await tkMergeQuestions(qs,{title,hypothesis:hy.value.trim()});
     m.close();tkOrgClear();
     if(dst==='focus')await tkSetQStatus(nq,'focus');else ra();   /* 重点は上限 TK_MAX_FOCUS_Q を通す */
   });
+}
+
+/* 問いの統合の保存部分（モーダルと REFLECT-UPDATE の両方から呼ぶ）。新しい問いは候補。元は merged＋mergedIntoId、
+   元に紐づく実験は新しい問いへ付け替え。o.hypothesis 省略時は元の仮説を連結 */
+async function tkMergeQuestions(qs,o){
+  o=o||{};
+  const ids=qs.map(q=>q.id);
+  const themeIds=[...new Set(qs.flatMap(q=>q.themeIds||[]))];
+  const hypothesis=o.hypothesis!==undefined?o.hypothesis:qs.map(q=>q.hypothesis).filter(Boolean).join('\n');
+  const nq={id:uid(),title:o.title,themeIds,status:'candidate',hypothesis,sourceLogIds:[...new Set(qs.flatMap(q=>q.sourceLogIds||[]))],mergedIntoId:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
+  await tkSave('questions',nq);
+  for(const q of qs){q.status='merged';q.mergedIntoId=nq.id;q.completedAt=tod();await tkSave('questions',q);}
+  for(const x of S.experiments.filter(x=>ids.includes(x.questionId))){x.questionId=nq.id;await tkSave('experiments',x);}
+  return nq;
+}
+/* 実験の統合の保存部分（モーダルと REFLECT-UPDATE の両方から呼ぶ）。questionId は先頭から順に最初に持っているもの（先頭が持っていれば先頭） */
+async function tkMergeExperiments(es,o){
+  o=o||{};
+  const qid=(es.find(x=>x.questionId)||{}).questionId||null;
+  const nx={id:uid(),questionId:qid,title:o.title,themeIds:[...new Set(es.flatMap(x=>x.themeIds||[]))],status:'candidate',scene:es[0].scene||'',observation:es[0].observation||'',deadline:es[0].deadline||'',note:'',result:'',learning:'',sourceLogIds:[...new Set(es.flatMap(x=>x.sourceLogIds||[]))],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
+  await tkSave('experiments',nx);
+  for(const x of es){x.status='merged';x.mergedIntoId=nx.id;x.completedAt=tod();await tkSave('experiments',x);}
+  return nx;
 }
 
 /* 実験の統合（問いの統合と同型。元は merged で履歴保持） */
@@ -2259,10 +2498,7 @@ function tkMergeEModal(ids){
   const ti=tkFld(m.box,'統合後の実験',tkTa('',50),true);ti.value=es[0].title;
   m.btns('統合する',async()=>{
     const title=ti.value.trim();if(!title){alert('統合後の実験内容を入力してください');return;}
-    const qid=(es.find(x=>x.questionId)||{}).questionId||null;
-    const nx={id:uid(),questionId:qid,title,themeIds:[...new Set(es.flatMap(x=>x.themeIds||[]))],status:'candidate',scene:es[0].scene||'',observation:es[0].observation||'',deadline:es[0].deadline||'',note:'',result:'',learning:'',sourceLogIds:[...new Set(es.flatMap(x=>x.sourceLogIds||[]))],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
-    await tkSave('experiments',nx);
-    for(const x of es){x.status='merged';x.mergedIntoId=nx.id;x.completedAt=tod();await tkSave('experiments',x);}
+    await tkMergeExperiments(es,{title});
     m.close();tkOrgClear();ra();
   });
 }
@@ -2474,6 +2710,7 @@ function tkQCard(q,expandedDefault){
     });
     const learn=exps.map(x=>x.learning).filter(Boolean);
     if(learn.length)card.appendChild(D({css:'font-size:13px;color:var(--go);margin-top:6px'},'直近の学び：'+learn[learn.length-1]));
+    { const nt=tkNotesEl(q); if(nt) card.appendChild(nt); }
     const src=tkSrcLog(q);
     card.appendChild(D({cls:'tk-meta',css:'margin-top:6px'},(src?'元ログ：'+src+' ／ ':'')+'更新：'+String(q.updatedAt||'').slice(0,10)));
     if(q.status==='focus')card.appendChild(tkOps(['＋実験を追加',()=>tkExpForm(q)],['編集',()=>tkQEditModal(q)],['候補へ戻す',()=>tkSetQStatus(q,'candidate')],['解消した',()=>tkSetQStatus(q,'resolved')],['破棄',()=>tkSetQStatus(q,'discarded'),true]));
@@ -2506,6 +2743,7 @@ function tkECard(x){
       card.appendChild(D({cls:'tk-meta'},'実践'+ps.total+'回'+(ps.related?'（'+ps.count+'＋関連'+ps.related+'）':'')+(md?'・最終 '+md:'')));}
   }else if(x.practiceCount)card.appendChild(D({cls:'tk-meta'},'実践'+x.practiceCount+'回'+(x.lastPracticedAt?('・最終 '+x.lastPracticedAt):'')));
   if(x.learning)card.appendChild(D({css:'font-size:13px;color:var(--go);margin-top:4px'},'学び：'+x.learning));
+  { const nt=tkNotesEl(x); if(nt) card.appendChild(nt); }
   if(x.status==='candidate')card.appendChild(tkOps(['実験中にする',()=>tkSetEStatus(x,'active')],['問いへ紐づける',()=>tkLinkModal([x.id])],['編集',()=>tkExpForm(null,x)],['完了',()=>tkSetEStatus(x,'complete')],['やらない',()=>tkSetEStatus(x,'discarded'),true]));
   else if(x.status==='active')card.appendChild(tkOps(['振り返る',()=>tkReviewModal(x)],['問いへ紐づける',()=>tkLinkModal([x.id])],['編集',()=>tkExpForm(null,x)],['候補へ戻す',()=>tkSetEStatus(x,'candidate')],['やらない',()=>tkSetEStatus(x,'discarded'),true]));
   else card.appendChild(tkOps(['候補へ戻す',()=>tkSetEStatus(x,'candidate')]));
