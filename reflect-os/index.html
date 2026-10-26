@@ -353,18 +353,19 @@ nav{display:flex;flex-direction:column;gap:0;}
   </div>
   <div class="sb-nav">
     <nav id="nav">
+      <!-- いちばん使う「取り込む」を一番上に（2026-10-26）。見た目・操作は他の項目と同じ -->
+      <button class="nb" data-tab="ai-import"><span class="nav-icon">⬇</span> 取り込む</button>
       <button class="nb on" data-tab="home"><span class="nav-icon">◉</span> ホーム</button>
       <!-- テーマ未紐づけはログ内のフィルタチップへ降格（バッジのみログ項目の右に残す） -->
       <button class="nb" data-tab="log"><span class="nav-icon">≡</span> ログ <span id="unthemed-badge" class="sb-badge" style="background:#fdf8e8;color:#b09040;border:1px solid #e8d880;" title="テーマ未紐づけ"></span></button>
 
       <!-- Phase 3: 旧「問い」「実験」タブは探求ボードへ統合しナビから撤去（renderQuestions等のコードはレガシー残置） -->
       <button class="nb" data-tab="tankyu"><span class="nav-icon">◇</span> 探求ボード</button>
-      <button class="nb" data-tab="decision"><span class="nav-icon">🔍</span> 意思決定検証 <span id="d-badge" class="sb-badge"></span></button>
+      <!-- 意思決定検証はメニューから撤去（2026-10-26：予測と答え合わせはVISION見直し担当の予測帳へ。renderDecision 等はレガシー残置） -->
       <button class="nb" data-tab="lectica"><span class="nav-icon">✦</span> Lectica</button>
       <!-- 検索はアーカイブ画面の最上部に統合（renderSearchはレガシー残置） -->
       <button class="nb" data-tab="archive"><span class="nav-icon">□</span> アーカイブ</button>
       <button class="nb" data-tab="vision-edit"><span class="nav-icon">◎</span> VISION設定</button>
-      <button class="nb" data-tab="ai-import"><span class="nav-icon">⬇</span> 取り込む</button>
     </nav>
   </div>
 
@@ -866,14 +867,7 @@ function renderHome(){
       w.appendChild(D({cls:'sec-lbl',css:'margin-top:10px'},'⚠ 問い未設定の実験'));
       rest.forEach(x=>w.appendChild(tkECardRO(x)));
     }
-    /* 検証日が近い決定検証は、ホームからも入口だけ示す（一覧は専用メニュー） */
-    const soonRv=tkReviewEs().filter(x=>x.status==='active'&&tkDueSoon(x)).sort((a,b)=>(a.deadline||'').localeCompare(b.deadline||''));
-    if(soonRv.length){
-      const lnk=D({css:'font-size:13px;color:var(--mu);margin-top:12px;cursor:pointer'},
-        '🔍 検証日が近い意思決定 '+soonRv.length+'件（'+soonRv.map(x=>x.title).join('・').slice(0,40)+'） → 意思決定検証を開く');
-      lnk.addEventListener('click',()=>{S.tab='decision';ra();updateNav();});
-      w.appendChild(lnk);
-    }
+    /* 意思決定検証への入口は撤去（2026-10-26：予測と答え合わせはVISION見直し担当の予測帳へ移った） */
     w.appendChild(D({css:'margin-bottom:26px'}));
     focusSlot.appendChild(w);   // A-4：VISIONより上のスロットへ
   })();
@@ -2752,7 +2746,7 @@ function renderExperiments(){
   if(S.tab==='home')wrap.appendChild(renderHome());
   else if(S.tab==='log')wrap.appendChild(renderLog());
   else if(S.tab==='tankyu')wrap.appendChild(renderTankyu());
-  else if(S.tab==='decision')wrap.appendChild(renderDecision());
+  else if(S.tab==='decision')wrap.appendChild(D({cls:'empty'},'この機能はVISION見直し担当の予測帳に移りました'));   /* 2026-10-26 廃止。renderDecision はレガシー残置 */
 
   else if(S.tab==='search')wrap.appendChild(renderSearch());
   else if(S.tab==='questions')wrap.appendChild(renderQuestions());
