@@ -2318,7 +2318,7 @@ window.addEventListener('message', ev=>{ if(ev.origin!==location.origin) return;
      カテゴリ：〇〇（任意・無ければ「今日のタスク」）
      メモ：〇〇（任意）
      ---END---
-   100LIST（【やりたいこと】）の受け口は後続の依頼書で。それまでは保留＝本文コピーで100リストへ手で貼る */
+   100LIST（【やりたいこと】／---LIST100-IMPORT---）は taskos 宛てで来ても、ハブが list100 宛てに振り替えて 100リストへ渡す */
 function inboxParseShotBlock(block){
   const m=String(block||'').match(/---SHOT-IMPORT---([\s\S]*?)(?:---END---|$)/);
   if(!m) return null;
@@ -2340,8 +2340,6 @@ function inboxNormDate(s){
   return m?(m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0')):null;
 }
 async function inboxApply(block, links, item){
-  if(!/---SHOT-IMPORT---/.test(block)&&/【やりたいこと】/.test(block))
-    return {ok:false, summary:'100リストの受け口はまだありません（本文をコピーして100リストの取り込みに貼ってください）'};
   const tasks=inboxParseShotBlock(block);
   if(!tasks) return {ok:false, summary:'---SHOT-IMPORT--- のブロックが見つかりません'};
   if(!tasks.length) return {ok:false, summary:'「タスク：」の行がありません'};
@@ -2375,7 +2373,17 @@ const INBOX_TARGETS={
   oneday:  { label:'1day',        nav:'1day',     path:'../1day/index.html' },
   su:      { label:'SU',          nav:'social',   path:'../social-universe/index.html' },
   learning:{ label:'学びレーダー', nav:'learning', path:'../learning-radar/index.html' },
+  list100: { label:'100リスト',   nav:'100list',  path:'../100list/index.html' },
 };
+/* taskos 宛てでも中身が 100リストの書式なら list100 宛てに振り替える（担当が taskos 宛てで出しても届くように）。保存して以後もそのまま */
+function inboxReroute(){
+  const box=inboxRead(); let ch=false;
+  (box.items||[]).forEach(it=>{
+    const b=String(it&&it.block||'');
+    if(it&&it.targetOS==='taskos'&&!/---SHOT-IMPORT---/.test(b)&&/【やりたいこと】|---LIST100-IMPORT---/.test(b)){ it.targetOS='list100'; ch=true; }
+  });
+  if(ch) localStorage.setItem(INBOX_KEY, JSON.stringify(box));
+}
 const INBOX_WAIT_MS=15000, INBOX_COPY_AFTER=3;
 let _inboxHubBusy=false;
 const _inboxWaiters={};
@@ -2439,6 +2447,7 @@ async function inboxDispatch(os, items){
 }
 async function inboxHubRun(trigger){
   if(_inboxHubBusy) return;
+  inboxReroute();
   const done=inboxDoneSet();
   const pend=(inboxRead().items||[]).filter(it=>it&&it.id&&!done.has(it.id));
   if(!pend.length) return;                                      /* 宛先が1件も無い日は何もしない */
