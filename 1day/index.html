@@ -248,6 +248,15 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .flag-btn { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text2); font-size: 0.905rem; padding: 6px 12px; cursor: pointer; transition: all var(--transition); font-family: var(--font-body); }
 .flag-btn:hover { border-color: var(--border2); }
 .flag-btn.selected { background: var(--bg4); border-color: var(--border2); color: var(--text); }
+/* できごと欄の【感情記録】入力補助：欄に密着させて付属物に見せる。足すのは3ボタン＋候補チップ最大3つだけ */
+.kj-bar { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 6px; }
+.kj-btn { min-height: 44px; padding: 0 12px; font-size: 0.84rem; color: var(--text2); background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); cursor: pointer; font-family: var(--font-body); white-space: nowrap; }
+.kj-btn:hover { border-color: var(--border2); }
+.kj-chip { min-height: 44px; max-width: 9em; padding: 0 12px; font-size: 0.8rem; color: var(--text3); background: transparent;
+  border: 1px dashed var(--border2); border-radius: 999px; cursor: pointer; font-family: var(--font-body);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kj-chip:hover { color: var(--text2); }
 
 /* MODAL FOOTER */
 .modal-footer { display: flex; justify-content: flex-end; padding-top: 4px; border-top: 1px solid var(--border); }
@@ -439,6 +448,7 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
     <div class="field">
       <div class="field-label">できごと <span class="required">必須</span></div>
       <textarea id="eventsInput" placeholder="今週起きたこと、気になったこと、誰かとの会話…&#10;箇条書きでもOK" rows="4"></textarea>
+      <div id="kjMain"></div>
     </div>
     <div class="field">
       <div class="field-label">🏠 今日、ゆみさんの負荷を一つ引き取ったか</div>
@@ -1549,12 +1559,103 @@ function buildDateButtons(editDate = null) {
   });
 }
 
+/* ── できごと欄の【感情記録】入力補助 ──
+   書式：【感情記録】の下に「・感情 ／ 体：〜」。「体：なし」＝思い出せなかった（記録した）、「／ 体：」が無い行＝未入力。
+   データ項目は増やさず、できごと欄（events）の文章の書式で一対にする（Morning Brief・VISION見直しは原文を読む）。
+   手動フォーム（#eventsInput）とAIX承認フォーム（#aix-events-N）の両方で同じ関数を使う */
+const KJ_HEAD = '【感情記録】';
+const KJ_BODY_RE = /／\s*体：/;
+function kjCursor(ta) {                     /* カーソル位置。まだ触っていない欄は末尾 */
+  return ta.dataset.kjTouched === '1' ? ta.selectionStart : ta.value.length;
+}
+function kjLineRange(text, pos) {            /* pos を含む行の [開始, 終了) */
+  const s = text.lastIndexOf('\n', pos - 1) + 1;
+  let e = text.indexOf('\n', pos); if (e < 0) e = text.length;
+  return [s, e];
+}
+function kjSet(ta, text, caret) {
+  ta.value = text;
+  ta.dataset.kjTouched = '1';
+  ta.focus();
+  ta.setSelectionRange(caret, caret);
+  ta.dispatchEvent(new Event('input', { bubbles: true }));   /* AIX欄の高さ自動調整など、手で打ったときと同じ扱いに */
+}
+/* ＋感情：見出しが無ければ「【感情記録】\n・」、あれば「・」を、カーソルのある行の末尾に新しい行として足す（行の途中で文を割らない） */
+function kjInsertEmotion(ta) {
+  const v = ta.value;
+  const [s, e] = kjLineRange(v, kjCursor(ta));
+  const lead = (s === e) ? '' : '\n';      /* 空の行ならその行に書く */
+  const ins = lead + (v.indexOf(KJ_HEAD) < 0 ? KJ_HEAD + '\n・' : '・');
+  kjSet(ta, v.slice(0, e) + ins + v.slice(e), e + ins.length);
+}
+/* その行が【感情記録】の見出しの下（別の【…】見出しより前）にあるか */
+function kjInEmotionSection(lines, idx) {
+  for (let i = idx - 1; i >= 0; i--) {
+    const t = lines[i].trim();
+    if (t.charAt(0) === '【') return t.indexOf(KJ_HEAD) === 0;
+  }
+  return false;
+}
+/* 体／体：なし／候補：カーソルのある感情の行の末尾に「 ／ 体：{val}」。既に「／ 体：」がある行・見出しの外の行では何もしない */
+function kjAddBody(ta, val) {
+  const v = ta.value, pos = kjCursor(ta);
+  const [s, e] = kjLineRange(v, pos);
+  const line = v.slice(s, e);
+  const lines = v.slice(0, s).split('\n');               /* 末尾は現在の行の手前の空文字 */
+  const ok = line.trim() && line.trim().charAt(0) !== '【' && !KJ_BODY_RE.test(line) && kjInEmotionSection(lines, lines.length - 1);
+  if (!ok) { if (ta.dataset.kjTouched === '1') ta.focus(); return; }
+  const at = s + line.replace(/[ \u3000]+$/, '').length;    /* 行末の空白はまとめる */
+  const ins = ' ／ 体：' + val;
+  kjSet(ta, v.slice(0, at) + ins + v.slice(e), at + ins.length);
+}
+/* 候補：過去30日のできごとに出てきた「／ 体：〜」の言葉（「なし」を除く）を出現回数の多い順に最大3つ */
+function kjBodyCandidates() {
+  const d = new Date(); d.setDate(d.getDate() - 30);
+  const from = d.toLocaleDateString('sv');
+  const cnt = new Map();
+  (state.logs || []).forEach(l => {
+    if (!l || !l.date || l.date < from || typeof l.events !== 'string') return;
+    const re = /／\s*体：([^\n／]*)/g; let m;
+    while ((m = re.exec(l.events))) {
+      const w = m[1].trim();
+      if (w && w !== 'なし') cnt.set(w, (cnt.get(w) || 0) + 1);
+    }
+  });
+  return [...cnt.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => x[0]);
+}
+function kjBarHtml(taId) {
+  const t = escHtml(taId);
+  const chips = kjBodyCandidates().map(w =>
+    '<button type="button" class="kj-chip" data-kj="chip" data-ta="' + t + '" data-w="' + escHtml(w) + '" title="体：' + escHtml(w) + '">' + escHtml(w) + '</button>').join('');
+  return '<div class="kj-bar">' + chips
+    + '<button type="button" class="kj-btn" data-kj="emo" data-ta="' + t + '">＋感情</button>'
+    + '<button type="button" class="kj-btn" data-kj="body" data-ta="' + t + '">体</button>'
+    + '<button type="button" class="kj-btn" data-kj="none" data-ta="' + t + '">体：なし</button></div>';
+}
+/* 押してもできごと欄のカーソル（とスマホのキーボード）を失わないよう、補助ボタンではフォーカスを奪わない */
+document.addEventListener('mousedown', ev => { if (ev.target.closest && ev.target.closest('[data-kj]')) ev.preventDefault(); });
+document.addEventListener('focusin', ev => {
+  const t = ev.target;
+  if (t && t.tagName === 'TEXTAREA' && (t.id === 'eventsInput' || t.id.indexOf('aix-events-') === 0)) t.dataset.kjTouched = '1';
+});
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-kj]'); if (!b) return;
+  const ta = document.getElementById(b.dataset.ta); if (!ta) return;
+  const k = b.dataset.kj;
+  if (k === 'emo') kjInsertEmotion(ta);
+  else if (k === 'body') kjAddBody(ta, '');
+  else if (k === 'none') kjAddBody(ta, 'なし');
+  else if (k === 'chip') kjAddBody(ta, b.dataset.w || '');
+});
+
 function openEntryModal(editId = null) {
   state.editId = editId;
   selectedSat = ''; selectedTags = new Set(); selectedFlags = new Set();
   document.getElementById('yumiLoadNote').value = ''; ylApply('');
   document.getElementById('modalTitle').textContent = editId ? '記録を編集' : '今週を記録';
   document.getElementById('eventsInput').value = '';
+  document.getElementById('eventsInput').dataset.kjTouched = '';
+  document.getElementById('kjMain').innerHTML = kjBarHtml('eventsInput');
   document.getElementById('unease').value = '';
   document.querySelectorAll('.sat-btn').forEach(b => b.classList.remove('selected'));
   document.querySelectorAll('.tag-chip').forEach(b => b.classList.remove('selected'));
@@ -1953,6 +2054,7 @@ function renderAixDraftList() {
       <div style="margin-bottom:14px;">
         <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">できごと</div>
         <textarea id="aix-events-${i}" oninput="this.style.height='auto';this.style.height=Math.max(140,this.scrollHeight)+'px'" style="width:100%;min-height:140px;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || d.text || d.content || ''}</textarea>
+        ${kjBarHtml('aix-events-' + i)}
       </div>
       <div style="margin-bottom:14px;">
         <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">🏠 今日、ゆみさんの負荷を一つ引き取ったか</div>
