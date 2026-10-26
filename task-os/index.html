@@ -2371,8 +2371,8 @@ const INBOX_TARGETS={
   koso:    { label:'構想',         nav:'kosolog',  path:'../koso-log/index.html' },
   hitomemo:{ label:'ヒトメモ',     nav:'hitomemo', path:'../hitomemo/index.html' },
   oneday:  { label:'1day',        nav:'1day',     path:'../1day/index.html' },
-  su:      { label:'SU',          nav:'social',   path:'../social-universe/index.html' },
-  learning:{ label:'学びレーダー', nav:'learning', path:'../learning-radar/index.html' },
+  su:      { label:'SU',          nav:'social',   path:'../social-universe/index.html', noReceiver:true },   /* 受け口だけ（取り込み口なし＝常に保留） */
+  learning:{ label:'学びレーダー', nav:'learning', path:'../learning-radar/index.html', noReceiver:true },
   list100: { label:'100リスト',   nav:'100list',  path:'../100list/index.html' },
 };
 /* taskos 宛てでも中身が 100リストの書式なら list100 宛てに振り替える（担当が taskos 宛てで出しても届くように）。保存して以後もそのまま */
@@ -2490,7 +2490,7 @@ function homeInboxCard(){
     pend.forEach(it=>{
       html+=`<div class="ibx-pend"><span class="ibx-os">${esc(tgt(it.targetOS).label)}</span><span class="ibx-t">${esc(it.title||it.id)}</span>`
         +`<span class="ibx-s">（${esc(it._lastSummary||'取り込み待ち')}）</span>`
-        +((it._tries||0)>=INBOX_COPY_AFTER?`<button class="ibx-copy" onclick="inboxCopyBlock('${esc(it.id)}')">📋 本文をコピー</button>`:'')
+        +(((it._tries||0)>=INBOX_COPY_AFTER||((it._tries||0)>=1&&tgt(it.targetOS).noReceiver))?`<button class="ibx-copy" onclick="inboxCopyBlock('${esc(it.id)}')">📋 本文をコピー</button>`:'')
         +`</div>`;
     });
   }
