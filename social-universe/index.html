@@ -1910,10 +1910,98 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){ closeModal(); closeBackup(); closeDormant(); closeSnapshotHistory(); closeSnapPreview(); }
 });
 
+/* ══ 受信箱 共通部品 v1 ══
+   各OSはこのブロックをそのままコピーし、INBOX_OS と（ブロックの外に書く）inboxApply だけ差し替える。
+   ・Drive を読むのは Task OS だけ。各OSは localStorage の import_inbox_v1 から自分宛て（targetOS）を取り、
+     既存の貼り付けパーサで取り込む（書式は変えない）
+   ・inboxApply(block, links, item) は OS ごとに実装し { ok:true, summary } / { ok:false, summary } を返す。
+     ok:false は done にしない（保留に残り、次回また試す）
+   ・起動時は「自分のデータの読み込みが終わった後」に inboxProcess('load') を呼ぶ（Task OS を経由しなかった日の保険）
+   ・Task OS からの合図（postMessage 'myapps-inbox-process'）でも動き、結果を親へ 'myapps-inbox-result' で返す
+   ・同じ id は二度と処理しない（import_inbox_done_v1）。未知の行・未知のフィールドは無視 */
+const INBOX_OS = 'su';                       // このOSの targetOS 名（各OSで差し替える）
+const INBOX_KEY='import_inbox_v1', INBOX_DONE='import_inbox_done_v1', INBOX_LOG='import_inbox_log_v1';
+const INBOX_DONE_MAX=2000, INBOX_LOG_DAYS=60;
+function inboxYmd(d){ d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function inboxRead(){ try{ const o=JSON.parse(localStorage.getItem(INBOX_KEY)||'null'); return (o&&Array.isArray(o.items))?o:{items:[]}; }catch(e){ return {items:[]}; } }
+function inboxDoneList(){ try{ const a=JSON.parse(localStorage.getItem(INBOX_DONE)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function inboxDoneSet(){ return new Set(inboxDoneList().map(d=>d&&d.id)); }
+function inboxLogList(){ try{ const a=JSON.parse(localStorage.getItem(INBOX_LOG)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+/* 取り込み済みにする：done に追記（新しい順・最大2000）／pending から除く／log に追記（直近60日） */
+function inboxMarkDone(item, summary, links){
+  const now=new Date();
+  const done=inboxDoneList().filter(d=>d&&d.id!==item.id);
+  done.unshift({ id:item.id, os:INBOX_OS, doneAt:now.toISOString(), summary:summary||'' });
+  localStorage.setItem(INBOX_DONE, JSON.stringify(done.slice(0,INBOX_DONE_MAX)));
+  const box=inboxRead();
+  box.items=(box.items||[]).filter(it=>it&&it.id!==item.id);
+  box.updatedAt=now.toISOString();
+  localStorage.setItem(INBOX_KEY, JSON.stringify(box));
+  const from=new Date(now); from.setDate(from.getDate()-INBOX_LOG_DAYS); const fromYmd=inboxYmd(from);
+  const log=inboxLogList().filter(x=>x&&x.id!==item.id&&String(x.date||'')>=fromYmd);
+  log.unshift({ date:inboxYmd(now), os:INBOX_OS, title:item.title||'', summary:summary||'', links:links||item.links||{}, id:item.id });
+  localStorage.setItem(INBOX_LOG, JSON.stringify(log));
+}
+/* 「紐づけ：」行を読む。書式：紐づけ：S03 ③JSS承継税制／PJ：{id} {名前}／人：{id} {名前}, {id} {名前}／問い：{id}
+   ID は英数字（数字を1つ以上含む）。ID が無ければ名前だけ。空のものは入れない。行が無ければ {} */
+function inboxParseLinks(block){
+  const out={};
+  const line=String(block||'').split(/\r?\n/).map(s=>s.trim()).find(s=>/^紐づけ[：:]/.test(s));
+  if(!line) return out;
+  const isId=s=>/^[A-Za-z0-9_-]*\d[A-Za-z0-9_-]*$/.test(s);
+  const idName=s=>{ const t=String(s||'').trim(); if(!t) return null; const m=t.match(/^(\S+)\s+(.+)$/);
+    if(m&&isId(m[1])) return {id:m[1], name:m[2].trim()}; return isId(t)&&!/[^\x00-\x7F]/.test(t)&&/^[A-Za-z]/.test(t)&&t.length<=12?{id:t, name:''}:{id:'', name:t}; };
+  line.replace(/^紐づけ[：:]\s*/,'').split('／').map(s=>s.trim()).filter(Boolean).forEach(part=>{
+    let m;
+    if((m=part.match(/^PJ[：:]\s*(.*)$/i))){ const r=idName(m[1]); if(r){ if(r.id) out.projectId=r.id; if(r.name) out.projectName=r.name; } }
+    else if((m=part.match(/^人[：:]\s*(.*)$/))){
+      const ids=[], names=[];
+      m[1].split(/[,、，]/).forEach(p=>{ const r=idName(p); if(!r) return; if(r.id) ids.push(r.id); if(r.name) names.push(r.name); });
+      if(ids.length) out.personIds=ids; if(names.length) out.personNames=names;
+    }
+    else if((m=part.match(/^問い[：:]\s*(\S+)/))){ out.questionId=m[1]; }
+    else if((m=part.match(/^(S\d+)\b/))){ out.strategyGoalId=m[1]; }
+  });
+  return out;
+}
+/* 自分宛ての未処理を取り込む。重なって呼ばれても順番に1回ずつ（同じ item を二重に取り込まない） */
+let _inboxChain=Promise.resolve();
+function inboxProcess(trigger){
+  const run=async()=>{
+    const box=inboxRead(); const done=inboxDoneSet();
+    const mine=(box.items||[]).filter(it=>it&&it.id&&it.targetOS===INBOX_OS&&!done.has(it.id));
+    const results=[];
+    for(const it of mine){
+      try{
+        if(inboxDoneSet().has(it.id)) continue;
+        const links=Object.assign({}, inboxParseLinks(it.block||''), it.links||{});   /* item.links 優先 */
+        const r=await inboxApply(it.block||'', links, it);
+        if(r&&r.ok){ inboxMarkDone(it, r.summary, links); results.push({id:it.id, ok:true, summary:r.summary||''}); }
+        else results.push({id:it.id, ok:false, summary:(r&&r.summary)||'取り込めませんでした'});
+      }catch(e){ results.push({id:it.id, ok:false, summary:'エラー: '+((e&&e.message)||e)}); }
+    }
+    if(window.parent!==window){ try{ window.parent.postMessage({type:'myapps-inbox-result', os:INBOX_OS, trigger, results}, location.origin); }catch(e){} }
+    return results;
+  };
+  const p=_inboxChain.then(run, run);
+  _inboxChain=p.catch(()=>{});
+  return p;
+}
+window.addEventListener('message', ev=>{ if(ev.origin!==location.origin) return; if(ev.data&&ev.data.type==='myapps-inbox-process') inboxProcess('message'); });
+/* ══ 受信箱 共通部品 v1 ここまで ══ */
+
+/* ?inbox=1（Task OS の非表示 iframe）では確認・警告を出さない（confirm は「やめる」扱い） */
+if (new URLSearchParams(location.search).get('inbox') === '1') { window.alert = m => console.warn('[inbox]', m); window.confirm = () => false; }
+/* 受け口だけ（SU は四半期の紙運用のため、には取り込みブロックを新設しない）。保留に残し、Task OS HOME の本文コピーで手で反映する。links も保存しない */
+async function inboxApply(block, links, item) {
+  return { ok:false, summary:'このOSには取り込み口がありません。本文をコピーして手で反映してください' };
+}
+
 // ── INIT ──
 renderMap();
 updateSnapBadge();
 updateQrChip();
+inboxProcess('load');   /* 受信箱：自分宛て（targetOS:'su'）があっても保留のまま（取り込み口なし） */
 </script>
   <script>
     if ('serviceWorker' in navigator) {
