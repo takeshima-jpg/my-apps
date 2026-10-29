@@ -1319,8 +1319,10 @@ async function reflectImportText(text, opts){
      ■ 実験 {実ID または R001}　題名／問い（実ID・（外す））／ステータス（候補・実験中・振り返り待ち・完了・変更・保留・やらない・原則化）／場面／観察／期限／結果／学び／記録
      ■ 統合：問い {A}, {B} → 新規「題名」　　理由
      ■ 統合：実験 {A}, {B} → 新規「題名」　　理由
+     ■ 問い 新規　　題名（必須）／ステータス（候補・重点。省略＝候補）／仮説／記録
+     ■ 実験 新規　　題名（必須）／問い（既存の実ID）／ステータス（候補・実験中。省略＝候補）／場面／観察／期限／結果／学び／記録
    値が空・（変更なし）＝触らない／（空にする）＝空文字（題名は不可）／記録：種類｜本文 ＝ notes[] に追記（全件に同じ種類＋本文があれば入れない）
-   新規作成はしない（新規は従来の REFLECT-IMPORT）。上限（重点3・実験中5）を超える昇格は入れ替えず、そのブロックだけ保留 */
+   新規は「■ 問い 新規」「■ 実験 新規」（同じ題名が既にあれば作らず記録だけ足す）。上限（重点3・実験中5）を超える昇格・作成は入れ替えず、そのブロックだけ保留 */
 const RF_UPDATE_BK='reflect_backup_lastupdate';
 /* 本文から【REFLECT-UPDATE】の区間を切り出す。区間は次の【…】行か ---REFLECT-IMPORT--- か【/REFLECT-UPDATE】まで。残りは従来の取り込みへ */
 function rfSplitUpdate(text){
@@ -1352,6 +1354,8 @@ function rfParseUpdate(body){
     let m;
     if((m=b.head.match(/^■\s*統合\s*[：:]\s*(問い|実験)\s+(.+?)\s*(?:→|->|⇒)\s*新規\s*[「『"“](.+?)[」』"”]\s*$/))){
       b.op='merge'; b.kind=m[1]==='問い'?'q':'e'; b.ids=m[2].split(/[,、，\s]+/).map(s=>s.trim()).filter(Boolean); b.title=m[3].trim();
+    }else if((m=b.head.match(/^■\s*(問い|実験)\s*新規\s*$/))){
+      b.op='create'; b.kind=m[1]==='問い'?'q':'e';
     }else if((m=b.head.match(/^■\s*(問い|実験)\s+(\S+)\s*$/))){
       b.op='update'; b.kind=m[1]==='問い'?'q':'e'; b.id=m[2];
     }else b.op='unknown';
@@ -1449,6 +1453,7 @@ async function rfApplyUpdate(body){
         sums.push('実験 '+b.id+' '+(ch.length?ch.join('・'):'変更なし'));
         continue;
       }
+      if(b.op==='create'){ await rfApplyCreate(b,{out,sums,backup,bad}); continue; }
       if(b.op==='merge'){
         const reason=(b.fields.find(f=>f.key==='理由')||{}).value||'';
         const isQ=b.kind==='q';
@@ -1474,6 +1479,67 @@ async function rfApplyUpdate(body){
   out.summary=sums.join('／');
   return out;
 }
+/* 「■ 問い 新規」「■ 実験 新規」：画面の「問いを追加」・フリー追加と同じ形で作る。題名は必須、ステータス省略は候補。
+   同じ題名（空白を除いて一致・merged／決定検証は除く）が既にあれば作らず、記録を足し空の項目だけ埋める（二重作成しない）。
+   重点・実験中が上限なら作らずに保留（勝手に候補で作らない） */
+const rfTitleKey=s=>String(s||'').replace(/[\s　]+/g,'');
+const rfShort=s=>{ s=String(s||''); return s.length>20?s.slice(0,20)+'…':s; };
+async function rfApplyCreate(b,ctx){
+  const {out,sums,backup,bad}=ctx;
+  const isQ=b.kind==='q', KEYS=isQ?RF_UQ_KEYS:RF_UE_KEYS;
+  const p={}; const notes=[]; let err='';
+  b.fields.forEach(({key,value})=>{
+    const k=KEYS[key]; if(!k||err) return;
+    if(k==='note'){ if(!rfNoChg(value)) notes.push(value); return; }
+    if(rfNoChg(value)||rfClear(value)) return;
+    if(k==='status'){
+      const st=rfStatusKey(value,isQ?TK_QST:TK_EST);
+      if(!st||!(isQ?['candidate','focus']:['candidate','active']).includes(st)) err='新規で使えるステータスは'+(isQ?'候補・重点':'候補・実験中')+'です：'+value;
+      else p.status=st;
+      return;
+    }
+    if(k==='questionId'){
+      if(/^[（(]外す[)）]$/.test(value)){ p.questionId=null; return; }
+      if(!S.questions.some(q=>q&&q.id===value&&q.status!=='merged')){ err='つなぎ先の問いの実IDが見つかりません：'+value; return; }
+      p.questionId=value; return;
+    }
+    if(k==='deadline'){ if(!/^\d{4}-\d{2}-\d{2}$/.test(value)){ err='期限は YYYY-MM-DD で：'+value; return; } p.deadline=value; return; }
+    p[k]=value;
+  });
+  if(!err&&!p.title) err='題名がありません';
+  if(err){ bad(b,err); return; }
+  out.readable++;
+  const st=p.status||'candidate', label=isQ?'問い':'実験';
+  const key=rfTitleKey(p.title);
+  const dup=isQ?S.questions.find(q=>q&&q.status!=='merged'&&rfTitleKey(q.title)===key)
+               :S.experiments.find(x=>x&&x.status!=='merged'&&!tkIsReview(x)&&rfTitleKey(x.title)===key);
+  if(dup){
+    /* 作らない。取りこぼし防止に記録は足し、空の項目だけ埋める */
+    const ch=[];
+    const fill=isQ?[['hypothesis','仮説']]:[['scene','場面'],['observation','観察'],['deadline','期限'],['result','結果'],['learning','学び']];
+    fill.forEach(([k,lb])=>{ if(p[k]&&!dup[k]){ backup(); dup[k]=p[k]; ch.push(lb); } });
+    let nN=0; notes.forEach(v=>{ if(rfPushNote(dup,v,backup)) nN++; }); if(nN) ch.push('記録'+nN+'件');
+    if(ch.length){ await tkSave(isQ?'questions':'experiments',dup); out.changed++; (isQ?out.questionIds:out.experimentIds).push(dup.id); }
+    sums.push(label+' 新規『'+rfShort(p.title)+'』既にあります（'+dup.id+'）'+(ch.length?'・'+ch.join('・'):''));
+    return;
+  }
+  if(isQ&&st==='focus'&&tkFocusQs().length>=TK_MAX_FOCUS_Q){
+    const s='重点の問いが'+TK_MAX_FOCUS_Q+'件のため入れ替えが必要です（どれを候補へ戻すか本人が決める）：問い 新規『'+rfShort(p.title)+'』'; out.limits.push(s); sums.push(s); return;
+  }
+  if(!isQ&&st==='active'&&tkActiveEs().length>=TK_MAX_ACTIVE_E){
+    const s='実験中が'+TK_MAX_ACTIVE_E+'件のため入れ替えが必要です（どれを候補へ戻すか本人が決める）：実験 新規『'+rfShort(p.title)+'』'; out.limits.push(s); sums.push(s); return;
+  }
+  backup();
+  const now=new Date().toISOString();
+  const o=isQ
+    ?{id:uid(),title:p.title,themeIds:[],status:st,hypothesis:p.hypothesis||'',sourceLogIds:[],mergedIntoId:null,createdAt:now,updatedAt:now,completedAt:null,notes:[]}
+    :{id:uid(),questionId:p.questionId||null,title:p.title,themeIds:[],status:st,scene:p.scene||'',observation:p.observation||'',deadline:p.deadline||'',result:p.result||'',learning:p.learning||'',sourceLogIds:[],createdAt:now,updatedAt:now,completedAt:null,notes:[]};
+  notes.forEach(v=>rfPushNote(o,v));
+  await tkSave(isQ?'questions':'experiments',o);
+  out.changed++; (isQ?out.questionIds:out.experimentIds).push(o.id);
+  sums.push(label+' 新規『'+rfShort(p.title)+'』（'+(isQ?TK_QST:TK_EST)[st]+(!isQ&&o.questionId?'・問い '+o.questionId:'')+'）');
+}
+
 /* 「直前の更新を元に戻す」：退避した reflectOS_v1 の生文字列へ戻し、画面の状態を読み直す（1世代） */
 async function rfUndoLastUpdate(){
   const b=localStorage.getItem(RF_UPDATE_BK); if(b===null) return;
