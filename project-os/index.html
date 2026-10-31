@@ -940,13 +940,14 @@ textarea.fc.tall { min-height: 130px; }
       <div class="import-panel" style="margin-bottom:14px;">
         <div class="import-panel-h">🗣 PROJECT-IMPORT 貼り付け（壁打ちから取り込み）</div>
         <div class="import-panel-b">
-          <div class="si-format-hint">壁打ちAIの出力をそのまま貼り付け。ラベル行だけを読みます。<br><b>ムーブとして刻む</b>：決定: / 学び: / 分岐: / 次の一手: / 問い:　分岐は末尾に @YYYY-MM-DD で予定日を指定可。「問い:」「次の一手:」は核に同期します。<br><b>上書き（置換）する</b>：ゴール: / 注意論点: / 成功条件: / 悪い未来: / センターピン:　今と同じ値・空の行は何もしません。<br>どちらも旧値は消えず、ムーブ履歴に残ります。</div>
+          <div class="si-format-hint">壁打ちAIの出力をそのまま貼り付け。ラベル行だけを読みます。<br><b>ムーブとして刻む</b>：決定: / 学び: / 分岐: / 次の一手: / 問い:　分岐は末尾に @YYYY-MM-DD で予定日を指定可。「問い:」「次の一手:」は核に同期します。<br><b>上書き（置換）する</b>：ゴール: / 注意論点: / 成功条件: / 悪い未来: / センターピン: / 名称: / ステータス: / 期限: / フェーズ:　今と同じ値・空の行は何もしません。<br><b>複数件</b>：分岐: / 制約: は「YYYY-MM-DD タイトル／…。削除：YYYY-MM-DD タイトル／…」。<b>新しいPJ</b>：新規: する。<br>どちらも旧値は消えず、ムーブ履歴に残ります。読まなかった項目は結果に出ます。</div>
           <textarea class="import-textarea" id="pi-paste" style="min-height:150px;"
             placeholder="---PROJECT-IMPORT---&#10;PJ: 事業承継&#10;決定: 持株会社方式を軸に進める&#10;学び: 感情面の整理が先&#10;分岐: 銀行への説明会 @2026-08-01&#10;次の一手: 税理士に株価算定を依頼&#10;問い: 先代の納得と税務合理性をどう両立するか&#10;ゴール: （見直したときだけ）&#10;センターピン: （見直したときだけ）&#10;---END---"></textarea>
           <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;">
             <button class="btn btn-navy btn-sm" onclick="piParse()">⬇ 取り込む</button>
-            <div id="pi-status" style="font-size:.8rem;color:var(--gray4);flex:1;"></div>
+            <div id="pi-status" style="font-size:.8rem;color:var(--gray4);flex:1;overflow-wrap:anywhere;"></div>
           </div>
+          <div id="pi-undo"></div>
         </div>
       </div>
 
@@ -1735,27 +1736,42 @@ function sparkCopyAll(){copyText(sparkContextAll(),'全PJ横断コンテキス�
 
 /* ══ v2 Phase 2：PROJECT-IMPORT（壁打ちからの取り込み。表記ゆれ・空行に寛容） ══ */
 /* 解析だけ（画面に依存しない）。返り値 {pjName, items, error, noPj}。
-   「答え合わせ: する」は直前の「次の一手」に answerCheck、「予測: …」は直前の「決定」に prediction（直前が無ければ無視） */
+   「答え合わせ: する」は直前の「次の一手」に answerCheck、「予測: …」は直前の「決定」に prediction（直前が無ければ無視）。
+   items には配列のプロパティとして isNew（新規: する）・bad（読めなかった値）・unread（知らないラベル）を持たせる */
+const PI_LABEL_ALIAS={'名前':'名称','状態':'ステータス','締切':'期限','重点テーマ':'フェーズ'};
+const PI_STATUSES=['構想中','進行中','停滞','完了','保留'];
 function piParseText(raw){
   raw=String(raw||'');
   const m=raw.match(/-{2,}\s*PROJECT-IMPORT\s*-{2,}([\s\S]*?)(?:-{2,}\s*END\s*-{2,}|$)/i);
   const body=(m?m[1]:raw).trim();
   if(!body)return {pjName:null,items:[],error:'貼り付け内容が空です'};
-  let pjName=null;const items=[];
+  let pjName=null,isNew=false;const items=[];const bad=[];const unread=[];
   const coreLast={};   /* v2.3 核・見立ての上書きラベル：同じラベルが複数あれば最後を採用 */
+  const oneLast={};    /* 名称・ステータス・期限・フェーズも最後の1行 */
   body.split(/\n/).map(l=>l.trim()).filter(Boolean).forEach(l=>{
-    const mm=l.match(/^(PJ|プロジェクト|決定|学び|分岐|次の一手|問い|ゴール|注意論点|注意点|成功条件|悪い未来|センターピン|答え合わせ|予測)\s*[:：]\s*(.*)$/i);
-    if(!mm)return;   /* ラベル行以外は無視（寛容） */
+    const mm=l.match(/^(PJ|プロジェクト|決定|学び|分岐|次の一手|問い|ゴール|注意論点|注意点|成功条件|悪い未来|センターピン|答え合わせ|予測|名称|名前|ステータス|状態|期限|締切|フェーズ|重点テーマ|制約|新規|紐づけ)\s*[:：]\s*(.*)$/i);
+    if(!mm){
+      /* 「ラベル: 値」の形なのに知らないラベルは、黙って捨てず名前だけ報告する（URL は除く） */
+      const um=l.match(/^([^\s:：]{1,12})\s*[:：](?!\/\/)/);
+      if(um&&!unread.includes(um[1]))unread.push(um[1]);
+      return;
+    }
+    const label=PI_LABEL_ALIAS[mm[1]]||mm[1];
+    if(label==='紐づけ')return;   /* inboxParseLinks が読む */
     const isPj=/^pj$/i.test(mm[1])||mm[1]==='プロジェクト';
     const val=mm[2].trim();
     if(isPj){if(val)pjName=val;return;}
     if(!val)return;   /* 空値は無視（クリアには使わない＝誤消去防止） */
     const lastOf=k=>{for(let i=items.length-1;i>=0;i--){if(items[i].kind===k)return items[i];}return null;};
-    if(mm[1]==='答え合わせ'){ const t=lastOf('次の一手'); if(t&&/^(する|あり|true|yes|on|○)$/i.test(val))t.answerCheck=true; return; }
-    if(mm[1]==='予測'){ const t=lastOf('決定'); if(t)t.prediction=val; return; }
-    const cf=PI_CORE_FIELDS[mm[1]];
+    if(label==='答え合わせ'){ const t=lastOf('次の一手'); if(t&&/^(する|あり|true|yes|on|○)$/i.test(val))t.answerCheck=true; return; }
+    if(label==='予測'){ const t=lastOf('決定'); if(t)t.prediction=val; return; }
+    if(label==='新規'){ if(val==='する')isNew=true; else bad.push('新規（'+val+'）'); return; }
+    if(['名称','ステータス','期限','フェーズ'].includes(label)){ oneLast[label]=val; return; }
+    if(label==='制約'){ items.push({kind:'制約',text:val}); return; }
+    const cf=PI_CORE_FIELDS[label];
     if(cf){coreLast[cf[0]]={kind:'見立て',field:cf[0],label:cf[1],text:val};return;}
-    const it={kind:mm[1],text:val};
+    if(label==='分岐'&&!piIsLegacyFork(val)){ items.push({kind:'分岐複数',text:val}); return; }
+    const it={kind:label,text:val};
     if(it.kind==='分岐'){
       const dm=it.text.match(/@\s*(\d{4}-\d{2}-\d{2})\s*$/);
       if(dm){it.forkDate=dm[1];it.text=it.text.replace(/@\s*\d{4}-\d{2}-\d{2}\s*$/,'').trim();}
@@ -1763,16 +1779,144 @@ function piParseText(raw){
     items.push(it);
   });
   Object.values(coreLast).forEach(c=>items.push(c));
-  const noItems='取り込むラベル行（決定/学び/分岐/次の一手/問い/ゴール/注意論点/成功条件/悪い未来/センターピン）がありません';
+  if(oneLast['名称'])items.unshift({kind:'名称',text:oneLast['名称']});
+  if(oneLast['ステータス']){ if(PI_STATUSES.includes(oneLast['ステータス']))items.push({kind:'ステータス',text:oneLast['ステータス']}); else bad.push('ステータス（'+oneLast['ステータス']+'）'); }
+  if(oneLast['期限']){
+    const v=oneLast['期限'];
+    if(/^[（(]空にする[)）]$/.test(v))items.push({kind:'期限',text:''});
+    else if(/^\d{4}-\d{2}-\d{2}$/.test(v))items.push({kind:'期限',text:v});
+    else bad.push('期限（'+v+'）');
+  }
+  if(oneLast['フェーズ'])items.push({kind:'フェーズ',text:oneLast['フェーズ']});
+  items.isNew=isNew; items.bad=bad; items.unread=unread;
+  const noItems='取り込むラベル行（決定/学び/分岐/次の一手/問い/ゴール/注意論点/成功条件/悪い未来/センターピン/名称/ステータス/期限/フェーズ/制約）がありません'+(unread.length?'（読まなかった項目：'+unread.join(', ')+'）':'');
   if(!pjName)return {pjName:null,items,error:'「PJ: プロジェクト名」の行が見つかりません',noPj:true,noItems:!items.length?noItems:''};
-  if(!items.length)return {pjName,items,error:noItems};
+  if(!items.length&&!isNew)return {pjName,items,error:noItems};
   return {pjName,items,error:''};
 }
-/* PJ名の部分一致（piParse と受信箱で同じ） */
+/* 区切り文字で分ける。カッコ（）()「」『』【】の中の区切りでは分けない（例：実務責任者／クッション役） */
+function piSplitTop(s,seps){
+  const out=[];let cur='',d=0;
+  for(const c of String(s||'')){
+    if('（(「『【'.includes(c))d++;
+    else if('）)」』】'.includes(c))d=Math.max(0,d-1);
+    if(d===0&&seps.includes(c)){out.push(cur);cur='';continue;}
+    cur+=c;
+  }
+  out.push(cur);
+  return out.map(x=>x.replace(/[。．]+\s*$/,'').trim()).filter(Boolean);
+}
+const PI_DEL_RE=/削除\s*[：:]/;
+/* 従来の1件の分岐（「文 @日付」「文」）か。「／」・先頭の日付・削除：のどれかがあれば複数件の書き方 */
+function piIsLegacyFork(val){
+  if(PI_DEL_RE.test(val))return false;
+  const ps=piSplitTop(val,'／');
+  return ps.length<=1&&!/^\d{4}-\d{2}-\d{2}/.test(String(ps[0]||''));
+}
+const piNormT=s=>String(s||'').normalize('NFKC').replace(/\s+/g,'').toLowerCase();
+const piPartial=(a,b)=>{ const x=piNormT(a),y=piNormT(b); return !!(x&&y&&(x.includes(y)||y.includes(x))); };
+/* 既存の要素を探す。同じ日付が1件ならそれ／複数ならタイトルの部分一致／日付なしはタイトルの部分一致。
+   strict（削除）のときは複数に当たったら絞れないものとして multi を返す */
+function piMatchList(arr,date,title,strict){
+  let pool=arr;
+  if(date){
+    pool=arr.filter(x=>x&&x.date===date);
+    if(pool.length===1)return {hit:pool[0]};
+    if(!pool.length)return {};
+  }
+  const part=pool.filter(x=>x&&piPartial(x.title,title));
+  if(part.length===1)return {hit:part[0]};
+  if(!part.length)return {};
+  const exact=part.filter(x=>piNormT(x.title)===piNormT(title));
+  if(exact.length===1)return {hit:exact[0]};
+  return strict?{multi:true}:{hit:part[0]};
+}
+/* 分岐・制約の行を適用。削除を先に処理する（「2026-12-20 新しい文。削除：旧2026-12-20 古い文」で新しい方を消さないため）。
+   この行で足す／直す片と同じ日付・同じ題名の要素は削除の対象にしない（再適用で新しい方を消さない＝冪等） */
+function piApplyList(p,kind,text){
+  const isF=kind==='forks', lb=isF?'分岐':'制約';
+  if(!Array.isArray(p[kind]))p[kind]=[];
+  const arr=p[kind];
+  const i=String(text).search(PI_DEL_RE);
+  const front=i>=0?String(text).slice(0,i):String(text);
+  const back=i>=0?String(text).slice(i).replace(PI_DEL_RE,''):'';
+  const notes=[];
+  const adds=piSplitTop(front,'／').map(raw=>{
+    let s=raw,date='',status='';
+    const dm=s.match(/^(\d{4}-\d{2}-\d{2})\s*(.*)$/);
+    if(dm){date=dm[1];s=dm[2];}
+    else if(isF){ const am=s.match(/^(.*?)\s*@\s*(\d{4}-\d{2}-\d{2})$/); if(am){s=am[1];date=am[2];} }
+    if(!isF){ const sm=s.match(/[（(](未着手|着手|進行中|保留|完了)[)）]\s*$/); if(sm){ status=sm[1]==='着手'?'進行中':sm[1]; s=s.slice(0,sm.index).trim(); } }
+    return {raw,date,title:s.trim(),status};
+  });
+  const removed=[],edited=[];let add=0,edit=0;
+  piSplitTop(back,'／').forEach(raw=>{
+    const s=raw.replace(/^旧\s*/,'');
+    const dm=s.match(/^(\d{4}-\d{2}-\d{2})\s*(.*)$/);
+    const r=piMatchList(arr,dm?dm[1]:'',dm?dm[2]:s,true);
+    const keep=r.hit&&adds.some(a=>a.date===(r.hit.date||'')&&piNormT(a.title)===piNormT(r.hit.title));
+    if(!r.hit||keep){ notes.push('削除できませんでした：'+raw+'（'+(r.multi?'複数あります':'見つかりません')+'）'); return; }
+    arr.splice(arr.indexOf(r.hit),1); removed.push(r.hit);
+  });
+  adds.forEach(a=>{
+    if(!a.title){ notes.push(lb+'の読まなかった片：'+a.raw); return; }
+    if(isF&&!a.date){ notes.push('日付の無い分岐は足していません：'+a.title); return; }
+    const hit=piMatchList(arr,a.date,a.title,false).hit;
+    if(hit){
+      const tc=hit.title!==a.title, sc=!isF&&a.status&&hit.status!==a.status;
+      if(!tc&&!sc)return;
+      edited.push(JSON.parse(JSON.stringify(hit)));
+      hit.title=a.title;
+      if(isF)hit.status=hit.date>today()?'future':'past';
+      else{ if(a.status)hit.status=a.status; hit.updatedAt=new Date().toISOString(); }
+      edit++;return;
+    }
+    arr.push(isF
+      ?{id:uid(),date:a.date,status:a.date>today()?'future':'past',title:a.title,what:'',why:'',nextAction:'',stakeholders:''}
+      :{id:uid(),date:a.date,status:a.status||'未着手',phase:'',sentiment:'',_category:'constraints',title:a.title,content:'',goal:'',stakeholders:'',updatedAt:new Date().toISOString()});
+    add++;
+  });
+  let moveId=null;
+  const counts=lb+'：足す '+add+'・直す '+edit+'・削除 '+removed.length;
+  if(add||edit||removed.length){
+    const m=pushMove(p,'見立て更新',[counts].concat(removed.map(x=>lb+'削除：'+(x.date?x.date+' ':'')+x.title)).join('\n'));
+    if(removed.length)m.prev=removed;
+    if(edited.length)m.prevEdited=edited;
+    moveId=m.id;
+  }
+  return {moveId,changed:!!moveId,notes,counts};
+}
+/* フェーズを丸ごと置き換える。「／」または「。」で区切り、番号で始まる片だけ使う。末尾の（…）が goal。phase は全角数字で保存 */
+function piParsePhases(text){
+  const phases=[],skip=[];
+  const circled='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+  const zen=n=>String(n).replace(/[0-9]/g,c=>String.fromCharCode(c.charCodeAt(0)+0xFEE0));
+  piSplitTop(text,'／。').forEach(raw=>{
+    const m=raw.match(/^([0-9０-９]+|[①-⑳])(?:[\s　.．、:：]+|(?=[^\s0-9０-９]))(.+)$/);
+    const ok=m&&(/^[①-⑳]/.test(m[1])||/^[0-9０-９]+[\s　.．、:：]/.test(raw));
+    if(!ok){skip.push(raw);return;}
+    const no=/^[①-⑳]/.test(m[1])?circled.indexOf(m[1])+1:parseInt(m[1].normalize('NFKC'),10);
+    let theme=m[2].trim(),goal='';
+    if(/）$/.test(theme)){   /* 末尾の（…）。入れ子でも対応する開きカッコまで */
+      let d=0,at=-1;
+      for(let i=theme.length-1;i>=0;i--){ const c=theme[i]; if(c==='）')d++; else if(c==='（'){ d--; if(d===0){at=i;break;} } }
+      if(at>0){ goal=theme.slice(at+1,-1).trim(); theme=theme.slice(0,at).trim(); }
+    }
+    phases.push({phase:zen(no),theme,goal});
+  });
+  return {phases,skip};
+}
+/* PJ名の部分一致（piParse と受信箱で同じ）。旧名（formerNames）も見る＝改名前の名前で書かれた取り込みも届く */
 function piCands(pjName){
   const key=String(pjName||'').toLowerCase();
   if(!key)return [];
-  return S.projects.filter(p=>p.name&&(p.name.toLowerCase().includes(key)||key.includes(p.name.toLowerCase())));
+  const hit=n=>{ const x=String(n||'').toLowerCase(); return !!x&&(x.includes(key)||key.includes(x)); };
+  return S.projects.filter(p=>p.name&&(hit(p.name)||(p.formerNames||[]).some(hit)));
+}
+/* 「新規: する」のPJを作る（画面の新規プロジェクトと同じ形。保存は piApply がまとめて行う） */
+function piCreateProject(name,items){
+  const st=(items.find(it=>it.kind==='ステータス')||{}).text||'構想中';
+  return projCreate({name,status:st,priority:'中',sheetUrl:'',goal:'',attentionIssue:'',successConditions:'',badFuture:'',centerPin:'',phaseLabel:'phase',updatedAt:today()});
 }
 function piParse(){
   const raw=($$('pi-paste').value||'');
@@ -1781,8 +1925,14 @@ function piParse(){
   if(r.error){st.textContent=r.error;return;}
   const items=r.items, pjName=r.pjName;
   items.links=inboxParseLinks(raw);   /* 本文に「紐づけ：」行があればムーブに付ける（受信箱と同じ） */
+  const pre=localStorage.getItem(KEY);
   const cands=piCands(pjName);
-  if(!cands.length){st.textContent='該当するPJが見つかりません：'+pjName;return;}
+  if(!cands.length){
+    if(!items.isNew){st.textContent='該当するPJが見つかりません：'+pjName;return;}   /* 打ち間違いでPJが増えないように */
+    const np=piCreateProject(pjName,items);
+    piApply(np.id,items,{pre,created:true,note:'新規 '+np.id});
+    return;
+  }
   if(cands.length>1){
     /* 曖昧：選択UI（モーダルなし・その場でボタン提示） */
     window.__piPending=items;
@@ -1790,7 +1940,7 @@ function piParse(){
       `<button class="btn btn-outline btn-xs" style="margin-left:6px;" onclick="piApply('${p.id}',window.__piPending)">${esc(p.name)}</button>`).join('');
     return;
   }
-  piApply(cands[0].id,items);
+  piApply(cands[0].id,items,{pre,note:items.isNew?'新規：既にあります（'+cands[0].name+'）':''});
 }
 /* v2.3：PROJECT-IMPORTの核・見立てラベル → PJフィールド（データキーは既存のまま） */
 const PI_CORE_FIELDS={'ゴール':['goal','ゴール'],'注意論点':['attentionIssue','注意論点'],'注意点':['attentionIssue','注意論点'],
@@ -1798,7 +1948,10 @@ const PI_CORE_FIELDS={'ゴール':['goal','ゴール'],'注意論点':['attentio
 function piApply(pid,items,opts){
   opts=opts||{};
   const p=proj(pid);if(!p||!items)return null;
-  let n=0,coreN=0,same=0;const moveIds=[];
+  const pre=opts.pre!==undefined?opts.pre:localStorage.getItem(KEY);   /* 適用前の生文字列（直前の取り込みを元に戻す用） */
+  let n=0,coreN=0,same=0,dupN=0;const moveIds=[];const ex=[];
+  if(opts.note)ex.push(opts.note);
+  const coreMove=txt=>{ const m=pushMove(p,'見立て更新',txt); moveIds.push(m.id); coreN++;n++; return m; };
   items.forEach(it=>{
     if(it.kind==='見立て'){
       /* 上書き（置換）。旧値と同じなら何もしない。旧→新を「見立て更新」ムーブとして履歴に残す（削除しない原則） */
@@ -1808,6 +1961,51 @@ function piApply(pid,items,opts){
       moveIds.push(pushMove(p,'見立て更新',old?`${it.label}更新：「${old}」→「${it.text}」`:`${it.label}設定：「${it.text}」`).id);
       coreN++;n++;return;
     }
+    if(it.kind==='名称'){
+      const old=String(p.name||'');
+      if(old===it.text){same++;return;}
+      p.formerNames=(p.formerNames||[]).filter(x=>x!==old&&x!==it.text).concat(old?[old]:[]);
+      p.name=it.text;
+      coreMove('名称変更：『'+old+'』→『'+it.text+'』');
+      return;
+    }
+    if(it.kind==='ステータス'){
+      const old=String(p.status||'');
+      if(old===it.text){same++;return;}
+      p.status=it.text;
+      coreMove('ステータス：'+(old||'（なし）')+'→'+it.text);
+      ex.push('ステータス（'+(old||'なし')+'→'+it.text+'）');
+      return;
+    }
+    if(it.kind==='期限'){
+      const old=String(p.deadline||'');
+      if(old===it.text){same++;return;}
+      p.deadline=it.text;
+      coreMove('期限：'+(old||'（なし）')+'→'+(it.text||'（なし）'));
+      ex.push('期限（'+(old||'なし')+'→'+(it.text||'なし')+'）');
+      return;
+    }
+    if(it.kind==='フェーズ'){
+      const r=piParsePhases(it.text);
+      if(r.skip.length)ex.push('フェーズの読まなかった部分：'+r.skip.join('／'));
+      if(!r.phases.length)return;
+      const oldP=Array.isArray(p.phases)?p.phases:[];
+      const sig=a=>JSON.stringify(a.map(x=>[x.phase,x.theme,x.goal||'']));
+      if(sig(oldP)===sig(r.phases)){same++;return;}
+      p.phases=r.phases;
+      coreMove('フェーズ置き換え：旧 '+oldP.length+'件→新 '+r.phases.length+'件').prev=oldP;   /* 旧配列はムーブに残す（削除しない原則） */
+      ex.push('フェーズ '+r.phases.length+'件に置き換え');
+      return;
+    }
+    if(it.kind==='分岐複数'||it.kind==='制約'){
+      const r=piApplyList(p,it.kind==='制約'?'constraints':'forks',it.text);
+      if(r.changed){ moveIds.push(r.moveId); n++; ex.push(r.counts); }
+      else ex.push((it.kind==='制約'?'制約':'分岐')+'：変更なし');
+      ex.push(...r.notes);
+      return;
+    }
+    /* 取り込みの重複判定は全件：同じPJに kind＋本文が同じムーブが既にあれば足さない（核への同期もしない）。分岐（従来の1件）は今までどおり */
+    if(['決定','学び','次の一手','問い'].includes(it.kind)&&(p.moves||[]).some(m=>m&&m.kind===it.kind&&String(m.text||'').trim()===it.text.trim())){ dupN++; return; }
     const mv=pushMove(p,it.kind,it.text,it.forkDate);
     moveIds.push(mv.id);
     if(it.kind==='次の一手'&&it.answerCheck)mv.answerCheck=true;   /* IMPORT の「答え合わせ: する」 */
@@ -1820,15 +2018,40 @@ function piApply(pid,items,opts){
     }
     n++;
   });
+  if(dupN)ex.push('重複 '+dupN+'件（同じムーブがあるため足さず）');
+  (items.bad||[]).forEach(s=>ex.push('読めませんでした：'+s));
+  if((items.unread||[]).length)ex.push('読まなかった項目：'+items.unread.join(', '));
   inboxAttachLinks(p,moveIds,opts.links||items.links);
-  touchProj(pid);save();
-  window.__piPending=null;
-  if(!opts.silent){
-    const st=$$('pi-status');if(st)st.textContent='✓ '+p.name+' に '+n+'件取り込みました（問い・次の一手は核に同期'+(coreN?'／核・見立て'+coreN+'項目を置換し旧→新を履歴に記録':'')+(same?'／'+same+'項目は変更なしのためスキップ':'')+'）';
-    const ta=$$('pi-paste');if(ta)ta.value='';
-    toast(p.name+' に '+n+'件取り込みました');
+  if(n>0||opts.created){
+    /* 1件でも適用するときだけ直前に退避（1世代・毎回上書き）。同じ本文の再適用では戻し先を上書きしない */
+    try{ if(pre!==null)localStorage.setItem(PI_LAST_BK,pre); }catch(e){ console.warn('取り込み前の退避に失敗',e); }
+    touchProj(pid);save();
   }
-  return {n,coreN,same,moveIds};
+  window.__piPending=null;
+  const summary=p.name+' に '+n+'件'+(coreN?'（見立て'+coreN+'）':'')+(ex.length?'／'+ex.join('／'):'');
+  if(!opts.silent){
+    const st=$$('pi-status');if(st)st.textContent='✓ '+p.name+' に '+n+'件取り込みました（問い・次の一手は核に同期'+(coreN?'／核・見立て'+coreN+'項目を置換し旧→新を履歴に記録':'')+(same?'／'+same+'項目は変更なしのためスキップ':'')+'）'+(ex.length?' '+ex.join('／'):'');
+    const ta=$$('pi-paste');if(ta&&n>0)ta.value='';
+    toast(p.name+' に '+n+'件取り込みました');
+    piRenderUndo();
+  }
+  return {n,coreN,same,dup:dupN,moveIds,summary};
+}
+/* 直前の取り込みを元に戻す（KOSOLog・Reflect と同じ。?inbox=1 では出さない） */
+const PI_LAST_BK='pos_backup_lastimport';
+function piRenderUndo(){
+  const el=$$('pi-undo'); if(!el)return;
+  const show=localStorage.getItem(PI_LAST_BK)!==null&&new URLSearchParams(location.search).get('inbox')!=='1';
+  el.innerHTML=show?'<a onclick="piUndoLastImport()" style="display:inline-flex;align-items:center;min-height:44px;font-size:.75rem;color:var(--gray4);text-decoration:underline;cursor:pointer;">直前の取り込みを元に戻す</a>':'';
+}
+function piUndoLastImport(){
+  const b=localStorage.getItem(PI_LAST_BK); if(b===null)return;
+  try{ S=JSON.parse(b); }catch(e){ toast('戻せませんでした'); return; }
+  save();
+  localStorage.removeItem(PI_LAST_BK);
+  const st=$$('pi-status'); if(st)st.textContent='';
+  render(); piRenderUndo();
+  toast('直前の取り込みを元に戻しました');
 }
 
 /* ══ v2 Phase 3：共有用エクスポート（前田さんPJ等・読み取り専用の共有）══
@@ -2489,6 +2712,12 @@ function g(id){ return $$(id)?.value?.trim()||''; }
 /* ══════════════════════════════════
    PROJECT MODAL
 ══════════════════════════════════ */
+/* 新規プロジェクトの形（画面のモーダルと PROJECT-IMPORT の「新規: する」で共通）。S に足すだけで保存は呼び出し側 */
+function projCreate(data){
+  const tgt={id:uid(),...data,stakeholders:[],issues:[],forks:[],decisions:[],learnings:[],events:[],constraints:[]};
+  S.projects.push(tgt);
+  return tgt;
+}
 function openProjModal(pid){
   const p = pid?proj(pid):null;
   showModal(p?'プロジェクトを編集':'新規プロジェクト', `
@@ -2517,7 +2746,7 @@ function openProjModal(pid){
       updatedAt:today()};
     let tgt;
     if(p){ tgt=proj(pid); Object.assign(tgt,data); }
-    else { tgt={id:uid(),...data,stakeholders:[],issues:[],forks:[],decisions:[],learnings:[],events:[],constraints:[]}; S.projects.push(tgt); }
+    else tgt=projCreate(data);
     /* 任意の3項目：空なら項目ごと持たない（既存PJのデータ形を変えない） */
     const sg=g('fsg'), rqid=g('frq'), shIds=(window.__pjShIds||[]).slice();
     if(sg)tgt.strategyGoalId=sg; else delete tgt.strategyGoalId;
@@ -3344,6 +3573,7 @@ function copyUpdatePrompt() {
 }
 
 function renderImport() {
+  piRenderUndo();
   siRefreshProjSel();
   $$('si-status').textContent = '';
   $$('si-result').style.display = 'none';
@@ -3763,18 +3993,24 @@ async function inboxApply(block, links, item){
   try{ const raw=localStorage.getItem(KEY); if(raw) S=JSON.parse(raw); }catch(e){}
   const r=piParseText(block);
   if(r.error&&!(r.noPj&&links&&links.projectId&&!r.noItems)) return {ok:false, summary:r.error};
+  const pre=localStorage.getItem(KEY);
   let p=(links&&links.projectId)?proj(String(links.projectId)):null;
+  let created=false, note='';
   if(!p){
     if(!r.pjName) return {ok:false, summary:'該当するPJが見つかりません：'+(links&&links.projectId||'')};
     const cands=piCands(r.pjName);
     if(cands.length===1) p=cands[0];
-    else if(!cands.length) return {ok:false, summary:'該当するPJが見つかりません：'+r.pjName};
+    else if(!cands.length){
+      if(!r.items.isNew) return {ok:false, summary:'該当するPJが見つかりません：'+r.pjName};   /* 打ち間違いでPJが増えないように */
+      p=piCreateProject(r.pjName,r.items); created=true; note='新規 '+p.id;
+    }
     else return {ok:false, summary:'複数のPJに一致：'+cands.map(x=>x.name).join('／')+'（紐づけ行に PJ の実IDを書いてください）'};
   }
-  const res=piApply(p.id, r.items, {silent:true, links});
+  if(!created&&r.items.isNew) note='新規：既にあります（'+p.name+'）';
+  const res=piApply(p.id, r.items, {silent:true, links, pre, created, note});
   if(!res) return {ok:false, summary:'取り込めませんでした'};
   try{ render(); }catch(e){}
-  return {ok:true, summary:p.name+' に '+res.n+'件'+(res.coreN?'（見立て'+res.coreN+'）':'')};
+  return {ok:true, summary:res.summary};
 }
 
 /* 戦略目標の対応表（記録の地図 §D-1。地図が変わったら Claude Code がここを直す。Reflect OS と同じ内容） */
@@ -3813,10 +4049,28 @@ function inboxAttachLinks(p, moveIds, links){
   (p.moves||[]).forEach(m=>{ if((moveIds||[]).includes(m.id)) m.links=Object.assign({}, out); });
 }
 
+/* 10/28 の取り込みで「／」区切りの8件が1件の分岐として入ったものを起動時に1回だけ取り除く。同じ文のムーブ（kind「分岐」）は履歴なので残す。
+   実行前に退避（同名キーがあれば作らない）。実行済みフラグで二度走らない */
+const POS_FORKFIX_BK='pos_backup_forkfix_20261031', POS_FORKFIX_FLAG='pos_forkfix_20261031_done';
+function posForkFixOnce(){
+  if(localStorage.getItem(POS_FORKFIX_FLAG))return;
+  const p=proj('s6n9vf1vgdx');
+  const head='2026-12-15 スリーエーグループ2027年事業計画策定／';
+  const hits=p&&Array.isArray(p.forks)?p.forks.filter(f=>f&&String(f.title||'').startsWith(head)):[];
+  if(hits.length){
+    try{ if(localStorage.getItem(POS_FORKFIX_BK)===null)localStorage.setItem(POS_FORKFIX_BK,localStorage.getItem(KEY)||JSON.stringify(S)); }
+    catch(e){ console.warn('退避できないため分岐の整理を見送り',e); return; }
+    p.forks=p.forks.filter(f=>!hits.includes(f));
+    save();
+    setTimeout(()=>toast('まとめて入っていた分岐 '+hits.length+'件を整理しました'),300);
+  }
+  try{ localStorage.setItem(POS_FORKFIX_FLAG,today()); }catch(e){}
+}
+
 /* ══════════════════════════════════
    BOOT
 ══════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', ()=>{migrateProjectItems();nav('dash');renderVision();
+document.addEventListener('DOMContentLoaded', ()=>{posForkFixOnce();migrateProjectItems();nav('dash');renderVision();
   inboxProcess('load');   /* 受信箱：自分宛て（targetOS:'project'）の未処理を取り込む。無ければ何もしない */
 });
 </script>
