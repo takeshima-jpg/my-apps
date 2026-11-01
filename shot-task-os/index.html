@@ -294,6 +294,13 @@ select option { background: var(--surface); }
 .sym-normal { color: var(--text3); }
 
 .task-body { flex: 1; min-width: 0; }
+/* Lectica Shot の結果3択（カードの下にその場で開く） */
+.lx-sheet{width:100%;margin-top:8px;padding:10px 12px;border:1px solid var(--border,#ddd);border-radius:8px;background:var(--surface,#fff);box-sizing:border-box;}
+.lx-sheet-q{font-size:12px;color:var(--text2,#555);margin-bottom:8px;}
+.lx-sheet-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.lx-sheet button{min-height:44px;padding:0 14px;font-size:13px;font-family:inherit;border:1px solid var(--border,#ddd);border-radius:8px;background:transparent;color:var(--text,#222);cursor:pointer;}
+.lx-sheet button.lx-sheet-sub{font-size:12px;color:var(--text3,#888);border-color:transparent;}
+@media(max-width:480px){.lx-sheet-row{flex-direction:column;align-items:stretch;}}
 .task-title {
   font-size: 17px;
   color: var(--text);
@@ -1100,6 +1107,9 @@ function setToday(id) {
 // ── DELETE ──
 let confirmDelId = null, confirmDelTimer = null;
 function deleteTask(id, title) {
+  /* Lectica は消す前に結果を選べる（削除の2回目の代わりに3択。消すのは「結果なしで消す」のときだけ） */
+  const lx = tasks.find(x => x.id === id);
+  if (lx && lx.category === 'Lectica') { lxSheet = {id, del:true}; render(); return; }
   if (confirmDelId !== id) {            // 1回目：その場で「本当に削除」に変わる（往復なし）
     confirmDelId = id;
     clearTimeout(confirmDelTimer);
@@ -1256,7 +1266,7 @@ function lxPracticeLine(st, prefix){
 // Lectica実験内容を開かずに読める形で展開（既定展開・折りたたみ無し）。
 // t.lecticaDetail（同期が保存する✦今日の実験の構造化全文）があれば全文カード、無い旧Shotはmemoパース表示（後方互換）。
 function renderLecticaDetail(t) {
-  const d = (t && typeof t === 'object' && t.lecticaDetail) ? t.lecticaDetail : null;
+  const d = (t && typeof t === 'object' && t.lecticaDetail && (t.lecticaDetail.experimentId || t.lecticaDetail.title)) ? t.lecticaDetail : null;   /* 結果だけ入った旧Shotは memo パース表示のまま */
   const memo = (t && typeof t === 'object') ? t.memo : t;
   const row = (lbl, val, extra) => val ? `<div class="lx-field${extra||''}"><span class="lx-flabel">${escH(lbl)}</span><span class="lx-fval">${escH(val)}</span></div>` : '';
   /* 実施回数（ログから導出）。lecticaDetail の実験ID → 無ければ memo の「実験ID：」から */
@@ -1281,8 +1291,76 @@ function renderLecticaDetail(t) {
   if (!f) return cntRow ? `<div class="lx-detail">${cntRow}</div>` : null;   /* 中身が読めない旧Shotでも、実験IDが取れれば回数だけ出す */
   return `<div class="lx-detail">${row('重点の問い', f.q)}${row('実験', f.exp)}${cntRow}${row('使う場面', f.scene)}${row('完了条件', f.done)}${row('今日振り返るなら', f.review, ' lx-review')}</div>`;
 }
-// Lecticaの完了✔は確認を挟む（開くボタン隣での誤爆対策）。
-function lecticaComplete(id) { if (confirm('この実験を完了にしますか？')) changeStatus(id, 'done'); }
+/* ══ Lectica Shot の結果3択（Task OS・Shot Task OS で同じ部品）══
+   やった／やってない＝完了（lecticaDetail.result と memo の「結果：」行で区別）。後でやる＝閉じずに翌営業日へ持ち越し。
+   Lecticaログには書かない（実施回数はログから数えるので、Shot から足すと二重になる） */
+const LX_RESULT_JP={done:'やった',not_done:'やってない',later:'後でやる'};
+function lxYmd(d){ return d.toLocaleDateString('sv'); }
+/* 翌営業日：土日と routineOS_holidays の祝日を飛ばす */
+function lxNextBizDay(ymd){
+  let hol=new Set();
+  try{ hol=new Set((JSON.parse(localStorage.getItem('routineOS_holidays')||'[]')||[]).map(h=>typeof h==='string'?h:(h&&h.date)).filter(Boolean)); }catch(e){}
+  const d=new Date(ymd+'T00:00:00');
+  do{ d.setDate(d.getDate()+1); }while(d.getDay()===0||d.getDay()===6||hol.has(lxYmd(d)));
+  return lxYmd(d);
+}
+/* memo の「結果：」行を1行に書き換える。無ければ末尾に足す */
+function lxResultMemo(memo,jp){
+  const line='結果：'+jp; let put=false;
+  const out=String(memo||'').split('\n').reduce((a,l)=>{
+    if(/^\s*結果[：:]/.test(l)){ if(!put){ a.push(line); put=true; } }
+    else a.push(l);
+    return a;
+  },[]);
+  if(!put){ if(out.length===1&&out[0]==='') out[0]=line; else out.push(line); }
+  return out.join('\n');
+}
+const lxMd=ymd=>{ const m=String(ymd||'').match(/^\d{4}-(\d{2})-(\d{2})/); return m?(+m[1])+'/'+(+m[2]):''; };
+/* 結果を t に書く（保存は呼び出し側）。最後の選択で上書き */
+function lxApplyResult(t,res){
+  const now=new Date().toISOString();
+  t.lecticaDetail=Object.assign({},t.lecticaDetail||{},{result:res,resultAt:now});
+  t.memo=lxResultMemo(t.memo,LX_RESULT_JP[res]);
+  t.updatedAt=now;
+  if(res==='later'){
+    const today=lxYmd(new Date());
+    const from=t.dueDate||today;
+    const to=lxNextBizDay(from>today?from:today);   /* 期日を過ぎていても今日より後へ（過去日のままだと翌朝また自動保留になる） */
+    t.memo='持ち越し：'+lxMd(from)+'→'+lxMd(to)+'\n'+t.memo;
+    t.dueDate=to;
+    /* 自動保留から持ち越すときだけ未着手へ戻す（保留のままだと翌日の一覧に出ない）。本人が保留にしたものはそのまま */
+    if(t.lecticaAutoPaused){ delete t.lecticaAutoPaused; if(t.status==='pending') t.status='todo'; }
+    return;
+  }
+  if(t.status!=='done'){ t.status='done'; t.completedAt=now; }
+}
+/* 3択の中身。withDelete：削除から開いたとき「結果なしで消す」を足す。完了済みのShotに「後でやる」は出さない */
+function lxSheetHtml(id,status,withDelete){
+  const b=(lb,fn,sub)=>`<button type="button"${sub?' class="lx-sheet-sub"':''} onclick="${fn};event.stopPropagation()">${lb}</button>`;
+  return `<div class="lx-sheet" onclick="event.stopPropagation()"><div class="lx-sheet-q">この実験の結果は？</div><div class="lx-sheet-row">`
+    +b('やった',`lxSheetPick('${id}','done')`)+b('やってない',`lxSheetPick('${id}','not_done')`)
+    +(status==='done'?'':b('後でやる',`lxSheetPick('${id}','later')`))
+    +(withDelete?b('結果なしで消す',`lxSheetDelete('${id}')`,true):'')
+    +b('やめる','lxSheetClose()',true)
+    +`</div></div>`;
+}
+/* ══ 結果3択 ここまで ══ */
+/* Shot Task OS 側の出し方：そのカードの本文の下に開く（確認ダイアログの代わり。開くボタン隣での誤爆対策も兼ねる） */
+let lxSheet = null;
+function lecticaComplete(id) { lxSheet = {id, del:false}; render(); }
+function lxSheetClose() { lxSheet = null; render(); }
+function lxSheetPick(id, res) {
+  const t = tasks.find(x => x.id === id); if (!t) return;
+  lxSheet = null;
+  lxApplyResult(t, res);
+  save(); render();
+  toast(res === 'later' ? '↗ ' + lxMd(t.dueDate) + ' へ持ち越し' : '✓ 結果：' + LX_RESULT_JP[res]);
+}
+function lxSheetDelete(id) {
+  lxSheet = null;
+  tasks = tasks.filter(x => x.id !== id);
+  save(); render();
+}
 
 function renderMemo(memo) {
   if (!memo) return '';
@@ -1458,6 +1536,7 @@ function buildCardHTML(t) {
       <div class="${titleCls}">${escH(t.title)}${t.status!=='done'?priToggle:''}</div>
       <div class="task-meta">${meta}</div>
       ${memo}
+      ${(lxSheet && lxSheet.id === id) ? lxSheetHtml(id, t.status, lxSheet.del) : ''}
     </div>
     <div class="task-actions dense">${acts}</div>
   </div>`;

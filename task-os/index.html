@@ -194,6 +194,13 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
   background:var(--surface);border:1px solid var(--border);border-radius:8px;
   margin-bottom:4px;transition:background .1s;}
 .trow:hover{background:var(--bg);}
+/* Lectica Shot の結果3択（カードの下にその場で開く） */
+.lx-sheet{width:100%;margin-top:8px;padding:10px 12px;border:1px solid var(--border,#ddd);border-radius:8px;background:var(--surface,#fff);box-sizing:border-box;}
+.lx-sheet-q{font-size:12px;color:var(--text2,#555);margin-bottom:8px;}
+.lx-sheet-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.lx-sheet button{min-height:44px;padding:0 14px;font-size:13px;font-family:inherit;border:1px solid var(--border,#ddd);border-radius:8px;background:transparent;color:var(--text,#222);cursor:pointer;}
+.lx-sheet button.lx-sheet-sub{font-size:12px;color:var(--text3,#888);border-color:transparent;}
+@media(max-width:480px){.lx-sheet-row{flex-direction:column;align-items:stretch;}}
 .trow.ov{border-left:3px solid var(--r);padding-left:11px;}
 .trow.today-due{border-left:3px solid #C97A00;padding-left:11px;}
 .src-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
@@ -825,7 +832,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-10-26';
+const BUILD_VER = '2026-11-01';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -1535,10 +1542,86 @@ function completeRt(rawId){
   t.lastDone=TODAY; t.lastDate=prev; t.updatedAt=now(); t.nextDate=nextDate; t.status='';
   saveRt(a); addRtLog(t,'完了',prev,t.nextDate); toast(`✓ 完了 → 次回 ${fmtDate(t.nextDate)}`); refresh();
 }
-function completeSh(rawId){
+/* ══ Lectica Shot の結果3択（Task OS・Shot Task OS で同じ部品）══
+   やった／やってない＝完了（lecticaDetail.result と memo の「結果：」行で区別）。後でやる＝閉じずに翌営業日へ持ち越し。
+   Lecticaログには書かない（実施回数はログから数えるので、Shot から足すと二重になる） */
+const LX_RESULT_JP={done:'やった',not_done:'やってない',later:'後でやる'};
+function lxYmd(d){ return d.toLocaleDateString('sv'); }
+/* 翌営業日：土日と routineOS_holidays の祝日を飛ばす */
+function lxNextBizDay(ymd){
+  let hol=new Set();
+  try{ hol=new Set((JSON.parse(localStorage.getItem('routineOS_holidays')||'[]')||[]).map(h=>typeof h==='string'?h:(h&&h.date)).filter(Boolean)); }catch(e){}
+  const d=new Date(ymd+'T00:00:00');
+  do{ d.setDate(d.getDate()+1); }while(d.getDay()===0||d.getDay()===6||hol.has(lxYmd(d)));
+  return lxYmd(d);
+}
+/* memo の「結果：」行を1行に書き換える。無ければ末尾に足す */
+function lxResultMemo(memo,jp){
+  const line='結果：'+jp; let put=false;
+  const out=String(memo||'').split('\n').reduce((a,l)=>{
+    if(/^\s*結果[：:]/.test(l)){ if(!put){ a.push(line); put=true; } }
+    else a.push(l);
+    return a;
+  },[]);
+  if(!put){ if(out.length===1&&out[0]==='') out[0]=line; else out.push(line); }
+  return out.join('\n');
+}
+const lxMd=ymd=>{ const m=String(ymd||'').match(/^\d{4}-(\d{2})-(\d{2})/); return m?(+m[1])+'/'+(+m[2]):''; };
+/* 結果を t に書く（保存は呼び出し側）。最後の選択で上書き */
+function lxApplyResult(t,res){
+  const now=new Date().toISOString();
+  t.lecticaDetail=Object.assign({},t.lecticaDetail||{},{result:res,resultAt:now});
+  t.memo=lxResultMemo(t.memo,LX_RESULT_JP[res]);
+  t.updatedAt=now;
+  if(res==='later'){
+    const today=lxYmd(new Date());
+    const from=t.dueDate||today;
+    const to=lxNextBizDay(from>today?from:today);   /* 期日を過ぎていても今日より後へ（過去日のままだと翌朝また自動保留になる） */
+    t.memo='持ち越し：'+lxMd(from)+'→'+lxMd(to)+'\n'+t.memo;
+    t.dueDate=to;
+    /* 自動保留から持ち越すときだけ未着手へ戻す（保留のままだと翌日の一覧に出ない）。本人が保留にしたものはそのまま */
+    if(t.lecticaAutoPaused){ delete t.lecticaAutoPaused; if(t.status==='pending') t.status='todo'; }
+    return;
+  }
+  if(t.status!=='done'){ t.status='done'; t.completedAt=now; }
+}
+/* 3択の中身。withDelete：削除から開いたとき「結果なしで消す」を足す。完了済みのShotに「後でやる」は出さない */
+function lxSheetHtml(id,status,withDelete){
+  const b=(lb,fn,sub)=>`<button type="button"${sub?' class="lx-sheet-sub"':''} onclick="${fn};event.stopPropagation()">${lb}</button>`;
+  return `<div class="lx-sheet" onclick="event.stopPropagation()"><div class="lx-sheet-q">この実験の結果は？</div><div class="lx-sheet-row">`
+    +b('やった',`lxSheetPick('${id}','done')`)+b('やってない',`lxSheetPick('${id}','not_done')`)
+    +(status==='done'?'':b('後でやる',`lxSheetPick('${id}','later')`))
+    +(withDelete?b('結果なしで消す',`lxSheetDelete('${id}')`,true):'')
+    +b('やめる','lxSheetClose()',true)
+    +`</div></div>`;
+}
+/* ══ 結果3択 ここまで ══ */
+
+/* Task OS 側の出し方：押した行の下にその場で開く。refresh() で描き直すと閉じる */
+let _lxSheetMark=null;
+function lxSheetClose(){ document.querySelectorAll('.lx-sheet').forEach(el=>el.remove()); _lxSheetMark=null; }
+function lxSheetOpen(rawId,status,btn,markId){
+  lxSheetClose();
+  _lxSheetMark=markId||null;
+  const anchor=btn&&(btn.closest('.trow,.t-row')||btn.parentElement);
+  if(!anchor) return;
+  anchor.insertAdjacentHTML('afterend',lxSheetHtml(rawId,status,false));
+}
+function lxSheetPick(rawId,res){
+  const a=getSh(), t=a.find(x=>x.id===rawId); if(!t) return;
+  const mark=_lxSheetMark;
+  lxApplyResult(t,res); saveSh(a);
+  lxSheetClose();
+  /* Shot の iframe は起動時の一覧を持ったまま。後でそれが保存して結果を消さないよう読み直す */
+  try{ document.getElementById('frame-shot').contentWindow.location.reload(); }catch(e){}
+  toast(res==='later'?'↗ '+fmtDate(t.dueDate)+' へ持ち越し':'✓ 結果：'+LX_RESULT_JP[res]);
+  if(mark&&res!=='later') markDone(mark);
+  refresh();
+}
+function completeSh(rawId,btn,markId){
   const a=getSh(), t=a.find(x=>x.id===rawId); if(!t) return false;
-  // 誤爆対策：Lecticaは「Shot で開く」の隣で✓完了を押しやすいので確認を挟む（他カテゴリは即完了のまま）
-  if(t.category==='Lectica' && !confirm('この実験を完了にしますか？')) return false;
+  // Lectica は閉じるときに結果を選ぶ（✓→3択。誤爆対策の確認も兼ねる）。他カテゴリは即完了のまま
+  if(t.category==='Lectica'){ lxSheetOpen(rawId,t.status,btn,markId); return false; }
   t.status='done'; t.completedAt=now(); t.updatedAt=t.completedAt; saveSh(a); toast('✓ 完了 (Shot)'); refresh(); return true;
 }
 function postponeRt(rawId){
@@ -1962,7 +2045,7 @@ function autoGenLecticaShot(){
     const promoteMaster=()=>{ try{ const e=byId(sanboExp.id); if(e&&e.status==='not_started'){ e.status='active'; localStorage.setItem('lectica_experiments_master_v1',JSON.stringify(master)); } }catch(_){} };
 
     // ① 置き換え：random由来かつ未完了(todo/doing)のShotを提案で上書き（移行期の掃除）
-    const replaceable=todays.find(o=>o.t.lecticaSource==='random'&&(o.t.status==='todo'||o.t.status==='doing'));
+    const replaceable=todays.find(o=>o.t.lecticaSource==='random'&&(o.t.status==='todo'||o.t.status==='doing')&&!(o.t.lecticaDetail&&o.t.lecticaDetail.result));
     if(replaceable){
       const cur=replaceable.t;
       cur.title=buildTitle();
@@ -2035,7 +2118,7 @@ function renderHome(){
 
 function topActions(t){
   if(t.src==='shot') return `
-    <button class="btn-done" onclick="completeSh('${t.rawId}')">✓ 完了</button>
+    <button class="btn-done" onclick="completeSh('${t.rawId}',this)">✓ 完了</button>
     <button class="btn-ghost" onclick="postponeSh('${t.rawId}')">↗ 翌日</button>
     <button class="btn-open" onclick="nav('shot')">Shot で開く</button>`;
   if(t.src==='routine') return `
@@ -2051,10 +2134,10 @@ function trowHtml(t){
   const ov=isOv(t.due), td=isTd(t.due);
   let cls=''; if(ov) cls=' ov'; else if(td) cls=' today-due';
   const links=renderLinks(t);
-  /* ✔完了は行の左端（旧●の位置）・「開く」は右端に分離（フィッツ/誤爆対策。Lecticaの確認ダイアログはcompleteSh内で維持） */
+  /* ✔完了は行の左端（旧●の位置）・「開く」は右端に分離（フィッツ/誤爆対策。Lecticaは completeSh で結果3択を開く） */
   let chk='', open='';
   if(t.src==='shot'){
-    chk=`<button class="btn-done trow-chk" onclick="completeSh('${t.rawId}');event.stopPropagation()" title="完了にする">✓</button>`;
+    chk=`<button class="btn-done trow-chk" onclick="completeSh('${t.rawId}',this);event.stopPropagation()" title="完了にする">✓</button>`;
     open=`<button class="btn-open" onclick="nav('shot');event.stopPropagation()">開く</button>`;
   } else if(t.src==='routine'){
     chk=`<button class="btn-done trow-chk" onclick="completeRt('${t.rawId}');event.stopPropagation()" title="完了にする">✓</button>`;
@@ -2145,7 +2228,7 @@ function todayRow(t){
   const isDone=done[t.id];
   const links=renderLinks(t);
   let acts='';
-  if(t.src==='shot') acts=`<button class="btn-done" onclick="if(completeSh('${t.rawId}'))markDone('${t.id}')">✓</button>`;
+  if(t.src==='shot') acts=`<button class="btn-done" onclick="if(completeSh('${t.rawId}',this,'${t.id}'))markDone('${t.id}')">✓</button>`;
   else if(t.src==='routine') acts=`<button class="btn-done" onclick="completeRt('${t.rawId}');markDone('${t.id}')">✓</button>`;
   else acts=`<button class="btn-done" onclick="completePj('${t.pId}','${t.kind}','${t.rawId}');markDone('${t.id}')">✓</button>`;
 
