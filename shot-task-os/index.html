@@ -333,6 +333,7 @@ select option { background: var(--surface); }
 .mtag-doing { color: var(--blue); border-color: var(--blue-border); }
 .mtag-pending { color: var(--gray); }
 .mtag-done { color: var(--green); border-color: rgba(46,125,79,0.3); }
+.mtag-result { color: var(--text2); }   /* 実験の結果の印。やってないも責める色にしない（赤は締切専用） */
 
 .task-memo {
   font-size: 14px;
@@ -1495,6 +1496,10 @@ function buildCardHTML(t) {
   if (t.status==='doing') meta += '<span class="mtag mtag-doing">進行中</span>';
   if (t.status==='pending') meta += '<span class="mtag mtag-pending">保留</span>';
   if (t.status==='done') meta += '<span class="mtag mtag-done">完了</span>';
+  /* 実験の結果の印（Lectica は memo の代わりに詳細を出すので「結果：」行が見えないため）。result の無い古い Shot には出さない */
+  const lxRes = (t.category === 'Lectica' && t.lecticaDetail) ? t.lecticaDetail.result : '';
+  if (lxRes === 'done' || lxRes === 'not_done') meta += `<span class="mtag mtag-result">結果：${LX_RESULT_JP[lxRes]}</span>`;
+  else if (lxRes === 'later') meta += '<span class="mtag mtag-result">持ち越し</span>';
 
   // Lecticaは✦枠の構造化5項目を展開表示（あれば）。無ければ従来どおりmemo全文。
   let memo = '';
@@ -1571,13 +1576,19 @@ function toggleSelectAll(chkEl) {
   updateBulkUI();
 }
 function bulkDelete() {
-  const ids = getCheckedIds();
-  if (!ids.length) return;
+  const checked = getCheckedIds();
+  if (!checked.length) return;
+  /* 結果の無い実験の Shot は一括では消さない（結果が残らないため。1件ずつ削除すれば結果を選んで消せる） */
+  const keep = new Set(tasks.filter(t => checked.includes(t.id) && t.category === 'Lectica' && !(t.lecticaDetail && t.lecticaDetail.result)).map(t => t.id));
+  const ids = checked.filter(id => !keep.has(id));
+  const note = keep.size ? `実験のShot ${keep.size}件は外しました（1件ずつ結果を選んで消せます）` : '';
+  if (!ids.length) { if (note) toast(note); return; }
   if (!confirm(`選択した ${ids.length} 件を削除しますか？`)) return;
   tasks = tasks.filter(t => !ids.includes(t.id));
   save();
   renderAllTable();
   render();
+  if (note) toast(note);
 }
 
 // ── SUMMARY ──

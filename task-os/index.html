@@ -2044,8 +2044,10 @@ function autoGenLecticaShot(){
     };
     const promoteMaster=()=>{ try{ const e=byId(sanboExp.id); if(e&&e.status==='not_started'){ e.status='active'; localStorage.setItem('lectica_experiments_master_v1',JSON.stringify(master)); } }catch(_){} };
 
+    /* 「後でやる」で持ち越したShot（結果 later か、memo の先頭行が「持ち越し：」）。書き換えず消さず、新しい提案の邪魔もしない */
+    const isCarried=t=>(t.lecticaDetail&&t.lecticaDetail.result==='later')||/^\s*持ち越し：/.test(String(t.memo||'').split('\n')[0]);
     // ① 置き換え：random由来かつ未完了(todo/doing)のShotを提案で上書き（移行期の掃除）
-    const replaceable=todays.find(o=>o.t.lecticaSource==='random'&&(o.t.status==='todo'||o.t.status==='doing')&&!(o.t.lecticaDetail&&o.t.lecticaDetail.result));
+    const replaceable=todays.find(o=>o.t.lecticaSource==='random'&&(o.t.status==='todo'||o.t.status==='doing')&&!(o.t.lecticaDetail&&o.t.lecticaDetail.result)&&!isCarried(o.t));
     if(replaceable){
       const cur=replaceable.t;
       cur.title=buildTitle();
@@ -2061,8 +2063,9 @@ function autoGenLecticaShot(){
       return 1;
     }
 
-    // openな（todo/doing）Lecticaが別に居るなら尊重して何もしない（sanbo由来・手動追加を上書きしない【厳守】）
-    const openShot=todays.find(o=>o.t.status==='todo'||o.t.status==='doing');
+    // openな（todo/doing）Lecticaが別に居るなら尊重して何もしない（sanbo由来・手動追加を上書きしない【厳守】）。持ち越したShotだけは数えない
+    const openAll=todays.filter(o=>o.t.status==='todo'||o.t.status==='doing');
+    const openShot=openAll.find(o=>!isCarried(o.t));
     if(openShot){ _lxlog('skip','open別実験を尊重(sanbo/手動)'); return 0; }
 
     // ここまで来る＝当日のLecticaが無い or done/pending/rejected のみ、かつ提案は別ID → 新規追加
@@ -2071,7 +2074,7 @@ function autoGenLecticaShot(){
     shot.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title:buildTitle(),category:buildCat(),priority:'normal',status:'todo',dueDate:today,memo:lecticaMemo(sanboShot&&sanboShot.memo,sanboExp.id),lecticaDetail:buildDetail(),lecticaSource:'sanbo',createdAt:now,completedAt:null,updatedAt:now});
     localStorage.setItem('shot-task-os-v1',JSON.stringify(shot));
     promoteMaster();
-    _lxlog('create', todaysCount?'当日は実行済み等のみ→提案を新規追加':'当日Shot0件→提案から新規生成');
+    _lxlog('create', openAll.length?'持ち越しあり→提案を新規追加':(todaysCount?'当日は実行済み等のみ→提案を新規追加':'当日Shot0件→提案から新規生成'));
     return 1;
   }catch(e){ console.warn('[lectica-sync] 分岐=error', e); return 0; }
 }
