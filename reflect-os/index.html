@@ -395,9 +395,6 @@ nav{display:flex;flex-direction:column;gap:0;}
 // 他のタブで保存された場合に再読み込み
 window.addEventListener('storage', function(e) {
   if (e.key === 'reflectOS_v1') { location.reload(); return; }
-  /* Project OSが別タブで保存されたらPJ由来テーマを追随させる。
-     reloadはしない（入力中のフォームを壊さないため。再描画も入力中は見送る） */
-  if (e.key === 'pos_v4') { if (typeof posLiveSync === 'function') posLiveSync(); return; }
 });
 
 function toast(msg) {
@@ -477,6 +474,8 @@ const EMOTIONS=['希望','興奮','感謝','誇り','安心','楽しさ','不安
 const BIASES=['返報依存','承認欲求','透明性の錯覚','期待投影','対立回避','確証バイアス','サンクコスト','楽観バイアス'];
 const THEME_CATS=['戦略','プロジェクト','VISION','新規事業','人間関係','学習','財務','組織'];
 const THEME_STATUS=['構想中','実行中','保留','完了','撤退'];
+/* 選択肢に出すテーマ（外したテーマ・完了を除く） */
+const rfPickThemes=()=>S.themes.filter(t=>!t.detached&&t.status!=='完了');
 const THEME_PRI=['S','A','B','C'];
 const MS_ST=['未着手','実行中','完了'];
 
@@ -484,7 +483,7 @@ const MS_ST=['未着手','実行中','完了'];
 function fld(lb,child,opt=false,note=''){const w=D({cls:'field'});if(lb){const l=h('label',{cls:'lbl'},lb);if(opt)l.appendChild(Sp({cls:'lbl-opt'},'任意'));w.appendChild(l);}w.appendChild(child);if(note)w.appendChild(D({css:'font-size:13px;color:var(--di);margin-top:3px'},note));return w;}
 function tI(lb,key,ph='',tp='text',opt=false,fd2){const fd=fd2||S.fd;const e=In({type:tp,placeholder:ph});e.value=fd[key]||(tp==='date'?'':'');e.addEventListener('input',()=>fd[key]=e.value);return fld(lb,e,opt);}
 function taF(lb,key,ph='',mh=70,opt=false,fd2){const fd=fd2||S.fd;const e=Ta({placeholder:ph,css:`min-height:${mh}px;width:100%`});e.value=fd[key]||'';e.addEventListener('input',()=>fd[key]=e.value);return fld(lb,e,opt);}
-function thChipsF(key){const selIds=S.fd[key]||[];const w=D({cls:'chips'});const active=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');if(!active.length){w.appendChild(Sp({css:'font-size:14px;color:var(--di)'},'（テーマ未登録）'));return fld('探求テーマ',w,true);}active.forEach(t=>{const a=selIds.includes(t.id);const c=Bt({cls:'chip'+(a?' on':'')},t.title);c.addEventListener('click',()=>{const cur=S.fd[key]||[];S.fd[key]=cur.includes(t.id)?cur.filter(x=>x!==t.id):[...cur,t.id];ra();});w.appendChild(c);});return fld('探求テーマ',w,true);}
+function thChipsF(key){const selIds=S.fd[key]||[];const w=D({cls:'chips'});const active=rfPickThemes();if(!active.length){w.appendChild(Sp({css:'font-size:14px;color:var(--di)'},'（テーマ未登録）'));return fld('探求テーマ',w,true);}active.forEach(t=>{const a=selIds.includes(t.id);const c=Bt({cls:'chip'+(a?' on':'')},t.title);c.addEventListener('click',()=>{const cur=S.fd[key]||[];S.fd[key]=cur.includes(t.id)?cur.filter(x=>x!==t.id):[...cur,t.id];ra();});w.appendChild(c);});return fld('探求テーマ',w,true);}
 
 /* ── Theme form ── */
 function buildThemeForm(tfd){
@@ -525,7 +524,7 @@ function buildThemeForm(tfd){
     };
     render();return fld('KPI / 数字',w,true);
   };
-  // 関連PJ選択（Project OSから同期済みのものを選択肢に）
+  // 関連PJ選択（Project OSから写していた頃のテーマを選択肢に。新しいPJは増えない）
   function pjSelectF(){
     const pjThemes=S.themes.filter(t=>t._fromProjectOS);
     if(!pjThemes.length)return null;
@@ -639,7 +638,7 @@ function logCard(r){
   } else {
     const uwrap=D({css:'margin:4px 0 2px'});
     uwrap.appendChild(Sp({css:'font-size:11px;color:#b09040;background:#fdf8e8;border:1px solid #e8d880;border-radius:10px;padding:1px 8px;display:inline-block'},'テーマ未紐づけ'));
-    const linkable=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
+    const linkable=rfPickThemes();
     if(linkable.length){
       const pk=D({css:'display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px'});
       pk.appendChild(Sp({css:'font-size:11px;color:var(--di)'},'テーマに紐づける：'));
@@ -750,7 +749,7 @@ function renderHome(){
   const priOrd={S:0,A:1,B:2,C:3};
   const stOrd={実行中:0,構想中:1,保留:2,完了:3,撤退:4};
   const themes=[...S.themes].sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9)||(stOrd[a.status]||9)-(stOrd[b.status]||9));
-  // ── カード生成関数（探求テーマ・プロジェクト共用） ──
+  // ── カード生成関数 ──
   function buildThemeCard(t){
     const relLogs=pub.filter(r=>(r.themes||[]).includes(t.id));
     const card=D({cls:'tcard'});
@@ -767,17 +766,8 @@ function renderHome(){
     // 左：問い・仮説
     const left=D({});
     if(t.currentState){left.appendChild(D({cls:'tcard-dl'},'問い'));left.appendChild(D({css:'font-size:14px;color:var(--tx);line-height:1.7;white-space:pre-wrap;margin-bottom:10px'},t.currentState));}
-    /* PJ由来テーマはPJのセンターピンを正とし、無い場合だけ既存のsummary（手入力の仮説）を出す */
-    const hypo=t._fromProjectOS?((t.centerPin||'').trim()||t.summary):t.summary;
-    if(hypo){left.appendChild(D({cls:'tcard-dl'},t._fromProjectOS?'現在の仮説（センターピン）':'現在の仮説'));left.appendChild(D({css:'font-size:14px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:10px'},hypo));}
-    /* Project由来テーマ：PJの中身も読めるようにする（タイトルだけの空テーマに見せない） */
-    if(t._fromProjectOS){
-      [['ゴール',t.goal],['悪い未来',t.badFuture],['成功条件',t.successConditions],['次の一手',t.nextMove]]
-        .filter(x=>x[1]).forEach(([l,v])=>{
-          left.appendChild(D({cls:'tcard-dl'},l));
-          left.appendChild(D({css:'font-size:13px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:10px'},v));
-        });
-    }
+    if(t.summary){left.appendChild(D({cls:'tcard-dl'},'現在の仮説'));left.appendChild(D({css:'font-size:14px;color:var(--mu);line-height:1.7;white-space:pre-wrap;margin-bottom:10px'},t.summary));}
+    { const nt=tkNotesEl(t); if(nt) left.appendChild(nt); }
     inner.appendChild(left);
     // 右：関連PJ・振り返り
     const right=D({});
@@ -801,7 +791,7 @@ function renderHome(){
     }
     inner.appendChild(right);
     det.appendChild(inner);
-    if(!t._fromProjectOS){
+    {
       const acts2=D({cls:'tcard-acts'});
       const editBtn=Bt({cls:'btn-g',css:'font-size:13px'},'編集');editBtn.addEventListener('click',e=>{e.stopPropagation();openThemeForm(t);});acts2.appendChild(editBtn);
       if(t.status!=='完了'){
@@ -832,7 +822,6 @@ function renderHome(){
     }
     card.appendChild(det);
     main2.addEventListener('click',()=>{
-      if(t._fromProjectOS){det.classList.toggle('open');return;}
       // 探求テーマ：選択トグル
       if(S._activeTheme===t.id){
         S._activeTheme=null;
@@ -882,8 +871,8 @@ function renderHome(){
   })();
 
   // ── 探求テーマ（手動追加のみ） ──
-  const myThemes=themes.filter(t=>!t._fromProjectOS);
-  const pjThemes=themes.filter(t=>t._fromProjectOS);
+  const myThemes=themes.filter(t=>!t.detached);
+  const detachedThemes=themes.filter(t=>t.detached);
   const activeThemes=myThemes.filter(t=>t.status!=='完了');
   const doneThemes=myThemes.filter(t=>t.status==='完了').sort((a,b)=>(b.completedAt||b.updatedAt||'').localeCompare(a.completedAt||a.updatedAt||''));
 
@@ -917,59 +906,31 @@ function renderHome(){
     });
     tsec.appendChild(doneSec);
   }
-  f.appendChild(tsec);
-
-  // ── プロジェクト（Project OS同期・折りたたみ） ──
-  const activePjThemes=pjThemes.filter(t=>t.status!=='完了');
-  const donePjThemes=pjThemes.filter(t=>t.status==='完了');
-
-  const pjsec=D({cls:'sec',css:'margin-top:32px'});
-  const pjHd=D({css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'});
-  pjHd.appendChild(D({cls:'sec-lbl',css:'margin-bottom:0'},'プロジェクト'));
-  const syncBtn=Bt({cls:'btn-s',css:'font-size:11px'},`↺ PJ同期`);
-  syncBtn.addEventListener('click',async()=>{
-    syncBtn.textContent='同期中...';syncBtn.disabled=true;
-    const result=await syncFromProjectOS();
-    if(result===-1){
-      syncBtn.textContent='↺ PJ同期';syncBtn.disabled=false;
-      alert('Project OSのデータが見つかりません。\nProject OSを一度開いてからお試しください。');
-      return;
-    }
-    const priOrd2={S:0,A:1,B:2,C:3};
-    const th2=await dball('themes');
-    S.themes=th2.sort((a,b)=>(priOrd2[a.priority]||9)-(priOrd2[b.priority]||9));
-    syncBtn.textContent='↺ PJ同期';syncBtn.disabled=false;
-    ra();
-  });
-  pjHd.appendChild(syncBtn);pjsec.appendChild(pjHd);
-  if(!activePjThemes.length&&!donePjThemes.length){
-    pjsec.appendChild(D({cls:'empty',css:'font-size:13px'},'PJ同期ボタンで取り込めます'));
-  } else {
-    if(activePjThemes.length){
-      const pjGrid=D({cls:'theme-grid'});
-      activePjThemes.forEach(t=>pjGrid.appendChild(buildThemeCard(t)));
-      pjsec.appendChild(pjGrid);
-    }
-    if(donePjThemes.length){
-      const doneSec=D({css:'margin-top:16px'});
-      const doneToggle=D({css:'display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 0'});
-      const doneArrow=Sp({css:'font-size:11px;color:var(--mu);transition:transform .2s'},'▶');
-      doneToggle.appendChild(doneArrow);
-      doneToggle.appendChild(Sp({css:'font-size:13px;color:var(--mu)'},'完了済み（'+donePjThemes.length+'件）'));
-      const doneBody=D({css:'display:none;margin-top:12px'});
-      const doneGrid=D({cls:'theme-grid'});
-      donePjThemes.forEach(t=>doneGrid.appendChild(buildThemeCard(t)));
-      doneBody.appendChild(doneGrid);
-      doneSec.appendChild(doneToggle);doneSec.appendChild(doneBody);
-      doneToggle.addEventListener('click',()=>{
-        const open=doneBody.style.display==='block';
-        doneBody.style.display=open?'none':'block';
-        doneArrow.style.transform=open?'':'rotate(90deg)';
-      });
-      pjsec.appendChild(doneSec);
-    }
+  // 外したテーマ（折りたたみ。「戻す」で一覧へ。戻しても Project OS とは同期しない）
+  if(detachedThemes.length){
+    const dtSec=D({css:'margin-top:16px'});
+    const dtToggle=D({css:'display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 0'});
+    const dtArrow=Sp({css:'font-size:11px;color:var(--mu);transition:transform .2s'},'▶');
+    dtToggle.appendChild(dtArrow);
+    dtToggle.appendChild(Sp({css:'font-size:13px;color:var(--mu)'},'外したテーマ（'+detachedThemes.length+'件）'));
+    const dtBody=D({css:'display:none;margin-top:8px'});
+    detachedThemes.forEach(t=>{
+      const row=D({css:'display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bd)'});
+      row.appendChild(Sp({css:'flex:1;min-width:0;font-size:13px;color:var(--mu)'},t.title));
+      const back=Bt({cls:'btn-s',css:'font-size:12px;padding:3px 10px;flex-shrink:0'},'戻す');
+      back.addEventListener('click',async()=>{t.detached=false;t.updatedAt=tod();await dbput('themes',t);ra();});
+      row.appendChild(back);
+      dtBody.appendChild(row);
+    });
+    dtSec.appendChild(dtToggle);dtSec.appendChild(dtBody);
+    dtToggle.addEventListener('click',()=>{
+      const open=dtBody.style.display==='block';
+      dtBody.style.display=open?'none':'block';
+      dtArrow.style.transform=open?'':'rotate(90deg)';
+    });
+    tsec.appendChild(dtSec);
   }
-  f.appendChild(pjsec);
+  f.appendChild(tsec);
 
   // Record buttons moved to sidebar
 
@@ -1071,7 +1032,7 @@ function renderLog(){
   utC.addEventListener('click',()=>{S.unthemedOnly=!S.unthemedOnly;updateNav();ra();});fc.appendChild(utC);
   hd.appendChild(fc);
   // テーマフィルター
-  const myThemesLog=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
+  const myThemesLog=rfPickThemes();
   if(myThemesLog.length && !S.unthemedOnly){
     const tfc=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px'});
     let thFilt='all';const thB={};
@@ -1293,7 +1254,7 @@ async function reflectImportText(text, opts){
   text=String(text||'').trim();
   const sp=rfSplitUpdate(text);
   if(sp.update===null) return reflectImportLegacy(text, opts);   /* REFLECT-UPDATE が無ければ従来どおり */
-  const res={ok:false,kind:'',message:'',summary:'',parts:[],logIds:[],questionIds:[],experimentIds:[],lecticaLogIds:[]};
+  const res={ok:false,kind:'',message:'',summary:'',parts:[],logIds:[],questionIds:[],experimentIds:[],themeIds:[],lecticaLogIds:[]};
   /* 従来ブロック（【振り返り】・---REFLECT-IMPORT--- 等）が混ざっていれば先に従来どおり処理（「直前の更新を元に戻す」は UPDATE だけを戻す） */
   let lg=null;
   if(/【|---REFLECT-IMPORT---/.test(sp.rest)) lg=await reflectImportLegacy(sp.rest, opts);
@@ -1301,6 +1262,7 @@ async function reflectImportText(text, opts){
   const up=await rfApplyUpdate(sp.update);
   up.questionIds.forEach(id=>{ if(!res.questionIds.includes(id)) res.questionIds.push(id); });
   up.experimentIds.forEach(id=>{ if(!res.experimentIds.includes(id)) res.experimentIds.push(id); });
+  up.themeIds.forEach(id=>{ if(!res.themeIds.includes(id)) res.themeIds.push(id); });
   if(up.changed) res.parts.push('探求ボードの更新'+up.changed+'件');
   const lgSum=lg?(lg.ok?lg.summary:(lg.kind==='none'?'':lg.message)):'';
   res.summary=[lgSum, up.summary].filter(Boolean).join('／');
@@ -1319,8 +1281,12 @@ async function reflectImportText(text, opts){
      ■ 実験 {実ID または R001}　題名／問い（実ID・（外す））／ステータス（候補・実験中・振り返り待ち・完了・変更・保留・やらない・原則化）／場面／観察／期限／結果／学び／記録
      ■ 統合：問い {A}, {B} → 新規「題名」　　理由
      ■ 統合：実験 {A}, {B} → 新規「題名」　　理由
-     ■ 問い 新規　　題名（必須）／ステータス（候補・重点。省略＝候補）／仮説／記録
+     ■ 問い 新規　　題名（必須）／ステータス（候補・重点。省略＝候補）／仮説／テーマ（実ID・題名の完全一致・なし）／記録
      ■ 実験 新規　　題名（必須）／問い（既存の実ID）／ステータス（候補・実験中。省略＝候補）／場面／観察／期限／結果／学び／記録
+     ■ テーマ {実ID}　題名／状態（構想中・実行中・保留・完了・撤退・外した・戻す）／問い（＝現在の状態）／仮説／記録
+     ■ テーマ 新規　題名（必須）／状態（省略＝構想中）／問い／仮説／記録
+     ■ 原則 新規　　題名（必須）／分類（対話・判断・組織・自分・その他。省略＝その他）／説明／元の実験（実ID・R番号）／元の問い（実ID）
+   実験を完了にするには学びが要る（ブロックの「学び：」か既存の学び。「学び：なし」＝（学びなし）で完了）
    値が空・（変更なし）＝触らない／（空にする）＝空文字（題名は不可）／記録：種類｜本文 ＝ notes[] に追記（全件に同じ種類＋本文があれば入れない）
    新規は「■ 問い 新規」「■ 実験 新規」（同じ題名が既にあれば作らず記録だけ足す）。上限（重点3・実験中5）を超える昇格・作成は入れ替えず、そのブロックだけ保留 */
 const RF_UPDATE_BK='reflect_backup_lastupdate';
@@ -1339,7 +1305,9 @@ function rfSplitUpdate(text){
   return {update:up.join('\n'), rest:rest.join('\n').trim()};
 }
 const RF_UQ_KEYS={'題名':'title','タイトル':'title','ステータス':'status','状態':'status','仮説':'hypothesis','記録':'note'};
+const RF_UT_KEYS={'題名':'title','タイトル':'title','状態':'status','ステータス':'status','問い':'currentState','現在の状態':'currentState','仮説':'summary','記録':'note'};
 const RF_UE_KEYS={'題名':'title','タイトル':'title','問い':'questionId','ステータス':'status','状態':'status','場面':'scene','観察':'observation','期限':'deadline','結果':'result','学び':'learning','記録':'note'};
+const RF_UKIND={'問い':'q','実験':'e','テーマ':'t','原則':'p'};
 /* 区間 → ブロック配列（解析のみ・データは触らない） */
 function rfParseUpdate(body){
   const blocks=[]; let cur=null;
@@ -1354,10 +1322,10 @@ function rfParseUpdate(body){
     let m;
     if((m=b.head.match(/^■\s*統合\s*[：:]\s*(問い|実験)\s+(.+?)\s*(?:→|->|⇒)\s*新規\s*[「『"“](.+?)[」』"”]\s*$/))){
       b.op='merge'; b.kind=m[1]==='問い'?'q':'e'; b.ids=m[2].split(/[,、，\s]+/).map(s=>s.trim()).filter(Boolean); b.title=m[3].trim();
-    }else if((m=b.head.match(/^■\s*(問い|実験)\s*新規\s*$/))){
-      b.op='create'; b.kind=m[1]==='問い'?'q':'e';
-    }else if((m=b.head.match(/^■\s*(問い|実験)\s+(\S+)\s*$/))){
-      b.op='update'; b.kind=m[1]==='問い'?'q':'e'; b.id=m[2];
+    }else if((m=b.head.match(/^■\s*(問い|実験|テーマ|原則)\s*新規\s*$/))){
+      b.op='create'; b.kind=RF_UKIND[m[1]];
+    }else if((m=b.head.match(/^■\s*(問い|実験|テーマ)\s+(\S+)\s*$/))){
+      b.op='update'; b.kind=RF_UKIND[m[1]]; b.id=m[2];
     }else b.op='unknown';
   });
   return blocks;
@@ -1383,13 +1351,14 @@ function rfPushNote(o, value, before){
   o.notes.push({date:tod(), kind, text, src:'取り込み'});
   return true;
 }
-/* 区間を適用。返り値 {summary, changed, readable, errors[], limits[], questionIds[], experimentIds[]} */
+/* 区間を適用。返り値 {summary, changed, readable, errors[], limits[], questionIds[], experimentIds[], themeIds[]} */
 async function rfApplyUpdate(body){
-  const out={summary:'', changed:0, readable:0, errors:[], limits:[], questionIds:[], experimentIds:[]};
+  const out={summary:'', changed:0, readable:0, errors:[], limits:[], questionIds:[], experimentIds:[], themeIds:[]};
   const sums=[];
   const pre=localStorage.getItem('reflectOS_v1'); let bk=false;
   const backup=()=>{ if(bk) return; bk=true; try{ if(pre!==null) localStorage.setItem(RF_UPDATE_BK, pre); }catch(e){} };   /* 1件でも適用する直前に1回だけ */
-  const bad=(b,why)=>{ const s='読めませんでした：'+b.head+(why?'（'+why+'）':''); out.errors.push(s); sums.push(s); };
+  /* first：理由を先に書く（「読めませんでした：学びがありません…（■ 実験 e1）」） */
+  const bad=(b,why,first)=>{ const s='読めませんでした：'+(first?why+'（'+b.head+'）':b.head+(why?'（'+why+'）':'')); out.errors.push(s); sums.push(s); };
   for(const b of rfParseUpdate(body)){
     try{
       if(b.op==='update'&&b.kind==='q'){
@@ -1434,9 +1403,12 @@ async function rfApplyUpdate(body){
           }
           if(k==='status'){ const st=rfStatusKey(value,TK_EST); if(!st) err='ステータス名が読めません：'+value; else p.status=st; return; }
           if(k==='deadline'){ if(rfClear(value)){ p.deadline=''; return; } if(!/^\d{4}-\d{2}-\d{2}$/.test(value)){ err='期限は YYYY-MM-DD で：'+value; return; } p.deadline=value; return; }
+          if(k==='learning'&&value==='なし'){ if(!tkHasLearning(x)) p.learning=TK_NO_LEARNING; return; }   /* 書いてある学びは「なし」で消さない */
           p[k]=rfClear(value)?'':value;
         });
         if(err){ bad(b,err); continue; }
+        /* 完了には学びが要る。既に完了している実験はさかのぼって止めない */
+        if(p.status==='complete'&&x.status!=='complete'&&!String(p.learning!==undefined?p.learning:(x.learning||'')).trim()){ bad(b,'学びがありません（学び：なし と書けば完了できます）',true); continue; }
         out.readable++;
         if(p.status==='active'&&x.status!=='active'&&!tkIsReview(x)&&tkActiveEs().length>=TK_MAX_ACTIVE_E){
           const s='実験中が'+TK_MAX_ACTIVE_E+'件のため入れ替えが必要です（どれを候補へ戻すか本人が決める）：実験 '+b.id; out.limits.push(s); sums.push(s); continue;
@@ -1453,6 +1425,9 @@ async function rfApplyUpdate(body){
         sums.push('実験 '+b.id+' '+(ch.length?ch.join('・'):'変更なし'));
         continue;
       }
+      if(b.op==='update'&&b.kind==='t'){ await rfApplyThemeUpdate(b,{out,sums,backup,bad}); continue; }
+      if(b.op==='create'&&b.kind==='t'){ await rfApplyThemeCreate(b,{out,sums,backup,bad}); continue; }
+      if(b.op==='create'&&b.kind==='p'){ await rfApplyPrincipleCreate(b,{out,sums,backup,bad}); continue; }
       if(b.op==='create'){ await rfApplyCreate(b,{out,sums,backup,bad}); continue; }
       if(b.op==='merge'){
         const reason=(b.fields.find(f=>f.key==='理由')||{}).value||'';
@@ -1487,8 +1462,16 @@ const rfShort=s=>{ s=String(s||''); return s.length>20?s.slice(0,20)+'…':s; };
 async function rfApplyCreate(b,ctx){
   const {out,sums,backup,bad}=ctx;
   const isQ=b.kind==='q', KEYS=isQ?RF_UQ_KEYS:RF_UE_KEYS;
-  const p={}; const notes=[]; let err='';
+  const p={}; const notes=[]; let err='', errFirst=false;
   b.fields.forEach(({key,value})=>{
+    if(isQ&&key==='テーマ'&&!err){
+      if(rfNoChg(value)||rfClear(value)) return;
+      if(value==='なし'){ p.themeIds=[]; p.noTheme=true; return; }
+      const hit=S.themes.find(t=>t&&t.id===value)||S.themes.find(t=>t&&!t.detached&&t.title===value)||S.themes.find(t=>t&&t.title===value);
+      if(!hit){ err='テーマが見つかりません：'+value; return; }
+      if(hit.detached){ err='外したテーマです'; errFirst=true; return; }
+      p.themeIds=[hit.id]; return;
+    }
     const k=KEYS[key]; if(!k||err) return;
     if(k==='note'){ if(!rfNoChg(value)) notes.push(value); return; }
     if(rfNoChg(value)||rfClear(value)) return;
@@ -1504,10 +1487,11 @@ async function rfApplyCreate(b,ctx){
       p.questionId=value; return;
     }
     if(k==='deadline'){ if(!/^\d{4}-\d{2}-\d{2}$/.test(value)){ err='期限は YYYY-MM-DD で：'+value; return; } p.deadline=value; return; }
+    if(k==='learning'&&value==='なし'){ p.learning=TK_NO_LEARNING; return; }
     p[k]=value;
   });
   if(!err&&!p.title) err='題名がありません';
-  if(err){ bad(b,err); return; }
+  if(err){ bad(b,err,errFirst); return; }
   out.readable++;
   const st=p.status||'candidate', label=isQ?'問い':'実験';
   const key=rfTitleKey(p.title);
@@ -1518,6 +1502,7 @@ async function rfApplyCreate(b,ctx){
     const ch=[];
     const fill=isQ?[['hypothesis','仮説']]:[['scene','場面'],['observation','観察'],['deadline','期限'],['result','結果'],['learning','学び']];
     fill.forEach(([k,lb])=>{ if(p[k]&&!dup[k]){ backup(); dup[k]=p[k]; ch.push(lb); } });
+    if(isQ&&p.themeIds&&!(dup.themeIds||[]).length&&!dup.noTheme&&(p.themeIds.length||p.noTheme)){ backup(); dup.themeIds=p.themeIds; if(p.noTheme) dup.noTheme=true; ch.push('テーマ'); }
     let nN=0; notes.forEach(v=>{ if(rfPushNote(dup,v,backup)) nN++; }); if(nN) ch.push('記録'+nN+'件');
     if(ch.length){ await tkSave(isQ?'questions':'experiments',dup); out.changed++; (isQ?out.questionIds:out.experimentIds).push(dup.id); }
     sums.push(label+' 新規『'+rfShort(p.title)+'』既にあります（'+dup.id+'）'+(ch.length?'・'+ch.join('・'):''));
@@ -1532,12 +1517,102 @@ async function rfApplyCreate(b,ctx){
   backup();
   const now=new Date().toISOString();
   const o=isQ
-    ?{id:uid(),title:p.title,themeIds:[],status:st,hypothesis:p.hypothesis||'',sourceLogIds:[],mergedIntoId:null,createdAt:now,updatedAt:now,completedAt:null,notes:[]}
+    ?{id:uid(),title:p.title,themeIds:p.themeIds||[],...(p.noTheme?{noTheme:true}:{}),status:st,hypothesis:p.hypothesis||'',sourceLogIds:[],mergedIntoId:null,createdAt:now,updatedAt:now,completedAt:null,notes:[]}
     :{id:uid(),questionId:p.questionId||null,title:p.title,themeIds:[],status:st,scene:p.scene||'',observation:p.observation||'',deadline:p.deadline||'',result:p.result||'',learning:p.learning||'',sourceLogIds:[],createdAt:now,updatedAt:now,completedAt:null,notes:[]};
   notes.forEach(v=>rfPushNote(o,v));
   await tkSave(isQ?'questions':'experiments',o);
   out.changed++; (isQ?out.questionIds:out.experimentIds).push(o.id);
-  sums.push(label+' 新規『'+rfShort(p.title)+'』（'+(isQ?TK_QST:TK_EST)[st]+(!isQ&&o.questionId?'・問い '+o.questionId:'')+'）');
+  sums.push(label+' 新規『'+rfShort(p.title)+'』（'+(isQ?TK_QST:TK_EST)[st]+(!isQ&&o.questionId?'・問い '+o.questionId:'')+(isQ&&o.themeIds.length?'・テーマ '+o.themeIds[0]:'')+'）');
+}
+/* テーマの項目を読む。新規（create）では 外した／戻す は使えず、（空にする）は書かないのと同じ */
+function rfReadThemeFields(b,create){
+  const p={}; const notes=[]; let err='';
+  b.fields.forEach(({key,value})=>{
+    const k=RF_UT_KEYS[key]; if(!k||err) return;
+    if(k==='note'){ if(!rfNoChg(value)) notes.push(value); return; }
+    if(rfNoChg(value)) return;
+    if(k==='title'){ if(!rfClear(value)) p.title=value; return; }
+    if(k==='status'){
+      if(!create&&value==='外した'){ p.detached=true; return; }
+      if(!create&&value==='戻す'){ p.detached=false; return; }
+      if(!THEME_STATUS.includes(value)) err='状態名が読めません：'+value; else p.status=value;
+      return;
+    }
+    if(rfClear(value)){ if(!create) p[k]=''; return; }
+    p[k]=value;
+  });
+  return {p,notes,err};
+}
+/* 「■ テーマ {実ID}」：更新のみ。完了にしたら completedAt、完了以外へ戻したら外す */
+async function rfApplyThemeUpdate(b,{out,sums,backup,bad}){
+  const t=S.themes.find(x=>x&&x.id===b.id);
+  if(!t){ bad(b,'テーマの実IDが見つかりません'); return; }
+  const {p,notes,err}=rfReadThemeFields(b,false);
+  if(err){ bad(b,err); return; }
+  out.readable++;
+  const ch=[];
+  if(p.title!==undefined&&p.title!==t.title){ backup(); t.title=p.title; ch.push('題名'); }
+  if(p.status!==undefined&&p.status!==t.status){
+    backup(); ch.push('状態（'+(t.status||'なし')+'→'+p.status+'）'); t.status=p.status;
+    if(p.status==='完了') t.completedAt=tod(); else delete t.completedAt;
+  }
+  [['currentState','問い'],['summary','仮説']].forEach(([k,lb])=>{ if(p[k]!==undefined&&p[k]!==(t[k]||'')){ backup(); t[k]=p[k]; ch.push(lb); } });
+  let nN=0; notes.forEach(v=>{ if(rfPushNote(t,v,backup)) nN++; }); if(nN) ch.push('記録'+nN+'件');
+  if(p.detached===true&&!t.detached){ backup(); t.detached=true; t.detachedAt=tod(); ch.push('外した'); }
+  if(p.detached===false&&t.detached){ backup(); t.detached=false; ch.push('戻した'); }
+  if(ch.length){ t.updatedAt=tod(); await dbput('themes',t); out.changed++; out.themeIds.push(t.id); }
+  sums.push('テーマ '+b.id+' '+(ch.length?ch.join('・'):'変更なし'));
+}
+/* 「■ テーマ 新規」：同じ題名（外したテーマも含む）が既にあれば作らず、記録を足し空の項目だけ埋める */
+async function rfApplyThemeCreate(b,{out,sums,backup,bad}){
+  const {p,notes,err}=rfReadThemeFields(b,true);
+  if(err||!p.title){ bad(b,err||'題名がありません'); return; }
+  out.readable++;
+  const key=rfTitleKey(p.title);
+  const dup=S.themes.find(t=>t&&rfTitleKey(t.title)===key);
+  if(dup){
+    const ch=[];
+    [['currentState','問い'],['summary','仮説']].forEach(([k,lb])=>{ if(p[k]&&!dup[k]){ backup(); dup[k]=p[k]; ch.push(lb); } });
+    let nN=0; notes.forEach(v=>{ if(rfPushNote(dup,v,backup)) nN++; }); if(nN) ch.push('記録'+nN+'件');
+    if(ch.length){ dup.updatedAt=tod(); await dbput('themes',dup); out.changed++; out.themeIds.push(dup.id); }
+    sums.push('テーマ 新規『'+rfShort(p.title)+'』既にあります（'+dup.id+(dup.detached?'・外したテーマ':'')+'）'+(ch.length?'・'+ch.join('・'):''));
+    return;
+  }
+  backup();
+  const st=p.status||'構想中';
+  const t={id:uid(),title:p.title,status:st,currentState:p.currentState||'',summary:p.summary||'',milestones:[],metrics:[],notes:[],createdAt:tod(),updatedAt:tod()};
+  if(st==='完了') t.completedAt=tod();
+  notes.forEach(v=>rfPushNote(t,v));
+  await dbput('themes',t); S.themes.push(t);
+  out.changed++; out.themeIds.push(t.id);
+  sums.push('テーマ 新規『'+rfShort(p.title)+'』');
+}
+/* 「■ 原則 新規」：画面の「原則をつくる」と同じ tkAddPrinciple で作る。元の実験を原則化にはしない（■ 実験 の ステータス：原則化 で別に） */
+async function rfApplyPrincipleCreate(b,{out,sums,backup,bad}){
+  let title='',cat='other',desc='',err='';
+  const srcE=[],srcQ=[];
+  const ids=v=>v.split(/[,、，\s]+/).map(s=>s.trim()).filter(Boolean);
+  b.fields.forEach(({key,value})=>{
+    if(err||rfNoChg(value)||rfClear(value)) return;
+    if(key==='題名'||key==='タイトル') title=value;
+    else if(key==='説明') desc=value;
+    else if(key==='分類'||key==='カテゴリ'){
+      const c=Object.keys(TK_PCAT).find(k=>k===value||TK_PCAT[k]===value);
+      if(!c) err='分類が読めません：'+value; else cat=c;
+    }
+    else if(key==='元の実験') ids(value).forEach(id=>{ const x=rfFindE(id); if(!x) err=err||'元の実験の実IDが見つかりません：'+id; else if(!srcE.includes(x.id)) srcE.push(x.id); });
+    else if(key==='元の問い') ids(value).forEach(id=>{ if(!S.questions.some(q=>q&&q.id===id)) err=err||'元の問いの実IDが見つかりません：'+id; else if(!srcQ.includes(id)) srcQ.push(id); });
+  });
+  if(!err&&!title) err='題名がありません';
+  if(err){ bad(b,err); return; }
+  out.readable++;
+  const key=rfTitleKey(title);
+  const dup=S.principles.find(p=>p&&p.status!=='archived'&&rfTitleKey(p.title)===key);
+  if(dup){ sums.push('原則 新規『'+rfShort(title)+'』既にあります（'+dup.id+'）'); return; }
+  backup();
+  await tkAddPrinciple({title,category:cat,description:desc,sourceExperimentIds:srcE,sourceQuestionIds:srcQ});
+  out.changed++;
+  sums.push('原則 新規『'+rfShort(title)+'』（'+TK_PCAT[cat]+(srcE.length?'・元の実験'+srcE.length:'')+(srcQ.length?'・元の問い'+srcQ.length:'')+'）');
 }
 
 /* 「直前の更新を元に戻す」：退避した reflectOS_v1 の生文字列へ戻し、画面の状態を読み直す（1世代） */
@@ -2275,7 +2350,7 @@ async function tkAutoAssignRids(){
 const tkExploreEs=()=>S.experiments.filter(x=>!tkIsReview(x));
 const tkReviewEs=()=>S.experiments.filter(x=>tkIsReview(x));
 const tkActiveEs=()=>S.experiments.filter(x=>x.status==='active'&&!tkIsReview(x));
-const tkThemeNames=ids=>(ids||[]).map(id=>S.themes.find(t=>t.id===id)?.title).filter(Boolean);
+const tkThemeNames=ids=>(ids||[]).map(id=>{const t=S.themes.find(t=>t.id===id);return t&&!t.detached?t.title:'';}).filter(Boolean);   /* 外したテーマは出さない（PJは links のチップに出る） */
 const tkSrcLog=o=>{const r=S.logs.find(l=>(o.sourceLogIds||[]).includes(l.id));return r?(r.date+' / '+(r.title||'')):'';};
 
 /* 記録（notes・REFLECT-UPDATE で追記）：新しい順・最大3件を薄く。無ければ出さない */
@@ -2316,7 +2391,27 @@ async function tkSetQStatus(q,st){
   }
   q.status=st;q.completedAt=(st==='resolved'||st==='discarded')?tod():null;await tkSave('questions',q);ra();
 }
+/* 実験を完了にするときの学び（空では完了にしない。既に完了している実験はさかのぼらない） */
+const TK_NO_LEARNING='（学びなし）';
+const tkHasLearning=x=>!!String((x&&x.learning)||'').trim();
+const tkLearningText=x=>(tkHasLearning(x)&&x.learning!==TK_NO_LEARNING)?x.learning:'';   /* 表示や原則の下書きに使う本文（「学びなし」を除く） */
+/* 学びを1行もらう。返り値：本文／TK_NO_LEARNING／null（やめる） */
+function tkAskLearning(x){
+  return new Promise(res=>{
+    const m=tkModal('学びを1行',x.title);
+    const inp=tkFld(m.box,'この実験から学んだこと',In({type:'text',css:'width:100%;box-sizing:border-box'}));
+    const done=v=>{m.close();res(v);};
+    const row=D({css:'display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:14px'});
+    const cancel=Bt({cls:'btn-s'},'やめる');cancel.addEventListener('click',()=>done(null));
+    const none=Bt({cls:'btn-s'},'学びなし');none.addEventListener('click',()=>done(TK_NO_LEARNING));
+    const ok=Bt({cls:'btn-g'},'完了にする');ok.addEventListener('click',()=>{const v=inp.value.trim();if(!v){inp.focus();return;}done(v);});
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing)ok.click();});
+    row.appendChild(cancel);row.appendChild(none);row.appendChild(ok);m.box.appendChild(row);
+    inp.focus();
+  });
+}
 async function tkSetEStatus(x,st){
+  if(st==='complete'&&x.status!=='complete'&&!tkHasLearning(x)){const v=await tkAskLearning(x);if(v===null)return;x.learning=v;}
   /* 上限 TK_MAX_ACTIVE_E は探求実験（explore）のみ。決定検証は別枠管理＝制限を受けない */
   if(st==='active'&&x.status!=='active'&&!tkIsReview(x)&&tkActiveEs().length>=TK_MAX_ACTIVE_E){
     tkSwapModal('e',async backId=>{const back=S.experiments.find(b=>b.id===backId);if(back){back.status='candidate';back.completedAt=null;await tkSave('experiments',back);}x.status='active';x.completedAt=null;await tkSave('experiments',x);ra();});
@@ -2395,7 +2490,7 @@ function tkExpForm(q,existing,forceType){
     tkFld(m.box,'紐づける問い（任意）',qSel);
     thSel=Sel({css:'width:100%;font-size:13px;padding:7px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx)'});
     thSel.appendChild(Opt('','テーマなし'));
-    S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了').forEach(t=>thSel.appendChild(Opt(t.id,t.title)));
+    rfPickThemes().forEach(t=>thSel.appendChild(Opt(t.id,t.title)));
     tkFld(m.box,'探求テーマ（任意）',thSel);
   }
   const sc=tkFld(m.box,L.scene+'（実験中にする場合は必須）',tkTa('',44));sc.value=existing?.scene||'';
@@ -2447,7 +2542,7 @@ function tkQuickQForm(){
   const hy=tkFld(m.box,'現在の仮説（任意）',tkTa('',44));hy.value='';
   const sel=Sel({css:'width:100%;font-size:13px;padding:7px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx)'});
   sel.appendChild(Opt('','テーマなし'));
-  S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了').forEach(t=>sel.appendChild(Opt(t.id,t.title)));
+  rfPickThemes().forEach(t=>sel.appendChild(Opt(t.id,t.title)));
   tkFld(m.box,'探求テーマ（任意）',sel);
   m.btns('候補に追加',async()=>{
     const t=ti.value.trim();if(!t){alert('問いを入力してください');return;}
@@ -2467,6 +2562,10 @@ function tkReviewModal(x){
   let sel='active';
   tkFld(m.box,'状態',tkRadioRow([['active','継続'],['complete','完了'],['changed','変更'],['paused','保留'],['principled','原則化']],'active',v=>sel=v));
   m.btns('保存',async()=>{
+    if(sel==='complete'&&x.status!=='complete'&&!lrn.value.trim()&&!tkHasLearning(x)){
+      const v=await tkAskLearning(x);if(v===null)return;
+      if(v===TK_NO_LEARNING)x.learning=v;else lrn.value=v;   /* 「学びなし」は振り返りログに書かない */
+    }
     if(did.value.trim())x.did=did.value.trim();
     if(res.value.trim())x.result=res.value.trim();
     if(lrn.value.trim())x.learning=lrn.value.trim();
@@ -2571,13 +2670,18 @@ function tkMergeEModal(ids){
 
 /* ══ Phase 3：実践原則（カテゴリ5分類・作成/編集/アーカイブ・振り返り「原則化」から接続） ══ */
 const TK_PCAT={dialogue:'対話',decision:'判断',organization:'組織',self:'自分',other:'その他'};
+/* 原則の保存部分（画面の「原則をつくる」と REFLECT-UPDATE の両方から呼ぶ） */
+async function tkAddPrinciple(o){
+  const now=new Date().toISOString();
+  await tkSave('principles',{id:uid(),title:o.title,category:o.category,description:o.description,sourceExperimentIds:o.sourceExperimentIds,sourceQuestionIds:o.sourceQuestionIds,status:'active',createdAt:now,updatedAt:now});
+}
 function tkPrincipleForm(existing,ctx){
   const m=tkModal(existing?'実践原則を編集':'実践原則をつくる',ctx&&ctx.exp?'実験の振り返りから原則化します':'');
   const ti=tkFld(m.box,'原則名',tkTa('例：答えを渡す前に、問いを一つ置く',44),true);
-  ti.value=existing?existing.title:((ctx&&ctx.exp&&(ctx.exp.learning||'').split('\n')[0])||'');
+  ti.value=existing?existing.title:((ctx&&ctx.exp&&tkLearningText(ctx.exp).split('\n')[0])||'');
   let cat=existing?(existing.category||'other'):'other';
   tkFld(m.box,'カテゴリ',tkRadioRow(Object.entries(TK_PCAT),cat,v=>cat=v));
-  const ds=tkFld(m.box,'説明',tkTa('どう実践するか・なぜ効くか',56));ds.value=existing?(existing.description||''):((ctx&&ctx.exp&&ctx.exp.learning)||'');
+  const ds=tkFld(m.box,'説明',tkTa('どう実践するか・なぜ効くか',56));ds.value=existing?(existing.description||''):((ctx&&ctx.exp&&tkLearningText(ctx.exp))||'');
   const srcE=existing?(existing.sourceExperimentIds||[]):(ctx&&ctx.exp?[ctx.exp.id]:[]);
   const srcQ=existing?(existing.sourceQuestionIds||[]):(ctx&&ctx.exp&&ctx.exp.questionId?[ctx.exp.questionId]:[]);
   const eT=srcE.map(id=>S.experiments.find(x=>x.id===id)?.title).filter(Boolean);
@@ -2587,7 +2691,7 @@ function tkPrincipleForm(existing,ctx){
   m.btns(existing?'更新':'作成',async()=>{
     const t=ti.value.trim();if(!t){alert('原則名を入力してください');return;}
     if(existing){existing.title=t;existing.category=cat;existing.description=ds.value.trim();await tkSave('principles',existing);}
-    else await tkSave('principles',{id:uid(),title:t,category:cat,description:ds.value.trim(),sourceExperimentIds:srcE,sourceQuestionIds:srcQ,status:'active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+    else await tkAddPrinciple({title:t,category:cat,description:ds.value.trim(),sourceExperimentIds:srcE,sourceQuestionIds:srcQ});
     m.close();ra();
   });
 }
@@ -2636,7 +2740,7 @@ function tkPrincipleView(){
 function tkOrgClear(){S._tkSelQ=[];S._tkSelE=[];}
 function tkToggleSel(arr,id){const i=arr.indexOf(id);if(i>=0)arr.splice(i,1);else arr.push(id);ra();}
 async function tkBulkQ(st){for(const id of S._tkSelQ){const q=S.questions.find(x=>x.id===id);if(!q)continue;q.status=st;q.completedAt=(st==='resolved'||st==='discarded')?tod():null;await tkSave('questions',q);}tkOrgClear();ra();}
-async function tkBulkE(st){for(const id of S._tkSelE){const x=S.experiments.find(b=>b.id===id);if(!x)continue;x.status=st;x.completedAt=(st==='candidate')?null:tod();await tkSave('experiments',x);}tkOrgClear();ra();}
+async function tkBulkE(st){let kept=0;for(const id of S._tkSelE){const x=S.experiments.find(b=>b.id===id);if(!x)continue;if(st==='complete'&&x.status!=='complete'&&!tkHasLearning(x)){kept++;continue;}x.status=st;x.completedAt=(st==='candidate')?null:tod();await tkSave('experiments',x);}tkOrgClear();ra();if(kept)toast('学びが空の実験 '+kept+'本は残しました（1本ずつ完了できます）');}
 function tkOrgBar(){
   const nq=S._tkSelQ.length,ne=S._tkSelE.length;
   if(!nq&&!ne)return null;
@@ -2774,7 +2878,7 @@ function tkQCard(q,expandedDefault){
       if(x.status==='active'){const rb=Bt({cls:'btn-s',css:'font-size:11px;padding:2px 8px;flex-shrink:0'},'振り返る');rb.addEventListener('click',e=>{e.stopPropagation();tkReviewModal(x);});ec.appendChild(rb);}
       card.appendChild(ec);
     });
-    const learn=exps.map(x=>x.learning).filter(Boolean);
+    const learn=exps.map(tkLearningText).filter(Boolean);
     if(learn.length)card.appendChild(D({css:'font-size:13px;color:var(--go);margin-top:6px'},'直近の学び：'+learn[learn.length-1]));
     { const nt=tkNotesEl(q); if(nt) card.appendChild(nt); }
     const src=tkSrcLog(q);
@@ -3003,7 +3107,7 @@ function renderQuestions(){
   const thSel=document.createElement('select');
   thSel.style.cssText='font-size:13px;padding:6px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);height:38px';
   const noOpt=document.createElement('option');noOpt.value='none';noOpt.textContent='テーマなし';thSel.appendChild(noOpt);
-  S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了').forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.title;thSel.appendChild(o);});
+  rfPickThemes().forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.title;thSel.appendChild(o);});
   const addBtn=Bt({cls:'btn-g',css:'white-space:nowrap;height:38px;padding:0 14px'},'＋ 追加');
   addBtn.addEventListener('click',async()=>{
     const v=addInput.value.trim();if(!v)return;
@@ -3015,7 +3119,7 @@ function renderQuestions(){
   f.appendChild(addRow);
   const pub=S.logs.filter(r=>r.status!=='draft'&&r.question?.trim());
   // テーマフィルター
-  const qThemes=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
+  const qThemes=rfPickThemes();
   let qThFilt='all';
   const qfc=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px'});
   const qThB={};
@@ -3060,7 +3164,7 @@ function renderExperiments(){
   const thSelE=document.createElement('select');
   thSelE.style.cssText='font-size:13px;padding:6px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);height:38px';
   const noOptE=document.createElement('option');noOptE.value='none';noOptE.textContent='テーマなし';thSelE.appendChild(noOptE);
-  S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了').forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.title;thSelE.appendChild(o);});
+  rfPickThemes().forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.title;thSelE.appendChild(o);});
   const addBtnE=Bt({cls:'btn-g',css:'white-space:nowrap;height:38px;padding:0 14px'},'＋ 追加');
   addBtnE.addEventListener('click',async()=>{
     const v=addInputE.value.trim();if(!v)return;
@@ -3072,7 +3176,7 @@ function renderExperiments(){
   f.appendChild(addRowE);
   const pub=S.logs.filter(r=>r.status!=='draft'&&r.nextExp?.trim());
   // テーマフィルター
-  const eThemes=S.themes.filter(t=>!t._fromProjectOS&&t.status!=='完了');
+  const eThemes=rfPickThemes();
   let eThFilt='all';
   const efc=D({css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px'});
   const eThB={};
@@ -3253,79 +3357,6 @@ document.getElementById('imp').addEventListener('change',e=>{const f=e.target.fi
   alert('インポート完了');ra();rgShowUndo();
 }catch(err){alert('エラー: '+err.message);}};reader.readAsText(f);});
 
-/* ── Project OS 同期 ── */
-const POS_STATUS_MAP={'進行中':'実行中','構想中':'構想中','保留':'保留','完了':'完了','中止':'完了'};
-/* Project OS v2.2 のフィールドをテーマへ運ぶ同期。
-   突合キーは 'pos_'+PJ id（既存どおり）。現用ストアは reflectOS_v1（dball('themes')）のみ更新。
-   テーマ実フィールド：問い＝currentState／仮説＝summary（依頼書の question/hypothesis 相当）。
-   上書きルール：currentState/summary は「テーマ側が空のときだけ」PJ値で補完＝手入力を潰さない。
-   goal/centerPin/badFuture/successConditions/nextMove は参照用としてPJ値を常に最新反映（テーマ詳細で表示）。
-   centerPin はPJのセンターピンそのもの。表示は centerPin || summary（PJ由来テーマのみ）。 */
-async function syncFromProjectOS(){
-  try{
-    const raw=localStorage.getItem('pos_v4');
-    if(!raw){console.warn('pos_v4 not found');return -1;}
-    const pos=JSON.parse(raw);
-    const projects=(pos.projects||[]).filter(p=>p.name);
-    const existing=await dball('themes');
-    const firstLine=s=>String(s||'').split(/[\n・]/).map(x=>x.trim()).filter(Boolean)[0]||'';
-    let added=0;
-    for(const p of projects){
-      const syncId='pos_'+p.id;
-      const already=existing.find(t=>t.id===syncId);
-      /* 「現在の問い」材料：question →（空なら）issueMemo →（空なら）attentionIssue の先頭要点 */
-      const pjQuestion=(p.question||'').trim()||(p.issueMemo||'').trim()||firstLine(p.attentionIssue);
-      /* 仮説：centerPin →（空なら）goal */
-      const pjHypo=(p.centerPin||'').trim()||(p.goal||'').trim();
-      const mapped={
-        id:syncId,
-        title:p.name,
-        status:POS_STATUS_MAP[p.status]||'構想中',
-        priority:p.priority==='高'?'A':p.priority==='中'?'B':'C',
-        goal:p.goal||'',
-        centerPin:p.centerPin||'',   /* PJ正で毎回上書き。既存のsummary（手入力の仮説）は保持する */
-        badFuture:p.badFuture||'',
-        successConditions:p.successConditions||'',
-        nextMove:p.nextMove||p.nextAction||'',
-        updatedAt:tod(),
-        _fromProjectOS:true
-      };
-      if(!already){
-        await dbput('themes',{...mapped,createdAt:tod(),currentState:pjQuestion,summary:pjHypo});
-        added++;
-      }else{
-        const next={...already,...mapped};
-        if(!(already.currentState||'').trim()&&pjQuestion)next.currentState=pjQuestion;   /* 空欄補完のみ */
-        if(!(already.summary||'').trim()&&pjHypo)next.summary=pjHypo;
-        await dbput('themes',next);
-      }
-    }
-    /* 対応PJが削除されたテーマは消さず、手動テーマ化して残す（statusは維持） */
-    const posIds=new Set(projects.map(p=>'pos_'+p.id));
-    for(const t of existing.filter(t=>t._fromProjectOS&&!posIds.has(t.id))){
-      await dbput('themes',{...t,_fromProjectOS:false,updatedAt:tod()});
-    }
-    return added;
-  }catch(e){console.warn('Project OS sync error:',e);return 0;}
-}
-
-/* pos_v4 の変更（別タブでのProject OS保存）を受けてPJ由来テーマを再同期する。
-   データは必ず更新し、画面の再描画だけは入力中（#body内のフォームにフォーカス）なら見送る。 */
-let _posLiveBusy=false;
-async function posLiveSync(){
-  if(_posLiveBusy)return;
-  _posLiveBusy=true;
-  try{
-    await syncFromProjectOS();
-    const priOrd={S:0,A:1,B:2,C:3};
-    const th=await dball('themes');
-    S.themes=th.sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));
-    const ae=document.activeElement;
-    const typing=ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)&&document.getElementById('body')?.contains(ae);
-    if(!typing)ra();
-  }catch(e){console.warn('pos live sync error:',e);}
-  finally{_posLiveBusy=false;}
-}
 
 /* ── VISION localStorage 共有 ── */
 const VISION_KEY = 'myapps_vision';
@@ -3579,14 +3610,17 @@ function rfResolveLinks(links){
   ['personIds','personNames'].forEach(k=>{ if(Array.isArray(l[k])&&l[k].length) out[k]=l[k].slice(); });
   return out;
 }
-/* 取り込みで作った ログ・問い・実験・Lectica実践ログ に links を付ける。問いには questionId を付けない（元の問いの意味なので） */
+/* 新しい紐づけに PJ が無ければ、今ある PJ のつながりは残す（テーマを外したときに補った links.projectId を取り込みで消さない） */
+const rfKeepPj=(old,lk)=>(old&&old.projectId&&!lk.projectId&&!lk.projectName)?Object.assign({},lk,{projectId:old.projectId},old.projectName?{projectName:old.projectName}:{}):lk;
+/* 取り込みで作った・直した ログ・問い・実験・テーマ・Lectica実践ログ に links を付ける。問い・テーマには questionId を付けない（元の問いの意味なので） */
 async function inboxAttachLinks(r, links){
   const lk=rfResolveLinks(links);
   if(!Object.keys(lk).length) return;
   const lkQ=Object.assign({}, lk); delete lkQ.questionId;
   for(const id of (r.logIds||[])){ const x=S.logs.find(z=>z&&z.id===id); if(x){ x.links=lk; await dbput('logs', x); } }
-  for(const id of (r.questionIds||[])){ const x=S.questions.find(z=>z&&z.id===id); if(x&&Object.keys(lkQ).length){ x.links=lkQ; await dbput('questions', x); } }
-  for(const id of (r.experimentIds||[])){ const x=S.experiments.find(z=>z&&z.id===id); if(x){ x.links=lk; await dbput('experiments', x); } }
+  for(const id of (r.questionIds||[])){ const x=S.questions.find(z=>z&&z.id===id); if(x&&Object.keys(lkQ).length){ x.links=rfKeepPj(x.links,lkQ); await dbput('questions', x); } }
+  for(const id of (r.experimentIds||[])){ const x=S.experiments.find(z=>z&&z.id===id); if(x){ x.links=rfKeepPj(x.links,lk); await dbput('experiments', x); } }
+  for(const id of (r.themeIds||[])){ const x=S.themes.find(z=>z&&z.id===id); if(x&&Object.keys(lkQ).length){ x.links=lkQ; await dbput('themes', x); } }
   if((r.lecticaLogIds||[]).length){
     const logs=lxReadLogs(); let ch=false;
     logs.forEach(l=>{ if(l&&r.lecticaLogIds.includes(l.id)){ l.links=lk; ch=true; } });
@@ -3615,10 +3649,44 @@ function rfLinkChips(links){
   return row;
 }
 
+/* Project OS のPJをテーマとして写すのをやめた（2026-11-02 本人決定：テーマ＝在り方の軸、PJ＝案件）ときの移行。
+   id が pos_ のテーマに「外した」印を付け、付いていた問い・実験へ links.projectId を補う（themeIds は履歴として残す）。
+   印の無いものだけが対象なので冪等。古いバックアップを戻して印の無い pos_ が入ってきても外れる。「戻す」（detached:false）は触らない */
+async function rfDetachPjThemes(){
+  const FLAG='reflect_detach_20261102_done',BK='reflect_backup_detach_20261102';
+  let flag=null;
+  try{flag=localStorage.getItem(FLAG);}catch(e){return;}
+  const targets=(await dball('themes')).filter(t=>t&&String(t.id).startsWith('pos_')&&t.detached===undefined);
+  if(targets.length){
+    try{if(localStorage.getItem(BK)===null){const v=localStorage.getItem('reflectOS_v1');if(v!==null)localStorage.setItem(BK,v);}}catch(e){console.warn('退避失敗のため移行を見送り',e);return;}
+    for(const t of targets){t.detached=true;t.detachedAt=tod();t.projectId=t.id.slice(4);await dbput('themes',t);}
+    let linked=0;
+    for(const store of ['questions','experiments']){
+      for(const o of await dball(store)){
+        if(!o||(o.links&&o.links.projectId))continue;
+        const t=targets.find(t=>(o.themeIds||[]).includes(t.id));if(!t)continue;
+        o.links=Object.assign({},o.links,{projectId:t.projectId,projectName:t.title});
+        await dbput(store,o);linked++;
+      }
+    }
+    console.log('[reflect-detach] テーマ'+targets.length+'本を外し、問い・実験'+linked+'件に links を補いました');
+  }
+  /* トーストは1回だけ。見えないまま済みにしない：非表示 iframe（?inbox=1）や、SW 更新で直後に読み直されたときは次に開いたときに出す */
+  const m=/^toast:(\d+)$/.exec(flag||'');
+  if(flag&&!m)return;
+  const n=m?+m[1]:targets.length;
+  const mark=v=>{try{localStorage.setItem(FLAG,v);}catch(e){}};
+  if(!n){mark(new Date().toISOString());return;}
+  mark('toast:'+n);
+  if(RF_INBOX_MODE)return;
+  toast('PJのテーマ '+n+'本を外しました（問い・実験のPJとのつながりは残しています）');
+  setTimeout(()=>mark(new Date().toISOString()),2200);
+}
+
 async function boot(){
   try{const v=await dbget('settings','vision');if(v?.value)S.vision=v.value;}catch(e){}
   try{
-    await syncFromProjectOS();
+    await rfDetachPjThemes();   /* PJの写しに「外した」印を付ける（1回だけ・退避キーあり） */
     const priOrd={S:0,A:1,B:2,C:3};
     const th=await dball('themes');
     S.themes=th.sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));

@@ -777,7 +777,7 @@ function readReflectOSFromIDB() {
     const themes = (o.themes || []).filter(t => t && t.status !== '完了')
       /* Cowork向け要約。キー名は互換のため維持し、値の取り先をテーマの実フィールドに合わせる
          （問い＝currentState／仮説＝centerPin || summary。reflect-osの同期契約と対応） */
-      .map(t => ({ id: t.id || '', title: t.title || '', status: t.status || '', priority: t.priority || '', question: t.currentState || '', hypothesis: t.centerPin || t.summary || '', fromProjectOS: !!t._fromProjectOS }));
+      .map(t => ({ id: t.id || '', title: t.title || '', status: t.status || '', priority: t.priority || '', question: t.currentState || '', hypothesis: t.centerPin || t.summary || '', fromProjectOS: !!t._fromProjectOS, detached: !!t.detached }));
     return Promise.resolve({ themes, importantQuestions, activeExperiments });
   } catch(e) { return Promise.resolve(EMPTY); }
 }
@@ -1913,7 +1913,7 @@ function homeInsight(){
   const cands=[];
   try{
     const ref=JSON.parse(localStorage.getItem('reflectOS_v1'))||{};
-    (ref.experiments||[]).forEach(x=>{ if(x&&x.learning) cands.push({text:String(x.learning).split('\n')[0], date:String(x.updatedAt||x.createdAt||'').slice(0,10), src:'reflect'}); });
+    (ref.experiments||[]).forEach(x=>{ if(x&&x.learning&&x.learning!=='（学びなし）') cands.push({text:String(x.learning).split('\n')[0], date:String(x.updatedAt||x.createdAt||'').slice(0,10), src:'reflect'}); });
     (ref.logs||[]).forEach(r=>{ if(r&&r.status!=='draft'&&r.lesson){ const ln=String(r.lesson).split('\n').find(l=>l.trim())||''; if(ln) cands.push({text:ln, date:r.date||'', src:'reflect'}); } });
   }catch(e){}
   try{
