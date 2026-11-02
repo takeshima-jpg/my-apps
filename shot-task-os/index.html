@@ -399,6 +399,12 @@ select option { background: var(--surface); }
   .task-card{flex-wrap:wrap;}
   .task-actions{max-width:none;width:100%;justify-content:flex-end;border-top:1px dashed var(--border);padding-top:8px;margin-top:4px;}
 }
+/* 実験のShotの操作列：ボタンの幅と高さをそろえてまっすぐ並べる（PC＝縦1列、スマホ＝3列の格子） */
+.task-actions.lx-acts { flex-direction: column; flex-wrap: nowrap; align-items: stretch; width: 120px; gap: 4px; }
+.task-actions.lx-acts .act-btn { min-height: 44px; padding: 0 12px; text-align: center; }
+@media(max-width:480px){
+  .task-actions.lx-acts { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; }
+}
 .act-btn.ab-week:hover { border-color: var(--purple); color: var(--purple); }
 .act-btn.ab-reject { color: #dc2626; }
 .act-btn.ab-reject:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
@@ -1557,7 +1563,7 @@ function buildCardHTML(t) {
       ${memo}
       ${(lxSheet && lxSheet.id === id) ? lxSheetHtml(id, t.status, lxSheet.del) : ''}
     </div>
-    <div class="task-actions dense">${acts}</div>
+    <div class="task-actions dense${isLx && t.status !== 'done' ? ' lx-acts' : ''}">${acts}</div>
   </div>`;
 }
 
