@@ -152,6 +152,12 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
 .rfc-q{font-size:13px;color:var(--text);font-weight:700;margin-top:6px}
 .rfc-q.rfc-unl{color:var(--text3);font-weight:400}
 .rfc-exp{font-size:13px;color:var(--text2,#555);padding-left:16px;margin-top:2px}
+/* 週の2択・月の1問：答えると消える。赤・バッジ・件数は出さない */
+.stn-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:14px;line-height:1.6}
+.stn-q{font-size:13px;color:var(--text);margin-top:10px;overflow-wrap:anywhere}
+.stn-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.stn-btn{min-height:44px;padding:0 14px;font-size:13px;font-family:inherit;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text);cursor:pointer;max-width:100%;overflow-wrap:anywhere}
+.stn-btn.on{background:var(--bg);font-weight:700}
 /* 受信箱：取り込んだものを時系列1本で（OS別にしない）。催促・件数バッジは出さない */
 .ibx-wrap{cursor:default}
 .ibx-wrap:hover{background:var(--surface)}
@@ -828,11 +834,12 @@ function collectAllOSData() {
     importInbox:                { pending: jGet('import_inbox_v1'),          // 受信箱：未処理（Task OS が Drive から作る）
                                   done:    jGet('import_inbox_done_v1'),     //         処理済み id（各OSが追記）
                                   log:     jGet('import_inbox_log_v1') },    //         HOME カード用の取り込み記録（直近60日）
+    reflectStance:              jGet('reflect_stance_v1'),    // 週の2択・月の1問の答え（Task OS HOME が書く）
   };
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-11-01';
+const BUILD_VER = '2026-11-02';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -872,6 +879,7 @@ function restoreAllOSData(data) {
   if (data.importInbox?.pending)       localStorage.setItem('import_inbox_v1',                        JSON.stringify(data.importInbox.pending));
   if (data.importInbox?.done)          localStorage.setItem('import_inbox_done_v1',                   JSON.stringify(data.importInbox.done));
   if (data.importInbox?.log)           localStorage.setItem('import_inbox_log_v1',                    JSON.stringify(data.importInbox.log));
+  if (data.reflectStance)              localStorage.setItem('reflect_stance_v1',                      JSON.stringify(data.reflectStance));
   // brief/review は markdown文字列 or オブジェクト。collect(bGet)と対称に：文字列は生のまま、オブジェクトはJSON化。
   const writeBrief = (val, key) => { if (val == null) return; localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val)); };
   writeBrief(data.aixReviewWeekly,  'aix_review_weekly');
@@ -1081,7 +1089,7 @@ const RG_KEYS = [
   'kouso_backlog_v1', 'kouso_archive_v1', 'su-v6-persons', 'hitomemo_profiles_v1',
   'lectica_experiments_master_v1', 'lectica_experiments_master_markdown_v1', 'lectica_experiment_logs_v1',
   'aix_review_weekly', 'aix_review_monthly', 'reflectOS_v1', 'learningRadar_v1',
-  'import_inbox_v1', 'import_inbox_done_v1', 'import_inbox_log_v1',
+  'import_inbox_v1', 'import_inbox_done_v1', 'import_inbox_log_v1', 'reflect_stance_v1',
 ];
 const RG_SNAP_KEY = 'taskos_pre_restore_snapshot';
 
@@ -1907,6 +1915,71 @@ function homeFocusCard(){
   return `<div class="rfc-wrap" onclick="nav('reflect')" title="Reflect OSを開く"><div class="rfc-hd">◇ 重点の問い</div>${rows}</div>`;
 }
 
+/* ══ 週の2択・月の1問（答えは reflect_stance_v1。Reflect OS が問いの詳細で数える）══
+   出す時期を過ぎたら持ち越さない（催促しない）。重点の問い・テーマは reflect_focus_v1 から読む */
+function stanceRead(){
+  let o=null; try{ o=JSON.parse(localStorage.getItem('reflect_stance_v1')||'null'); }catch(e){}
+  return { weeks:(o&&Array.isArray(o.weeks))?o.weeks:[], months:(o&&Array.isArray(o.months))?o.months:[] };
+}
+function stanceFocus(){
+  let fv=null; try{ fv=JSON.parse(localStorage.getItem('reflect_focus_v1')||'null'); }catch(e){}
+  return fv||{};
+}
+/* 金・土・日だけ。全部答えたら消える（重点が入れ替わっても同じ週には再び出さない） */
+function homeStanceWeek(){
+  const now=new Date(), wd=now.getDay();
+  if(wd!==5&&wd!==6&&wd!==0) return '';
+  const fq=stanceFocus().focusQuestions;
+  const qs=(Array.isArray(fq)?fq:[]).filter(q=>q&&q.id).slice(0,3);
+  if(!qs.length) return '';
+  const rec=stanceRead().weeks.find(w=>w&&w.week===isoWeekKey(now));
+  const ans=(rec&&rec.answers)||[];
+  if(ans.length>=qs.length) return '';
+  const btn=(q,used,lb)=>{
+    const a=ans.find(a=>a.questionId===q.id);
+    return `<button class="stn-btn${a&&a.used===used?' on':''}" data-id="${esc(q.id)}" onclick="stanceAnswerWeek(this.dataset.id,${used})">${lb}</button>`;
+  };
+  const rows=qs.map(q=>`<div class="stn-q">◇ ${esc(q.title||'')}</div><div class="stn-btns">${btn(q,true,'あった')}${btn(q,false,'なかった')}</div>`).join('');
+  return `<div class="stn-wrap"><div class="rfc-hd">この週、この構えを使う場面はあったか？</div>${rows}</div>`;
+}
+function stanceAnswerWeek(qid,used){
+  const q=(stanceFocus().focusQuestions||[]).find(q=>q&&q.id===qid); if(!q) return;
+  const st=stanceRead(), week=isoWeekKey(new Date());
+  let rec=st.weeks.find(w=>w&&w.week===week);
+  if(!rec){ rec={week,answers:[]}; st.weeks.push(rec); }
+  if(!Array.isArray(rec.answers)) rec.answers=[];
+  const ans={questionId:qid,title:q.title||'',used:!!used,at:new Date().toISOString()};
+  const i=rec.answers.findIndex(a=>a&&a.questionId===qid);
+  if(i>=0) rec.answers[i]=ans; else rec.answers.push(ans);
+  localStorage.setItem('reflect_stance_v1',JSON.stringify(st));
+  renderHome();
+}
+/* 毎月1〜7日に前月分を聞く。テーマは多くても5つ（優先度順） */
+function stancePrevMonth(){
+  const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+function homeStanceMonth(){
+  if(new Date().getDate()>7) return '';
+  if(stanceRead().months.some(m=>m&&m.month===stancePrevMonth())) return '';
+  const ths=stanceFocus().themes;
+  const themes=Array.isArray(ths)?ths:[];
+  if(!themes.length) return '';
+  const ord={S:0,A:1,B:2,C:3};
+  const top=themes.filter(t=>t&&t.id).map((t,i)=>({t,i})).sort((a,b)=>((ord[a.t.priority]??9)-(ord[b.t.priority]??9))||(a.i-b.i)).slice(0,5).map(x=>x.t);
+  const btns=top.map(t=>`<button class="stn-btn" data-id="${esc(t.id)}" onclick="stanceAnswerMonth(this.dataset.id)">${esc(t.title||'')}</button>`).join('');
+  return `<div class="stn-wrap"><div class="rfc-hd">先月いちばん動いたテーマは？</div><div class="stn-btns">${btns}<button class="stn-btn" onclick="stanceAnswerMonth('')">どれでもない</button></div></div>`;
+}
+function stanceAnswerMonth(themeId){
+  const t=themeId?(stanceFocus().themes||[]).find(t=>t&&t.id===themeId):null;
+  const st=stanceRead(), month=stancePrevMonth();
+  const rec={month,themeId:t?t.id:null,themeTitle:t?(t.title||''):'',at:new Date().toISOString()};
+  const i=st.months.findIndex(m=>m&&m.month===month);
+  if(i>=0) st.months[i]=rec; else st.months.push(rec);
+  localStorage.setItem('reflect_stance_v1',JSON.stringify(st));
+  renderHome();
+}
+
 /* ══ HOME視点追加：💡 最近の気づき（1件・reflectOS_v1のlearning/lesson＋pos_v4の学びムーブの最新。
    読み取り専用・無ければ非表示（空状態の催促メッセージは出さない）══ */
 function homeInsight(){
@@ -2102,6 +2175,8 @@ function renderHome(){
   h += homeOvBanner(ov);
   h += homePjCompass();
   h += homeFocusCard();
+  h += homeStanceWeek();
+  h += homeStanceMonth();
   h += homeInboxCard();
   h += homeInsight();
   h += homeThisWeek(thisWeek);

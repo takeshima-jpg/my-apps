@@ -562,9 +562,9 @@ function openThemeForm(existing){
   wrap.appendChild(card);
   const acts=D({css:'display:flex;gap:8px;margin-top:20px;margin-bottom:40px'});
   const sv=Bt({cls:'btn-p'},existing?'更新':'追加');
-  sv.addEventListener('click',async()=>{if(!tfd.title?.trim()){alert('テーマ名を入力してください');return;}tfd.updatedAt=tod();if(!tfd.createdAt)tfd.createdAt=tod();await dbput('themes',tfd);const i=S.themes.findIndex(x=>x.id===tfd.id);if(i>=0)S.themes[i]=tfd;else S.themes.push(tfd);ra();});
+  sv.addEventListener('click',async()=>{if(!tfd.title?.trim()){alert('テーマ名を入力してください');return;}tfd.updatedAt=tod();if(!tfd.createdAt)tfd.createdAt=tod();await dbput('themes',tfd);const i=S.themes.findIndex(x=>x.id===tfd.id);if(i>=0)S.themes[i]=tfd;else S.themes.push(tfd);tkMirrorFocus();ra();});
   acts.appendChild(sv);
-  if(existing){const dl=Bt({cls:'btn-d',css:'margin-left:auto',onclick:async()=>{if(!confirm('削除しますか？'))return;await dbdel('themes',tfd.id);S.themes=S.themes.filter(x=>x.id!==tfd.id);ra();}},  '削除');acts.appendChild(dl);}
+  if(existing){const dl=Bt({cls:'btn-d',css:'margin-left:auto',onclick:async()=>{if(!confirm('削除しますか？'))return;await dbdel('themes',tfd.id);S.themes=S.themes.filter(x=>x.id!==tfd.id);tkMirrorFocus();ra();}},  '削除');acts.appendChild(dl);}
   const cn=Bt({cls:'btn-s',onclick:()=>ra()},'キャンセル');acts.appendChild(cn);
   wrap.appendChild(acts);
   main.appendChild(wrap);
@@ -803,6 +803,7 @@ function renderHome(){
           const th2=await dball('themes');
           const priOrd={S:0,A:1,B:2,C:3};
           S.themes=th2.sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));
+          tkMirrorFocus();
           ra();
         });
         acts2.appendChild(doneBtn);
@@ -814,6 +815,7 @@ function renderHome(){
           const th2=await dball('themes');
           const priOrd={S:0,A:1,B:2,C:3};
           S.themes=th2.sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9));
+          tkMirrorFocus();
           ra();
         });
         acts2.appendChild(undoBtn);
@@ -918,7 +920,7 @@ function renderHome(){
       const row=D({css:'display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bd)'});
       row.appendChild(Sp({css:'flex:1;min-width:0;font-size:13px;color:var(--mu)'},t.title));
       const back=Bt({cls:'btn-s',css:'font-size:12px;padding:3px 10px;flex-shrink:0'},'戻す');
-      back.addEventListener('click',async()=>{t.detached=false;t.updatedAt=tod();await dbput('themes',t);ra();});
+      back.addEventListener('click',async()=>{t.detached=false;t.updatedAt=tod();await dbput('themes',t);tkMirrorFocus();ra();});
       row.appendChild(back);
       dtBody.appendChild(row);
     });
@@ -1451,6 +1453,7 @@ async function rfApplyUpdate(body){
       bad(b,'');
     }catch(e){ bad(b,(e&&e.message)||String(e)); }
   }
+  if(out.themeIds.length) tkMirrorFocus();
   out.summary=sums.join('／');
   return out;
 }
@@ -1495,8 +1498,8 @@ async function rfApplyCreate(b,ctx){
   out.readable++;
   const st=p.status||'candidate', label=isQ?'問い':'実験';
   const key=rfTitleKey(p.title);
-  const dup=isQ?S.questions.find(q=>q&&q.status!=='merged'&&rfTitleKey(q.title)===key)
-               :S.experiments.find(x=>x&&x.status!=='merged'&&!tkIsReview(x)&&rfTitleKey(x.title)===key);
+  const dup=isQ?S.questions.find(q=>q&&q.status!=='merged'&&!tkIsDraft(q)&&rfTitleKey(q.title)===key)
+               :S.experiments.find(x=>x&&x.status!=='merged'&&!tkIsDraft(x)&&!tkIsReview(x)&&rfTitleKey(x.title)===key);
   if(dup){
     /* 作らない。取りこぼし防止に記録は足し、空の項目だけ埋める */
     const ch=[];
@@ -1658,6 +1661,7 @@ async function reflectImportLegacy(text, opts){
 
   // 汎用ブロックの登録（従来ロジックのまま）
   for(const r of entries){
+    if(opts.importSource) r.importSource=opts.importSource;   /* 受信箱の source（tkMigrate が下書きにするかを見る） */
     await dbput('logs', r);
     const i = S.logs.findIndex(x=>x.id===r.id);
     if(i>=0) S.logs[i]=r; else S.logs.unshift(r);
@@ -1703,8 +1707,12 @@ async function reflectImportLegacy(text, opts){
   /* 受信箱向けの要約：振り返り1件・問い1件・実験1件／Lectica L042 1件 */
   const sum=[];
   if(entries.length) sum.push('振り返り'+entries.length+'件');
-  if(res.questionIds.length) sum.push('問い'+res.questionIds.length+'件');
-  if(res.experimentIds.length) sum.push('実験'+res.experimentIds.length+'件');
+  const nDraft=(ids,arr)=>ids.filter(id=>(arr.find(o=>o.id===id)||{}).status==='draft').length;
+  const dQ=nDraft(res.questionIds,S.questions), dE=nDraft(res.experimentIds,S.experiments);
+  if(res.questionIds.length-dQ) sum.push('問い'+(res.questionIds.length-dQ)+'件');
+  if(res.experimentIds.length-dE) sum.push('実験'+(res.experimentIds.length-dE)+'件');
+  if(dQ) sum.push('問いの下書き'+dQ+'件');
+  if(dE) sum.push('実験の下書き'+dE+'件');
   if(dcAdded) sum.push('意思決定検証'+dcAdded+'件');
   let lxSum='';
   if(lecticaOk) lxSum='Lectica '+(lx.experimentId||'')+' 1件';
@@ -2375,7 +2383,8 @@ function tkMirrorFocus(){
     localStorage.setItem('reflect_focus_v1',JSON.stringify({
       updatedAt:new Date().toISOString(),
       focusQuestions:fq.map(q=>({id:q.id,title:q.title,experiments:acts.filter(x=>x.questionId===q.id).map(lite)})),
-      unlinkedExperiments:acts.filter(x=>!x.questionId||!fqIds.has(x.questionId)).map(lite)
+      unlinkedExperiments:acts.filter(x=>!x.questionId||!fqIds.has(x.questionId)).map(lite),
+      themes:rfPickThemes().map(t=>({id:t.id,title:t.title,priority:t.priority||''}))   /* Task OS の月の1問が読む */
     }));
   }catch(e){console.warn('reflect_focus_v1 mirror失敗',e);}   /* 失敗してもUIは止めない */
 }
@@ -2822,15 +2831,18 @@ async function tkMigrate(){
   const seenE=new Set(S.experiments.map(x=>x.sourceCk).filter(Boolean));
   const pub=S.logs.filter(r=>r.status!=='draft');
   const newQ=[],newE=[];
+  /* 振り返りから生まれる問い・実験は下書き（「振り返りから選ぶ」で0〜1本ずつ候補へ）。
+     リフレクト見直し担当が置いた分は本人がチャットで選び済みなので候補のまま。旧チェックで状態が付いている行はその状態を保つ */
+  const draftOr=(r,st)=>(st==='candidate'&&!/リフレクト見直し/.test(r.importSource||''))?'draft':st;
   pub.forEach(r=>{
     if(r.question?.trim())r.question.split(/\n/).filter(l=>l.trim()).forEach((line,i)=>{
       const ck='q_'+r.id+'_'+i;if(seenQ.has(ck))return;const title=tkCleanLine(line);if(!title)return;
-      const st=TK_QMAP[S.checks[ck]||'todo']||'candidate';
+      const st=draftOr(r,TK_QMAP[S.checks[ck]||'todo']||'candidate');
       newQ.push({id:uid(),title,themeIds:(r.themes||[]).slice(),status:st,hypothesis:'',sourceLogIds:[r.id],sourceCk:ck,mergedIntoId:null,createdAt:r.date||tod(),updatedAt:r.date||tod(),completedAt:(st==='resolved'||st==='discarded')?(r.date||tod()):null});
     });
     if(r.nextExp?.trim())r.nextExp.split(/\n/).filter(l=>l.trim()).forEach((line,i)=>{
       const ck='e_'+r.id+'_'+i;if(seenE.has(ck))return;const title=tkCleanLine(line);if(!title)return;
-      const st=TK_EMAP[S.checks[ck]||'todo']||'candidate';
+      const st=draftOr(r,TK_EMAP[S.checks[ck]||'todo']||'candidate');
       newE.push({id:uid(),questionId:null,title,themeIds:(r.themes||[]).slice(),status:st,scene:'',observation:'',deadline:'',result:'',learning:'',sourceLogIds:[r.id],sourceCk:ck,createdAt:r.date||tod(),updatedAt:r.date||tod(),completedAt:(st==='complete'||st==='discarded')?(r.date||tod()):null});
     });
   });
@@ -2845,6 +2857,109 @@ async function tkMigrate(){
     toast('探求ボードへ移行：問い'+newQ.length+'件・実験'+newE.length+'件（移行前スナップショットをDLしました）');
   }
   return {questionIds:newQ.map(q=>q.id),experimentIds:newE.map(x=>x.id)};
+}
+
+/* ══ 振り返りから選ぶ：下書きの問い・実験をログごとに。問い0〜1・実験0〜1だけ候補へ（残りは draft_dropped。消さない）══ */
+const tkIsDraft=o=>!!o&&(o.status==='draft'||o.status==='draft_dropped');
+const TK_DRAFT_SHOW=3;
+function tkDraftGroups(){
+  const m=new Map();
+  const add=(o,kind)=>{const k=(o.sourceLogIds||[])[0]||o.id;if(!m.has(k))m.set(k,{key:k,qs:[],es:[]});m.get(k)[kind].push(o);};
+  S.questions.filter(q=>q.status==='draft').forEach(q=>add(q,'qs'));
+  S.experiments.filter(x=>x.status==='draft').forEach(x=>add(x,'es'));
+  return [...m.values()].map(g=>{
+    const r=S.logs.find(l=>l.id===g.key);
+    g.date=r?r.date:String((g.qs[0]||g.es[0]).createdAt||'').slice(0,10);
+    g.title=r?(r.title||''):'';
+    return g;
+  }).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+}
+function tkDraftRadios(opts,val,onSel){
+  const w=D({});const nm='tkd'+uid();
+  opts.forEach(([v,l])=>{
+    const lb=h('label',{css:'display:flex;gap:8px;align-items:center;min-height:44px;cursor:pointer;font-size:14px;line-height:1.5'});
+    const rd=In({type:'radio',name:nm,css:'flex-shrink:0;width:auto'});rd.checked=(v===val);
+    rd.addEventListener('change',()=>onSel(v));
+    lb.appendChild(rd);lb.appendChild(Sp({css:'min-width:0;overflow-wrap:anywhere'},l));w.appendChild(lb);
+  });
+  return w;
+}
+async function tkDraftConfirm(g,st){
+  if(st.q&&!st.theme)return;
+  for(const q of g.qs){
+    if(q.id===st.q){q.status='candidate';q.themeIds=st.theme==='none'?[]:[st.theme];if(st.theme==='none')q.noTheme=true;else delete q.noTheme;}
+    else q.status='draft_dropped';
+    await tkSave('questions',q);
+  }
+  for(const x of g.es){
+    if(x.id===st.e){x.status='candidate';x.questionId=st.link==='now'?(st.q||null):(st.link||null);}
+    else x.status='draft_dropped';
+    await tkSave('experiments',x);
+  }
+  delete S._drPick[g.key];ra();updateNav();
+}
+function tkDraftCard(g){
+  S._drPick=S._drPick||{};S._drLater=S._drLater||new Set();
+  const st=S._drPick[g.key]||(S._drPick[g.key]={q:'',e:'',theme:'',link:''});
+  const card=D({css:'background:#fff;border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin-bottom:10px'});
+  const redraw=()=>card.replaceWith(tkDraftCard(g));
+  const md=String(g.date||'').slice(5).replace('-','/');
+  const head=D({css:'font-size:14px;font-weight:600;color:var(--tx);line-height:1.5;overflow-wrap:anywhere'},(md?md+' ':'')+(g.title||'（題名なし）'));
+  if(S._drLater.has(g.key)){   /* 「あとで」：この場では畳むだけ（データは触らない。次に開いたときはまた開いて出る） */
+    head.style.cssText+=';color:var(--mu);font-weight:400;cursor:pointer;min-height:44px;display:flex;align-items:center';
+    head.addEventListener('click',()=>{S._drLater.delete(g.key);redraw();});
+    card.appendChild(head);
+    return card;
+  }
+  card.appendChild(head);
+  const lbl=t=>D({css:'font-size:12px;color:var(--mu);margin-top:10px'},t);
+  if(g.qs.length){
+    card.appendChild(lbl('問いを1つ選ぶ'));
+    card.appendChild(tkDraftRadios([['','選ばない'],...g.qs.slice(0,TK_DRAFT_SHOW).map(q=>[q.id,q.title])],st.q,v=>{st.q=v;if(!v){st.theme='';if(st.link==='now')st.link='';}redraw();}));
+    if(st.q){
+      card.appendChild(lbl('テーマ（必須）'));
+      card.appendChild(tkDraftRadios([...rfPickThemes().map(t=>[t.id,t.title]),['none','テーマなし']],st.theme,v=>{st.theme=v;redraw();}));
+    }
+  }
+  if(g.es.length){
+    card.appendChild(lbl('実験を1つ選ぶ'));
+    card.appendChild(tkDraftRadios([['','選ばない'],...g.es.slice(0,TK_DRAFT_SHOW).map(x=>[x.id,x.title])],st.e,v=>{st.e=v;if(!v)st.link='';redraw();}));
+    if(st.e){
+      card.appendChild(lbl('つなぐ問い（任意）'));
+      const sel=Sel({css:'width:100%;min-height:44px;font-size:14px;padding:6px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx)'});
+      sel.appendChild(Opt('','つながない'));
+      if(st.q)sel.appendChild(Opt('now','いま選んだ問い'));
+      S.questions.filter(q=>q.status==='focus').forEach(q=>sel.appendChild(Opt(q.id,'重点：'+q.title)));
+      S.questions.filter(q=>q.status==='candidate').forEach(q=>sel.appendChild(Opt(q.id,'候補：'+q.title)));
+      sel.value=st.link;
+      sel.addEventListener('change',()=>{st.link=sel.value;});
+      card.appendChild(sel);
+    }
+  }
+  const row=D({css:'display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px'});
+  const blocked=!!st.q&&!st.theme;
+  if(blocked)row.appendChild(Sp({css:'font-size:12px;color:var(--mu);margin-right:auto'},'テーマを選ぶと確定できます'));
+  const later=Bt({cls:'btn-s',css:'min-height:44px'},'あとで');later.addEventListener('click',()=>{S._drLater.add(g.key);redraw();});
+  const ok=Bt({cls:'btn-g',css:'min-height:44px'},'確定');ok.disabled=blocked;if(blocked)ok.style.opacity='.5';
+  ok.addEventListener('click',()=>tkDraftConfirm(g,st));
+  row.appendChild(later);row.appendChild(ok);
+  card.appendChild(row);
+  return card;
+}
+function tkDraftView(){
+  const gs=tkDraftGroups();
+  if(!gs.length)return null;
+  const w=D({css:'margin-bottom:18px'});
+  w.appendChild(D({cls:'sec-lbl',css:'margin-bottom:10px'},'振り返りから選ぶ'));
+  gs.forEach(g=>w.appendChild(tkDraftCard(g)));
+  return w;
+}
+/* 週の2択の答え（reflect_stance_v1。Task OS が書く）。答えが無ければ空文字 */
+function tkStanceLine(qid){
+  let o=null;try{o=JSON.parse(localStorage.getItem('reflect_stance_v1')||'null');}catch(e){}
+  let used=0,all=0;
+  ((o&&o.weeks)||[]).forEach(w=>{const a=((w&&w.answers)||[]).find(a=>a&&a.questionId===qid);if(a){all++;if(a.used)used++;}});
+  return all?'場面があった週：'+used+'／答えた週 '+all:'';
 }
 
 /* ── 探求ボード描画 ── */
@@ -2864,6 +2979,7 @@ function tkQCard(q,expandedDefault){
     if(thN.length)card.appendChild(D({cls:'tk-meta'},'テーマ：'+thN.join('・')));
     if(q.hypothesis)card.appendChild(D({css:'font-size:13px;margin-top:6px;line-height:1.6'},'仮説：'+q.hypothesis));
     { const lk=rfLinkChips(q.links); if(lk) card.appendChild(lk); }   /* 紐づけ（あるときだけ） */
+    { const sl=tkStanceLine(q.id); if(sl) card.appendChild(D({cls:'tk-meta'},sl)); }   /* 週の2択の答え（あるときだけ） */
     /* 問いカード内の関連実験 */
     const exps=S.experiments.filter(x=>x.questionId===q.id&&x.status!=='discarded'&&!tkIsReview(x));
     const act=exps.filter(x=>x.status==='active');
@@ -3080,6 +3196,7 @@ function renderTankyu(){
     f.appendChild(D({css:'font-size:12px;color:var(--mu);margin:-6px 0 12px'},'整理モード：問い・実験を複数選択して、下のバーから統合・紐づけ・一括変更できます'));
     const bar=tkOrgBar();if(bar)f.appendChild(bar);
   }
+  { const dv=tkDraftView(); if(dv) f.appendChild(dv); }
   const tabs=[['focus','重点'],['candidate','候補'],['principle','実践原則'],['done','完了']];
   const tw=D({cls:'tk-tabs'});
   tabs.forEach(([k,l])=>{const b=Bt({cls:'chip'+(S._tkTab===k?' on':'')},l);b.addEventListener('click',()=>{S._tkTab=k;ra();});tw.appendChild(b);});
@@ -3574,7 +3691,7 @@ if(RF_INBOX_MODE){ window.alert=m=>console.warn('[inbox]',m); window.confirm=()=
 let _rfBootDone; const RF_BOOT=new Promise(r=>{_rfBootDone=r;});
 async function inboxApply(block, links, item){
   await RF_BOOT;
-  const r = await reflectImportText(block, {silent:true});
+  const r = await reflectImportText(block, {silent:true, importSource:(item&&item.source)||''});
   if(!r.ok) return {ok:false, summary:r.message||r.summary||'取り込めませんでした'};
   await inboxAttachLinks(r, links);
   try{ ra(); updateNav(); }catch(e){}
