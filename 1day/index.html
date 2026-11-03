@@ -2200,7 +2200,39 @@ function inboxParseLinks(block){
     else if((m=part.match(/^問い[：:]\s*(\S+)/))){ out.questionId=m[1]; }
     else if((m=part.match(/^(S\d+)\b/))){ out.strategyGoalId=m[1]; }
   });
-  return out;
+  return inboxPjName(out);
+}
+/* PJ の今の名前（Project OS の pos_v4）。引けなければ ''。紐づけの保存・表示はこれを優先（PJ名が変わっても古い名前を残さない） */
+function inboxPjNow(id){
+  if(!id) return '';
+  try{ const o=JSON.parse(localStorage.getItem('pos_v4')||'null'); const p=((o&&o.projects)||[]).find(x=>x&&String(x.id)===String(id)); return (p&&p.name)?String(p.name):''; }catch(e){ return ''; }
+}
+/* links の projectName を今のPJ名にそろえる（projectId で引けたときだけ。旧名で書かれても今の名前で保存する）。links を返す */
+function inboxPjName(l){ if(l&&l.projectId){ const n=inboxPjNow(l.projectId); if(n) l.projectName=n; } return l; }
+/* 起動時1回：保存している紐づけの旧PJ名を直す（2026-11-03 PJ「3AHD2030構想」→「スリーエーグループ2030構想」・本人決定）。
+   keys の localStorage を JSON として読み、どの深さでも「links」キーの値（とその配列）だけを直す＝本文は触らない。
+   projectId が s6n9vf1vgdx か projectName が旧名 → projectName を新名に（projectId が無ければ足す）。
+   直す前に元の値を {os}_backup_s02rename_20261103 に退避（同名キーがあれば作らない）。済みは {os}_s02rename_20261103_done。
+   データを読む前に呼ぶ（関数宣言なので共通部品より前の行からも呼べる）。返り値：直した件数 */
+function inboxPjRenameOnce(os, keys){
+  const FLAG=os+'_s02rename_20261103_done', BK=os+'_backup_s02rename_20261103';
+  const ID='s6n9vf1vgdx', OLD='3AHD2030構想', NEW='スリーエーグループ2030構想';
+  try{ if(localStorage.getItem(FLAG)) return 0; }catch(e){ return 0; }
+  let n=0;
+  const fix=l=>{ if(!l||typeof l!=='object'||Array.isArray(l)) return; if(l.projectId!==ID&&l.projectName!==OLD) return;
+    let ch=false; if(l.projectName!==NEW){ l.projectName=NEW; ch=true; } if(!l.projectId){ l.projectId=ID; ch=true; } if(ch) n++; };
+  const walk=v=>{ if(Array.isArray(v)){ v.forEach(walk); return; } if(!v||typeof v!=='object') return;
+    for(const k in v){ if(k==='links') (Array.isArray(v[k])?v[k]:[v[k]]).forEach(fix); walk(v[k]); } };
+  const out={}, raw={};
+  (keys||[]).forEach(k=>{ let s=null; try{ s=localStorage.getItem(k); }catch(e){} if(s===null) return; let o; try{ o=JSON.parse(s); }catch(e){ return; }
+    const before=n; walk(o); if(n>before){ out[k]=JSON.stringify(o); raw[k]=s; } });
+  if(n){
+    try{ if(localStorage.getItem(BK)===null) localStorage.setItem(BK, JSON.stringify(raw)); }catch(e){ console.warn('['+os+'] 退避できないため旧PJ名の直しを見送り（次回また試す）',e); return 0; }
+    try{ for(const k in out) localStorage.setItem(k,out[k]); }catch(e){ console.warn('['+os+'] 旧PJ名の直しの保存に失敗',e); return 0; }
+    console.log('['+os+'] 紐づけの旧PJ名を '+n+'件 直しました');
+  }
+  try{ localStorage.setItem(FLAG,new Date().toISOString()); }catch(e){}
+  return n;
 }
 /* 自分宛ての未処理を取り込む。重なって呼ばれても順番に1回ずつ（同じ item を二重に取り込まない） */
 let _inboxChain=Promise.resolve();
@@ -2212,7 +2244,7 @@ function inboxProcess(trigger){
     for(const it of mine){
       try{
         if(inboxDoneSet().has(it.id)) continue;
-        const links=Object.assign({}, inboxParseLinks(it.block||''), it.links||{});   /* item.links 優先 */
+        const links=inboxPjName(Object.assign({}, inboxParseLinks(it.block||''), it.links||{}));   /* item.links 優先。PJ名は今の名前 */
         const r=await inboxApply(it.block||'', links, it);
         if(r&&r.ok){ inboxMarkDone(it, r.summary, links); results.push({id:it.id, ok:true, summary:r.summary||''}); }
         else results.push({id:it.id, ok:false, summary:(r&&r.summary)||'取り込めませんでした'});
@@ -2261,7 +2293,7 @@ async function inboxApply(block, links, item) {
 /* 戦略目標の対応表（記録の地図 §D-1。Reflect・Project・KOSOLog・ヒトメモと同じ内容。地図が変わったら Claude Code が直す） */
 const STRATEGY_GOALS = {
   S01:{no:'①', name:'関連当事者取引解消（借金返済）'},
-  S02:{no:'②', name:'3AHD構想作成'},
+  S02:{no:'②', name:'スリーエーグループ2030構想'},
   S03:{no:'③', name:'JSS承継税制'},
   S04:{no:'④', name:'IPO準備'},
   S05:{no:'⑤', name:'仲間づくり'},
@@ -2270,11 +2302,13 @@ function odLinkHtml(l) {
   if (!l || typeof l !== 'object') return '';
   const a = [];
   if (l.strategyGoalId) { const g = STRATEGY_GOALS[l.strategyGoalId]; a.push(l.strategyGoalId + (g ? ' ' + g.no + g.name : '')); }
-  if (l.projectName) a.push('PJ ' + l.projectName);
+  const pn = inboxPjNow(l.projectId) || l.projectName;   /* 今のPJ名を優先 */
+  if (pn) a.push('PJ ' + pn);
   (l.personNames || []).forEach(n => a.push('👤 ' + n));
   return a.length ? '<div class="log-lk">' + a.map(s => '<span>' + escHtml(s) + '</span>').join('') + '</div>' : '';
 }
 
+inboxPjRenameOnce('oneday', [DB_KEY, 'aix_drafts']);   /* ログ・下書きの紐づけの旧PJ名（2026-11-03・1回だけ。データを読む前） */
 loadData();
 render();
 bindEvents();

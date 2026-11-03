@@ -34,6 +34,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-reflect-drafts-stance-spec.md](specs/claude-code-reflect-drafts-stance-spec.md) | 振り返りの問い・実験を下書きにし、1回につき問い0〜1・実験0〜1を選んで候補に（問いはテーマ必須）。Task OS HOME に週の2択（金〜日）と月初の1問。答えは reflect_stance_v1 | ✅実装済み（2026-11-02） |
 | [claude-code-shot-card-buttons-spec.md](specs/claude-code-shot-card-buttons-spec.md) | Shot Task OS のカードのボタン整理（期日が今日・実験のShotでは「やる」を出さず「完了」を目立たせる／「保留」の文言）。実験のShotは結果3択を最初から並べる（Task OS HOME も・↗翌日を外す） | ✅実装済み（2026-11-02） |
 | [claude-code-reflect-question-theme-merge-spec.md](specs/claude-code-reflect-question-theme-merge-spec.md) | REFLECT-UPDATE の ■問い／■実験 に「テーマ：」（付け替え）。統合で重点・実験中とテーマを引き継ぐ（外したテーマは除く）、統合ブロックで「テーマ：」「ステータス：」を指定可、画面の統合にもテーマ選択 | ✅実装済み（2026-11-03） |
+| [claude-code-s02-rename-spec.md](specs/claude-code-s02-rename-spec.md) | 戦略目標 S02 を「スリーエーグループ2030構想」に。紐づけの旧PJ名「3AHD2030構想」を起動時1回だけ直し、チップは projectId から今のPJ名を引いて表示 | ✅実装済み（2026-11-03） |
 | [claude-code-koso-log-v2-spec.md](specs/claude-code-koso-log-v2-spec.md) | 構想ログ v2（記録・GOサイン・由来・関連・KOSO-IMPORT）。2026-10-26 に §4-2 の重複判定を「全件」へ訂正して保管 | ✅実装済み（保管のみ・本体は以前に配置） |
 | [claude-code-launcher-pwa-spec.md](specs/claude-code-launcher-pwa-spec.md) | コックピットのPWA化＋自作SVGアイコン（ホーム追加・standalone表示） | ✅実装済み 2026-07-12 `89f825e` |
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |
