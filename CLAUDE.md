@@ -47,6 +47,8 @@ socialUniverse_snapshots / su_pending_review / myapps_vision
 　各OSは loadVisionShared() で読み、無ければ VISION を出さない。前の値は myapps_vision_prev（1世代・受信箱 VISION-UPDATE の退避）
 ※ Reflect のレコード（問い・実験・ログ・テーマ・原則・Lectica の実践ログ）の links は人（personIds/personNames）と問い（questionId）だけ。
 　PJ・戦略目標は持たない（2026-11-03）。案件とのつながりは Project のムーブの links.questionId（PJ から問いを指す）
+※ pos_v4 の projects[] に kind（通常｜維持活動）・mapOrder（全体の地図の並び）・targets[{id,title,status,order,items[{id,title,due,src}]}]（2026-11-03）。
+　ターゲット・案件は「見方の器」で、phases・forks・constraints・moves が正本。PJ の strategyGoalId・ムーブの links.strategyGoalId は過去の記録として残す（画面には出さない）
 ※ reflect_focus_v1 はReflect→Task OSの重点ミラー（派生データ・Reflect起動で再生成可）。
 　形式（focusQuestions/unlinkedExperiments/themes）はTask OSが読むため変更時は両OS同時に
 
