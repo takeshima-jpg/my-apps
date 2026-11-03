@@ -344,6 +344,24 @@ nav{display:flex;flex-direction:column;gap:0;}
 .rf-undo{display:inline-flex;align-items:center;min-height:44px;font-size:12px;color:var(--mu);text-decoration:underline;cursor:pointer;margin-top:6px}
 .tk-ecard{background:#f0f5f1;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:13px;line-height:1.5}
 .tk-st{display:inline-block;font-size:11px;border-radius:9px;padding:1px 8px;margin-right:6px;white-space:nowrap}
+/* 在り方の木（探求ボードの一番上）：VISION → テーマ → 重点の問い → 実験中。線は描画後の実寸から SVG で引く */
+.ariki{margin-bottom:22px;overflow-x:auto;overflow-y:hidden}
+.ak-tree{position:relative;display:flex;align-items:flex-start;gap:28px;min-width:820px;padding:2px 0}
+.ak-lines{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.ak-vcol{width:150px;flex-shrink:0}
+.ak-rows{flex:1;min-width:0}
+.ak-trow,.ak-qrow{display:flex;align-items:flex-start;gap:28px}
+.ak-tcol{width:170px;flex-shrink:0;margin-bottom:10px}
+.ak-qs,.ak-es{flex:1;min-width:0}
+.ak-qcol{width:220px;flex-shrink:0}
+.ak-card{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.ak-card.ak-v{background:var(--go-lt);border-color:var(--go-bd);font-size:12px;color:var(--go);line-height:1.6}
+.ak-card.ak-t{font-weight:700}
+.ak-sub{font-size:12px;color:var(--mu);margin-top:2px}
+.ak-warn{display:inline-block;font-size:11px;font-weight:400;color:#8a5300;background:#fbf0dc;border-radius:9px;padding:1px 8px;margin-left:6px;white-space:nowrap}
+.ak-done-tg{display:inline-flex;align-items:center;min-height:32px;font-size:12px;color:var(--mu);cursor:pointer}
+.ak-done{font-size:12px;color:var(--di);line-height:1.6;padding-left:12px}
+.ak-cand{font-size:12px;color:var(--di);margin-top:2px}
 .tk-warn{display:inline-block;font-size:11px;color:#b05050;background:#faf0f0;border-radius:9px;padding:1px 8px;margin-left:6px;white-space:nowrap}
 .tk-ops{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 </style>
@@ -396,6 +414,12 @@ nav{display:flex;flex-direction:column;gap:0;}
 // 他のタブで保存された場合に再読み込み
 window.addEventListener('storage', function(e) {
   if (e.key === 'reflectOS_v1') { location.reload(); return; }
+  /* 在り方の木の実践回数（Lectica ログ）・VISION は描画のたびに読むので描き直すだけ（読み込み後・受信箱の非表示 iframe では何もしない。
+     入力中のフォーム・VISION編集は描き直さない＝次に開いたときに映る） */
+  if (e.key === 'lectica_experiment_logs_v1' || e.key === 'myapps_vision') {
+    if (typeof RF_INBOX_MODE !== 'undefined' && RF_INBOX_MODE) return;
+    RF_BOOT.then(() => { if (!S.forming && !S.editing && S.tab !== 'vision-edit') ra(); });
+  }
 });
 
 function toast(msg) {
@@ -477,6 +501,8 @@ const THEME_CATS=['戦略','プロジェクト','VISION','新規事業','人間�
 const THEME_STATUS=['構想中','実行中','保留','完了','撤退'];
 /* 選択肢に出すテーマ（外したテーマ・完了を除く） */
 const rfPickThemes=()=>S.themes.filter(t=>!t.detached&&t.status!=='完了');
+/* 探求テーマの並び（ホームと在り方の木で共通）：優先度 → 状態 */
+const rfThemeSort=(a,b)=>{const p={S:0,A:1,B:2,C:3},st={実行中:0,構想中:1,保留:2,完了:3,撤退:4};return (p[a.priority]||9)-(p[b.priority]||9)||(st[a.status]||9)-(st[b.status]||9);};
 const THEME_PRI=['S','A','B','C'];
 
 /* ── Form primitives ── */
@@ -743,9 +769,7 @@ function renderHome(){
   f.appendChild(vblock);
 
   // Themes
-  const priOrd={S:0,A:1,B:2,C:3};
-  const stOrd={実行中:0,構想中:1,保留:2,完了:3,撤退:4};
-  const themes=[...S.themes].sort((a,b)=>(priOrd[a.priority]||9)-(priOrd[b.priority]||9)||(stOrd[a.status]||9)-(stOrd[b.status]||9));
+  const themes=[...S.themes].sort(rfThemeSort);
   // ── カード生成関数 ──
   function buildThemeCard(t){
     const relLogs=pub.filter(r=>(r.themes||[]).includes(t.id));
@@ -3256,9 +3280,97 @@ function tkDoneView(){
   return w;
 }
 
+/* ── 在り方の木（2026-11-03 本人決定・記録の地図 v1.18 §E）──
+   VISION → テーマ → 重点の問い → 実験中 を左から右へ。データから毎回描く（受信箱の直しがそのまま映る）。
+   目立たせるのは「重点なし」「実験中なし」の2つだけ（黄土色）。重点につながらない実験中・テーマにつながらない重点の問いは木に出さない（下の一覧に出る）。
+   線は描画後の実寸から SVG で引き直す（カードの高さは中身で変わる。ResizeObserver で折りたたみ・幅の変化にも追従） */
+function akTree(){
+  const themes=rfPickThemes().sort(rfThemeSort);
+  if(!themes.length) return null;
+  const VS=loadVisionShared(), logs=lxReadLogs();
+  const edges=[];   /* [親カード, [子カード…]] */
+  const sec=D({cls:'ariki'});
+  sec.appendChild(D({cls:'sec-lbl'},'在り方の木'));
+  const tree=D({cls:'ak-tree'});
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','ak-lines');
+  tree.appendChild(svg);
+  let vCard=null;
+  if(VS){ const vc=D({cls:'ak-vcol'}); vCard=D({cls:'ak-card ak-v'}); VS.vision.forEach(v=>vCard.appendChild(D({},v))); vc.appendChild(vCard); tree.appendChild(vc); }
+  const rows=D({cls:'ak-rows'}), tCards=[];
+  if(!S._akDone)S._akDone={};
+  themes.forEach(t=>{
+    const tr=D({cls:'ak-trow'}), tc=D({cls:'ak-tcol'});
+    const fqs=tkFocusQs().filter(q=>(q.themeIds||[]).includes(t.id));
+    const tCard=D({cls:'ak-card ak-t'},t.title); if(!fqs.length) tCard.appendChild(Sp({cls:'ak-warn'},'重点なし'));
+    tc.appendChild(tCard); tCards.push(tCard);
+    const done=S.experiments.filter(x=>(x.status==='complete'||x.status==='principled')&&(x.themeIds||[]).includes(t.id));
+    if(done.length){   /* 完了・原則化は問いの下に出さず、テーマの下に折りたたみ（本数は出さない） */
+      const open=!!S._akDone[t.id];
+      const tg=D({cls:'ak-done-tg'},(open?'▾':'▸')+' 完了した実験を見る');
+      const ls=D({cls:'ak-done',css:open?'':'display:none'});
+      done.forEach(x=>ls.appendChild(D({},(x.rid?'['+x.rid+'] ':'')+x.title)));
+      tg.addEventListener('click',()=>{ const o=!S._akDone[t.id]; S._akDone[t.id]=o; ls.style.display=o?'':'none'; tg.textContent=(o?'▾':'▸')+' 完了した実験を見る'; });
+      tc.appendChild(tg); tc.appendChild(ls);
+    }
+    tr.appendChild(tc);
+    if(fqs.length){
+      const qs=D({cls:'ak-qs'}), qCards=[];
+      fqs.forEach(q=>{
+        const qr=D({cls:'ak-qrow'}), qc=D({cls:'ak-qcol'});
+        const acts=tkActiveOf(q.id);
+        const qCard=D({cls:'ak-card'},q.title); if(!acts.length) qCard.appendChild(Sp({cls:'ak-warn'},'実験中なし'));
+        qc.appendChild(qCard); qr.appendChild(qc); qCards.push(qCard);
+        if(acts.length){
+          const es=D({cls:'ak-es'}), eCards=[];
+          acts.forEach(x=>{
+            const ec=D({cls:'ak-card'});
+            const tt=D({}); tt.appendChild(tkStBadge(x.status,TK_EST)); tt.appendChild(document.createTextNode((x.rid?'['+x.rid+'] ':'')+x.title)); ec.appendChild(tt);
+            ec.appendChild(x.scene?D({cls:'ak-sub'},'場面：'+x.scene):D({cls:'ak-sub',css:'color:var(--mu);font-size:11px'},'場面なし'));
+            if(x.rid){ const n=lxPracticeStats(x.rid,logs).total; if(n) ec.appendChild(D({cls:'ak-sub'},'実践 '+n+'回')); }   /* 事実の数字（0回は出さない） */
+            { const lk=rfLinkChips(x.links); if(lk) ec.appendChild(lk); }   /* 人だけ */
+            es.appendChild(ec); eCards.push(ec);
+          });
+          qr.appendChild(es); edges.push([qCard,eCards]);
+        }
+        qs.appendChild(qr);
+      });
+      tr.appendChild(qs); edges.push([tCard,qCards]);
+    }
+    rows.appendChild(tr);
+  });
+  if(vCard) edges.unshift([vCard,tCards]);
+  tree.appendChild(rows);
+  sec.appendChild(tree);
+  /* 木の下の1行：候補の本数（事実）。0本のものは書かない */
+  const cq=S.questions.filter(q=>q.status==='candidate').length, ce=S.experiments.filter(x=>x.status==='candidate').length;
+  const cl=[cq?'候補の問い '+cq+'本':'',ce?'候補の実験 '+ce+'本':''].filter(Boolean);
+  if(cl.length) sec.appendChild(D({cls:'ak-cand'},cl.join(' ・ ')));
+  /* 線：親の右端から幹（縦）を下ろし、各子へ枝（横）。y はカードの上から最大20px（1行目の高さ） */
+  const draw=()=>{
+    if(!tree.isConnected) return;
+    const R=tree.getBoundingClientRect(), my=r=>r.top-R.top+Math.min(r.height/2,20);
+    let d='';
+    edges.forEach(([p,kids])=>{
+      const pr=p.getBoundingClientRect(), x0=pr.right-R.left, y0=my(pr);
+      const ks=kids.map(k=>k.getBoundingClientRect()); if(!ks.length) return;
+      const x1=Math.min(...ks.map(r=>r.left-R.left)), xt=Math.round((x0+x1)/2)+.5;
+      const ys=ks.map(my), top=Math.min(y0,...ys), bot=Math.max(y0,...ys);
+      d+='M'+x0+' '+y0+'H'+xt+'M'+xt+' '+top+'V'+bot;
+      ks.forEach((r,i)=>{ d+='M'+xt+' '+ys[i]+'H'+(r.left-R.left); });
+    });
+    svg.setAttribute('width',tree.offsetWidth); svg.setAttribute('height',tree.offsetHeight);   /* scroll* だと前回の SVG 自身の大きさが残る */
+    svg.innerHTML='<path d="'+d+'" fill="none" stroke="#cfc8bc" stroke-width="1"/>';
+  };
+  if(window.ResizeObserver){ const ro=new ResizeObserver(()=>{ if(!tree.isConnected){ ro.disconnect(); return; } draw(); }); ro.observe(tree); }
+  else window.addEventListener('resize',draw);
+  requestAnimationFrame(draw);
+  return sec;
+}
+
 function renderTankyu(){
   if(!S._tkSelQ){S._tkSelQ=[];S._tkSelE=[];}
   const f=document.createDocumentFragment();
+  { const ak=akTree(); if(ak) f.appendChild(ak); }   /* 在り方の木（件数の行より上） */
   const hd=D({cls:'tk-hd'});
   hd.appendChild(D({},'重点の問い ',h('b',{},String(tkFocusQs().length)),' / '+TK_MAX_FOCUS_Q));
   hd.appendChild(D({},'実験中 ',h('b',{},String(tkActiveEs().length)),'（重点1本につき'+TK_MAX_ACTIVE_PER_Q+'まで）'));
@@ -3818,6 +3930,7 @@ window.addEventListener('message', ev=>{ if(ev.origin!==location.origin) return;
 
 /* 起動（データの読み込み）が終わるまで受信箱は待つ。?inbox=1（Task OS の非表示 iframe）ではダイアログを出さない */
 const RF_INBOX_MODE=new URLSearchParams(location.search).get('inbox')==='1';
+const RF_START_TAB=new URLSearchParams(location.search).get('tab');   /* ?tab=tankyu：探求ボードを開く（Task OS HOME の「在り方の木」から） */
 if(RF_INBOX_MODE){ window.alert=m=>console.warn('[inbox]',m); window.confirm=()=>false; }   /* 非表示 iframe では確認・警告を出さない（confirm は「やめる」扱い） */
 let _rfBootDone; const RF_BOOT=new Promise(r=>{_rfBootDone=r;});
 async function inboxApply(block, links, item){
@@ -4070,6 +4183,7 @@ async function boot(){
     await rfRidOnce();   /* R番号の無い実験中に次の番号（R001〜R003 の題名一致の後。冪等・退避キーあり） */
   }catch(e){console.warn(e);}
   tkMirrorFocus();   /* 初期化完了時に重点スナップショットをlocalStorageへ（空でも書く） */
+  if(RF_START_TAB==='tankyu'&&!RF_INBOX_MODE)S.tab='tankyu';
   renderV26();ra();updateNav();
   _rfBootDone();
   inboxProcess('load');   /* 受信箱：自分宛て（targetOS:'reflect'）の未処理を取り込む。無ければ何もしない */

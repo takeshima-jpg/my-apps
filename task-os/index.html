@@ -152,6 +152,12 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
 .rfc-q{font-size:13px;color:var(--text);font-weight:700;margin-top:6px}
 .rfc-q.rfc-unl{color:var(--text3);font-weight:400}
 .rfc-exp{font-size:13px;color:var(--text2,#555);padding-left:16px;margin-top:2px}
+/* 在り方の木の入口：1行（44px）。バッジ・催促なし */
+.ark-link{display:flex;align-items:center;gap:10px;height:44px;padding:0 16px;margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;font-size:13px;min-width:0}
+.ark-link:hover{background:var(--bg)}
+.ark-hd{flex-shrink:0;font-size:12px;font-weight:700;color:#2a5a3a}   /* Reflect の --go */
+.ark-th{flex:1;min-width:0;color:var(--text2,#555);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ark-go{flex-shrink:0;color:var(--text3)}
 /* 週の2択・月の1問：答えると消える。赤・バッジ・件数は出さない */
 .stn-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:14px;line-height:1.6}
 .stn-q{font-size:13px;color:var(--text);margin-top:10px;overflow-wrap:anywhere}
@@ -1937,6 +1943,14 @@ function homeFocusCard(){
   return `<div class="rfc-wrap" onclick="nav('reflect')" title="Reflect OSを開く"><div class="rfc-hd">◇ 重点の問い</div>${rows}</div>`;
 }
 
+/* ══ 在り方の木の入口（reflect_focus_v1.themes の題名を1行）══
+   押すと Reflect OS の探求ボード（?tab=tankyu）を新しいタブで開く。テーマが無ければ出さない */
+function homeArikiLink(){
+  const th=(stanceFocus().themes||[]).map(x=>x&&x.title).filter(Boolean);
+  if(!th.length) return '';
+  return `<div class="ark-link" onclick="closeSidebar();window.open('../reflect-os/index.html?tab=tankyu','_blank')" title="Reflect OS の探求ボードを開く"><span class="ark-hd">在り方の木</span><span class="ark-th">${esc(th.join('・'))}</span><span class="ark-go">›</span></div>`;
+}
+
 /* ══ 週の2択・月の1問（答えは reflect_stance_v1。Reflect OS が問いの詳細で数える）══
    出す時期を過ぎたら持ち越さない（催促しない）。重点の問い・テーマは reflect_focus_v1 から読む */
 function stanceRead(){
@@ -2197,6 +2211,7 @@ function renderHome(){
   h += homeOvBanner(ov);
   h += homePjCompass();
   h += homeFocusCard();
+  h += homeArikiLink();   /* 在り方の木の入口（重点の問いの直後・週の2択の直前） */
   h += homeStanceWeek();
   h += homeStanceMonth();
   h += homeInboxCard();
