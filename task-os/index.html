@@ -787,8 +787,10 @@ function readReflectOSFromIDB() {
     } catch(e) {}
     const themes = (o.themes || []).filter(t => t && t.status !== '完了')
       /* Cowork向け要約。キー名は互換のため維持し、値の取り先をテーマの実フィールドに合わせる
-         （問い＝currentState／仮説＝centerPin || summary。reflect-osの同期契約と対応） */
-      .map(t => ({ id: t.id || '', title: t.title || '', status: t.status || '', priority: t.priority || '', question: t.currentState || '', hypothesis: t.centerPin || t.summary || '', fromProjectOS: !!t._fromProjectOS, detached: !!t.detached }));
+         （問い＝そのテーマの重点の問いの題名を「／」でつないだ文（2026-11-03 テーマの問い欄は廃止）／仮説＝centerPin || summary） */
+      .map(t => ({ id: t.id || '', title: t.title || '', status: t.status || '', priority: t.priority || '',
+        question: (o.questions || []).filter(q => q && q.status === 'focus' && (q.themeIds || []).includes(t.id)).map(q => q.title).filter(Boolean).join('／'),
+        hypothesis: t.centerPin || t.summary || '', fromProjectOS: !!t._fromProjectOS, detached: !!t.detached }));
     return Promise.resolve({ themes, importantQuestions, activeExperiments });
   } catch(e) { return Promise.resolve(EMPTY); }
 }
