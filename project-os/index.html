@@ -1991,7 +1991,8 @@ function sparkContextPJ(p){
   const nf=nearFork(p);
   const ms=[...(p.moves||[])].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
   const build=(mit,k)=>{
-    const tl=tgList(p).filter(t=>tgSt(t)!=='完了').map((t,i)=>pjCirc(i+1)+t.title+(tgSt(t)==='保留'?'（保留）':''));
+    /* 番号は付けない（地図の番号は地図全体の通し番号なので、PJ の中で①から振ると食い違う） */
+    const tl=tgList(p).filter(t=>tgSt(t)!=='完了').map(t=>t.title+(tgSt(t)==='保留'?'（保留）':''));
     const head=(tl.length?['ターゲット：'+tl.join('／')]:[]).concat(['【PJ】'+p.name,'ゴール：'+(p.goal||'未設定'),'現在の問い：'+(p.question||'未設定'),'次の一手：'+(p.nextMove||'未設定')])
       .concat(mit.map(x=>x[0]+'：'+x[1]));
     if(nf)head.push('接近分岐：'+nf.title+' あと'+nf.days+'日（'+nf.date+'）');
