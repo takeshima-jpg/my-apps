@@ -45,6 +45,8 @@ socialUniverse_snapshots / su_pending_review / myapps_vision
 ※ myapps_vision の形：{vision:[文…], principles:[{title,text}], directions:[{title,text}], words:[③の選択肢],
 　cycle:['安心','挑戦','成長'], updatedAt, source}。words・cycle が無ければ読む側で補う（原則・指針の title／安心→挑戦→成長）。
 　各OSは loadVisionShared() で読み、無ければ VISION を出さない。前の値は myapps_vision_prev（1世代・受信箱 VISION-UPDATE の退避）
+※ Reflect のレコード（問い・実験・ログ・テーマ・原則・Lectica の実践ログ）の links は人（personIds/personNames）と問い（questionId）だけ。
+　PJ・戦略目標は持たない（2026-11-03）。案件とのつながりは Project のムーブの links.questionId（PJ から問いを指す）
 ※ reflect_focus_v1 はReflect→Task OSの重点ミラー（派生データ・Reflect起動で再生成可）。
 　形式（focusQuestions/unlinkedExperiments/themes）はTask OSが読むため変更時は両OS同時に
 

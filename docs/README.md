@@ -39,6 +39,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-reflect-rid-auto-spec.md](specs/claude-code-reflect-rid-auto-spec.md) | 実験を実験中にしたとき R番号を自動で付ける（次の番号・使い回さない・手で付けた番号が優先）。統合は統合元の R番号を引き継ぐ。今ある実験中に起動時1回だけ付ける | ✅実装済み（2026-11-03） |
 | [claude-code-cleanup-1103-spec.md](specs/claude-code-cleanup-1103-spec.md) | 使っていない欄・古い写しの片付け（Project の Reflect問いID欄、Lectica壁打ちプロンプト v3.1 の埋め込み、Reflect の決定検証、ヒトメモの日次ファイルの受け口）。SU の見直し記録をバックアップへ | ✅実装済み（2026-11-03） |
 | [claude-code-vision-source-and-theme-link-spec.md](specs/claude-code-vision-source-and-theme-link-spec.md) | VISION を myapps_vision 1つから出す（旧 VISION の埋め込みを10ファイルから外す・バックアップ・受信箱 VISION-UPDATE）。Reflect のテーマに「今いちばん足りない言葉」「循環の止まっている所」、ホームを VISION→テーマ→重点の問い→実験中の順に | ✅実装済み（2026-11-03） |
+| [claude-code-reflect-unlink-projects-spec.md](specs/claude-code-reflect-unlink-projects-spec.md) | Reflect の問い・実験・ログ・テーマ・Lectica ログから PJ と戦略目標の紐づけを外す（旧紐づけは記録に1行）。これからも付けない（人の紐づけは残す）。つながりは PJ 側の「問い：」で持つ | ✅実装済み（2026-11-03） |
 | [claude-code-koso-log-v2-spec.md](specs/claude-code-koso-log-v2-spec.md) | 構想ログ v2（記録・GOサイン・由来・関連・KOSO-IMPORT）。2026-10-26 に §4-2 の重複判定を「全件」へ訂正して保管 | ✅実装済み（保管のみ・本体は以前に配置） |
 | [claude-code-launcher-pwa-spec.md](specs/claude-code-launcher-pwa-spec.md) | コックピットのPWA化＋自作SVGアイコン（ホーム追加・standalone表示） | ✅実装済み 2026-07-12 `89f825e` |
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |
