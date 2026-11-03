@@ -2289,18 +2289,10 @@ async function inboxApply(block, links, item) {
   try { updateAixBadge(); if (document.getElementById('aix-view') && document.getElementById('aix-view').style.display === 'block') renderAixDraftList(); } catch(e) {}
   return { ok:true, summary: Number(td.slice(5,7)) + '/' + Number(td.slice(8,10)) + ' の下書きを追加（承認待ち）' };
 }
-/* 戦略目標の対応表（記録の地図 §D-1。Reflect・Project・KOSOLog・ヒトメモと同じ内容。地図が変わったら Claude Code が直す） */
-const STRATEGY_GOALS = {
-  S01:{no:'①', name:'関連当事者取引解消（借金返済）'},
-  S02:{no:'②', name:'スリーエーグループ2030構想'},
-  S03:{no:'③', name:'JSS承継税制'},
-  S04:{no:'④', name:'IPO準備'},
-  S05:{no:'⑤', name:'仲間づくり'},
-};
+/* ログの紐づけ：PJ名・人。旧 S-ID は 2026-11-03 に表示をやめた（links.strategyGoalId は残す） */
 function odLinkHtml(l) {
   if (!l || typeof l !== 'object') return '';
   const a = [];
-  if (l.strategyGoalId) { const g = STRATEGY_GOALS[l.strategyGoalId]; a.push(l.strategyGoalId + (g ? ' ' + g.no + g.name : '')); }
   const pn = inboxPjNow(l.projectId) || l.projectName;   /* 今のPJ名を優先 */
   if (pn) a.push('PJ ' + pn);
   (l.personNames || []).forEach(n => a.push('👤 ' + n));

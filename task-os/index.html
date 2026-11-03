@@ -2713,7 +2713,7 @@ function homeInboxCard(){
   const md=s=>{ const m=String(s||'').match(/^\d{4}-(\d{2})-(\d{2})/); return m?(+m[1])+'/'+(+m[2]):''; };
   /* PJ は名前で出す（id があれば pos_v4 の今の名前、引けなければ保存した名前。実IDは見せない） */
   const pjName=l=>inboxPjNow(l.projectId)||l.projectName||'';   /* 今のPJ名を優先 */
-  const linkLine=l=>{ l=l||{}; const a=[l.strategyGoalId, pjName(l)].concat(l.personNames||[]).filter(Boolean); return a.length?'｜紐づけ：'+a.join('・'):''; };
+  const linkLine=l=>{ l=l||{}; const a=[pjName(l)].concat(l.personNames||[]).filter(Boolean); return a.length?'｜紐づけ：'+a.join('・'):''; };   /* PJ名・人だけ（旧 S-ID は出さない・2026-11-03） */
   const tgt=os=>INBOX_TARGETS[os]||{label:os||'?', nav:''};
   let html='';
   rows.forEach(r=>{

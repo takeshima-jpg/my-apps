@@ -3944,7 +3944,7 @@ async function inboxApply(block, links, item){
   return {ok:true, summary:[r.summary,pjNote].filter(Boolean).join('／')};
 }
 
-/* 戦略目標の対応表（記録の地図 §D-1。地図が変わったら Claude Code がここを直す。Project OS と同じ内容） */
+/* 旧 S-ID の読み替え用（一度きりの移行 rfUnlinkPj の記録ラベルだけが使う）。新しく使わない（2026-11-03 から戦略目標は構想ログの種別「戦略目標」） */
 const STRATEGY_GOALS={
   S01:{no:'①', name:'関連当事者取引解消（借金返済）'},
   S02:{no:'②', name:'スリーエーグループ2030構想'},

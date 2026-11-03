@@ -130,6 +130,7 @@ nav { padding: 4px 8px; display: flex; flex-direction: column; gap: 1px; }
 .badge-完了   { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
 .badge-廃棄   { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
 .badge-PJ化   { background: #ecfeff; color: #0e7490; border: 1px solid #cffafe; }
+.badge-戦略目標 { background: #eef4f1; color: #2f5d4a; border: 1px solid #cfe3d8; }
 .badge-pri-S  { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; }
 .badge-pri-A  { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 800; }
 .badge-pri-B  { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; font-weight: 800; }
@@ -164,6 +165,14 @@ nav { padding: 4px 8px; display: flex; flex-direction: column; gap: 1px; }
 .home-pri-c .home-priority-label { color: #6b7280; }
 .home-pri-c .home-priority-header { border-color: #e5e7eb; }
 
+/* 戦略目標の束（S/A/B/C の上）・つながるプロジェクト */
+.home-sg .home-priority-label { color: #2f5d4a; }
+.home-sg .home-priority-header { border-color: #cfe3d8; }
+.home-card-pj { font-size: 12px; color: var(--text3); margin-top: 3px; }
+.list-sg-label { font-size: 12px; font-weight: 800; color: var(--text3); letter-spacing: .06em; margin: 4px 0 8px; }
+.sg-pj-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.sg-pj-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 2px 4px 2px 10px; border: 1px solid #cfe3d8; border-radius: 9999px; background: #eef4f1; color: #2f5d4a; }
+.sg-pj-chip button { border: none; background: transparent; color: #2f5d4a; cursor: pointer; min-width: 32px; min-height: 32px; font-size: 14px; }
 .home-card {
   background: var(--bg);
   border: 1px solid var(--border);
@@ -638,6 +647,7 @@ textarea.form-control { resize: vertical; min-height: 56px; }
         <select class="form-control" id="f-type" onchange="onTypeChange()">
           <option value="構想">構想 (G)</option>
           <option value="実行">試し (E)</option>
+          <option value="戦略目標">戦略目標 (G)</option>
         </select>
       </div>
       <div class="form-group" id="f-priority-group">
@@ -673,7 +683,7 @@ textarea.form-control { resize: vertical; min-height: 56px; }
         <label class="form-label">GOサイン（やる／やらないを分けるもの）</label>
         <input class="form-control" id="f-gosign" type="text">
       </div>
-      <div class="form-group">
+      <div class="form-group" id="f-success-group">
         <label class="form-label">成功条件</label>
         <input class="form-control" id="f-success" type="text">
       </div>
@@ -684,6 +694,11 @@ textarea.form-control { resize: vertical; min-height: 56px; }
       <div class="form-group" id="f-prereq-group">
         <label class="form-label">前提条件</label>
         <input class="form-control" id="f-prereq" type="text">
+      </div>
+      <div class="form-group form-col2" id="f-pj-group">
+        <label class="form-label">プロジェクト</label>
+        <div class="sg-pj-chips" id="f-pj-chips"></div>
+        <select class="form-control" id="f-pj-add" onchange="sgPjAdd(this.value)"><option value="">＋ プロジェクトを足す</option></select>
       </div>
       <div class="form-group" id="f-review-group">
         <label class="form-label">最終レビュー日</label>
@@ -750,6 +765,10 @@ function toast(msg) {
 const STORAGE_KEY = 'kouso_backlog_v1';
 const ARCHIVE_KEY = 'kouso_archive_v1';
 const STATUSES    = ['検討中','待機','実行中','PJ化','完了','廃棄'];
+const SG = '戦略目標';                                   /* 種別「戦略目標」（2026-11-03） */
+const SG_STATUSES = ['検討中','実行中','完了','廃棄'];   /* 戦略目標に PJ化・待機は無い */
+const isGType = t => t==='構想' || t===SG;              /* 親になれる G（構想・戦略目標） */
+const SG_HIDDEN = ['priority','goSign','trigger','prereq','success'];   /* 戦略目標では画面に出さない欄（値は残す） */
 const LOG_KINDS   = ['気づき','判断','統合','派生','PJ化','見直し'];
 const REL_KINDS   = ['派生元','統合先','関連'];
 const ORIGIN_KINDS = ['種','壁打ち','1day','本人'];
@@ -779,6 +798,7 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     items = raw ? JSON.parse(raw) : [];
     items.forEach(i => {
+      if (i.type===SG) return;   /* 戦略目標には優先度・トリガー・前提を足さない */
       if (!i.priority) i.priority = 'A';
       if (!i.prereq) i.prereq = '';
       if (!i.trigger) i.trigger = '';
@@ -792,7 +812,7 @@ function load() {
 }
 // v2 移行（冪等）：createdAt 補完／log・relations を [] に。値は一切変えない（review・origin も触らない）
 function migrateV2(raw) {
-  const needs = items.some(i => !i.createdAt || !Array.isArray(i.log) || (i.type==='構想' && !Array.isArray(i.relations)));
+  const needs = items.some(i => !i.createdAt || !Array.isArray(i.log) || (isGType(i.type) && !Array.isArray(i.relations)));
   if (!needs) return;
   if (raw) {
     const d = new Date();
@@ -800,15 +820,15 @@ function migrateV2(raw) {
     if (localStorage.getItem(key) === null) { try { localStorage.setItem(key, raw); } catch(e) {} }
   }
   items.forEach(i => {
-    if (i.type==='構想' && !i.createdAt) i.createdAt = i.review || DEFAULT_CREATED;
+    if (isGType(i.type) && !i.createdAt) i.createdAt = i.review || DEFAULT_CREATED;
   });
   items.forEach(i => {
-    if (i.type!=='構想' && !i.createdAt) {
+    if (!isGType(i.type) && !i.createdAt) {
       const p = items.find(x => x.id===i.parentId);
       i.createdAt = (p && p.createdAt) || DEFAULT_CREATED;
     }
     if (!Array.isArray(i.log)) i.log = [];
-    if (i.type==='構想' && !Array.isArray(i.relations)) i.relations = [];
+    if (isGType(i.type) && !Array.isArray(i.relations)) i.relations = [];
   });
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch(e) {}
 }
@@ -958,7 +978,7 @@ function esc(s) {
 }
 function priOrder(p) { return {S:0,A:1,B:2,C:3}[p]??9; }
 function genId(type) {
-  const prefix = type==='構想'?'G':'E';
+  const prefix = isGType(type)?'G':'E';
   const nums = items.filter(i=>i.id.startsWith(prefix)).map(i=>parseInt(i.id.slice(1))||0);
   return prefix + String((nums.length?Math.max(...nums):0)+1).padStart(2,'0');
 }
@@ -985,7 +1005,7 @@ function renderCurrentView() {
   else if (currentView==='list') renderList();
   else if (currentView==='archive') renderArchive();
   else if (currentView==='ai-import') renderAiImport();
-  const kousoCount = items.filter(i=>i.type==='構想').length;
+  const kousoCount = items.filter(i=>isGType(i.type)).length;   /* G 番号の数（戦略目標を含む） */
   const jikkoCount = items.filter(i=>i.type==='実行').length;
   document.getElementById('sidebar-count').textContent = `G:${kousoCount} E:${jikkoCount}`;
 }
@@ -999,6 +1019,8 @@ function updateBadges() {
 function renderHome() {
   const el = document.getElementById('view-home');
   const kousos = items.filter(i=>i.type==='構想'&&i.status!=='廃棄'&&i.status!=='完了'&&i.status!=='PJ化');
+  /* 戦略目標（VISION とプロジェクトの間・2026-11-03）は S/A/B/C の束の上に。件数・優先度は出さない */
+  const sgs = items.filter(i=>i.type===SG&&i.status!=='廃棄'&&i.status!=='完了').sort((a,b)=>a.id.localeCompare(b.id));
   const groups = [
     { key:'S', label:'S — 今期コア', cls:'home-pri-s', items: kousos.filter(i=>i.priority==='S').sort((a,b)=>a.id.localeCompare(b.id)) },
     { key:'A', label:'A — 重要',     cls:'home-pri-a', items: kousos.filter(i=>i.priority==='A').sort((a,b)=>a.id.localeCompare(b.id)) },
@@ -1012,25 +1034,19 @@ function renderHome() {
       <div class="page-sub">今どの構想に集中するか — クリックで詳細を展開</div>
     </div>`;
 
-  groups.forEach(g => {
-    if (g.items.length === 0) return;
-    html += `<div class="home-priority-section ${g.cls}">
-      <div class="home-priority-header">
-        <span class="home-priority-label">${esc(g.label)}</span>
-        <span class="home-priority-count">${g.items.length}件</span>
-      </div>`;
-    g.items.forEach(k => {
-      const children = items.filter(i=>i.type==='実行'&&i.parentId===k.id&&i.status!=='廃棄');
-      const isExpanded = expandedHome.has(k.id);
-      const childrenHtml = children.map(e => `
+  const card = k => {
+    const isSG = k.type===SG;
+    const children = items.filter(i=>i.type==='実行'&&i.parentId===k.id&&i.status!=='廃棄');
+    const isExpanded = expandedHome.has(k.id);
+    const childrenHtml = children.map(e => `
         <div class="home-child-row">
           <span class="home-child-indent">└</span>
           <span class="home-child-id">${esc(e.id)}</span>
           <span class="home-child-title">${esc(e.title)}</span>
           ${statusBadge(e.status)}
         </div>`).join('');
-
-      html += `
+    const pjs = isSG ? sgPjNames(k) : [];
+    return `
         <div class="home-card${isExpanded?' expanded':''}" onclick="toggleHomeCard('${esc(k.id)}')">
           <div class="home-card-header">
             <span class="home-card-id">${esc(k.id)}</span>
@@ -1039,7 +1055,9 @@ function renderHome() {
             <span class="home-toggle-arrow">▶</span>
           </div>
           ${k.purpose?`<div class="home-card-purpose">${esc(k.purpose)}</div>`:''}
-          ${k.goSign?`<div class="home-card-gosign">GOサイン：${esc(k.goSign)}</div>`:''}
+          ${isSG
+            ? (pjs.length?`<div class="home-card-pj">プロジェクト：${esc(pjs.join('・'))}</div>`:'')
+            : (k.goSign?`<div class="home-card-gosign">GOサイン：${esc(k.goSign)}</div>`:'')}
           <div class="home-card-children">
             ${children.length===0
               ? '<div class="home-empty">試しなし</div>'
@@ -1049,11 +1067,22 @@ function renderHome() {
             </div>
           </div>
         </div>`;
-    });
-    html += `</div>`;
+  };
+
+  if (sgs.length) {
+    html += `<div class="home-priority-section home-sg">
+      <div class="home-priority-header"><span class="home-priority-label">戦略目標</span></div>${sgs.map(card).join('')}</div>`;
+  }
+  groups.forEach(g => {
+    if (g.items.length === 0) return;
+    html += `<div class="home-priority-section ${g.cls}">
+      <div class="home-priority-header">
+        <span class="home-priority-label">${esc(g.label)}</span>
+        <span class="home-priority-count">${g.items.length}件</span>
+      </div>${g.items.map(card).join('')}</div>`;
   });
 
-  if (kousos.length === 0) {
+  if (kousos.length === 0 && sgs.length === 0) {
     html += `<div class="empty-state"><div class="empty-icon">📭</div>構想がありません。<br>AIインポートまたは新規追加で登録してください。</div>`;
   }
 
@@ -1080,19 +1109,31 @@ function renderList() {
       )
     );
   }
+  /* 戦略目標の束（一番上）：検索・ステータスの絞り込みは効かせる。優先度で絞ったときは出さない（優先度を持たない） */
+  let sgList = filterPriority ? [] : items.filter(i=>i.type===SG);
+  if (filterSearch) {
+    const q = filterSearch.toLowerCase();
+    sgList = sgList.filter(k => [k.id,k.title,k.purpose,sgPjNames(k).join(' ')].some(v=>(v||'').toLowerCase().includes(q)));
+  }
+  if (filterStatus) sgList = sgList.filter(k=>k.status===filterStatus);
+  sgList.sort((a,b)=>a.id.localeCompare(b.id));
   if (filterPriority) filtered = filtered.filter(k=>k.priority===filterPriority);
   if (filterStatus)   filtered = filtered.filter(k=>k.status===filterStatus);
 
   filtered.sort((a,b)=>priOrder(a.priority)-priOrder(b.priority)||a.id.localeCompare(b.id));
 
-  const listHtml = filtered.map(k => {
+  const listCard = k => {
+    const isSG = k.type===SG;
     const children = items.filter(i=>i.type==='実行'&&i.parentId===k.id);
     const isOpen = expandedLog.has(k.id);
     const log = Array.isArray(k.log) ? k.log : [];
     const rels = Array.isArray(k.relations) ? k.relations : [];
     const latest = log.length ? log[log.length-1] : null;
 
-    const detailFields = [
+    const detailFields = isSG ? [
+      {label:'目的', value:k.purpose},
+      {label:'プロジェクト', value:sgPjNames(k).join('・')},
+    ] : [
       {label:'目的/概要', value:k.purpose},
       {label:'GOサイン', value:k.goSign},
       {label:'成功条件', value:k.success},
@@ -1141,7 +1182,7 @@ function renderList() {
               <span class="log-child-id">${esc(e.id)}</span>
               <span class="log-child-title">${esc(e.title)}</span>
               ${statusBadge(e.status)}
-              <span class="priority-inherited">継承: ${esc(parentPri)}</span>
+              ${isSG?'':`<span class="priority-inherited">継承: ${esc(parentPri)}</span>`}
             </div>
             ${e.purpose?`<div class="log-child-purpose">${esc(e.purpose)}</div>`:''}
           </div>
@@ -1162,7 +1203,7 @@ function renderList() {
             ${latest?`<span class="log-latest">${esc(shortDate(latest.date))} ${esc(latest.kind)}｜${esc(clip(latest.text,40))}</span>`:''}
           </div>
           <div class="log-meta">
-            ${priBadge(k.priority||'A')}
+            ${isSG?'<span class="badge badge-戦略目標">戦略目標</span>':priBadge(k.priority||'A')}
             ${statusBadge(k.status)}
             ${children.length>0?`<span style="font-size:10px;color:var(--text4)">E:${children.length}</span>`:''}
           </div>
@@ -1180,11 +1221,12 @@ function renderList() {
             <button class="btn-edit" onclick="openModal('${esc(k.id)}')">編集</button>
             <button class="btn-del" onclick="deleteItem('${esc(k.id)}')">削除</button>
             <button class="btn-edit" onclick="openModal(null,'${esc(k.id)}')" style="background:#ede9fe;color:#5b21b6;border-color:#ddd6fe">＋ 試しを追加</button>
-            <button class="btn-edit" onclick="copyOneKoso('${esc(k.id)}')">📋 この構想</button>
+            <button class="btn-edit" onclick="copyOneKoso('${esc(k.id)}')">${isSG?'📋 この戦略目標':'📋 この構想'}</button>
           </div>
         </div>
       </div>`;
-  }).join('');
+  };
+  const listHtml = filtered.map(listCard).join('');
 
   el.innerHTML = `
     <div class="page-header">
@@ -1205,6 +1247,7 @@ function renderList() {
       <button class="btn-edit" onclick="copyAllKoso()">📋 壁打ち用</button>
     </div>
     <div class="log-list">
+      ${sgList.length?`<div class="list-sg-label">戦略目標</div>${sgList.map(listCard).join('')}<div class="list-sg-label" style="margin-top:14px">構想</div>`:''}
       ${listHtml||'<div class="empty-state"><div class="empty-icon">🔍</div>該当する構想がありません</div>'}
     </div>`;
 }
@@ -1231,8 +1274,9 @@ function addRecord(id, kind) {
 }
 
 function openRelated(id) {
-  const k = items.find(i=>i.id===id&&i.type==='構想');
+  const k = items.find(i=>i.id===id&&isGType(i.type));
   if (!k) { showToast(id+' が見つかりません'); return; }
+  if (k.type===SG && filterPriority) filterPriority='';
   if ((filterPriority&&k.priority!==filterPriority)||(filterStatus&&k.status!==filterStatus)||filterSearch) {
     filterSearch=''; filterPriority=''; filterStatus='';
   }
@@ -1265,14 +1309,22 @@ function buildAllKosoText() {
     }
   });
   while (total()>800 && rows.length) rows.pop();
-  return [head, ...rows.map(r=>r.line)].join('\n');
+  /* 先頭に戦略目標の束（検討中・実行中）。あれば構想の束に見出しを付ける */
+  const sgRows = items.filter(i=>i.type===SG&&['検討中','実行中'].includes(i.status)).sort((a,b)=>a.id.localeCompare(b.id))
+    .map(k => [k.id, k.title, sgPjNames(k).length?'プロジェクト：'+sgPjNames(k).join('・'):'', latestRecLine(k)].filter(Boolean).join('｜'));
+  if (!sgRows.length) return [head, ...rows.map(r=>r.line)].join('\n');
+  return [head, '■ 戦略目標', ...sgRows, '■ 構想', ...rows.map(r=>r.line)].join('\n');
 }
 function buildOneKosoText(id) {
   const k = items.find(i=>i.id===id);
   if (!k) return '';
   const kids = items.filter(i=>i.type==='実行'&&i.parentId===id);
   const log = (Array.isArray(k.log)?k.log:[]).slice(-3).reverse();
-  const lines = [
+  const lines = k.type===SG ? [
+    '【戦略目標 '+k.id+'】'+k.title,
+    '目的：'+(k.purpose||''),
+    'プロジェクト：'+(sgPjNames(k).join('・')||'未設定'),
+  ] : [
     '【構想 '+k.id+'】'+k.title,
     '目的：'+(k.purpose||''),
     'GOサイン：'+(k.goSign||'未設定'),
@@ -1385,6 +1437,15 @@ GOサイン：〇〇〇（空欄・（変更なし）は触らない／（空に
 学び：〇〇〇
 
 ■ PJ化：G01 → PJ名
+
+■ 戦略目標 新規
+タイトル：〇〇〇
+目的：〇〇〇（任意）
+プロジェクト：PJ名、PJ名（全置換・（空にする）で空に）
+ステータス：検討中
+
+■ 戦略目標 G05
+プロジェクト：PJ名、PJ名
 <span style="color:var(--text4)">※ 旧書式（【構想】で始まるもの）も従来どおり新規作成として受け付けます。</span></div>
       </details>
     </div>`;
@@ -1563,8 +1624,9 @@ const KI_KEYS = {
   '記録':'log',
   '理由':'reason',
   '学び':'learn',
+  'プロジェクト':'projects',
 };
-const KI_LABEL = { title:'タイトル', purpose:'目的/概要', success:'成功条件', goSign:'GOサイン', trigger:'実行トリガー', prereq:'前提条件', priority:'優先順位', status:'ステータス', origin:'由来' };
+const KI_LABEL = { projects:'プロジェクト', title:'タイトル', purpose:'目的/概要', success:'成功条件', goSign:'GOサイン', trigger:'実行トリガー', prereq:'前提条件', priority:'優先順位', status:'ステータス', origin:'由来' };
 const KI_CLEARABLE = ['goSign','trigger','prereq','purpose','success'];
 
 // 貼り付け文字列 → ブロック配列（解析のみ・データは触らない）
@@ -1588,9 +1650,9 @@ function parseKosoImport(text) {
   blocks.forEach(b => {
     const h = b.headN;
     let m;
-    if ((m = h.match(/^■\s*(構想|試し|実行)\s*(新規|[GEge]\d+)(?:\s*親\s*[：:]\s*([Gg]\d+))?/))) {
+    if ((m = h.match(/^■\s*(構想|試し|実行|戦略目標)\s*(新規|[GEge]\d+)(?:\s*親\s*[：:]\s*([Gg]\d+))?/))) {
       b.op = m[2]==='新規' ? 'new' : 'update';
-      b.type = m[1]==='構想' ? '構想' : '実行';
+      b.type = m[1]==='構想' ? '構想' : m[1]===SG ? SG : '実行';
       b.id = m[2]==='新規' ? '' : m[2].toUpperCase();
       b.parent = m[3] ? m[3].toUpperCase() : '';
     } else if ((m = h.match(/^■\s*統合\s*[：:]\s*([Gg]\d+)\s*(?:→|->|⇒|＞)\s*([Gg]\d+)/))) {
@@ -1630,8 +1692,8 @@ function kiAddRelation(item, kind, id) {
 
 // 1ブロック分を item に反映（更新・新規共通）。変更内容のラベル配列を返す
 function kiApplyFields(item, fields, isNew) {
-  const isG = item.type === '構想';
-  const changed = [];
+  const isG = isGType(item.type), isSG = item.type===SG;   /* 由来・関連は戦略目標にも効く */
+  const changed = [], skipped = [];
   let logN = 0, relN = 0, dupN = 0;
   fields.forEach(({key, value}) => {
     if (key==='reason' || key==='learn') return;
@@ -1645,6 +1707,13 @@ function kiApplyFields(item, fields, isNew) {
     }
     if (!value || value==='（変更なし）' || value==='(変更なし)') return;
     const clear = value==='（空にする）' || value==='(空にする)';
+    if (key==='projects') {   /* 戦略目標だけ。全置換（書いた分に入れ替え） */
+      if (!isSG) { skipped.push(KI_LABEL[key]); return; }
+      const next = clear ? [] : kosoParsePjList(value);
+      if (JSON.stringify(item.projects||[]) !== JSON.stringify(next)) { item.projects = next; changed.push(KI_LABEL[key]); }
+      return;
+    }
+    if (isSG && SG_HIDDEN.includes(key)) { skipped.push(KI_LABEL[key]); return; }   /* 戦略目標では使わない欄（今の値は残す） */
     if (key==='relations') {
       if (!isG) return;
       const m = value.split(/\s+/);
@@ -1669,6 +1738,7 @@ function kiApplyFields(item, fields, isNew) {
       return;
     }
     if (key==='status') {
+      if (isSG && !SG_STATUSES.includes(value)) { skipped.push(KI_LABEL[key]+'（'+value+'）'); return; }
       if (STATUSES.includes(value) && item.status!==value) { item.status = value; changed.push(KI_LABEL[key]); }
       return;
     }
@@ -1682,22 +1752,26 @@ function kiApplyFields(item, fields, isNew) {
   });
   if (relN) changed.push('関連'+relN+'件');
   if (logN) changed.push('記録'+logN+'件');
-  changed.dupLog = dupN;   /* 重複で入れなかった記録の数（要約用・changed の件数には数えない） */
+  changed.dupLog = dupN;
+  changed.note = skipped.length ? '戦略目標では使わない欄：'+skipped.join('・') : '';   /* 要約に1行（読めませんでした、にはしない） */   /* 重複で入れなかった記録の数（要約用・changed の件数には数えない） */
   return changed;
 }
 
 // 1ブロック適用。成功時 {summary}、失敗時 {error} を返す（失敗時はデータを変えない）
 function applyKosoBlock(b) {
   const fv = k => { const f = b.fields.filter(x=>x.key===k).pop(); return f ? f.value : ''; };
-  const findG = id => items.find(i => i.id===id && i.type==='構想');
+  const findG = id => items.find(i => i.id===id && isGType(i.type));
+  const withNote = (s, ...n) => [s, ...n].filter(Boolean).join('／');
 
   if (b.op==='update') {
-    const item = items.find(i => i.id===b.id && i.type===b.type);
+    let item = items.find(i => i.id===b.id && i.type===b.type), sgNote = '';
+    /* 古い書き方「■ 構想 G05」で戦略目標が届いたら、戦略目標として読む */
+    if (!item && b.type==='構想') { item = items.find(i => i.id===b.id && i.type===SG); if (item) sgNote = b.id+' は戦略目標です（■ 戦略目標 '+b.id+' で書いてください）'; }
     if (!item) return { error: true };
     const changed = kiApplyFields(item, b.fields, false);
-    if (!changed.length) return { summary: b.id+' 変更なし'+(changed.dupLog?'（記録 0件（重複））':'') };
-    if (item.type==='構想') item.review = today();
-    return { summary: b.id+' 更新（'+changed.join('・')+'）', ids: [item.id] };
+    if (!changed.length) return { summary: withNote(b.id+' 変更なし'+(changed.dupLog?'（記録 0件（重複））':''), sgNote, changed.note) };
+    if (isGType(item.type)) item.review = today();
+    return { summary: withNote(b.id+' 更新（'+changed.join('・')+'）', sgNote, changed.note), ids: [item.id] };
   }
 
   if (b.op==='new') {
@@ -1709,7 +1783,10 @@ function applyKosoBlock(b) {
       if (!parent) return { error: true };
     }
     const dup = items.find(i => i.type===b.type && i.title===title);
-    const item = {
+    const item = b.type===SG ? {
+      id: genId(SG), type: SG, parentId: '-', title: '', purpose: '', status: '検討中',
+      review: today(), createdAt: today(), log: [], relations: [], projects: [],
+    } : {
       id: genId(b.type), type: b.type,
       parentId: parent ? parent.id : '-',
       title: '', purpose: '', success: '', trigger: '', prereq: '',
@@ -1719,11 +1796,11 @@ function applyKosoBlock(b) {
       createdAt: today(), log: [],
     };
     if (b.type==='構想') { item.goSign = ''; item.relations = []; }
-    kiApplyFields(item, b.fields, true);
+    const ch = kiApplyFields(item, b.fields, true);
     if (parent) item.priority = parent.priority || 'A';
-    if (b.type==='構想' && !(item.origin && item.origin.kind)) item.origin = { kind:'取り込み', date: today() };
+    if (isGType(b.type) && !(item.origin && item.origin.kind)) item.origin = { kind:'取り込み', date: today() };
     items.push(item);
-    return { summary: item.id+' 新規'+(parent?'（親 '+parent.id+'）':'')+(dup?'（同名 '+dup.id+' あり）':''), ids: [item.id] };
+    return { summary: withNote(item.id+' 新規'+(b.type===SG?'（戦略目標）':'')+(parent?'（親 '+parent.id+'）':'')+(dup?'（同名 '+dup.id+' あり）':''), ch.note), ids: [item.id] };
   }
 
   if (b.op==='merge') {
@@ -1746,7 +1823,7 @@ function applyKosoBlock(b) {
     const learn = fv('learn');
     const already = item.status==='廃棄' && archives.some(a => a.id===item.id && a.reason===reason);
     item.status = '廃棄';
-    if (item.type==='構想') item.review = today();
+    if (isGType(item.type)) item.review = today();
     if (already) return { summary: item.id+' 廃棄済み（アーカイブは追加せず）', ids: [item.id] };
     archives.push({ id:item.id, title:item.title, priority:item.priority||'A', type:item.type, reason, learn, date: today() });
     return { summary: item.id+' 廃棄', ids: [item.id] };
@@ -1755,6 +1832,7 @@ function applyKosoBlock(b) {
   if (b.op==='pj') {
     const item = findG(b.id);
     if (!item || !b.pjName) return { error: true };
+    if (item.type===SG) return { summary: item.id+' 戦略目標は PJ化しません' };   /* 戦略目標は PJ を束ねたまま閉じない */
     item.status = 'PJ化';
     item.projectName = b.pjName;
     const pj = findPosProject(b.pjName);
@@ -1854,6 +1932,8 @@ function openModal(id, defaultParentId) {
     item ? item.type : (defaultParentId?'実行':'構想'),
     item ? item.parentId : (defaultParentId||'-')
   );
+  sgPjSel = (item && Array.isArray(item.projects)) ? item.projects.map(p=>Object.assign({}, p)) : [];
+  sgPjRender();
   updateFormForType();
   document.getElementById('modal').classList.add('open');
   setTimeout(() => document.getElementById('f-title').focus(), 50);
@@ -1861,10 +1941,10 @@ function openModal(id, defaultParentId) {
 
 function rebuildParentOpts(type, selected) {
   const sel = document.getElementById('f-parent');
-  const parents = items.filter(i=>i.type==='構想'&&(editingId?i.id!==editingId:true));
+  const parents = items.filter(i=>isGType(i.type)&&(editingId?i.id!==editingId:true));   /* 戦略目標も試しの親になれる */
   sel.innerHTML = '<option value="-">-</option>' +
     parents.map(p=>`<option value="${esc(p.id)}"${p.id===selected?' selected':''}>${esc(p.id+': '+p.title)}</option>`).join('');
-  sel.disabled = type==='構想';
+  sel.disabled = type!=='実行';
 }
 
 function onTypeChange() {
@@ -1875,15 +1955,20 @@ function onTypeChange() {
 
 function updateFormForType() {
   const type = document.getElementById('f-type').value;
-  const isG  = type === '構想';
-  // 構想のみ: priority, trigger, prereq, review
-  // 実行のみ: parent
+  const isG  = type === '構想', isSG = type === SG;
+  // 構想のみ: priority, gosign, trigger, prereq／構想・戦略目標: review／戦略目標のみ: プロジェクト（成功条件も出さない）／実行のみ: parent
   document.getElementById('f-priority-group').style.display = isG ? '' : 'none';
   document.getElementById('f-gosign-group').style.display   = isG ? '' : 'none';
-  document.getElementById('f-parent-group').style.display   = isG ? 'none' : '';
+  document.getElementById('f-parent-group').style.display   = (isG||isSG) ? 'none' : '';
   document.getElementById('f-trigger-group').style.display  = isG ? '' : 'none';
   document.getElementById('f-prereq-group').style.display   = isG ? '' : 'none';
-  document.getElementById('f-review-group').style.display   = isG ? '' : 'none';
+  document.getElementById('f-review-group').style.display   = (isG||isSG) ? '' : 'none';
+  document.getElementById('f-success-group').style.display  = isSG ? 'none' : '';
+  document.getElementById('f-pj-group').style.display       = isSG ? '' : 'none';
+  /* 戦略目標に PJ化・待機は無い */
+  const st = document.getElementById('f-status');
+  [...st.options].forEach(o => { o.hidden = isSG && !SG_STATUSES.includes(o.value); });
+  if (isSG && !SG_STATUSES.includes(st.value)) st.value = '検討中';
 }
 
 function closeModal() { document.getElementById('modal').classList.remove('open'); editingId = null; }
@@ -1905,19 +1990,27 @@ function saveItem() {
   if (!title) { alert('タイトルを入力してください'); return; }
   const type = document.getElementById('f-type').value;
   const newStatus = document.getElementById('f-status').value;
-  const isG = type === '構想';
+  const isG = type === '構想', isSG = type === SG;
 
   // Inherit priority for 実行 from parent
   let priority = 'A';
   if (isG) {
     priority = document.getElementById('f-priority').value || 'A';
-  } else {
+  } else if (!isSG) {
     const parentId = document.getElementById('f-parent').value;
     const parent = items.find(i=>i.id===parentId);
     priority = parent ? (parent.priority||'A') : 'A';
   }
 
-  const data = {
+  /* 戦略目標：GOサイン・成功条件・トリガー・前提・優先度は data に入れない＝今の値をそのまま残す（画面で隠すだけ） */
+  const data = isSG ? {
+    id: editingId || genId(type),
+    type, parentId: '-', title,
+    purpose: document.getElementById('f-purpose').value.trim(),
+    status: SG_STATUSES.includes(newStatus) ? newStatus : '検討中',
+    review: document.getElementById('f-review').value.replace(/-/g,'/'),
+    projects: sgPjSel.map(p => Object.assign({}, p)),
+  } : {
     id: editingId || genId(type),
     type,
     parentId: isG ? '-' : (document.getElementById('f-parent').value||'-'),
@@ -1944,7 +2037,7 @@ function saveItem() {
     if(idx>=0) { saved = {...prevItem, ...data}; items[idx] = saved; }
   } else {
     saved = {...data, createdAt: today(), log: []};
-    if (isG) { saved.relations = []; saved.origin = {kind:'本人', date: today()}; }
+    if (isG || isSG) { saved.relations = []; saved.origin = {kind:'本人', date: today()}; }
     items.push(saved);
   }
   if (becamePj && saved) {
@@ -2106,14 +2199,6 @@ async function inboxApply(block, links, item) {
   try { renderCurrentView(); } catch(e) {}
   return { ok:true, summary: [r.summary, ...r.errors].join('／') };
 }
-/* 戦略目標の対応表（記録の地図 §D-1。Reflect OS・Project OS と同じ内容。地図が変わったら Claude Code が直す） */
-const STRATEGY_GOALS = {
-  S01:{no:'①', name:'関連当事者取引解消（借金返済）'},
-  S02:{no:'②', name:'スリーエーグループ2030構想'},
-  S03:{no:'③', name:'JSS承継税制'},
-  S04:{no:'④', name:'IPO準備'},
-  S05:{no:'⑤', name:'仲間づくり'},
-};
 /* 触った構想・試しに links を付ける（空の項目は落とす。projectId はレコードの projectId に補わない） */
 function kosoAttachLinks(ids, links) {
   const l = links || {}, out = {};
@@ -2125,8 +2210,7 @@ function kosoAttachLinks(ids, links) {
 function kosoLinkLabels(l) {
   if (!l || typeof l !== 'object') return [];
   const a = [];
-  if (l.strategyGoalId) { const g = STRATEGY_GOALS[l.strategyGoalId]; a.push(l.strategyGoalId + (g ? ' ' + g.no + g.name : '')); }
-  (l.personNames || []).forEach(n => a.push('👤 ' + n));
+  (l.personNames || []).forEach(n => a.push('👤 ' + n));   /* 人だけ（旧 S-ID は 2026-11-03 に表示をやめた。links.strategyGoalId は残す） */
   return a;
 }
 
@@ -2156,10 +2240,89 @@ function kosoLogDedupeOnce() {
   try { localStorage.setItem(LOGDEDUPE_FLAG, new Date().toISOString().slice(0, 10)); } catch (e) {}
 }
 
+/* ══ 戦略目標（2026-11-03 本人決定・記録の地図 v1.18 §D-0）══
+   VISION とプロジェクトの間の層。構想と同じ G 番号で、PJ を複数束ねたまま閉じない（PJ化は無い）。
+   projects＝[{projectId, projectName}]（名前は pos_v4 の今の名前で出す）。goSign・priority・trigger・prereq・success は画面に出さない（値は残す） */
+function kosoPosList() {
+  try { const o = JSON.parse(localStorage.getItem('pos_v4') || 'null'); return (o && Array.isArray(o.projects)) ? o.projects : []; } catch(e) { return []; }
+}
+const kosoNormPj = s => String(s||'').normalize('NFKC').replace(/\s+/g,'').toLowerCase();
+/* PJ 名（formerNames も）で pos_v4 から引く。引けなければ null */
+function kosoFindPjByName(name) {
+  const k = kosoNormPj(name); if (!k) return null;
+  return kosoPosList().find(p => p && (kosoNormPj(p.name)===k || (p.formerNames||[]).some(x => kosoNormPj(x)===k))) || null;
+}
+/* 「、」区切りの PJ 名 → [{projectId, projectName}]。引けない名前は projectId 空で名前だけ残す */
+function kosoParsePjList(v) {
+  const out = [];
+  String(v||'').split(/[、,，]/).map(s=>s.trim()).filter(Boolean).forEach(n => {
+    const p = kosoFindPjByName(n);
+    const e = p ? { projectId: String(p.id), projectName: String(p.name||n) } : { projectId: '', projectName: n };
+    if (!out.some(x => (e.projectId && x.projectId===e.projectId) || (!e.projectId && x.projectName===e.projectName))) out.push(e);
+  });
+  return out;
+}
+function sgPjNames(k) {
+  return (Array.isArray(k && k.projects) ? k.projects : []).map(p => (p && (inboxPjNow(p.projectId) || p.projectName)) || '').filter(Boolean);
+}
+/* 編集フォームの「プロジェクト」（複数選択・チップ） */
+let sgPjSel = [];
+function sgPjRender() {
+  const chips = document.getElementById('f-pj-chips'), sel = document.getElementById('f-pj-add');
+  if (!chips || !sel) return;
+  chips.innerHTML = sgPjSel.map((p,i) => `<span class="sg-pj-chip">${esc(inboxPjNow(p.projectId) || p.projectName)}<button type="button" onclick="sgPjDel(${i})" title="外す">×</button></span>`).join('');
+  const cands = kosoPosList().filter(p => p && p.id && p.status!=='完了' && !sgPjSel.some(x => x.projectId===String(p.id)));
+  sel.innerHTML = '<option value="">＋ プロジェクトを足す</option>' + cands.map(p => `<option value="${esc(String(p.id))}">${esc(p.name||'')}</option>`).join('');
+}
+function sgPjAdd(id) {
+  const p = kosoPosList().find(x => x && String(x.id)===String(id));
+  if (p && !sgPjSel.some(x => x.projectId===String(p.id))) sgPjSel.push({ projectId: String(p.id), projectName: String(p.name||'') });
+  sgPjRender();
+}
+function sgPjDel(i) { sgPjSel.splice(i,1); sgPjRender(); }
+
+/* 一度だけの投入（依頼書3 §2-4）：G05「竹嶋家100年の計」を戦略目標に・「スリーエーグループ100年構想」を新設。
+   投入前に kouso_backlog_v1 を退避（同名キーがあれば作らない）。G05 が構想のときだけ・同じ題名の戦略目標が無いときだけ（冪等）。
+   フラグがあっても戦略目標が1つも無ければ（投入前のバックアップを戻したとき）もう一度入れる。G05 の review は触らない */
+const KOSO_SG_FLAG = 'kouso_sg_seeded_20261103', KOSO_SG_BK = 'kouso_backup_sg_20261103';
+function kosoSgSeedOnce() {
+  if (localStorage.getItem(KOSO_SG_FLAG) && items.some(i => i.type===SG)) return;
+  const D = '2026/11/03', NEWT = 'スリーエーグループ100年構想';
+  const pj = (id, name) => ({ projectId: id, projectName: inboxPjNow(id) || name });
+  const g5 = items.find(i => i.id==='G05' && i.type==='構想' && /竹嶋家100年の計/.test(i.title||''));
+  const needNew = !items.some(i => i.type===SG && String(i.title||'').trim()===NEWT);
+  if (g5 || needNew) {
+    try { if (localStorage.getItem(KOSO_SG_BK) === null) localStorage.setItem(KOSO_SG_BK, localStorage.getItem(STORAGE_KEY) || '[]'); }
+    catch(e) { console.warn('退避できないため戦略目標の投入を見送り（次回また試す）', e); return; }
+    const done = [];
+    if (g5) {
+      g5.type = SG;
+      g5.projects = [pj('wqt4wwbrizm','JSS承継親孝行プロジェクト'), pj('9mg4rmxaihj','ゆみさんと家庭円満で生涯安泰プロジェクト')];
+      if (!Array.isArray(g5.relations)) g5.relations = [];
+      if (!Array.isArray(g5.log)) g5.log = [];
+      const t = '11/3 種別を戦略目標に（本人決定）。GOサイン・成功条件・トリガー・前提・優先度は画面に出さなくなった（値は残している）';
+      if (!kiHasLog(g5, '判断', t)) g5.log.push({ date: D, kind: '判断', text: t, src: '移行' });
+      done.push('G05 を戦略目標に');
+    }
+    if (needNew) {
+      const id = genId(SG);
+      items.push({ id, type: SG, parentId: '-', title: NEWT, purpose: '', status: '検討中', review: D, createdAt: D,
+        log: [{ date: D, kind: '判断', text: '11/3 本人決定：VISION とプロジェクトの間の戦略目標として新設（2030だとこじんまりするので100年構想に）', src: '本人' }],
+        relations: [], origin: { kind: '本人', date: D },
+        projects: [pj('s6n9vf1vgdx','スリーエーグループ2030構想'), pj('2f709iu735e','チーム竹嶋づくり')] });
+      done.push(id + ' ' + NEWT + ' を新設');
+    }
+    save();
+    console.info('[koso-sg] ' + done.join('・') + '（退避＝' + KOSO_SG_BK + '）');
+  }
+  try { localStorage.setItem(KOSO_SG_FLAG, new Date().toISOString().slice(0,10)); } catch(e) {}
+}
+
 // ─── INIT ─────────────────────────────────────────────────
 inboxPjRenameOnce('koso', [STORAGE_KEY, ARCHIVE_KEY]);   /* 構想・試し・記録の紐づけの旧PJ名（2026-11-03・1回だけ。データを読む前） */
 load();
 kosoLogDedupeOnce();
+kosoSgSeedOnce();   /* G05 を戦略目標に・スリーエーグループ100年構想を新設（1回だけ・退避あり） */
 setView('home');
 inboxProcess('load');   /* 受信箱：自分宛て（targetOS:'koso'）の未処理を取り込む。無ければ何もしない */
 </script>

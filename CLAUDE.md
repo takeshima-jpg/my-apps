@@ -45,6 +45,10 @@ socialUniverse_snapshots / su_pending_review / myapps_vision
 ※ myapps_vision の形：{vision:[文…], principles:[{title,text}], directions:[{title,text}], words:[③の選択肢],
 　cycle:['安心','挑戦','成長'], updatedAt, source}。words・cycle が無ければ読む側で補う（原則・指針の title／安心→挑戦→成長）。
 　各OSは loadVisionShared() で読み、無ければ VISION を出さない。前の値は myapps_vision_prev（1世代・受信箱 VISION-UPDATE の退避）
+※ 層（記録の地図 v1.18 §D-0・2026-11-03）：VISION → 戦略目標（構想ログ kouso_backlog_v1 の type:'戦略目標'・G番号・2本。
+　projects[{projectId,projectName}] で PJ を複数束ねる・PJ化は無い）→ プロジェクト（Project OS の PJ）→ ターゲット → 案件（pos_v4 の targets）。
+　旧 S01〜S05（S-ID）は戦略目標ではない。links.strategyGoalId・PJ の strategyGoalId は過去の記録として残し、どの画面にも出さない
+　（読み替え表は記録の地図 §D-1。コード上の対応表は Reflect の rfUnlinkPj のラベル用だけ。inboxParseLinks は古い書式のため読み続ける）
 ※ Reflect のレコード（問い・実験・ログ・テーマ・原則・Lectica の実践ログ）の links は人（personIds/personNames）と問い（questionId）だけ。
 　PJ・戦略目標は持たない（2026-11-03）。案件とのつながりは Project のムーブの links.questionId（PJ から問いを指す）
 ※ pos_v4 の projects[] に kind（通常｜維持活動）・mapOrder（全体の地図の並び）・targets[{id,title,status,order,items[{id,title,due,src}]}]（2026-11-03）。

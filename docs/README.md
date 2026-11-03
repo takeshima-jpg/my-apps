@@ -11,6 +11,8 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 
 状態の凡例：✅実装済み（コミット済み）／🕒未実装（依頼書のみ）／🔧運用中（手順書・繰り返し使う）
 
+※ 言葉の注意（2026-11-03〜・記録の地図 v1.18 §D-0）：**戦略目標**＝構想ログの種別「戦略目標」（2本：竹嶋家100年の計・スリーエーグループ100年構想）。その下にプロジェクト（Project OS の PJ）→ ターゲット → 案件。旧 S01〜S05（S-ID）は戦略目標ではなくなった（Project OS ではターゲットに置き換え）。下の表の 10/26〜11/3 の行にある「戦略目標 S-ID」は旧い言葉。
+
 ## specs/ — 実装依頼書・手順書
 
 | ファイル | 用途 | 状態 |
@@ -42,6 +44,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-reflect-unlink-projects-spec.md](specs/claude-code-reflect-unlink-projects-spec.md) | Reflect の問い・実験・ログ・テーマ・Lectica ログから PJ と戦略目標の紐づけを外す（旧紐づけは記録に1行）。これからも付けない（人の紐づけは残す）。つながりは PJ 側の「問い：」で持つ | ✅実装済み（2026-11-03） |
 | [claude-code-ariki-tree-spec.md](specs/claude-code-ariki-tree-spec.md) | 依頼書1：Reflect 探求ボードの一番上に「在り方の木」（VISION→テーマ→重点の問い→実験中の図解）。Task OS HOME に木への入口1行（`?tab=tankyu`） | ✅実装済み（2026-11-03） |
 | [claude-code-project-map-targets-spec.md](specs/claude-code-project-map-targets-spec.md) | 依頼書2：Project OS ホームの一番上に「全体の地図」（プロジェクト→ターゲット→案件）・詳細パネル・ターゲットと案件の器と編集・種別（維持活動）・PROJECT-IMPORT の ターゲット:／案件:／種別:・旧 S-ID 欄の片付け・一度だけの自動投入 | ✅実装済み（2026-11-03） |
+| [claude-code-koso-strategy-goal-spec.md](specs/claude-code-koso-strategy-goal-spec.md) | 依頼書3：構想ログに種別「戦略目標」（G番号・プロジェクト複数・PJ化なし・KOSO-IMPORT の ■ 戦略目標）。G05 を戦略目標に・スリーエーグループ100年構想を新設（1回だけ）。構想ログ・ヒトメモ・1day・Task OS の旧 S-ID 表示を外す（データは残す） | ✅実装済み（2026-11-03） |
 | [claude-code-koso-log-v2-spec.md](specs/claude-code-koso-log-v2-spec.md) | 構想ログ v2（記録・GOサイン・由来・関連・KOSO-IMPORT）。2026-10-26 に §4-2 の重複判定を「全件」へ訂正して保管 | ✅実装済み（保管のみ・本体は以前に配置） |
 | [claude-code-launcher-pwa-spec.md](specs/claude-code-launcher-pwa-spec.md) | コックピットのPWA化＋自作SVGアイコン（ホーム追加・standalone表示） | ✅実装済み 2026-07-12 `89f825e` |
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |
