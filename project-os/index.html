@@ -2263,12 +2263,9 @@ function delMove(pid,mid){
   touchProj(pid);save();renderDetail();
 }
 function coreHtml(p){
-  const rq=f=>{ if(f!=='question'||!p.reflectQuestionId)return '';
-    const q=pjReflectQuestion(p.reflectQuestionId);
-    return `<span class="pj-chip" title="${esc(q?'Reflect の問い：'+q.title:'Reflect の問い（id '+p.reflectQuestionId+'）')}">◇ Reflect の問い</span>`; };
   return `<div class="core-wrap">`+CORE_DEFS.map(([f,lbl])=>`
     <div class="core-row" onclick="coreEdit('${p.id}','${f}',this)" title="クリックで編集">
-      <div class="core-lbl">${lbl}${rq(f)}</div>
+      <div class="core-lbl">${lbl}</div>
       <div class="core-val${p[f]?'':' core-empty'}">${esc(p[f])||'クリックで入力'}</div>
     </div>`).join('')+`</div>`;
 }
@@ -2735,7 +2732,6 @@ function openProjModal(pid){
     <div class="fg"><label class="fl">センターピン</label>${ta('fcp',p?.centerPin,'成功の鍵となる最重要ポイント')}</div>
     <div class="fg"><label class="fl">重点項目の呼び方</label>${sel('fpl',['フェーズ（順番に進む段階）','重点テーマ（並列の重点）'],p?.phaseLabel==='theme'?'重点テーマ（並列の重点）':'フェーズ（順番に進む段階）')}</div>
     <div class="fg"><label class="fl">戦略目標</label><select class="fc" id="fsg"><option value="">（なし）</option>${Object.keys(STRATEGY_GOALS).map(k=>`<option value="${k}"${p?.strategyGoalId===k?' selected':''}>${esc(sgLabel(k))}</option>`).join('')}</select></div>
-    <div class="fg"><label class="fl">Reflect の問い（問いのID）</label>${inp('frq',p?.reflectQuestionId,'Reflect OS の問いのID（任意）')}</div>
     <div class="fg"><label class="fl">関係者（ヒトメモ）</label><div class="sh-cur" id="fsh-cur"></div>${inp('fsh','','名前を入力するとヒトメモから候補が出ます')}<div class="sh-pick" id="fsh-pick"></div></div>`,
   ()=>{
     const name=g('fn'); if(!name){alert('プロジェクト名を入力してください');return;}
@@ -2748,10 +2744,10 @@ function openProjModal(pid){
     let tgt;
     if(p){ tgt=proj(pid); Object.assign(tgt,data); }
     else tgt=projCreate(data);
-    /* 任意の3項目：空なら項目ごと持たない（既存PJのデータ形を変えない） */
-    const sg=g('fsg'), rqid=g('frq'), shIds=(window.__pjShIds||[]).slice();
+    /* 任意の2項目：空なら項目ごと持たない（既存PJのデータ形を変えない）。
+       PJ と Reflect の問いのつながりは紐づけ行の「問い：」（links.questionId）で持つ（旧 reflectQuestionId 欄は 2026-11-03 に外した。値は触らない） */
+    const sg=g('fsg'), shIds=(window.__pjShIds||[]).slice();
     if(sg)tgt.strategyGoalId=sg; else delete tgt.strategyGoalId;
-    if(rqid)tgt.reflectQuestionId=rqid; else delete tgt.reflectQuestionId;
     if(shIds.length)tgt.stakeholderIds=shIds; else delete tgt.stakeholderIds;
     window.__pjShIds=null;
     save(); closeModal(); render();
@@ -4063,9 +4059,6 @@ function pjStakeholderNames(p){
   const ids=(p&&Array.isArray(p.stakeholderIds))?p.stakeholderIds:[]; if(!ids.length)return [];
   const ppl=pjReadPeople();
   return ids.map(id=>pjPersonName(ppl.find(x=>x&&String(x.id)===String(id)))).filter(Boolean);
-}
-function pjReflectQuestion(id){
-  try{ const o=JSON.parse(localStorage.getItem('reflectOS_v1')||'null'); return ((o&&o.questions)||[]).find(q=>q&&q.id===id)||null; }catch(e){ return null; }
 }
 /* 取り込みで作ったムーブに links を付ける（projectId／projectName はPJ自身なので付けない）。人は名前の一致が1つだけなら id を補う */
 function inboxAttachLinks(p, moveIds, links){

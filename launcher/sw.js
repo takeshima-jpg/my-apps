@@ -7,7 +7,7 @@
 // - activate時に（過去に何か残っていても）このスコープのCacheStorageを全削除する
 // - オフライン動作は狙わない（目的はホーム追加とstandalone表示のみ）
 
-const SW_VERSION = 'cockpit-sw-v1';   // 更新時はこの版数を上げる（旧キャッシュはactivateで破棄）
+const SW_VERSION = 'cockpit-sw-v2';   // 更新時はこの版数を上げる（旧キャッシュはactivateで破棄）
 
 self.addEventListener('install', () => {
   self.skipWaiting();

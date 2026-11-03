@@ -37,6 +37,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-s02-rename-spec.md](specs/claude-code-s02-rename-spec.md) | 戦略目標 S02 を「スリーエーグループ2030構想」に。紐づけの旧PJ名「3AHD2030構想」を起動時1回だけ直し、チップは projectId から今のPJ名を引いて表示 | ✅実装済み（2026-11-03） |
 | [claude-code-reflect-board-cleanup-spec.md](specs/claude-code-reflect-board-cleanup-spec.md) | 探求ボードの整理。テーマの「問い」欄をなくし重点の問いで表す、実験中は重点の問い1本につき5本（重点外は新しく実験中にできない）、問い・実験に「保管」、使わない欄（関連PJ・マイルストーン・指標・実践回数）を記録へ移して外す | ✅実装済み（2026-11-03） |
 | [claude-code-reflect-rid-auto-spec.md](specs/claude-code-reflect-rid-auto-spec.md) | 実験を実験中にしたとき R番号を自動で付ける（次の番号・使い回さない・手で付けた番号が優先）。統合は統合元の R番号を引き継ぐ。今ある実験中に起動時1回だけ付ける | ✅実装済み（2026-11-03） |
+| [claude-code-cleanup-1103-spec.md](specs/claude-code-cleanup-1103-spec.md) | 使っていない欄・古い写しの片付け（Project の Reflect問いID欄、Lectica壁打ちプロンプト v3.1 の埋め込み、Reflect の決定検証、ヒトメモの日次ファイルの受け口）。SU の見直し記録をバックアップへ | ✅実装済み（2026-11-03） |
 | [claude-code-koso-log-v2-spec.md](specs/claude-code-koso-log-v2-spec.md) | 構想ログ v2（記録・GOサイン・由来・関連・KOSO-IMPORT）。2026-10-26 に §4-2 の重複判定を「全件」へ訂正して保管 | ✅実装済み（保管のみ・本体は以前に配置） |
 | [claude-code-launcher-pwa-spec.md](specs/claude-code-launcher-pwa-spec.md) | コックピットのPWA化＋自作SVGアイコン（ホーム追加・standalone表示） | ✅実装済み 2026-07-12 `89f825e` |
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |

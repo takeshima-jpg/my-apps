@@ -842,6 +842,8 @@ function collectAllOSData() {
                                   done:    jGet('import_inbox_done_v1'),     //         処理済み id（各OSが追記）
                                   log:     jGet('import_inbox_log_v1') },    //         HOME カード用の取り込み記録（直近60日）
     reflectStance:              jGet('reflect_stance_v1'),    // 週の2択・月の1問の答え（Task OS HOME が書く）
+    socialUniverseReview:       { snapshots:     jGet('socialUniverse_snapshots'),   // SU の紙出しスナップショット（四半期の見直しの記録つき）
+                                  pendingReview: jGet('su_pending_review') },        //    次の紙出しに添付する見直しの記録（無ければ null）
   };
 }
 
@@ -887,6 +889,8 @@ function restoreAllOSData(data) {
   if (data.importInbox?.done)          localStorage.setItem('import_inbox_done_v1',                   JSON.stringify(data.importInbox.done));
   if (data.importInbox?.log)           localStorage.setItem('import_inbox_log_v1',                    JSON.stringify(data.importInbox.log));
   if (data.reflectStance)              localStorage.setItem('reflect_stance_v1',                      JSON.stringify(data.reflectStance));
+  if (data.socialUniverseReview?.snapshots)     localStorage.setItem('socialUniverse_snapshots', JSON.stringify(data.socialUniverseReview.snapshots));
+  if (data.socialUniverseReview?.pendingReview) localStorage.setItem('su_pending_review',        JSON.stringify(data.socialUniverseReview.pendingReview));
   // brief/review は markdown文字列 or オブジェクト。collect(bGet)と対称に：文字列は生のまま、オブジェクトはJSON化。
   const writeBrief = (val, key) => { if (val == null) return; localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val)); };
   writeBrief(data.aixReviewWeekly,  'aix_review_weekly');
@@ -1097,6 +1101,7 @@ const RG_KEYS = [
   'lectica_experiments_master_v1', 'lectica_experiments_master_markdown_v1', 'lectica_experiment_logs_v1',
   'aix_review_weekly', 'aix_review_monthly', 'reflectOS_v1', 'learningRadar_v1',
   'import_inbox_v1', 'import_inbox_done_v1', 'import_inbox_log_v1', 'reflect_stance_v1',
+  'socialUniverse_snapshots', 'su_pending_review',
 ];
 const RG_SNAP_KEY = 'taskos_pre_restore_snapshot';
 
