@@ -372,6 +372,7 @@ select.fi{cursor:pointer;}
 .lx-home-done-tag{font-size:12px;color:#15803d;font-weight:700;}
 .lx-home-note{font-size:11px;color:#94a3b8;margin-top:8px;}
 .lx-home-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.vision-area:empty{display:none}
 </style>
 </head>
 <body>
@@ -707,44 +708,43 @@ const saveSh = a => localStorage.setItem('shot-task-os-v1', JSON.stringify(a));
 const getPj = () => { try{ return JSON.parse(localStorage.getItem('pos_v4'))||{}; }catch{return {};} };
 const savePjData = d => localStorage.setItem('pos_v4', JSON.stringify(d));
 
-// ── VISION DATA ──
-const VISION_DATA = {
-  vision: [
-    '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。',
-    '安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。',
-  ],
-  principles: [
-    { title: '成長', text: '未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。' },
-    { title: '愛', text: '周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。' },
-    { title: '誠実', text: '自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。' },
-    { title: '寛容', text: '個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。' },
-    { title: '共創', text: '自分の確信を持ちながら、相手の確信も尊重する。違いを消さずに理解し、接点を探す。互いの成長につながる未来を共に創る。' },
-  ],
-  directions: [
-    { title: '確信', text: '頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。油断せず備える。' },
-    { title: '仲間', text: '弱みも未来も共有し、自立し、責任を持って、前向きに、違いを尊重しながら共通の未来を創れる人を大切にする。' },
-    { title: '健康', text: '心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。' },
-  ],
-};
+/* ══ VISION 共通（正本は localStorage 'myapps_vision'＝Reflect の「VISION設定」・受信箱の VISION-UPDATE。文はコードに埋め込まない・2026-11-03）══
+   無い・壊れているときは null（VISION の帯・ピルは出さない）。words が無ければ原則・指針の title、cycle が無ければ 安心→挑戦→成長 で補う（保存し直さない） */
+function loadVisionShared(){
+  try{
+    const d=JSON.parse(localStorage.getItem('myapps_vision')||'null');
+    const vs=(d&&Array.isArray(d.vision))?d.vision.map(v=>String(v==null?'':v).trim()).filter(Boolean):[];
+    if(!vs.length) return null;
+    const ok=a=>Array.isArray(a)?a.filter(x=>x&&x.title).map(x=>({title:String(x.title),text:String(x.text||'')})):[];
+    const P=ok(d.principles), Dr=ok(d.directions);
+    const ws=Array.isArray(d.words)?d.words.map(w=>String(w==null?'':w).trim()).filter(Boolean):[];
+    return {vision:vs, principles:P, directions:Dr, words:ws.length?ws:P.concat(Dr).map(x=>x.title),
+      cycle:(Array.isArray(d.cycle)&&d.cycle.length>=2)?d.cycle.map(String):['安心','挑戦','成長'], updatedAt:d.updatedAt||'', source:d.source||''};
+  }catch(e){ return null; }
+}
+/* VISION→原則→指針の順に {type,title,text} を並べる（日替わりで1つ出すOS用）。無ければ [] */
+function visionItems(v){ return v?[...v.vision.map(t=>({type:'VISION',title:'',text:t})),...v.principles.map(p=>({type:'原則',title:p.title,text:p.text})),...v.directions.map(p=>({type:'指針',title:p.title,text:p.text}))]:[]; }
+function visionEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* ══ VISION 共通 ここまで ══ */
 
 function renderVision() {
-  const area = document.getElementById('visionArea');
-  if (!area) return;
-  const seed = parseInt(new Date().toLocaleDateString('sv').replace(/-/g,'')) % 100;
-  const types = ['vision', 'principle', 'direction'];
-  const type = types[seed % 3];
+  const v = loadVisionShared();
   let h = '';
-  if (type === 'vision') {
-    const item = VISION_DATA.vision[seed % VISION_DATA.vision.length];
-    h = `<div class="vision-card"><span class="vision-type">VISION</span><span class="vision-body">${item}</span></div>`;
-  } else if (type === 'principle') {
-    const item = VISION_DATA.principles[seed % VISION_DATA.principles.length];
-    h = `<div class="vision-card"><span class="vision-type">原則</span><span class="vision-body"><span class="vision-keyword">${item.title}</span>${item.text}</span></div>`;
-  } else {
-    const item = VISION_DATA.directions[seed % VISION_DATA.directions.length];
-    h = `<div class="vision-card"><span class="vision-type">指針</span><span class="vision-body"><span class="vision-keyword">${item.title}</span>${item.text}</span></div>`;
+  if (v) {
+    const seed = parseInt(new Date().toLocaleDateString('sv').replace(/-/g,'')) % 100;
+    let type = ['vision', 'principle', 'direction'][seed % 3];
+    if ((type === 'principle' && !v.principles.length) || (type === 'direction' && !v.directions.length)) type = 'vision';
+    if (type === 'vision') {
+      const item = v.vision[seed % v.vision.length];
+      h = '<div class="vision-card"><span class="vision-type">VISION</span><span class="vision-body">' + visionEsc(item) + '</span></div>';
+    } else {
+      const list = type === 'principle' ? v.principles : v.directions, item = list[seed % list.length];
+      h = '<div class="vision-card"><span class="vision-type">' + (type === 'principle' ? '原則' : '指針') + '</span><span class="vision-body"><span class="vision-keyword">' + visionEsc(item.title) + '</span>' + visionEsc(item.text) + '</span></div>';
+    }
   }
-  area.innerHTML = h;
+  /* VISION が無ければ空（旧文で埋めない。空の帯は CSS で隠す） */
+  const area = document.getElementById('visionArea');
+  if (area) area.innerHTML = h;
 }
 
 // ── ALL OS JSON EXPORT ──
@@ -790,7 +790,8 @@ function readReflectOSFromIDB() {
          （問い＝そのテーマの重点の問いの題名を「／」でつないだ文（2026-11-03 テーマの問い欄は廃止）／仮説＝centerPin || summary） */
       .map(t => ({ id: t.id || '', title: t.title || '', status: t.status || '', priority: t.priority || '',
         question: (o.questions || []).filter(q => q && q.status === 'focus' && (q.themeIds || []).includes(t.id)).map(q => q.title).filter(Boolean).join('／'),
-        hypothesis: t.centerPin || t.summary || '', fromProjectOS: !!t._fromProjectOS, detached: !!t.detached }));
+        hypothesis: t.centerPin || t.summary || '', fromProjectOS: !!t._fromProjectOS, detached: !!t.detached,
+        ...(t.visionLink ? { visionLink: t.visionLink } : {}) }));   // VISION とのつながり（足りない言葉・止まっている所。あるテーマだけ）
     return Promise.resolve({ themes, importantQuestions, activeExperiments });
   } catch(e) { return Promise.resolve(EMPTY); }
 }
@@ -842,6 +843,7 @@ function collectAllOSData() {
                                   done:    jGet('import_inbox_done_v1'),     //         処理済み id（各OSが追記）
                                   log:     jGet('import_inbox_log_v1') },    //         HOME カード用の取り込み記録（直近60日）
     reflectStance:              jGet('reflect_stance_v1'),    // 週の2択・月の1問の答え（Task OS HOME が書く）
+    myappsVision:               jGet('myapps_vision'),        // VISION の正本（全OSがここから出す・Reflect の「VISION設定」と受信箱 VISION-UPDATE が書く）
     socialUniverseReview:       { snapshots:     jGet('socialUniverse_snapshots'),   // SU の紙出しスナップショット（四半期の見直しの記録つき）
                                   pendingReview: jGet('su_pending_review') },        //    次の紙出しに添付する見直しの記録（無ければ null）
   };
@@ -889,6 +891,7 @@ function restoreAllOSData(data) {
   if (data.importInbox?.done)          localStorage.setItem('import_inbox_done_v1',                   JSON.stringify(data.importInbox.done));
   if (data.importInbox?.log)           localStorage.setItem('import_inbox_log_v1',                    JSON.stringify(data.importInbox.log));
   if (data.reflectStance)              localStorage.setItem('reflect_stance_v1',                      JSON.stringify(data.reflectStance));
+  if (data.myappsVision)                localStorage.setItem('myapps_vision',                          JSON.stringify(data.myappsVision));
   if (data.socialUniverseReview?.snapshots)     localStorage.setItem('socialUniverse_snapshots', JSON.stringify(data.socialUniverseReview.snapshots));
   if (data.socialUniverseReview?.pendingReview) localStorage.setItem('su_pending_review',        JSON.stringify(data.socialUniverseReview.pendingReview));
   // brief/review は markdown文字列 or オブジェクト。collect(bGet)と対称に：文字列は生のまま、オブジェクトはJSON化。
@@ -1101,7 +1104,7 @@ const RG_KEYS = [
   'lectica_experiments_master_v1', 'lectica_experiments_master_markdown_v1', 'lectica_experiment_logs_v1',
   'aix_review_weekly', 'aix_review_monthly', 'reflectOS_v1', 'learningRadar_v1',
   'import_inbox_v1', 'import_inbox_done_v1', 'import_inbox_log_v1', 'reflect_stance_v1',
-  'socialUniverse_snapshots', 'su_pending_review',
+  'socialUniverse_snapshots', 'su_pending_review', 'myapps_vision',
 ];
 const RG_SNAP_KEY = 'taskos_pre_restore_snapshot';
 

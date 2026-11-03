@@ -255,6 +255,25 @@ function tabIconHtml(t, cls){
   return '<span class="ico">' + t.icon + '</span>';
 }
 
+/* ══ VISION 共通（正本は localStorage 'myapps_vision'＝Reflect の「VISION設定」・受信箱の VISION-UPDATE。文はコードに埋め込まない・2026-11-03）══
+   無い・壊れているときは null（VISION の帯・ピルは出さない）。words が無ければ原則・指針の title、cycle が無ければ 安心→挑戦→成長 で補う（保存し直さない） */
+function loadVisionShared(){
+  try{
+    const d=JSON.parse(localStorage.getItem('myapps_vision')||'null');
+    const vs=(d&&Array.isArray(d.vision))?d.vision.map(v=>String(v==null?'':v).trim()).filter(Boolean):[];
+    if(!vs.length) return null;
+    const ok=a=>Array.isArray(a)?a.filter(x=>x&&x.title).map(x=>({title:String(x.title),text:String(x.text||'')})):[];
+    const P=ok(d.principles), Dr=ok(d.directions);
+    const ws=Array.isArray(d.words)?d.words.map(w=>String(w==null?'':w).trim()).filter(Boolean):[];
+    return {vision:vs, principles:P, directions:Dr, words:ws.length?ws:P.concat(Dr).map(x=>x.title),
+      cycle:(Array.isArray(d.cycle)&&d.cycle.length>=2)?d.cycle.map(String):['安心','挑戦','成長'], updatedAt:d.updatedAt||'', source:d.source||''};
+  }catch(e){ return null; }
+}
+/* VISION→原則→指針の順に {type,title,text} を並べる（日替わりで1つ出すOS用）。無ければ [] */
+function visionItems(v){ return v?[...v.vision.map(t=>({type:'VISION',title:'',text:t})),...v.principles.map(p=>({type:'原則',title:p.title,text:p.text})),...v.directions.map(p=>({type:'指針',title:p.title,text:p.text}))]:[]; }
+function visionEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* ══ VISION 共通 ここまで ══ */
+
 function buildTabbar(){
   const bar = document.getElementById('tabbar');
   const primary = TABS.filter(t => PRIMARY_TAB_IDS.includes(t.id));
@@ -264,7 +283,7 @@ function buildTabbar(){
     + tabIconHtml(t, 'tab-ico') + '<span>' + t.label + '</span></button>'
   ).join('')
   + '<button class="tab" id="tabMoreBtn" onclick="toggleMoreMenu(event)"><span class="ico">▾</span><span>その他</span></button>'
-  + '<div class="tab-vision">守りの総合支援を通して、挑戦する人が成長できる社会をつくる</div>';
+  + (()=>{ const v=loadVisionShared(); return v?'<div class="tab-vision">'+visionEsc(v.vision[0])+'</div>':''; })();   /* VISION の正本から。無ければ出さない */
 }
 
 /* その他▾ メニュー（bodyにfixedで出す：縦タブバー/スマホ横バーの両レイアウトでクリップされない） */

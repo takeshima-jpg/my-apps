@@ -397,6 +397,7 @@ html,body{max-width:100%;overflow-x:hidden;}
   #month-chart-inner{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 }
 
+#visionArea:empty,#visionAreaSide:empty,#visionAreaMob:empty{display:none}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -489,40 +490,41 @@ html,body{max-width:100%;overflow-x:hidden;}
 
 <script>
 
-const VISION_DATA = {
-  vision: [
-    '守りの総合支援を通して、挑戦する人が成長できる社会をつくる。',
-    '安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。',
-  ],
-  principles: [
-    { title: '成長', text: '未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。' },
-    { title: '愛', text: '周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。' },
-    { title: '誠実', text: '自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。' },
-    { title: '寛容', text: '個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。' },
-    { title: '共創', text: '自分の確信を持ちながら、相手の確信も尊重する。違いを消さずに理解し、接点を探す。互いの成長につながる未来を共に創る。' },
-  ],
-  directions: [
-    { title: '確信', text: '頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。油断せず備える。' },
-    { title: '仲間', text: '弱みも未来も共有し、自立し、責任を持って、前向きに、違いを尊重しながら共通の未来を創れる人を大切にする。' },
-    { title: '健康', text: '心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。' },
-  ],
-};
+/* ══ VISION 共通（正本は localStorage 'myapps_vision'＝Reflect の「VISION設定」・受信箱の VISION-UPDATE。文はコードに埋め込まない・2026-11-03）══
+   無い・壊れているときは null（VISION の帯・ピルは出さない）。words が無ければ原則・指針の title、cycle が無ければ 安心→挑戦→成長 で補う（保存し直さない） */
+function loadVisionShared(){
+  try{
+    const d=JSON.parse(localStorage.getItem('myapps_vision')||'null');
+    const vs=(d&&Array.isArray(d.vision))?d.vision.map(v=>String(v==null?'':v).trim()).filter(Boolean):[];
+    if(!vs.length) return null;
+    const ok=a=>Array.isArray(a)?a.filter(x=>x&&x.title).map(x=>({title:String(x.title),text:String(x.text||'')})):[];
+    const P=ok(d.principles), Dr=ok(d.directions);
+    const ws=Array.isArray(d.words)?d.words.map(w=>String(w==null?'':w).trim()).filter(Boolean):[];
+    return {vision:vs, principles:P, directions:Dr, words:ws.length?ws:P.concat(Dr).map(x=>x.title),
+      cycle:(Array.isArray(d.cycle)&&d.cycle.length>=2)?d.cycle.map(String):['安心','挑戦','成長'], updatedAt:d.updatedAt||'', source:d.source||''};
+  }catch(e){ return null; }
+}
+/* VISION→原則→指針の順に {type,title,text} を並べる（日替わりで1つ出すOS用）。無ければ [] */
+function visionItems(v){ return v?[...v.vision.map(t=>({type:'VISION',title:'',text:t})),...v.principles.map(p=>({type:'原則',title:p.title,text:p.text})),...v.directions.map(p=>({type:'指針',title:p.title,text:p.text}))]:[]; }
+function visionEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* ══ VISION 共通 ここまで ══ */
 
-function renderVision(){
-  const seed = parseInt(new Date().toLocaleDateString('sv').replace(/-/g,'')) % 100;
-  const types = ['vision','principle','direction'];
-  const type = types[seed % 3];
+function renderVision() {
+  const v = loadVisionShared();
   let h = '';
-  if(type==='vision'){
-    const item = VISION_DATA.vision[seed % VISION_DATA.vision.length];
-    h = '<div class="vision-card"><span class="vision-type">VISION</span><span class="vision-body">'+item+'</span></div>';
-  } else if(type==='principle'){
-    const item = VISION_DATA.principles[seed % VISION_DATA.principles.length];
-    h = '<div class="vision-card"><span class="vision-type">原則</span><span class="vision-body"><span class="vision-keyword">'+item.title+'</span>'+item.text+'</span></div>';
-  } else {
-    const item = VISION_DATA.directions[seed % VISION_DATA.directions.length];
-    h = '<div class="vision-card"><span class="vision-type">指針</span><span class="vision-body"><span class="vision-keyword">'+item.title+'</span>'+item.text+'</span></div>';
+  if (v) {
+    const seed = parseInt(new Date().toLocaleDateString('sv').replace(/-/g,'')) % 100;
+    let type = ['vision', 'principle', 'direction'][seed % 3];
+    if ((type === 'principle' && !v.principles.length) || (type === 'direction' && !v.directions.length)) type = 'vision';
+    if (type === 'vision') {
+      const item = v.vision[seed % v.vision.length];
+      h = '<div class="vision-card"><span class="vision-type">VISION</span><span class="vision-body">' + visionEsc(item) + '</span></div>';
+    } else {
+      const list = type === 'principle' ? v.principles : v.directions, item = list[seed % list.length];
+      h = '<div class="vision-card"><span class="vision-type">' + (type === 'principle' ? '原則' : '指針') + '</span><span class="vision-body"><span class="vision-keyword">' + visionEsc(item.title) + '</span>' + visionEsc(item.text) + '</span></div>';
+    }
   }
+  /* VISION が無ければ空（旧文で埋めない。空の帯は CSS で隠す） */
   // スマホ用・PC用ヘッダー・サイドバー全部に反映
   const area = document.getElementById('visionArea');
   const side = document.getElementById('visionAreaSide');

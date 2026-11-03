@@ -4,7 +4,7 @@
 - 各OSは単一HTMLファイル完結（vanilla JS・依存ゼロ・ローカルファースト）
 - signal over noise：機能を足すより情報を減らす編集を優先
 - 削除ではなくアーカイブ。親子階層と空間配置で関係を表現
-- 静かなUI・余白。VISION（守りの総合支援を通して、挑戦する人が成長できる社会をつくる）を埋め込む
+- 静かなUI・余白。VISION は `myapps_vision`（Reflect の「VISION設定」・受信箱 VISION-UPDATE が書く）から読む。文をコードに埋め込まない
 
 ## 編集ルール
 - main直コミット可だが、変更は必ず検証後（下記）。大きな変更はブランチを切る
@@ -41,7 +41,10 @@ yaritai_items_v4 / oneday_logs_v1 / oneday_reviews_v1 / kouso_backlog_v1 / kouso
 su-v6-persons / hitomemo_profiles_v1 / lectica_experiments_master_v1 / lectica_experiment_logs_v1 /
 aix_draft_latest / aix_review_weekly / aix_review_monthly / aix_imported_keys / aix_lectica_pending /
 hitomemo_aix_imported / taskos_last_sync / reflect_stance_v1 /
-socialUniverse_snapshots / su_pending_review
+socialUniverse_snapshots / su_pending_review / myapps_vision
+※ myapps_vision の形：{vision:[文…], principles:[{title,text}], directions:[{title,text}], words:[③の選択肢],
+　cycle:['安心','挑戦','成長'], updatedAt, source}。words・cycle が無ければ読む側で補う（原則・指針の title／安心→挑戦→成長）。
+　各OSは loadVisionShared() で読み、無ければ VISION を出さない。前の値は myapps_vision_prev（1世代・受信箱 VISION-UPDATE の退避）
 ※ reflect_focus_v1 はReflect→Task OSの重点ミラー（派生データ・Reflect起動で再生成可）。
 　形式（focusQuestions/unlinkedExperiments/themes）はTask OSが読むため変更時は両OS同時に
 

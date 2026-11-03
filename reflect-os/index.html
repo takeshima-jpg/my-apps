@@ -194,6 +194,7 @@ nav{display:flex;flex-direction:column;gap:0;}
 .vision-expand:hover{color:var(--mu)}
 .vision-detail{display:none;padding:16px 0 8px;border-top:1px solid var(--bd);margin-top:8px}
 .vision-detail.open{display:block}
+.vision-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding-bottom:0;margin-bottom:16px}
 .vision-principle{display:flex;gap:14px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:15px}
 .vision-principle:last-child{border-bottom:none}
 .vp-kw{color:var(--go);min-width:36px;font-size:14px}
@@ -491,6 +492,52 @@ function buildThemeForm(tfd){
   return [
     tI('テーマ名','title','探求しているテーマ（例：資本政策は関係性の設計か？）','text',false,tfd),
     taF('現在の仮説','summary','今どう考えているか・何を信じているか',80,false,tfd),
+    ...rfVisionLinkFields(tfd),
+  ];
+}
+
+/* ── テーマと VISION のつながり（2026-11-03 本人決定）──
+   ③今いちばん足りない言葉（myapps_vision.words から1つ）・④VISION の循環（安心→挑戦→成長→安心）のどこで止まっているか。
+   半期の VISION 見直しで選び直す。分類の印ではないので、絞り込み・並べ替え・件数・バッジには使わない */
+function rfStuckOptions(v){ const c=(v&&v.cycle)||['安心','挑戦','成長']; return c.map((x,i)=>x+'→'+c[(i+1)%c.length]).concat(['流れている']); }
+/* カードの1行（値が無ければ ''） */
+function rfVisionLinkLine(t){ const v=t&&t.visionLink; if(!v) return ''; const a=[]; if(v.lacking) a.push('足りない：'+v.lacking); if(v.stuck) a.push('止まっている所：'+v.stuck); return a.join(' ／ '); }
+/* visionLink を置き換える。選び直したら前の値を記録に1行。変わったら説明（summary 用）を返す。nv の undefined の項目は今のまま */
+function rfSetVisionLink(t,nv,by,before){
+  const old=t.visionLink||{};
+  const o={lacking:old.lacking||'',stuck:old.stuck||'',note:old.note||''};
+  const n={lacking:nv.lacking!==undefined?nv.lacking:o.lacking,stuck:nv.stuck!==undefined?nv.stuck:o.stuck,note:nv.note!==undefined?String(nv.note).trim():o.note};
+  if(n.lacking===o.lacking&&n.stuck===o.stuck&&n.note===o.note) return '';
+  if(before) before();
+  const parts=[];
+  if(o.lacking&&o.lacking!==n.lacking) parts.push('足りない：'+o.lacking+'→'+(n.lacking||'なし'));
+  if(o.stuck&&o.stuck!==n.stuck) parts.push('止まっている所：'+o.stuck+'→'+(n.stuck||'なし'));
+  if(parts.length){ if(!Array.isArray(t.notes))t.notes=[]; t.notes.push({date:tod(),kind:'記録',text:'（VISION）'+parts.join('／')+'（'+tod()+'）',src:'VISION'}); }
+  if(!n.lacking&&!n.stuck&&!n.note) delete t.visionLink;
+  else t.visionLink=Object.assign({},n.lacking?{lacking:n.lacking}:{},n.stuck?{stuck:n.stuck}:{},n.note?{note:n.note}:{},{setAt:tod(),by});
+  const ch=[];
+  if(n.lacking!==o.lacking) ch.push('足りない言葉（'+(o.lacking||'なし')+'→'+(n.lacking||'なし')+'）');
+  if(n.stuck!==o.stuck) ch.push('止まっている所（'+(o.stuck||'なし')+'→'+(n.stuck||'なし')+'）');
+  if(n.note!==o.note) ch.push('ひとこと');
+  return ch.join('・');
+}
+/* 編集画面の欄：③ words の数だけ＋「選ばない」、④ 4つ＋「選ばない」（ボタン型）、ひとこと。選択肢はコードに埋め込まない */
+function rfVisionLinkFields(tfd){
+  const VS=loadVisionShared(), words=VS?VS.words:[], stucks=rfStuckOptions(VS);
+  const cur=tfd.visionLink||{};
+  tfd._vl={lacking:cur.lacking||'',stuck:cur.stuck||'',note:cur.note||''};
+  const row=(opts,key)=>{const r=D({cls:'chips'});const draw=()=>{r.innerHTML='';opts.forEach(([v,l])=>{const c=Bt({cls:'chip'+(tfd._vl[key]===v?' on':''),css:'min-height:44px'},l);c.addEventListener('click',()=>{tfd._vl[key]=v;draw();});r.appendChild(c);});};draw();return r;};
+  const lw=words.map(x=>[x,x]);
+  if(tfd._vl.lacking&&!words.includes(tfd._vl.lacking)) lw.push([tfd._vl.lacking,tfd._vl.lacking+'（今の VISION に無い言葉）']);
+  lw.push(['','選ばない']);
+  const sw=stucks.map(x=>[x,x]);
+  if(tfd._vl.stuck&&!stucks.includes(tfd._vl.stuck)) sw.push([tfd._vl.stuck,tfd._vl.stuck+'（今の VISION に無い流れ）']);
+  sw.push(['','選ばない']);
+  const note=In({type:'text',placeholder:'なぜそう見たか（任意）'});note.value=tfd._vl.note;note.addEventListener('input',()=>tfd._vl.note=note.value);
+  return [
+    fld('今いちばん足りない言葉',row(lw,'lacking'),true,words.length?'当てはまる言葉ではなく、足りない言葉を1つ':'VISION設定に原則・指針が入ると選べます'),
+    fld('VISION の循環で止まっている所',row(sw,'stuck'),true),
+    fld('ひとこと',note,true),
   ];
 }
 
@@ -505,7 +552,7 @@ function openThemeForm(existing){
   wrap.appendChild(card);
   const acts=D({css:'display:flex;gap:8px;margin-top:20px;margin-bottom:40px'});
   const sv=Bt({cls:'btn-p'},existing?'更新':'追加');
-  sv.addEventListener('click',async()=>{if(!tfd.title?.trim()){alert('テーマ名を入力してください');return;}tfd.updatedAt=tod();if(!tfd.createdAt)tfd.createdAt=tod();await dbput('themes',tfd);const i=S.themes.findIndex(x=>x.id===tfd.id);if(i>=0)S.themes[i]=tfd;else S.themes.push(tfd);tkMirrorFocus();ra();});
+  sv.addEventListener('click',async()=>{if(!tfd.title?.trim()){alert('テーマ名を入力してください');return;}if(tfd._vl){const vl=tfd._vl;delete tfd._vl;rfSetVisionLink(tfd,vl,'画面');}tfd.updatedAt=tod();if(!tfd.createdAt)tfd.createdAt=tod();await dbput('themes',tfd);const i=S.themes.findIndex(x=>x.id===tfd.id);if(i>=0)S.themes[i]=tfd;else S.themes.push(tfd);tkMirrorFocus();ra();});
   acts.appendChild(sv);
   if(existing){const dl=Bt({cls:'btn-d',css:'margin-left:auto',onclick:async()=>{if(!confirm('削除しますか？'))return;await dbdel('themes',tfd.id);S.themes=S.themes.filter(x=>x.id!==tfd.id);tkMirrorFocus();ra();}},  '削除');acts.appendChild(dl);}
   const cn=Bt({cls:'btn-s',onclick:()=>ra()},'キャンセル');acts.appendChild(cn);
@@ -659,33 +706,40 @@ function renderHome(){
     f.appendChild(notice);
   }
 
-  // 現在の重点をVISIONより上に置くためのスロット（UIスプリント1 A-4。重点の生成コードは下のIIFEのまま）
+  /* ホームの並び（2026-11-03）：VISION → テーマ（その重点の問い・実験中）→ テーマにつながらない重点の問い。
+     重点の枠（focusSlot）はテーマの後に置く（生成コードは下のIIFE） */
   const focusSlot=D({});
-  f.appendChild(focusSlot);
 
-  // VISION（本文は1行要約＋「▶ 全文を見る」折りたたみ。部品は原則・指針と同じ vision-expand/vision-detail）
+  // VISION（正本は myapps_vision。本文1行（2行で切る・タップで全文）＋「▶ 全文を見る」（2つ以上）＋「▶ 原則・指針を見る」。無ければ案内1行）
+  const VS=loadVisionShared();
   const vblock=D({cls:'vision-block'});
-  vblock.appendChild(D({cls:'sec-lbl'},'VISION 2026'));
-  vblock.appendChild(D({cls:'vision-text'},'守りの総合支援を通して、挑戦する人が成長できる社会をつくる。'));
-  const vfexp=D({cls:'vision-expand'});
-  vfexp.appendChild(Sp({css:'font-size:10px'},'▶'));
-  vfexp.appendChild(document.createTextNode('  全文を見る'));
-  const vfull=D({cls:'vision-detail'});
-  vfull.appendChild(D({cls:'vision-text'},
-    '安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、\n'+
-    '仲間と目指す確信のある未来を選ぶ。'
-  ));
-  vblock.appendChild(vfexp);vblock.appendChild(vfull);
-  vfexp.addEventListener('click',()=>{const open=vfull.classList.toggle('open');vfexp.children[0].textContent=open?'▼':'▶';});
-  const vexp=D({cls:'vision-expand'});
-  vexp.appendChild(Sp({css:'font-size:10px'},'▶'));
-  vexp.appendChild(document.createTextNode('  原則・指針を見る'));
-  const vdet=D({cls:'vision-detail'});
-  [['1','成長','未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。'],['2','愛','周囲の成長と可能性を気にかけ、信頼して渡す。たくさん持つのではなく、たくさん与えて心でつながる。'],['3','誠実','自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。'],['4','寛容','個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。'],['5','共創','自分の確信を持ちながら、相手の確信も尊重する。違いを消さずに理解し、接点を探す。互いの成長につながる未来を共に創る。']].forEach(([n,kw,tx])=>{const row=D({cls:'vision-principle'});row.appendChild(Sp({cls:'vp-num'},n));row.appendChild(Sp({cls:'vp-kw'},kw));row.appendChild(Sp({cls:'vp-text'},tx));vdet.appendChild(row);});
-  [['1','確信','頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。油断せず備える。'],['2','仲間','弱みも未来も共有し、自立し、責任を持って、前向きに、違いを尊重しながら共通の未来を創れる人を大切にする。'],['3','健康','心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。']].forEach(([n,kw,tx])=>{const row=D({cls:'vision-principle'});row.appendChild(Sp({cls:'vp-num'},n));row.appendChild(Sp({cls:'vp-kw'},kw));row.appendChild(Sp({cls:'vp-text'},tx));vdet.appendChild(row);});
-  const veBtn=Bt({cls:'btn-g',css:'margin-top:12px;font-size:13px'},'VISIONを編集');veBtn.addEventListener('click',e=>{e.stopPropagation();renderVisionEdit();});vdet.appendChild(veBtn);
-  vblock.appendChild(vexp);vblock.appendChild(vdet);
-  vexp.addEventListener('click',()=>{const open=vdet.classList.toggle('open');vexp.children[0].textContent=open?'▼':'▶';});
+  vblock.appendChild(D({cls:'sec-lbl'},'VISION'));
+  if(!VS){
+    const a=D({css:'font-size:13px;color:var(--di);min-height:44px;display:flex;align-items:center;cursor:pointer;text-decoration:underline'},'VISION は『VISION設定』で入れられます');
+    a.addEventListener('click',()=>{S.tab='vision-edit';ra();updateNav();});
+    vblock.appendChild(a);
+  }else{
+    const vt=D({cls:'vision-text vision-clamp',css:'cursor:pointer'},VS.vision[0]);
+    vt.addEventListener('click',()=>vt.classList.toggle('vision-clamp'));
+    vblock.appendChild(vt);
+    if(VS.vision.length>1){
+      const vfexp=D({cls:'vision-expand'});
+      vfexp.appendChild(Sp({css:'font-size:10px'},'▶'));
+      vfexp.appendChild(document.createTextNode('  全文を見る'));
+      const vfull=D({cls:'vision-detail'});
+      vfull.appendChild(D({cls:'vision-text'},VS.vision.slice(1).join('\n')));
+      vblock.appendChild(vfexp);vblock.appendChild(vfull);
+      vfexp.addEventListener('click',()=>{const open=vfull.classList.toggle('open');vfexp.children[0].textContent=open?'▼':'▶';});
+    }
+    const vexp=D({cls:'vision-expand'});
+    vexp.appendChild(Sp({css:'font-size:10px'},'▶'));
+    vexp.appendChild(document.createTextNode('  原則・指針を見る'));
+    const vdet=D({cls:'vision-detail'});
+    [VS.principles,VS.directions].forEach(list=>list.forEach((p,i)=>{const row=D({cls:'vision-principle'});row.appendChild(Sp({cls:'vp-num'},String(i+1)));row.appendChild(Sp({cls:'vp-kw'},p.title));row.appendChild(Sp({cls:'vp-text'},p.text));vdet.appendChild(row);}));
+    const veBtn=Bt({cls:'btn-g',css:'margin-top:12px;font-size:13px'},'VISIONを編集');veBtn.addEventListener('click',e=>{e.stopPropagation();S.tab='vision-edit';ra();updateNav();});vdet.appendChild(veBtn);
+    vblock.appendChild(vexp);vblock.appendChild(vdet);
+    vexp.addEventListener('click',()=>{const open=vdet.classList.toggle('open');vexp.children[0].textContent=open?'▼':'▶';});
+  }
   f.appendChild(vblock);
 
   // Themes
@@ -702,9 +756,14 @@ function renderHome(){
 
     if(t.priority==='S')meta2.appendChild(Sp({css:'font-size:10px;color:#9a7000;font-family:var(--mono)'},'S'));
     main2.appendChild(meta2);
-    /* そのテーマの重点の問い（自動）。無ければ薄く「重点なし」 */
+    /* VISION とのつながり（③足りない言葉・④止まっている所）。値が無ければ行ごと出さない（分類の印ではない） */
+    { const vl=rfVisionLinkLine(t); if(vl) main2.appendChild(D({css:'font-size:12px;color:var(--di);line-height:1.6;margin-top:2px'},vl)); }
+    /* そのテーマの重点の問い（自動）とその実験中。無ければ薄く「重点なし」 */
     const fqs=tkFocusQs().filter(q=>(q.themeIds||[]).includes(t.id));
-    if(fqs.length)fqs.forEach(q=>main2.appendChild(D({cls:'tcard-summary',css:'color:var(--tx)'},'・'+q.title)));
+    if(fqs.length)fqs.forEach(q=>{
+      main2.appendChild(D({cls:'tcard-summary',css:'color:var(--tx)'},'・'+q.title));
+      tkActiveOf(q.id).forEach(x=>main2.appendChild(D({css:'font-size:12px;color:var(--mu);line-height:1.6;padding-left:14px'},'▶ '+(x.rid?'['+x.rid+'] ':'')+x.title)));
+    });
     else main2.appendChild(D({cls:'tcard-summary',css:'color:var(--di)'},'重点なし'));
     card.appendChild(main2);
     const det=D({cls:'tcard-detail'});
@@ -790,16 +849,17 @@ function renderHome(){
   (function(){
     const w=D({});
     const hd=D({css:'display:flex;align-items:center;gap:10px;margin-bottom:10px'});
-    hd.appendChild(D({cls:'sec-lbl',css:'margin:0'},'現在の重点'));
+    hd.appendChild(D({cls:'sec-lbl',css:'margin:0'},'テーマにつながらない重点の問い'));
     const open=Bt({cls:'btn-s',css:'font-size:12px;padding:3px 10px'},'→ 探求ボードを開く');
     open.addEventListener('click',()=>{S.tab='tankyu';ra();updateNav();});
     hd.appendChild(open);
     w.appendChild(hd);
-    const fq=tkFocusQs();
-    if(!fq.length)w.appendChild(D({css:'font-size:13px;color:var(--di);margin-bottom:8px'},'重点の問いはまだ選ばれていません（探求ボードの候補から重点化できます）'));
+    /* テーマにつながる重点の問いはテーマのカードに出す。ここはつながらないものだけ（無ければ枠ごと出さない） */
+    const liveTh=new Set(S.themes.filter(t=>!t.detached&&t.status!=='完了').map(t=>t.id));
+    const fq=tkFocusQs().filter(q=>!(q.themeIds||[]).some(id=>liveTh.has(id)));
     fq.forEach(q=>w.appendChild(tkQCardRO(q)));
     const act=tkActiveEs();
-    const shown=new Set();fq.forEach(q=>S.experiments.filter(x=>x.questionId===q.id).forEach(x=>shown.add(x.id)));
+    const shown=new Set();tkFocusQs().forEach(q=>S.experiments.filter(x=>x.questionId===q.id).forEach(x=>shown.add(x.id)));
     const rest=act.filter(x=>!shown.has(x.id));
     if(rest.length){   /* 重点の問いにつながっていない実験中（さかのぼって変えない。薄く分けて出す） */
       w.appendChild(D({cls:'sec-lbl',css:'margin-top:10px;color:var(--di)'},'重点の外の実験中'));
@@ -807,7 +867,7 @@ function renderHome(){
     }
     /* 意思決定検証への入口は撤去（2026-10-26：予測と答え合わせはVISION見直し担当の予測帳へ移った） */
     w.appendChild(D({css:'margin-bottom:26px'}));
-    focusSlot.appendChild(w);   // A-4：VISIONより上のスロットへ
+    if(fq.length||rest.length) focusSlot.appendChild(w);   // テーマの後に置く
   })();
 
   // ── 探求テーマ（手動追加のみ） ──
@@ -827,6 +887,7 @@ function renderHome(){
     activeThemes.forEach(t=>grid.appendChild(buildThemeCard(t)));
     tsec.appendChild(grid);
   }
+  tsec.appendChild(focusSlot);   /* テーマにつながらない重点の問い・重点の外の実験中（テーマの後） */
   // 完了済みテーマ（折りたたみ）
   if(doneThemes.length){
     const doneSec=D({css:'margin-top:16px'});
@@ -1045,7 +1106,24 @@ function renderSearch(){
 }
 
 /* ── VISION2026 strip ── */
-const VD={vision:['守りの総合支援を通して、挑戦する人が成長できる社会をつくる。','安心・安全・やりがいを持続的につくり、短期的な楽しさや損得、忖度、感情に流されず、仲間と目指す確信のある未来を選ぶ。'],principles:[{title:'成長',text:'未来を作るために学びを止めず挑戦する。摩擦や違う意見を受け入れ、自分のVISIONを磨き続ける。'},{title:'愛',text:'周囲の成長と可能性を気にかけ、信頼して渡す。たくさん与えて心でつながる。'},{title:'誠実',text:'自分の軸に沿って未来の自分に誇れる選択をする。問題から逃げず謙虚に筋を通す。'},{title:'寛容',text:'個性を配慮と尊重で受け入れ、心で対話する。争わず小さな合意で一体感を育てる。'}],directions:[{title:'確信',text:'頭と心で腹落ちし、それが当たり前だと思えること。手触り感があり、ワクワクする未来。'},{title:'仲間',text:'弱みも未来も共有し、自立し、責任を持って、同じゴールに向かい仮説検証ができる人を大切にする。'},{title:'健康',text:'心と体、人間関係のバランスを整え、高いパフォーマンスを長く続けられる状態をつくる。'}]};
+/* ══ VISION 共通（正本は localStorage 'myapps_vision'＝Reflect の「VISION設定」・受信箱の VISION-UPDATE。文はコードに埋め込まない・2026-11-03）══
+   無い・壊れているときは null（VISION の帯・ピルは出さない）。words が無ければ原則・指針の title、cycle が無ければ 安心→挑戦→成長 で補う（保存し直さない） */
+function loadVisionShared(){
+  try{
+    const d=JSON.parse(localStorage.getItem('myapps_vision')||'null');
+    const vs=(d&&Array.isArray(d.vision))?d.vision.map(v=>String(v==null?'':v).trim()).filter(Boolean):[];
+    if(!vs.length) return null;
+    const ok=a=>Array.isArray(a)?a.filter(x=>x&&x.title).map(x=>({title:String(x.title),text:String(x.text||'')})):[];
+    const P=ok(d.principles), Dr=ok(d.directions);
+    const ws=Array.isArray(d.words)?d.words.map(w=>String(w==null?'':w).trim()).filter(Boolean):[];
+    return {vision:vs, principles:P, directions:Dr, words:ws.length?ws:P.concat(Dr).map(x=>x.title),
+      cycle:(Array.isArray(d.cycle)&&d.cycle.length>=2)?d.cycle.map(String):['安心','挑戦','成長'], updatedAt:d.updatedAt||'', source:d.source||''};
+  }catch(e){ return null; }
+}
+/* VISION→原則→指針の順に {type,title,text} を並べる（日替わりで1つ出すOS用）。無ければ [] */
+function visionItems(v){ return v?[...v.vision.map(t=>({type:'VISION',title:'',text:t})),...v.principles.map(p=>({type:'原則',title:p.title,text:p.text})),...v.directions.map(p=>({type:'指針',title:p.title,text:p.text}))]:[]; }
+function visionEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* ══ VISION 共通 ここまで ══ */
 /* ── AI Import ── */
 function renderAiImport(){
   const wrap = document.createElement('div');
@@ -1167,7 +1245,60 @@ function parseAiReflect(text){
    返り値：{ok, kind, message, summary, parts, logIds, questionIds, experimentIds, lecticaLogIds}
    kind：'empty'（空）／'parse'（解析エラー）／'none'（タイプ行も REFLECT-IMPORT も無い）／'fail'（何も登録できず）／'ok'
    opts.silent：Lectica の失敗を alert でなく message に返す */
+/* ---VISION-UPDATE--- 〜 ---END---（END が無ければ次の ---○○--- か【…】の手前まで）を切り出す */
+function rfSplitVisionUpdate(text){
+  const lines=String(text||'').split(/\r?\n/);
+  const i=lines.findIndex(l=>/^-{2,}\s*VISION-UPDATE\s*-{2,}$/.test(l.trim()));
+  if(i<0) return {block:null, rest:text};
+  let j=lines.findIndex((l,k)=>k>i&&/^-{2,}\s*END\s*-{2,}$/.test(l.trim()));
+  let end=j+1;
+  if(j<0){ j=lines.findIndex((l,k)=>k>i&&(/^-{2,}\s*[A-Z][A-Z-]*\s*-{2,}$/.test(l.trim())||/^【[^】]+】/.test(l.trim()))); if(j<0) j=lines.length; end=j; }
+  return {block:lines.slice(i+1,j).join('\n'), rest:lines.slice(0,i).concat(lines.slice(end)).join('\n').trim()};
+}
+const RF_VISION_PREV='myapps_vision_prev', RF_VISION_MARK='reflect_lastupdate_vision';
+/* VISION：（複数行＝配列）・原則：題｜文・指針：題｜文（どれか1行でその種類を全置換）・言葉：読点区切り（全置換）。cycle は変えない */
+function rfApplyVisionUpdate(block,opts){
+  const r={vision:[],principles:null,directions:null,words:null}, skipped=[];
+  String(block||'').split(/\r?\n/).forEach(raw=>{
+    const l=raw.replace(/　/g,' ').trim(); if(!l) return;
+    const m=l.match(/^([^：:]+?)\s*[：:]\s*(.*)$/); if(!m){ skipped.push(l); return; }
+    const k=m[1].trim(), v=m[2].trim();
+    if(k==='VISION'){ if(v) r.vision.push(v); else skipped.push(l); return; }
+    if(k==='原則'||k==='指針'){ const mm=v.match(/^([^｜|]+?)\s*[｜|]\s*(.+)$/); if(!mm){ skipped.push(l); return; }
+      const key=k==='原則'?'principles':'directions'; r[key]=r[key]||[]; r[key].push({title:mm[1].trim(),text:mm[2].trim()}); return; }
+    if(k==='言葉'){ const ws=v.split(/[、,，・\s]+/).map(x=>x.trim()).filter(Boolean); if(!ws.length){ skipped.push(l); return; } r.words=ws; return; }
+    skipped.push(l);
+  });
+  const sk=skipped.length?'読まなかった行：'+skipped.join('｜'):'';
+  if(!r.vision.length&&!r.principles&&!r.directions&&!r.words) return {ok:false, summary:['---VISION-UPDATE--- に読める行がありません',sk].filter(Boolean).join('／')};
+  const prevRaw=localStorage.getItem('myapps_vision'); let prev=null; try{ prev=JSON.parse(prevRaw||'null'); }catch(e){}
+  const nv=Object.assign({}, (prev&&typeof prev==='object'&&!Array.isArray(prev))?prev:{});
+  const parts=[];
+  if(r.vision.length){ nv.vision=r.vision; parts.push('本文'+r.vision.length); }
+  if(r.principles){ nv.principles=r.principles; parts.push('原則'+r.principles.length); }
+  if(r.directions){ nv.directions=r.directions; parts.push('指針'+r.directions.length); }
+  if(r.words){ nv.words=r.words; parts.push('言葉'+r.words.length); }
+  const src=(opts&&opts.importSource)||'';
+  nv.updatedAt=tod(); nv.source=/VISION見直し/.test(src)?'VISION見直し':(src||'受信箱');
+  try{ localStorage.setItem(RF_VISION_PREV, prevRaw===null?'null':prevRaw); localStorage.setItem('myapps_vision', JSON.stringify(nv)); }
+  catch(e){ return {ok:false, summary:'VISION を保存できませんでした'}; }
+  return {ok:true, summary:['VISION を更新しました（'+parts.join('・')+'）',sk].filter(Boolean).join('／')};
+}
 async function reflectImportText(text, opts){
+  opts=opts||{};
+  const vu=rfSplitVisionUpdate(String(text||''));
+  if(vu.block===null) return reflectImportText0(text, opts);
+  /* 「直前の更新を元に戻す」の基準をこの取り込みの直前にする（VISION は myapps_vision_prev から戻す） */
+  try{ const cur=localStorage.getItem('reflectOS_v1'); if(cur!==null) localStorage.setItem(RF_UPDATE_BK, cur); }catch(e){}
+  const v=rfApplyVisionUpdate(vu.block, opts);
+  const empty={ok:false,kind:'none',message:'',summary:'',parts:[],logIds:[],questionIds:[],experimentIds:[],themeIds:[],lecticaLogIds:[]};
+  const r=vu.rest?await reflectImportText0(vu.rest, opts):empty;
+  if(v.ok){ try{ localStorage.setItem(RF_VISION_MARK,'1'); }catch(e){} r.parts.unshift('VISION の更新'); if(!r.ok&&r.kind==='none'){ r.ok=true; r.kind='ok'; } }
+  r.summary=[v.summary, r.summary].filter(Boolean).join('／'); r.message=v.ok?r.summary:[v.summary,r.message].filter(Boolean).join('\n');
+  if(!v.ok&&!r.parts.length){ r.ok=false; r.kind='none'; }
+  return r;
+}
+async function reflectImportText0(text, opts){
   opts=opts||{};
   text=String(text||'').trim();
   const sp=rfSplitUpdate(text);
@@ -1177,7 +1308,7 @@ async function reflectImportText(text, opts){
   let lg=null;
   if(/【|---REFLECT-IMPORT---/.test(sp.rest)) lg=await reflectImportLegacy(sp.rest, opts);
   if(lg){ ['logIds','questionIds','experimentIds','lecticaLogIds'].forEach(k=>res[k].push(...(lg[k]||[]))); res.parts.push(...(lg.parts||[])); }
-  const up=await rfApplyUpdate(sp.update);
+  const up=await rfApplyUpdate(sp.update,opts);
   up.questionIds.forEach(id=>{ if(!res.questionIds.includes(id)) res.questionIds.push(id); });
   up.experimentIds.forEach(id=>{ if(!res.experimentIds.includes(id)) res.experimentIds.push(id); });
   up.themeIds.forEach(id=>{ if(!res.themeIds.includes(id)) res.themeIds.push(id); });
@@ -1202,7 +1333,7 @@ async function reflectImportText(text, opts){
        統合済みの同じブロックを テーマ・ステータス 付きで再送すると、統合先に当てる
      ■ 問い 新規　　題名（必須）／ステータス（候補・重点。省略＝候補）／仮説／テーマ（実ID・題名の完全一致・なし）／記録
      ■ 実験 新規　　題名（必須）／問い（既存の実ID）／ステータス（候補・実験中。省略＝候補）／場面／観察／期限／結果／学び／記録
-     ■ テーマ {実ID}　題名／状態（構想中・実行中・保留・完了・撤退・外した・戻す）／仮説／記録（問い欄はなくなった＝重点の問いで表す）
+     ■ テーマ {実ID}　題名／状態（構想中・実行中・保留・完了・撤退・外した・戻す）／仮説／足りない言葉／止まっている所（安心→挑戦 等・流れている）／ひとこと／記録（問い欄はなくなった＝重点の問いで表す）
      ■ テーマ 新規　題名（必須）／状態（省略＝構想中）／仮説／記録
      ■ 原則 新規　　題名（必須）／分類（対話・判断・組織・自分・その他。省略＝その他）／説明／元の実験（実ID・R番号）／元の問い（実ID）
    実験を完了にするには学びが要る（ブロックの「学び：」か既存の学び。「学び：なし」＝（学びなし）で完了）
@@ -1296,13 +1427,15 @@ function rfPushNote(o, value, before){
   return true;
 }
 /* 区間を適用。返り値 {summary, changed, readable, errors[], limits[], questionIds[], experimentIds[], themeIds[]} */
-async function rfApplyUpdate(body){
+async function rfApplyUpdate(body,opts){
   const out={summary:'', changed:0, readable:0, errors:[], limits:[], questionIds:[], experimentIds:[], themeIds:[]};
   const sums=[];
   S._ridQuiet=true;   /* R番号を付けたら summary に書く（トーストは出さない） */
   const ridNote=(r0,o)=>(!r0&&o&&o.rid)?o.rid+' を付けました':'';
   const pre=localStorage.getItem('reflectOS_v1'); let bk=false;
-  const backup=()=>{ if(bk) return; bk=true; try{ if(pre!==null) localStorage.setItem(RF_UPDATE_BK, pre); }catch(e){} };   /* 1件でも適用する直前に1回だけ */
+  const backup=()=>{ if(bk) return; bk=true; try{ if(pre!==null) localStorage.setItem(RF_UPDATE_BK, pre); localStorage.removeItem(RF_VISION_MARK); }catch(e){} };   /* 1件でも適用する直前に1回だけ */
+  /* テーマの VISION とのつながりを誰が付けたか：受信箱の source が VISION見直し なら 'VISION見直し'、それ以外は '受信箱' */
+  const by=/VISION見直し/.test((opts&&opts.importSource)||'')?'VISION見直し':'受信箱';
   /* first：理由を先に書く（「読めませんでした：学びがありません…（■ 実験 e1）」） */
   const bad=(b,why,first)=>{ const s='読めませんでした：'+(first?why+'（'+b.head+'）':b.head+(why?'（'+why+'）':'')); out.errors.push(s); sums.push(s); };
   for(const b of rfParseUpdate(body)){
@@ -1380,8 +1513,8 @@ async function rfApplyUpdate(body){
         sums.push('実験 '+b.id+' '+(ch.length?ch.join('・'):'変更なし'));
         continue;
       }
-      if(b.op==='update'&&b.kind==='t'){ await rfApplyThemeUpdate(b,{out,sums,backup,bad}); continue; }
-      if(b.op==='create'&&b.kind==='t'){ await rfApplyThemeCreate(b,{out,sums,backup,bad}); continue; }
+      if(b.op==='update'&&b.kind==='t'){ await rfApplyThemeUpdate(b,{out,sums,backup,bad,by}); continue; }
+      if(b.op==='create'&&b.kind==='t'){ await rfApplyThemeCreate(b,{out,sums,backup,bad,by}); continue; }
       if(b.op==='create'&&b.kind==='p'){ await rfApplyPrincipleCreate(b,{out,sums,backup,bad}); continue; }
       if(b.op==='create'){ await rfApplyCreate(b,{out,sums,backup,bad}); continue; }
       if(b.op==='merge'){
@@ -1513,6 +1646,16 @@ function rfReadThemeFields(b,create){
   const p={}; const notes=[]; let err='', first=false;
   b.fields.forEach(({key,value})=>{
     if((key==='問い'||key==='現在の状態')&&!err){ err='テーマの問い欄はなくなりました（重点の問いで表します）'; first=true; return; }
+    if(key==='足りない言葉'||key==='止まっている所'||key==='ひとこと'){   /* VISION とのつながり。合わない値はそのキーだけ読まない（ほかの変更は通す） */
+      if(rfNoChg(value)) return;
+      p.vl=p.vl||{}; p.vlSkip=p.vlSkip||[];
+      const none=value==='なし'||rfClear(value);
+      if(key==='ひとこと'){ p.vl.note=none?'':value; return; }
+      const VS=loadVisionShared(), opts=key==='足りない言葉'?(VS?VS.words:[]):rfStuckOptions(VS);
+      if(none){ p.vl[key==='足りない言葉'?'lacking':'stuck']=''; return; }
+      if(!opts.includes(value)){ p.vlSkip.push(key+'『'+value+'』（今の VISION に無い'+(key==='足りない言葉'?'言葉':'流れ')+'）'); return; }
+      p.vl[key==='足りない言葉'?'lacking':'stuck']=value; return;
+    }
     const k=RF_UT_KEYS[key]; if(!k||err) return;
     if(k==='note'){ if(!rfNoChg(value)) notes.push(value); return; }
     if(rfNoChg(value)) return;
@@ -1529,7 +1672,7 @@ function rfReadThemeFields(b,create){
   return {p,notes,err,first};
 }
 /* 「■ テーマ {実ID}」：更新のみ。完了にしたら completedAt、完了以外へ戻したら外す */
-async function rfApplyThemeUpdate(b,{out,sums,backup,bad}){
+async function rfApplyThemeUpdate(b,{out,sums,backup,bad,by}){
   const t=S.themes.find(x=>x&&x.id===b.id);
   if(!t){ bad(b,'テーマの実IDが見つかりません'); return; }
   const {p,notes,err,first}=rfReadThemeFields(b,false);
@@ -1545,11 +1688,14 @@ async function rfApplyThemeUpdate(b,{out,sums,backup,bad}){
   let nN=0; notes.forEach(v=>{ if(rfPushNote(t,v,backup)) nN++; }); if(nN) ch.push('記録'+nN+'件');
   if(p.detached===true&&!t.detached){ backup(); t.detached=true; t.detachedAt=tod(); ch.push('外した'); }
   if(p.detached===false&&t.detached){ backup(); t.detached=false; ch.push('戻した'); }
-  if(ch.length){ t.updatedAt=tod(); await dbput('themes',t); out.changed++; out.themeIds.push(t.id); }
+  if(p.vl){ const d=rfSetVisionLink(t,p.vl,by,backup); if(d) ch.push(d); }
+  if(p.vlSkip&&p.vlSkip.length) ch.push('読まなかった：'+p.vlSkip.join('・'));
+  const real=ch.filter(c=>!/^読まなかった：/.test(c)).length;
+  if(real){ t.updatedAt=tod(); await dbput('themes',t); out.changed++; out.themeIds.push(t.id); }
   sums.push('テーマ '+b.id+' '+(ch.length?ch.join('・'):'変更なし'));
 }
 /* 「■ テーマ 新規」：同じ題名（外したテーマも含む）が既にあれば作らず、記録を足し空の項目だけ埋める */
-async function rfApplyThemeCreate(b,{out,sums,backup,bad}){
+async function rfApplyThemeCreate(b,{out,sums,backup,bad,by}){
   const {p,notes,err,first}=rfReadThemeFields(b,true);
   if(err||!p.title){ bad(b,err||'題名がありません',first); return; }
   out.readable++;
@@ -1568,6 +1714,7 @@ async function rfApplyThemeCreate(b,{out,sums,backup,bad}){
   const t={id:uid(),title:p.title,status:st,summary:p.summary||'',notes:[],createdAt:tod(),updatedAt:tod()};
   if(st==='完了') t.completedAt=tod();
   notes.forEach(v=>rfPushNote(t,v));
+  if(p.vl) rfSetVisionLink(t,p.vl,by);
   await dbput('themes',t); S.themes.push(t);
   out.changed++; out.themeIds.push(t.id);
   sums.push('テーマ 新規『'+rfShort(p.title)+'』');
@@ -1603,6 +1750,8 @@ async function rfApplyPrincipleCreate(b,{out,sums,backup,bad}){
 /* 「直前の更新を元に戻す」：退避した reflectOS_v1 の生文字列へ戻し、画面の状態を読み直す（1世代） */
 async function rfUndoLastUpdate(){
   const b=localStorage.getItem(RF_UPDATE_BK); if(b===null) return;
+  /* 直前が VISION-UPDATE なら VISION も戻す（前が無かったら消す） */
+  if(localStorage.getItem(RF_VISION_MARK)){ const pv=localStorage.getItem(RF_VISION_PREV); if(pv===null||pv==='null') localStorage.removeItem('myapps_vision'); else localStorage.setItem('myapps_vision',pv); localStorage.removeItem(RF_VISION_MARK); try{renderV26();}catch(e){} }
   localStorage.setItem('reflectOS_v1', b);
   localStorage.removeItem(RF_UPDATE_BK);
   const priOrd={S:0,A:1,B:2,C:3};
@@ -1714,12 +1863,18 @@ async function registerAiInput(){
     if(statusEl){ statusEl.textContent = '登録できませんでした（内容を確認してください）'; statusEl.className = 'ai-status err'; }
     return;
   }
-  if(statusEl){ statusEl.textContent = r.parts.join('＋')+'を登録しました ✓'+(r.parts.some(p=>/^探求ボードの更新/.test(p))?'（'+r.summary+'）':''); statusEl.className='ai-status ok'; }
+  if(statusEl){ statusEl.textContent = r.parts.join('＋')+'を登録しました ✓'+(r.parts.some(p=>/^(探求ボードの更新|VISION の更新)/.test(p))?'（'+r.summary+'）':''); statusEl.className='ai-status ok'; }
   if(input) input.value='';
   setTimeout(()=>{S.tab='home';ra();updateNav();},800);
 }
 
-function renderV26(){const area=document.getElementById('v26');if(!area)return;const seed=parseInt(new Date().toLocaleDateString('sv').replace(/-/g,''))%100;const types=['vision','principle','direction'];const type=types[seed%3];let inner='';if(type==='vision'){const item=VD.vision[seed%VD.vision.length];inner=`<span class="v26t">VISION</span><span class="v26b">${item}</span>`;}else if(type==='principle'){const item=VD.principles[seed%VD.principles.length];inner=`<span class="v26t">原則</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}else{const item=VD.directions[seed%VD.directions.length];inner=`<span class="v26t">指針</span><span class="v26b"><span class="v26k">${item.title}</span>${item.text}</span>`;}area.innerHTML=`<div class="v26c">${inner}</div>`;}
+function renderV26(){const area=document.getElementById('v26');if(!area)return;const v=loadVisionShared();if(!v){area.innerHTML='';return;}   /* VISION が無ければ出さない */
+  const seed=parseInt(new Date().toLocaleDateString('sv').replace(/-/g,''))%100;let type=['vision','principle','direction'][seed%3];
+  if((type==='principle'&&!v.principles.length)||(type==='direction'&&!v.directions.length))type='vision';
+  let inner='';
+  if(type==='vision'){inner='<span class="v26t">VISION</span><span class="v26b">'+visionEsc(v.vision[seed%v.vision.length])+'</span>';}
+  else{const list=type==='principle'?v.principles:v.directions,item=list[seed%list.length];inner='<span class="v26t">'+(type==='principle'?'原則':'指針')+'</span><span class="v26b"><span class="v26k">'+visionEsc(item.title)+'</span>'+visionEsc(item.text)+'</span>';}
+  area.innerHTML='<div class="v26c">'+inner+'</div>';}
 
 /* ── 問い・実験の直接追加 ── */
 async function addDirectEntry(type, text, themeId){
@@ -3454,6 +3609,7 @@ function renderVisionEdit(){
 ・principlesは原則（title＋text）の配列。titleは漢字1〜2文字
 ・directionsは指針（title＋text）の配列。titleは漢字1〜2文字
 ・textは1〜2文の簡潔な文章
+・wordsは「今いちばん足りない言葉」の選択肢（原則・指針の title を順に並べる）
 ・JSONのみ出力し、説明文・コードブロック記号は不要
 ・ダブルクォート・カンマ・波括弧など JSON の記法を正確に守る
 
@@ -3467,7 +3623,8 @@ function renderVisionEdit(){
   "directions": [
     {"title": "指針1", "text": "説明文"},
     {"title": "指針2", "text": "説明文"}
-  ]
+  ],
+  "words": ["原則1", "原則2", "指針1", "指針2"]
 }
 
 【現在の内容】
@@ -3512,7 +3669,10 @@ function renderVisionEdit(){
       if(!parsed.directions||!Array.isArray(parsed.directions)) throw new Error('directions が配列ではありません');
       parsed.principles.forEach((p,i)=>{if(!p.title||!p.text) throw new Error('principles['+i+'] に title または text がありません');});
       parsed.directions.forEach((d,i)=>{if(!d.title||!d.text) throw new Error('directions['+i+'] に title または text がありません');});
+      if(parsed.words!==undefined&&(!Array.isArray(parsed.words)||parsed.words.some(w=>typeof w!=='string'))) throw new Error('words は文字の配列にしてください（無くても可：原則・指針の title で補います）');
+      parsed.updatedAt=tod(); parsed.source='VISION設定';
       saveSharedVision(parsed);
+      renderV26();
       // Reflect OSのvisionも更新
       S.vision = {vision: parsed.vision[0], yearGoal: S.vision.yearGoal||''};
       dbput('settings',{id:'vision',value:S.vision});
