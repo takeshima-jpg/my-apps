@@ -1321,6 +1321,8 @@ function rfPushNote(o, value, before){
 async function rfApplyUpdate(body){
   const out={summary:'', changed:0, readable:0, errors:[], limits:[], questionIds:[], experimentIds:[], themeIds:[]};
   const sums=[];
+  S._ridQuiet=true;   /* R番号を付けたら summary に書く（トーストは出さない） */
+  const ridNote=(r0,o)=>(!r0&&o&&o.rid)?o.rid+' を付けました':'';
   const pre=localStorage.getItem('reflectOS_v1'); let bk=false;
   const backup=()=>{ if(bk) return; bk=true; try{ if(pre!==null) localStorage.setItem(RF_UPDATE_BK, pre); }catch(e){} };   /* 1件でも適用する直前に1回だけ */
   /* first：理由を先に書く（「読めませんでした：学びがありません…（■ 実験 e1）」） */
@@ -1394,7 +1396,9 @@ async function rfApplyUpdate(body){
         });
         if(p.theme){ const t=rfSetTheme(x,p.theme,backup); if(t) ch.push(t); }
         let nN=0; notes.forEach(v=>{ if(rfPushNote(x,v,backup)) nN++; }); if(nN) ch.push('記録'+nN+'件');
+        const r0=x.rid;
         if(ch.length){ await tkSave('experiments',x); out.changed++; out.experimentIds.push(x.id); }
+        const rn=ridNote(r0,x); if(rn) ch.push(rn);
         sums.push('実験 '+b.id+' '+(ch.length?ch.join('・'):'変更なし'));
         continue;
       }
@@ -1431,7 +1435,9 @@ async function rfApplyUpdate(body){
             backup(); ch.push('ステータス（'+(DICT[into.status]||into.status)+'→'+DICT[st]+'）'); into.status=st; into.completedAt=null;
           }
           if(th){ const t=rfSetTheme(into,th,backup); if(t) ch.push(t); }
+          const r0=into.rid;
           if(ch.length){ await tkSave(store,into); out.changed++; (isQ?out.questionIds:out.experimentIds).push(into.id); }
+          if(!isQ){ const rn=ridNote(r0,into); if(rn) ch.push(rn); }
           sums.push(lb+'『'+b.title+'』'+(ch.length?ch.join('・'):'変更なし')); continue;
         }
         if(src.some(o=>o.status==='merged')){ bad(b,'すでに別の統合先へ統合済みです'); continue; }
@@ -1444,12 +1450,14 @@ async function rfApplyUpdate(body){
         if(reason&&rfPushNote(n,'統合｜'+reason)) await tkSave(store,n);
         out.changed++; (isQ?out.questionIds:out.experimentIds).push(n.id);
         const thN=tkThemeNames(n.themeIds);
-        sums.push(lb+'新規『'+b.title+'』（'+DICT[n.status]+(thN.length?'・テーマ '+thN.join('・'):'')+'）');
+        const rn=(!isQ&&n.rid)?(S._ridFrom?'・'+n.rid+' を引き継ぎ':'・'+n.rid+' を付けました'):'';
+        sums.push(lb+'新規『'+b.title+'』（'+DICT[n.status]+(thN.length?'・テーマ '+thN.join('・'):'')+rn+'）');
         continue;
       }
       bad(b,'');
     }catch(e){ bad(b,(e&&e.message)||String(e)); }
   }
+  S._ridQuiet=false;
   if(out.themeIds.length) tkMirrorFocus();
   out.summary=sums.join('／');
   return out;
@@ -1520,7 +1528,7 @@ async function rfApplyCreate(b,ctx){
   notes.forEach(v=>rfPushNote(o,v));
   await tkSave(isQ?'questions':'experiments',o);
   out.changed++; (isQ?out.questionIds:out.experimentIds).push(o.id);
-  sums.push(label+' 新規『'+rfShort(p.title)+'』（'+(isQ?TK_QST:TK_EST)[st]+(!isQ&&o.questionId?'・問い '+o.questionId:'')+(isQ&&o.themeIds.length?'・テーマ '+o.themeIds[0]:'')+'）');
+  sums.push(label+' 新規『'+rfShort(p.title)+'』（'+(isQ?TK_QST:TK_EST)[st]+(!isQ&&o.rid?'・'+o.rid+' を付けました':'')+(!isQ&&o.questionId?'・問い '+o.questionId:'')+(isQ&&o.themeIds.length?'・テーマ '+o.themeIds[0]:'')+'）');
 }
 /* テーマの項目を読む。新規（create）では 外した／戻す は使えず、（空にする）は書かないのと同じ */
 function rfReadThemeFields(b,create){
@@ -2368,7 +2376,22 @@ function tkNotesEl(o){
   ns.forEach(n=>w.appendChild(D({},String(n.date||'').slice(5).replace('-','/')+' '+(n.kind?n.kind+'｜':'')+(n.text||''))));
   return w;
 }
-async function tkSave(store,rec){rec.updatedAt=new Date().toISOString();await dbput(store,rec);const arr=store==='questions'?S.questions:store==='experiments'?S.experiments:S.principles;const i=arr.findIndex(x=>x.id===rec.id);if(i>=0)arr[i]=rec;else arr.push(rec);if(store==='questions'||store==='experiments')tkMirrorFocus();}
+/* ══ R番号（rid）の自動付与（2026-11-03 本人決定）══
+   実験中（active・決定検証を除く）になった時点で rid が無ければ「次の番号」を付ける。次の番号＝全実験（どの状態も）の rid と
+   formerRid の R に続く数字の最大＋1（3桁ゼロ埋め・R999 の次は R1000）。一度付いた番号は消さず、使い回さない。手で付けた番号が優先。
+   tkSave を通る保存すべて（画面・振り返り・REFLECT-UPDATE・統合・問いを選んで実験中）で付く。起動時の一括（rfRidOnce）が終わるまでは付けない */
+function tkNextRid(){
+  let mx=0;
+  S.experiments.forEach(x=>[x&&x.rid,x&&x.formerRid].forEach(v=>{const m=/^R(\d+)$/i.exec(String(v||'').trim());if(m)mx=Math.max(mx,+m[1]);}));
+  return 'R'+String(mx+1).padStart(3,'0');
+}
+/* 付けたら番号を返す（付けなければ ''） */
+function tkAutoRid(x){
+  if(!S._ridReady||!x||x.status!=='active'||x.rid||tkIsReview(x)) return '';
+  x.rid=tkNextRid();
+  return x.rid;
+}
+async function tkSave(store,rec){const nr=store==='experiments'?tkAutoRid(rec):'';if(nr&&!S._ridQuiet)setTimeout(()=>toast(nr+' を付けました'),0);rec.updatedAt=new Date().toISOString();await dbput(store,rec);const arr=store==='questions'?S.questions:store==='experiments'?S.experiments:S.principles;const i=arr.findIndex(x=>x.id===rec.id);if(i>=0)arr[i]=rec;else arr.push(rec);if(store==='questions'||store==='experiments')tkMirrorFocus();}
 
 /* ── 重点スナップショットをlocalStorageへミラー（Task OS HOME表示用の読み取り専用の写し）──
    Reflect本体はIndexedDBでTask OSから読めないため、重点の問い＋実験中(explore)だけを reflect_focus_v1 に書く。
@@ -2557,7 +2580,7 @@ function tkExpForm(q,existing,forceType){
       rid=v;}
     if(existing){
       existing.title=title;existing.scene=sc.value.trim();existing.observation=ob.value.trim();existing.deadline=dl.value;existing.note=nt.value.trim();
-      if(exI)existing.rid=rid;
+      if(exI){if(existing.rid&&existing.rid!==rid&&!existing.formerRid)existing.formerRid=existing.rid;existing.rid=rid;}   /* 手で付けた番号が優先。外した番号は使い回さない */
       await tkSave('experiments',existing);m.close();ra();return;
     }
     const linkedQ=(qSel&&qSel.value)?S.questions.find(z=>z.id===qSel.value):q;
@@ -2707,8 +2730,12 @@ async function tkMergeExperiments(es,o){
   o=o||{};
   const qid=(es.find(x=>x.questionId)||{}).questionId||null;
   const nx={id:uid(),questionId:qid,title:o.title,themeIds:o.themeIds?o.themeIds.slice():tkMergeThemes(es),...(o.noTheme?{noTheme:true}:{}),status:o.status||tkMergeStatus(false,es),scene:es[0].scene||'',observation:es[0].observation||'',deadline:es[0].deadline||'',note:'',result:'',learning:'',sourceLogIds:[...new Set(es.flatMap(x=>x.sourceLogIds||[]))],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),completedAt:null};
+  /* 実験中になるなら、統合元の R番号（実験中のもの優先）の先頭を引き継ぐ。元は formerRid に残す（Lectica の関連実験の数え方を新しい実験へ続ける）。無ければ tkSave が次の番号 */
+  let from=null;
+  if(nx.status==='active'&&!tkIsReview(nx)){from=es.find(x=>x.rid&&x.status==='active'&&!tkIsReview(x))||es.find(x=>x.rid)||null;if(from)nx.rid=from.rid;}
   await tkSave('experiments',nx);
-  for(const x of es){x.status='merged';x.mergedIntoId=nx.id;x.completedAt=tod();await tkSave('experiments',x);}
+  for(const x of es){if(x===from){x.formerRid=x.rid;delete x.rid;}x.status='merged';x.mergedIntoId=nx.id;x.completedAt=tod();await tkSave('experiments',x);}
+  S._ridFrom=from?from.id:null;   /* REFLECT-UPDATE の summary 用（データには残さない） */
   return nx;
 }
 
@@ -3953,6 +3980,30 @@ async function rfBoardCleanup(){
   setTimeout(()=>mark(new Date().toISOString()),2200);
 }
 
+/* 今ある実験中（決定検証を除く）で rid の無いものに、作成日の古い順に次の番号を付ける。対象が無ければ何もしない＝冪等。
+   退避は1回（同名キーがあれば作らない）。トーストは1回（見えないまま済みにしない） */
+async function rfRidOnce(){
+  const FLAG='reflect_rid_20261103_done',BK='reflect_backup_rid_20261103';
+  let flag=null;
+  try{flag=localStorage.getItem(FLAG);}catch(e){S._ridReady=true;return;}
+  const targets=S.experiments.filter(x=>x&&x.status==='active'&&!x.rid&&!tkIsReview(x)).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+  if(targets.length){
+    try{if(localStorage.getItem(BK)===null){const v=localStorage.getItem('reflectOS_v1');if(v!==null)localStorage.setItem(BK,v);}}catch(e){console.warn('退避できないため R番号の付与を見送り（次回また試す）',e);return;}
+    for(const x of targets){x.rid=tkNextRid();await dbput('experiments',x);}
+    console.log('[reflect-rid] '+targets.map(x=>x.rid+' '+x.title).join('／'));
+  }
+  S._ridReady=true;
+  const m=/^toast:(\d+)$/.exec(flag||'');
+  if(flag&&!m)return;
+  const n=m?+m[1]:targets.length;
+  const mark=v=>{try{localStorage.setItem(FLAG,v);}catch(e){}};
+  if(!n){mark(new Date().toISOString());return;}
+  mark('toast:'+n);
+  if(RF_INBOX_MODE)return;
+  toast('実験中の '+n+'本に R番号を付けました');
+  setTimeout(()=>mark(new Date().toISOString()),2200);
+}
+
 async function boot(){
   try{const v=await dbget('settings','vision');if(v?.value)S.vision=v.value;}catch(e){}
   try{
@@ -3971,6 +4022,7 @@ async function boot(){
     await tkFixCleanLineTitles();   /* 先頭の数字が消えた題名を元ログから1回だけ修復（退避キーあり・手で直した題名は触らない） */
     await tkMigrate();   /* 既存ログ→探求ボードの冪等移行（初回はスナップショットDL） */
     await tkAutoAssignRids();   /* 追補J：旧extId移行＋R001〜R003のrid自動割当（冪等・手動優先） */
+    await rfRidOnce();   /* R番号の無い実験中に次の番号（R001〜R003 の題名一致の後。冪等・退避キーあり） */
   }catch(e){console.warn(e);}
   tkMirrorFocus();   /* 初期化完了時に重点スナップショットをlocalStorageへ（空でも書く） */
   renderV26();ra();updateNav();
