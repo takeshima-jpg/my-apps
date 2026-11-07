@@ -618,11 +618,11 @@ function render(md, modifiedTime, luckyDay, lectin, visuals) {
     <div class="brief-body">${vis.length ? bvBodyWithVisuals(md, vis) : markdownToHtml(md)}</div>`;
 }
 
-/* ===== 図（visuals）：daily-brief.json の visuals[{slot,title,alt,svg}]（0〜2件）=====
+/* ===== 図（visuals）：daily-brief.json の visuals[{slot,title,alt,svg}]（0〜5件）=====
    図はその図が説明している欄の終わりに出す。visuals が無い・空なら今の本文と完全に同じ（markdownToHtml をそのまま通す）。
    安全：SVG は DOM に直接入れず <img src="data:image/svg+xml,…"> で出す（img 内の SVG はスクリプトも外部読み込みも動かない）。
    そのうえで念のため bvSanitizeSvg で危ないものを落とす。 */
-const BV_VISUAL_MAX = 2;
+const BV_VISUAL_MAX = 5;   /* 毎日は4枚まで・月曜だけ週の図を足して5枚まで（2026-11-08 本人） */
 const BV_VISUAL_MAX_BYTES = 60 * 1024;
 function bvValidVisuals(v) {
   if (!Array.isArray(v) || !v.length) return [];
@@ -634,7 +634,7 @@ function bvValidVisuals(v) {
     let bytes = svg.length;
     try { bytes = new TextEncoder().encode(svg).length; } catch (e) {}
     if (bytes > BV_VISUAL_MAX_BYTES) { console.warn('brief visual skipped (over 60KB):', i, bytes); continue; }
-    if (out.length >= BV_VISUAL_MAX) { console.warn('brief visual skipped (more than 2):', i); continue; }
+    if (out.length >= BV_VISUAL_MAX) { console.warn('brief visual skipped (more than 5):', i); continue; }
     out.push(x);
   }
   return out;
@@ -693,6 +693,14 @@ function bvVisualInsertAt(lines, slot) {
   } else if (slot === 'week') {
     start = find(l => isHead(l) && l.indexOf('①') >= 0);
     return start < 0 ? -1 : start + 1;   // 見出しのすぐ下＝欄の先頭
+  } else if (slot === 'framework' || slot === 'market') {
+    /* 🧰 今日のフレームワーク／② 財務・外部環境（2026-11-08）。始まりは見出し行だけで探す（本文の「①…②…」では探さない）。
+       欄の終わり＝次の「同じかそれより上の階層の見出し」（# の数がこの見出し以下）か ---。欄の中の ## 小見出しでは止まらない */
+    const mark = slot === 'framework' ? '🧰' : '②';
+    const level = l => (l.match(/^#+/) || [''])[0].length;
+    start = find(l => isHead(l) && l.indexOf(mark) >= 0);
+    const lv = start < 0 ? 0 : level(lines[start]);
+    stop = l => isHr(l) || (isHead(l) && level(l) <= lv);
   }
   if (start < 0) return -1;
   let end = lines.length;

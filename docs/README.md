@@ -45,6 +45,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-ariki-tree-spec.md](specs/claude-code-ariki-tree-spec.md) | 依頼書1：Reflect 探求ボードの一番上に「在り方の木」（VISION→テーマ→重点の問い→実験中の図解）。Task OS HOME に木への入口1行（`?tab=tankyu`） | ✅実装済み（2026-11-03） |
 | [claude-code-project-map-targets-spec.md](specs/claude-code-project-map-targets-spec.md) | 依頼書2：Project OS ホームの一番上に「全体の地図」（プロジェクト→ターゲット→案件）・詳細パネル・ターゲットと案件の器と編集・種別（維持活動）・PROJECT-IMPORT の ターゲット:／案件:／種別:・旧 S-ID 欄の片付け・一度だけの自動投入 | ✅実装済み（2026-11-03） |
 | [claude-code-koso-strategy-goal-spec.md](specs/claude-code-koso-strategy-goal-spec.md) | 依頼書3：構想ログに種別「戦略目標」（G番号・プロジェクト複数・PJ化なし・KOSO-IMPORT の ■ 戦略目標）。G05 を戦略目標に・スリーエーグループ100年構想を新設（1回だけ）。構想ログ・ヒトメモ・1day・Task OS の旧 S-ID 表示を外す（データは残す） | ✅実装済み（2026-11-03） |
+| [claude-code-brief-visuals-5-spec.md](specs/claude-code-brief-visuals-5-spec.md) | 依頼書6：Brief Viewer の図（visuals）の上限を2→5枚に。置き場所に framework（🧰 今日のフレームワーク）・market（② 財務・外部環境）を足す（欄の終わり＝同じかそれより上の階層の見出し・---） | ✅実装済み（2026-11-08） |
 | [claude-code-koso-log-v2-spec.md](specs/claude-code-koso-log-v2-spec.md) | 構想ログ v2（記録・GOサイン・由来・関連・KOSO-IMPORT）。2026-10-26 に §4-2 の重複判定を「全件」へ訂正して保管 | ✅実装済み（保管のみ・本体は以前に配置） |
 | [claude-code-launcher-pwa-spec.md](specs/claude-code-launcher-pwa-spec.md) | コックピットのPWA化＋自作SVGアイコン（ホーム追加・standalone表示） | ✅実装済み 2026-07-12 `89f825e` |
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |
