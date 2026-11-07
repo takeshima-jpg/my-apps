@@ -119,6 +119,10 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .brief-body strong { font-weight: 700; color: var(--text); }
 .brief-body hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 .brief-body code { background: var(--bg3); border-radius: 4px; padding: 2px 6px; font-family: var(--font-mono); font-size: 0.9em; }
+/* 図（visuals）：その欄の終わりに1枚。枠・背景・拡大なし（静かなUI）。幅100%でスマホでもはみ出さない */
+.brief-body figure.bv-visual { margin: 10px 0 14px; max-width: 100%; }
+.brief-body figure.bv-visual img { width: 100%; height: auto; display: block; border-radius: 8px; }
+.brief-body figure.bv-visual figcaption { font-size: 12px; color: var(--text3); margin-top: 6px; line-height: 1.5; }
 
 /* MESSAGE STATE */
 .bv-msg { max-width: 480px; margin: 0 auto; padding: 56px 24px; text-align: center; color: var(--text2); }
@@ -293,7 +297,8 @@ async function loadBrief() {
       let data;
       try { data = JSON.parse(raw); } catch (e) { data = raw; }
       render(toMarkdown(data), file.modifiedTime, (data && typeof data === 'object') ? data.lucky_day : '',
-             (currentTab === 'daily' && data && typeof data === 'object') ? data.lectica_next : null);
+             (currentTab === 'daily' && data && typeof data === 'object') ? data.lectica_next : null,
+             (data && typeof data === 'object') ? data.visuals : null);
       setStatus('connected', '接続済み');
       localStorage.setItem('bv_seen_' + currentTab, file.modifiedTime || '');
       setBadge(currentTab, false);
@@ -599,8 +604,9 @@ function freshnessBanner(iso) {
   } catch (e) { return ''; }
 }
 
-function render(md, modifiedTime, luckyDay, lectin) {
+function render(md, modifiedTime, luckyDay, lectin, visuals) {
   const main = document.getElementById('main');
+  const vis = bvValidVisuals(visuals);
   main.innerHTML = `
     ${freshnessBanner(modifiedTime)}
     <div class="bv-meta">
@@ -609,7 +615,112 @@ function render(md, modifiedTime, luckyDay, lectin) {
       ${luckyDay ? `<span class="luck-pill">📅 ${luckyDay}</span>` : ''}
     </div>
     ${lectinCardHTML(lectin)}
-    <div class="brief-body">${markdownToHtml(md)}</div>`;
+    <div class="brief-body">${vis.length ? bvBodyWithVisuals(md, vis) : markdownToHtml(md)}</div>`;
+}
+
+/* ===== 図（visuals）：daily-brief.json の visuals[{slot,title,alt,svg}]（0〜2件）=====
+   図はその図が説明している欄の終わりに出す。visuals が無い・空なら今の本文と完全に同じ（markdownToHtml をそのまま通す）。
+   安全：SVG は DOM に直接入れず <img src="data:image/svg+xml,…"> で出す（img 内の SVG はスクリプトも外部読み込みも動かない）。
+   そのうえで念のため bvSanitizeSvg で危ないものを落とす。 */
+const BV_VISUAL_MAX = 2;
+const BV_VISUAL_MAX_BYTES = 60 * 1024;
+function bvValidVisuals(v) {
+  if (!Array.isArray(v) || !v.length) return [];
+  const out = [];
+  for (let i = 0; i < v.length; i++) {
+    const x = v[i];
+    const svg = (x && typeof x === 'object') ? x.svg : null;
+    if (typeof svg !== 'string' || !/^<svg[\s>\/]/i.test(svg.replace(/^\s+/, ''))) { console.warn('brief visual skipped (not svg):', i); continue; }
+    let bytes = svg.length;
+    try { bytes = new TextEncoder().encode(svg).length; } catch (e) {}
+    if (bytes > BV_VISUAL_MAX_BYTES) { console.warn('brief visual skipped (over 60KB):', i, bytes); continue; }
+    if (out.length >= BV_VISUAL_MAX) { console.warn('brief visual skipped (more than 2):', i); continue; }
+    out.push(x);
+  }
+  return out;
+}
+function bvSanitizeSvg(s) {
+  let t = String(s).replace(/^\s+/, ''), prev;
+  // ※ この本体スクリプトの中に scr+ipt のタグを直書きすると本体が途中で切れるので、文字列をつないで正規表現を作る
+  const SC = 'scr' + 'ipt';
+  const reScBlock = new RegExp('<' + SC + '\\b[\\s\\S]*?<\\/' + SC + '\\s*>', 'gi');
+  const reScTag = new RegExp('<\\/?' + SC + '\\b[^>]*>', 'gi');
+  const reFoBlock = /<foreignObject\b[\s\S]*?<\/foreignObject\s*>/gi;
+  const reFoTag = /<\/?foreignObject\b[^>]*>/gi;
+  do {   // 入れ子でのすり抜け（タグを入れ子にした書き方など）を防ぐため、変わらなくなるまで繰り返す
+    prev = t;
+    t = t.replace(reScBlock, '').replace(reScTag, '').replace(reFoBlock, '').replace(reFoTag, '');
+  } while (t !== prev);
+  // on〜= の属性すべて
+  t = t.replace(/\s+on[a-z0-9_:-]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  // href / xlink:href は # で始まる（図の中の参照）ものだけ残す
+  t = t.replace(/\s+((?:xlink:)?href)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi, (m, _n, _v, a, b, c) =>
+    String(a != null ? a : b != null ? b : c != null ? c : '').trim().charAt(0) === '#' ? m : '');
+  // url( は # で始まるものだけ残す
+  t = t.replace(/url\(\s*(['"]?)([^)]*?)\1\s*\)/gi, (m, _q, u) => String(u).trim().charAt(0) === '#' ? m : 'none');
+  // <style> 内の @import
+  t = t.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi, (m, a, css, z) => a + css.replace(/@import\b[^;]*;?/gi, '') + z);
+  return t;
+}
+function bvVisualHTML(x) {
+  const att = s => _lxEsc(s).replace(/"/g, '&quot;');
+  const src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(bvSanitizeSvg(x.svg));
+  const title = typeof x.title === 'string' ? x.title : '';
+  const alt = typeof x.alt === 'string' ? x.alt : title;
+  return '<figure class="bv-visual"><img src="' + src + '" alt="' + att(alt) + '" decoding="async">'
+       + (title ? '<figcaption>' + _lxEsc(title) + '</figcaption>' : '') + '</figure>';
+}
+/* 置く場所：本文（Markdown）を行に分け、slot ごとに「欄の始まりの行」→「欄の終わり（次の欄の手前・手前の空行より前）」を探す。
+   そこに @@BV_VISUAL_n@@ だけの行を差し込んで markdownToHtml に通し、<p>@@BV_VISUAL_n@@</p> を図に置き換える。
+   始まりの行が見つからない slot の図は本文の一番最後に出す（捨てない）。 */
+function bvVisualInsertAt(lines, slot) {
+  const lead = l => l.replace(/^[#*\s]+/, '');
+  const isHead = l => /^#/.test(l);
+  const isHr = l => /^---+$/.test(l);
+  const isBlank = l => l.trim() === '';
+  const isBullet = l => /^[・\-*] /.test(l);
+  const find = pred => { for (let i = 0; i < lines.length; i++) if (pred(lines[i])) return i; return -1; };
+  let start = -1, stop = null;
+  if (slot === 'gift') {
+    start = find(l => isHead(l) && l.indexOf('🎁') >= 0);
+    stop = l => isHead(l) || isHr(l) || lead(l).startsWith('📚');
+  } else if (slot === 'learning') {
+    start = find(l => lead(l).startsWith('📚'));
+    stop = l => isHead(l) || isHr(l) || lead(l).startsWith('🎁');
+  } else if (slot === 'centerpin') {
+    start = find(l => l.indexOf('センターピン') >= 0);
+    stop = l => isBullet(l) || isHead(l) || isHr(l) || isBlank(l);
+  } else if (slot === 'week') {
+    start = find(l => isHead(l) && l.indexOf('①') >= 0);
+    return start < 0 ? -1 : start + 1;   // 見出しのすぐ下＝欄の先頭
+  }
+  if (start < 0) return -1;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) if (stop(lines[i])) { end = i; break; }
+  while (end - 1 > start && isBlank(lines[end - 1])) end--;   // 手前に空行が続くなら空行より前
+  return end;
+}
+function bvBodyWithVisuals(md, vis) {
+  try {
+    const lines = String(md || '').split('\n');
+    const at = vis.map(x => bvVisualInsertAt(lines, x && x.slot));
+    const byPos = {};   // 位置 → [図の番号…]（同じ場所は順に並べる）
+    const tail = [];
+    at.forEach((p, n) => { if (p < 0) tail.push(n); else (byPos[p] = byPos[p] || []).push(n); });
+    const outLines = [];
+    for (let i = 0; i <= lines.length; i++) {
+      if (byPos[i]) byPos[i].forEach(n => outLines.push('@@BV_VISUAL_' + n + '@@'));
+      if (i < lines.length) outLines.push(lines[i]);
+    }
+    if (tail.length) { outLines.push(''); tail.forEach(n => outLines.push('@@BV_VISUAL_' + n + '@@')); }
+    const fig = n => { const x = vis[+n]; return x ? bvVisualHTML(x) : ''; };
+    return markdownToHtml(outLines.join('\n'))
+      .replace(/<p>@@BV_VISUAL_(\d+)@@<\/p>/g, (_m, n) => fig(n))
+      .replace(/@@BV_VISUAL_(\d+)@@/g, (_m, n) => fig(n));   // 素のテキスト表示に落ちたとき等の取り残し
+  } catch (e) {
+    console.warn('brief visuals skipped:', e && e.message);
+    return markdownToHtml(md);
+  }
 }
 
 /* ✦ 明日の予告カード（V-2）：前夜にスクロール無しで目に入る専用カード。
