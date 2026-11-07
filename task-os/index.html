@@ -856,7 +856,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-11-03';
+const BUILD_VER = '2026-11-07';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -1944,11 +1944,11 @@ function homeFocusCard(){
 }
 
 /* ══ 在り方の木の入口（reflect_focus_v1.themes の題名を1行）══
-   押すと Reflect OS の探求ボード（?tab=tankyu）を新しいタブで開く。テーマが無ければ出さない */
+   押すと Reflect OS のホーム（一番上に在り方の木）を新しいタブで開く。テーマが無ければ出さない */
 function homeArikiLink(){
   const th=(stanceFocus().themes||[]).map(x=>x&&x.title).filter(Boolean);
   if(!th.length) return '';
-  return `<div class="ark-link" onclick="closeSidebar();window.open('../reflect-os/index.html?tab=tankyu','_blank')" title="Reflect OS の探求ボードを開く"><span class="ark-hd">在り方の木</span><span class="ark-th">${esc(th.join('・'))}</span><span class="ark-go">›</span></div>`;
+  return `<div class="ark-link" onclick="closeSidebar();window.open('../reflect-os/index.html','_blank')" title="Reflect OS のホーム（在り方の木）を開く"><span class="ark-hd">在り方の木</span><span class="ark-th">${esc(th.join('・'))}</span><span class="ark-go">›</span></div>`;
 }
 
 /* ══ 週の2択・月の1問（答えは reflect_stance_v1。Reflect OS が問いの詳細で数える）══

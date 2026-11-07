@@ -344,7 +344,7 @@ nav{display:flex;flex-direction:column;gap:0;}
 .rf-undo{display:inline-flex;align-items:center;min-height:44px;font-size:12px;color:var(--mu);text-decoration:underline;cursor:pointer;margin-top:6px}
 .tk-ecard{background:#f0f5f1;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:13px;line-height:1.5}
 .tk-st{display:inline-block;font-size:11px;border-radius:9px;padding:1px 8px;margin-right:6px;white-space:nowrap}
-/* 在り方の木（探求ボードの一番上）：VISION → テーマ → 重点の問い → 実験中。線は描画後の実寸から SVG で引く */
+/* 在り方の木（ホームの一番上）：VISION → テーマ → 重点の問い → 実験中。線は描画後の実寸から SVG で引く */
 .ariki{margin-bottom:22px;overflow-x:auto;overflow-y:hidden}
 .ak-tree{position:relative;display:flex;align-items:flex-start;gap:28px;min-width:820px;padding:2px 0}
 .ak-lines{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
@@ -731,6 +731,10 @@ function renderHome(){
     notice.appendChild(cls);
     f.appendChild(notice);
   }
+
+  /* 在り方の木（ホームの一番上・2026-11-07 本人決定）：通知の帯の下、VISION の枠の上。
+     VISION の枠・テーマのカードは下にそのまま残す（木で全体を見て、カードで記録や詳しい中身を見る） */
+  { const ak=akTree(); if(ak) f.appendChild(ak); }
 
   /* ホームの並び（2026-11-03）：VISION → テーマ（その重点の問い・実験中）→ テーマにつながらない重点の問い。
      重点の枠（focusSlot）はテーマの後に置く（生成コードは下のIIFE） */
@@ -3280,7 +3284,7 @@ function tkDoneView(){
   return w;
 }
 
-/* ── 在り方の木（2026-11-03 本人決定・記録の地図 v1.18 §E）──
+/* ── 在り方の木（2026-11-03 本人決定・記録の地図 v1.18 §E。11/7 から探求ボードでなくホームの一番上に置く）──
    VISION → テーマ → 重点の問い → 実験中 を左から右へ。データから毎回描く（受信箱の直しがそのまま映る）。
    目立たせるのは「重点なし」「実験中なし」の2つだけ（黄土色）。重点につながらない実験中・テーマにつながらない重点の問いは木に出さない（下の一覧に出る）。
    線は描画後の実寸から SVG で引き直す（カードの高さは中身で変わる。ResizeObserver で折りたたみ・幅の変化にも追従） */
@@ -3370,7 +3374,6 @@ function akTree(){
 function renderTankyu(){
   if(!S._tkSelQ){S._tkSelQ=[];S._tkSelE=[];}
   const f=document.createDocumentFragment();
-  { const ak=akTree(); if(ak) f.appendChild(ak); }   /* 在り方の木（件数の行より上） */
   const hd=D({cls:'tk-hd'});
   hd.appendChild(D({},'重点の問い ',h('b',{},String(tkFocusQs().length)),' / '+TK_MAX_FOCUS_Q));
   hd.appendChild(D({},'実験中 ',h('b',{},String(tkActiveEs().length)),'（重点1本につき'+TK_MAX_ACTIVE_PER_Q+'まで）'));
@@ -3930,7 +3933,7 @@ window.addEventListener('message', ev=>{ if(ev.origin!==location.origin) return;
 
 /* 起動（データの読み込み）が終わるまで受信箱は待つ。?inbox=1（Task OS の非表示 iframe）ではダイアログを出さない */
 const RF_INBOX_MODE=new URLSearchParams(location.search).get('inbox')==='1';
-const RF_START_TAB=new URLSearchParams(location.search).get('tab');   /* ?tab=tankyu：探求ボードを開く（Task OS HOME の「在り方の木」から） */
+const RF_START_TAB=new URLSearchParams(location.search).get('tab');   /* ?tab=tankyu：探求ボードを直接開く入口（在り方の木はホームに移ったので Task OS HOME の1行はホームを開く） */
 if(RF_INBOX_MODE){ window.alert=m=>console.warn('[inbox]',m); window.confirm=()=>false; }   /* 非表示 iframe では確認・警告を出さない（confirm は「やめる」扱い） */
 let _rfBootDone; const RF_BOOT=new Promise(r=>{_rfBootDone=r;});
 async function inboxApply(block, links, item){
