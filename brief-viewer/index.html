@@ -70,6 +70,11 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .bv-fresh .bv-fresh-date { font-family: var(--font-mono); font-size: 12px; font-weight: 500; opacity: 0.85; }
 .bv-meta .luck-pill { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 20px; padding: 3px 12px; color: #c2410c; font-weight: 600; }
 @media (max-width: 600px) { .bv-fresh { margin: 12px 18px 0; padding: 10px 14px; font-size: 14px; flex-wrap: wrap; } }
+/* 図つきのページ（週次・月次などの claude.ai のページ）への入口：鮮度の帯のすぐ下に1行。枠・バッジなし */
+.bv-report { max-width: 760px; margin: 4px auto 0; padding: 0 24px; }
+.bv-report a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.bv-report a:hover { text-decoration: underline; }
+@media (max-width: 600px) { .bv-report { padding: 0 18px; } }
 .bv-lectin { max-width: 760px; margin: 12px auto 0; padding: 12px 18px; border: 1.5px solid #0e7490; border-radius: 12px; background: color-mix(in srgb, #0e7490 6%, var(--bg, #fff)); font-size: 14px; line-height: 1.75; }
 .bv-lectin > summary { cursor: pointer; font-weight: 700; color: #0e7490; font-size: 15px; user-select: none; display: flex; align-items: baseline; gap: 10px; }
 .bv-lectin .bv-lx-body { margin-top: 8px; }
@@ -132,6 +137,10 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .bv-msg button { padding: 9px 18px; font-size: 14px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); cursor: pointer; font-family: var(--font-body); }
 .bv-msg button.ghost { background: none; border: 1px solid var(--border); color: var(--text2); }
 
+/* PC（1024px 以上）：ヘッダーとタブの中身を本文と同じ 760px の幅で中央に（本文の文字の左端＝760px の箱＋24px にそろえる）。背景と下線は画面いっぱいのまま */
+@media (min-width: 1024px) {
+  .bv-header, .bv-tabs { padding-left: calc((100% - 760px) / 2 + 24px); padding-right: calc((100% - 760px) / 2 + 24px); }
+}
 @media (max-width: 600px) {
   html { font-size: 16px; }
   .bv-logo .name { font-size: 14px; }
@@ -298,7 +307,8 @@ async function loadBrief() {
       try { data = JSON.parse(raw); } catch (e) { data = raw; }
       render(toMarkdown(data), file.modifiedTime, (data && typeof data === 'object') ? data.lucky_day : '',
              (currentTab === 'daily' && data && typeof data === 'object') ? data.lectica_next : null,
-             (data && typeof data === 'object') ? data.visuals : null);
+             (data && typeof data === 'object') ? data.visuals : null,
+             bvReportUrl(data));
       setStatus('connected', '接続済み');
       localStorage.setItem('bv_seen_' + currentTab, file.modifiedTime || '');
       setBadge(currentTab, false);
@@ -604,11 +614,11 @@ function freshnessBanner(iso) {
   } catch (e) { return ''; }
 }
 
-function render(md, modifiedTime, luckyDay, lectin, visuals) {
+function render(md, modifiedTime, luckyDay, lectin, visuals, reportUrl) {
   const main = document.getElementById('main');
   const vis = bvValidVisuals(visuals);
   main.innerHTML = `
-    ${freshnessBanner(modifiedTime)}
+    ${freshnessBanner(modifiedTime)}${bvReportLink(reportUrl)}
     <div class="bv-meta">
       <span>${TABS[currentTab].title}</span>
       <span class="date-pill">最終更新 ${fmtDate(modifiedTime)}</span>
@@ -616,6 +626,20 @@ function render(md, modifiedTime, luckyDay, lectin, visuals) {
     </div>
     ${lectinCardHTML(lectin)}
     <div class="brief-body">${vis.length ? bvBodyWithVisuals(md, vis) : markdownToHtml(md)}</div>`;
+}
+
+/* 図つきのページへの入口（2026-11-08）：JSON の report_url（https:// で始まる文字列）を優先。無ければ本文 brief の中で最初に出てくる
+   https://claude.ai/artifact/… を使う（週次は本文にだけ URL があることがある）。どちらも無ければ '' ＝何も出さない。タブは問わない */
+function bvReportUrl(data) {
+  if (!data || typeof data !== 'object') return '';
+  const r = typeof data.report_url === 'string' ? data.report_url.trim() : '';
+  if (/^https:\/\//i.test(r)) return r;
+  const m = typeof data.brief === 'string' ? data.brief.match(/https:\/\/claude\.ai\/artifact\/[A-Za-z0-9_-]+/) : null;
+  return m ? m[0] : '';
+}
+function bvReportLink(url) {
+  if (!url || !/^https:\/\//i.test(url)) return '';
+  return '<div class="bv-report"><a href="' + _lxEsc(url).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">📊 図つきのページを開く ›</a></div>';
 }
 
 /* ===== 図（visuals）：daily-brief.json の visuals[{slot,title,alt,svg}]（0〜5件）=====
