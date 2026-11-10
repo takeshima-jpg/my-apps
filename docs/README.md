@@ -47,6 +47,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-koso-strategy-goal-spec.md](specs/claude-code-koso-strategy-goal-spec.md) | 依頼書3：構想ログに種別「戦略目標」（G番号・プロジェクト複数・PJ化なし・KOSO-IMPORT の ■ 戦略目標）。G05 を戦略目標に・スリーエーグループ100年構想を新設（1回だけ）。構想ログ・ヒトメモ・1day・Task OS の旧 S-ID 表示を外す（データは残す） | ✅実装済み（2026-11-03） |
 | [claude-code-brief-visuals-5-spec.md](specs/claude-code-brief-visuals-5-spec.md) | 依頼書6：Brief Viewer の図（visuals）の上限を2→5枚に。置き場所に framework（🧰 今日のフレームワーク）・market（② 財務・外部環境）を足す（欄の終わり＝同じかそれより上の階層の見出し・---） | ✅実装済み（2026-11-08） |
 | [claude-code-brief-pc-report-link-spec.md](specs/claude-code-brief-pc-report-link-spec.md) | 依頼書7：Brief Viewer を PC でも使う形に（1024px 以上でヘッダー・タブの中身を本文と同じ 760px 幅にそろえる）。鮮度の帯の下に「📊 図つきのページを開く ›」（report_url、無ければ本文の claude.ai/artifact の URL）。ランチャーは使わない OS として残す | ✅実装済み（2026-11-08） |
+| [claude-code-brief-lectica-cards-spec.md](specs/claude-code-brief-lectica-cards-spec.md) | 依頼書8：Brief Viewer の TOP に「✦ 今日の実験」カードを足し（明日の予告と2枚）、どちらにも説明3行（力・広がり方・示唆）。合図を上げ、やり方サンプルとなぜ今は「やり方を見る」に畳む。明日の予告は18時まで畳む | ✅実装済み（2026-11-10） |
 | [claude-code-koso-log-v2-spec.md](specs/claude-code-koso-log-v2-spec.md) | 構想ログ v2（記録・GOサイン・由来・関連・KOSO-IMPORT）。2026-10-26 に §4-2 の重複判定を「全件」へ訂正して保管 | ✅実装済み（保管のみ・本体は以前に配置） |
 | [claude-code-launcher-pwa-spec.md](specs/claude-code-launcher-pwa-spec.md) | コックピットのPWA化＋自作SVGアイコン（ホーム追加・standalone表示） | ✅実装済み 2026-07-12 `89f825e` |
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |
