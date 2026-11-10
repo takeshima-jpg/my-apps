@@ -53,6 +53,9 @@ socialUniverse_snapshots / su_pending_review / myapps_vision
 　PJ・戦略目標は持たない（2026-11-03）。案件とのつながりは Project のムーブの links.questionId（PJ から問いを指す）
 ※ pos_v4 の projects[] に kind（通常｜維持活動）・mapOrder（全体の地図の並び）・targets[{id,title,status,order,items[{id,title,due,src}]}]（2026-11-03）。
 　ターゲット・案件は「見方の器」で、phases・forks・constraints・moves が正本。PJ の strategyGoalId・ムーブの links.strategyGoalId は過去の記録として残す（画面には出さない）
+※ Task OS の同期（2026-11-10）：import_inbox_files_seen_v1＝受信箱ファイルの読み済みの覚え（消しても次の同期で全部読み直すだけ）／
+　taskos_weekly_uploaded_ymd＝週次スナップショットを書いた日（自動は1日1回・手動の同期は毎回）／taskos_sync_timing_v1＝同期の各段の時間（直近10回・バックアップの taskosSyncTiming）。
+　受信箱の取り下げの退避は import_inbox_backup_lastwithdraw（戻すときは import_inbox_v1 に戻し、import_inbox_done_v1 から id を外す）
 ※ reflect_focus_v1 はReflect→Task OSの重点ミラー（派生データ・Reflect起動で再生成可）。
 　形式（focusQuestions/unlinkedExperiments/themes）はTask OSが読むため変更時は両OS同時に
 

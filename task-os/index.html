@@ -806,7 +806,8 @@ function readReflectOSFromIDB() {
 async function collectAllOSDataWithReflect() {
   const base = collectAllOSData();
   const reflectOS = await readReflectOSFromIDB();
-  return { ...base, reflectOS };
+  /* 一番上に同期の時間の記録（直近10回・メンテナンス担当がバックアップで確かめる用。入るのは前回までの記録）。復元では使わない */
+  return { taskosSyncTiming: gdTimingList(), ...base, reflectOS };
 }
 
 // localStorage値の安全パース。1キーのparse失敗がバックアップ全体を止めないための防御。
@@ -3189,35 +3190,66 @@ function pruneRejectedShots(){
 }
 
 /* 受信箱：10_日次データの import-inbox*.json（直近60日）をすべて読み、items を id で重複除去して import_inbox_v1 を上書き（未処理だけ）。
-   処理済み（import_inbox_done_v1）は除く。失敗回数（_tries 等）は同じ id の既存 item から引き継ぐ。Drive 上のファイルは更新・削除しない */
-async function inboxFetchFromDrive(){
+   処理済み（import_inbox_done_v1）は除く。失敗回数（_tries 等）は同じ id の既存 item から引き継ぐ。Drive 上のファイルは更新・削除しない。
+   2026-11-10：読む量を減らす。import_inbox_files_seen_v1＝{fileId:{modifiedTime, allDone, ids}} を覚え、
+   modifiedTime が同じで allDone かつ覚えた ids がまだ全部 取り込み済み のファイルはダウンロードしない（取り下げを戻して done から外した id があれば読み直す）。
+   読むファイルは同時に4本まで。組み立ては一覧の順（createdTime の新しい順）で今と同じ。stats に本数・時間を入れる */
+const INBOX_FILES_SEEN='import_inbox_files_seen_v1', INBOX_DL_PARALLEL=4;
+async function inboxFetchFromDrive(stats){
+  stats=stats||{};
+  const t0=performance.now();
   const since=new Date(Date.now()-60*86400000).toISOString();
   const q=encodeURIComponent(`'${GD_DAILY_FOLDER_ID}' in parents and name contains 'import-inbox' and createdTime > '${since}' and trashed=false`);
   const files=[]; let pageToken='';
   for(let i=0;i<10;i++){
-    const r=await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,createdTime)&orderBy=createdTime desc&pageSize=100&includeItemsFromAllDrives=true&supportsAllDrives=true${pageToken?'&pageToken='+encodeURIComponent(pageToken):''}`);
+    const r=await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,createdTime,modifiedTime)&orderBy=createdTime desc&pageSize=100&includeItemsFromAllDrives=true&supportsAllDrives=true${pageToken?'&pageToken='+encodeURIComponent(pageToken):''}`);
     const d=await r.json();
     (d.files||[]).forEach(f=>{ if(/^import-inbox/.test(f.name||'')) files.push(f); });
     if(!d.nextPageToken) break; pageToken=d.nextPageToken;
   }
-  const done=inboxDoneSet(); const byId=new Map();
+  const t1=performance.now(); stats.listMs=Math.round(t1-t0); stats.files=files.length;
+  const done=inboxDoneSet();
+  let seen={}; try{ const s=JSON.parse(localStorage.getItem(INBOX_FILES_SEEN)||'{}'); if(s&&typeof s==='object'&&!Array.isArray(s)) seen=s; }catch(e){}
+  const skip=f=>{ const s=seen[f.id]; return !!(s&&s.allDone&&s.modifiedTime===f.modifiedTime&&Array.isArray(s.ids)&&s.ids.every(id=>done.has(id))); };
+  const todo=files.filter(f=>!skip(f));
+  const got=new Map();   /* fileId → 中身（読めなければ null） */
+  let next=0;
+  const worker=async()=>{ while(next<todo.length){ const f=todo[next++];
+    try{ got.set(f.id, JSON.parse(await gdDownload(f.id))); }catch(e){ console.warn('受信箱：読めないファイル', f.name); got.set(f.id, null); } } };
+  await Promise.all(Array.from({length:Math.min(INBOX_DL_PARALLEL, todo.length)}, worker));
+  stats.downloadMs=Math.round(performance.now()-t1); stats.downloaded=todo.length;
+  const byId=new Map(), newSeen={};
   for(const f of files){
-    let o=null; try{ o=JSON.parse(await gdDownload(f.id)); }catch(e){ console.warn('受信箱：読めないファイル', f.name); continue; }
-    (o&&Array.isArray(o.items)?o.items:[]).forEach(it=>{
-      if(!it||typeof it!=='object'||!it.id||!it.targetOS||done.has(it.id)) return;
+    if(!got.has(f.id)){ newSeen[f.id]=seen[f.id]; continue; }   /* 読まなかった（全部 取り込み済み）ファイルは覚えをそのまま */
+    const o=got.get(f.id);
+    if(o===null){ newSeen[f.id]={ modifiedTime:f.modifiedTime||'', allDone:false, ids:[] }; continue; }   /* 読めないファイルは毎回読み直す */
+    const valid=(o&&Array.isArray(o.items)?o.items:[]).filter(it=>it&&typeof it==='object'&&it.id&&it.targetOS);
+    newSeen[f.id]={ modifiedTime:f.modifiedTime||'', allDone:valid.every(it=>done.has(it.id)), ids:valid.map(it=>it.id) };
+    valid.forEach(it=>{
+      if(done.has(it.id)) return;
       const prev=byId.get(it.id);
       if(!prev||String(it.createdAt||'')>String(prev.createdAt||'')) byId.set(it.id, it);
     });
   }
+  try{ localStorage.setItem(INBOX_FILES_SEEN, JSON.stringify(newSeen)); }catch(e){}   /* 一覧に無くなったファイルは覚えから消える */
   const old=new Map((inboxRead().items||[]).map(it=>[it&&it.id, it]));
   const items=[...byId.values()].map(it=>{ const p=old.get(it.id); const n=Object.assign({}, it);
     if(p){ ['_tries','_lastSummary','_lastTriedAt'].forEach(k=>{ if(p[k]!==undefined) n[k]=p[k]; }); } return n; });
   localStorage.setItem(INBOX_KEY, JSON.stringify({ updatedAt:new Date().toISOString(), items }));
   return items.length;
 }
+/* 同期の各段の時間（2026-11-10）：taskos_sync_timing_v1 に直近10回。途中で失敗してもそこまでを残す。画面には出さない */
+const GD_TIMING_KEY = 'taskos_sync_timing_v1', GD_TIMING_MAX = 10;
+const GD_WEEKLY_YMD_KEY = 'taskos_weekly_uploaded_ymd';   // 週次スナップショットを書いた日（自動の同期は1日1回だけ書く）
+function gdTimingList(){ try{ const a=JSON.parse(localStorage.getItem(GD_TIMING_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function gdTimingSave(rec){ try{ localStorage.setItem(GD_TIMING_KEY, JSON.stringify([rec].concat(gdTimingList()).slice(0, GD_TIMING_MAX))); }catch(e){} }
 async function gdAutoSync(manual){
   if(!gdToken){ if(manual) gdConnect(); return; }
   gdSetStatus('syncing');
+  const tm = { at:new Date().toISOString(), manual:!!manual, totalMs:0, steps:{}, inboxFiles:0, inboxDownloaded:0 };
+  const t0 = performance.now();
+  let ts = performance.now();
+  const lap = name => { const n=performance.now(); tm.steps[name]=Math.round(n-ts); ts=n; };
   try {
     // C0: rejected 30日超の掃除（取り込み・スナップショット送出の前に済ませて集計ノイズを消す）
     pruneRejectedShots();
@@ -3234,12 +3266,14 @@ async function gdAutoSync(manual){
         }
       }
     } catch(e){ if(e.code===401) throw e; console.warn('aix自動取込スキップ', e); }
+    lap('dailyTasks');
 
     // C2: daily-contacts.json をヒトメモ未登録へ取り込み（冪等・ヒトメモ未ログインでも入る）
     try {
       const hmAdded = await importHitomemoFromAix();
       if(hmAdded > 0) importMsg = (importMsg ? importMsg + ' / ' : '') + `ヒトメモ${hmAdded}人を未登録へ`;
     } catch(e){ if(e.code===401) throw e; console.warn('hitomemo自動取込スキップ', e); }
+    lap('hitomemo');
 
     // C3: Lectica実験のShotを自動生成（毎朝・冪等／参謀提案優先・なければランダム）
     try {
@@ -3249,27 +3283,43 @@ async function gdAutoSync(manual){
         importMsg = (importMsg ? importMsg + ' / ' : '') + 'Lectica実験を自動生成';
       }
     } catch(e){ console.warn('lectica自動生成スキップ', e); }
+    lap('lectica');
 
-    // A: スナップショットを一方向で書き出し（読み戻しはしない）
+    // A: スナップショットを一方向で書き出し（読み戻しはしない）。2026-11-10 から字下げなしで詰めて書く（中身は同じ）
     const fullSnap = await collectAllOSDataWithReflect();
     fullSnap.reflectOS_idb = await dumpReflectIDB();   // 完全データ（復元・週次スナップショット用）
-    const fullSnapStr = JSON.stringify(fullSnap, null, 2);
 
     // 毎朝Coworkが読むファイルは軽量化：Reflectの生ログは直近60日だけに絞る（要約reflectOSは保持）。
     // 全履歴は週次スナップショット／手動エクスポートに残るため復元能力は維持。
     const morningSnap = { ...fullSnap, reflectOS_idb: trimReflectIDBLogs(fullSnap.reflectOS_idb, 60) };
-    await gdUpload(GD_SNAPSHOT_FILE, JSON.stringify(morningSnap, null, 2), GD_BACKUP_FOLDER_ID);
+    const morningStr = JSON.stringify(morningSnap);
+    lap('collect');
+    await gdUpload(GD_SNAPSHOT_FILE, morningStr, GD_BACKUP_FOLDER_ID);   // 毎朝用は開くたびに書く（各担当が読む最新の状態）
+    lap('uploadMorning');
 
     // A2: 週次スナップショット（完全版。ISO週キー・同一週は上書き）。週差分レビュー＋完全復元用に直近8週を保持。
-    try {
-      await gdUpload(GD_WEEKLY_PREFIX + isoWeekKey(new Date()) + '.json', fullSnapStr, GD_BACKUP_FOLDER_ID);
-      await gdPruneWeekly();
-    } catch(e){ if(e.code===401) throw e; console.warn('週次スナップショット保存スキップ', e); }
+    //     自動の同期は1日1回だけ書く（taskos_weekly_uploaded_ymd が今日なら飛ばす）。「同期」ボタン（manual）は今日でも書く
+    const todayYmd = inboxYmd(new Date());
+    if(!manual && localStorage.getItem(GD_WEEKLY_YMD_KEY) === todayYmd){
+      tm.steps.uploadWeekly = 'skip';
+    } else {
+      try {
+        await gdUpload(GD_WEEKLY_PREFIX + isoWeekKey(new Date()) + '.json', JSON.stringify(fullSnap), GD_BACKUP_FOLDER_ID);
+        try{ localStorage.setItem(GD_WEEKLY_YMD_KEY, todayYmd); }catch(e){}
+        await gdPruneWeekly();
+      } catch(e){ if(e.code===401) throw e; console.warn('週次スナップショット保存スキップ', e); }
+      lap('uploadWeekly');
+    }
+    ts = performance.now();
 
     // 重複draftの掃除は廃止（Drive掃除は drive_cleanup.py=週1手動 に一本化。403の発生源を除去）
 
     // D: 受信箱（import-inbox）を取り込み、宛先OSへ合図（失敗しても同期は止めない・ハブの完了は待たない）
-    try { await inboxFetchFromDrive(); } catch(e){ console.warn('受信箱の取得スキップ', e); }
+    const ist = {};
+    try { await inboxFetchFromDrive(ist); } catch(e){ console.warn('受信箱の取得スキップ', e); }
+    if(ist.listMs != null) tm.steps.inboxList = ist.listMs;
+    if(ist.downloadMs != null) tm.steps.inboxDownload = ist.downloadMs;
+    tm.inboxFiles = ist.files || 0; tm.inboxDownloaded = ist.downloaded || 0;
     setTimeout(()=>{ inboxHubRun('sync'); }, 0);
 
     gdSetStatus('ok');
@@ -3285,6 +3335,9 @@ async function gdAutoSync(manual){
     gdSetStatus('err');
     if(manual && typeof toast==='function') toast('⚠️ GDrive同期に失敗しました');
     console.warn('gdAutoSync error', e);
+  } finally {
+    tm.totalMs = Math.round(performance.now() - t0);
+    gdTimingSave(tm);   // 途中で失敗・401 でもそこまでの段を残す
   }
 }
 
