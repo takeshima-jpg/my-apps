@@ -177,6 +177,7 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
 .ibx-sub{font-size:12px;font-weight:700;color:var(--text3);margin-top:10px}
 .ibx-pend{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:13px;line-height:1.6;padding:4px 0;min-width:0}
 .ibx-copy{font-size:12px;padding:0 12px;min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;color:var(--text2,#555)}
+.ibx-wd{display:inline-flex;gap:6px;margin-left:auto}   /* 保留の行の右端：取り下げ（押すとその場で 取り下げる／やめる） */
 /* ── HOME v2: 期限超過バナー（ある時だけ・細い1行） ── */
 .ov-banner{
   display:flex;align-items:center;gap:6px;
@@ -856,7 +857,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-11-07';
+const BUILD_VER = '2026-11-10';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -2730,10 +2731,45 @@ function homeInboxCard(){
       html+=`<div class="ibx-pend"><span class="ibx-os">${esc(tgt(it.targetOS).label)}</span><span class="ibx-t">${esc(it.title||it.id)}</span>`
         +`<span class="ibx-s">（${esc(it._lastSummary||'取り込み待ち')}）</span>`
         +(((it._tries||0)>=INBOX_COPY_AFTER||((it._tries||0)>=1&&tgt(it.targetOS).noReceiver))?`<button class="ibx-copy" onclick="inboxCopyBlock('${esc(it.id)}')">📋 本文をコピー</button>`:'')
+        +`<span class="ibx-wd" data-id="${esc(it.id)}"><button class="ibx-copy" onclick="inboxWithdrawAsk(this)">取り下げ</button></span>`
         +`</div>`;
     });
   }
   return `<div class="rfc-wrap ibx-wrap"><div class="rfc-hd">📥 今回取り込んだもの</div>${html}</div>`;
+}
+/* 保留の取り下げ（2026-11-10）：押すとその場で「取り下げる」「やめる」に変わる（ダイアログは使わない）。「やめる」か5秒で元に戻る。
+   取り下げると取り込み済み（import_inbox_done_v1）に入れて保留から外し、記録に1行（os は保留の宛先）。直前の受信箱は import_inbox_backup_lastwithdraw に退避。
+   戻し方（画面には出さない）：退避キーの中身を import_inbox_v1 に戻し、import_inbox_done_v1 からその id を外す。Drive のファイルは消さない */
+const INBOX_WITHDRAW_BK='import_inbox_backup_lastwithdraw';
+function inboxWithdrawAsk(btn){
+  const box=btn&&btn.parentNode; if(!box) return;
+  const id=box.getAttribute('data-id')||'';
+  box.innerHTML=`<button class="ibx-copy" onclick="inboxWithdraw(this.parentNode.getAttribute('data-id'))">取り下げる</button><button class="ibx-copy" onclick="inboxWithdrawCancel(this.parentNode)">やめる</button>`;
+  clearTimeout(box._t); box._t=setTimeout(()=>inboxWithdrawCancel(box),5000);
+  if(!id) inboxWithdrawCancel(box);
+}
+function inboxWithdrawCancel(box){
+  if(!box) return; clearTimeout(box._t);
+  box.innerHTML=`<button class="ibx-copy" onclick="inboxWithdrawAsk(this)">取り下げ</button>`;
+}
+function inboxWithdraw(id){
+  const box=inboxRead(); const it=(box.items||[]).find(x=>x&&x.id===id);
+  if(!it){ if(curView==='home') renderHome(); return; }
+  try{ localStorage.setItem(INBOX_WITHDRAW_BK, localStorage.getItem(INBOX_KEY)||JSON.stringify(box)); }catch(e){ toast('退避できないため取り下げを見送りました'); return; }
+  const first=String(it._lastSummary||'').split('\n')[0].trim();
+  const summary='取り下げ'+(first?'（'+first+'）':'');
+  const now=new Date(), os=it.targetOS||INBOX_OS;
+  const done=inboxDoneList().filter(d=>d&&d.id!==id);
+  done.unshift({ id, os, doneAt:now.toISOString(), summary, withdrawn:true });
+  localStorage.setItem(INBOX_DONE, JSON.stringify(done.slice(0,INBOX_DONE_MAX)));
+  box.items=(box.items||[]).filter(x=>x&&x.id!==id); box.updatedAt=now.toISOString();
+  localStorage.setItem(INBOX_KEY, JSON.stringify(box));
+  const from=new Date(now); from.setDate(from.getDate()-INBOX_LOG_DAYS); const fromYmd=inboxYmd(from);
+  const log=inboxLogList().filter(x=>x&&x.id!==id&&String(x.date||'')>=fromYmd);
+  log.unshift({ date:inboxYmd(now), os, title:it.title||'', summary, links:it.links||{}, id });
+  localStorage.setItem(INBOX_LOG, JSON.stringify(log));
+  if(curView==='home') renderHome();
+  toast('取り下げました（Drive のファイルは消していません）');
 }
 /* 手で貼る退路：保留の本文をそのままコピー */
 function inboxCopyBlock(id){

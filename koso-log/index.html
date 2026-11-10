@@ -1818,8 +1818,11 @@ function applyKosoBlock(b) {
 
   if (b.op==='discard') {
     const item = items.find(i => i.id===b.id);
+    /* 相手がもう無い（画面で削除済みなど）ときは廃棄は済み扱い。エラーにすると受信箱の保留に永久に残るため（2026-11-10）。理由が無くても同じ。
+       統合・PJ化・試しの新規の親で相手が無いときは今までどおりエラー（結果が変わるので本人が見る） */
+    if (!item) return { summary: b.id+' は見当たりません（もう無いので廃棄は済み扱い）', ids: [] };
     const reason = fv('reason');
-    if (!item || !reason) return { error: true };
+    if (!reason) return { error: true };
     const learn = fv('learn');
     const already = item.status==='廃棄' && archives.some(a => a.id===item.id && a.reason===reason);
     item.status = '廃棄';
