@@ -56,6 +56,8 @@ socialUniverse_snapshots / su_pending_review / myapps_vision
 ※ Task OS の同期（2026-11-10）：import_inbox_files_seen_v1＝受信箱ファイルの読み済みの覚え（消しても次の同期で全部読み直すだけ）／
 　taskos_weekly_uploaded_ymd＝週次スナップショットを書いた日（自動は1日1回・手動の同期は毎回）／taskos_sync_timing_v1＝同期の各段の時間（直近10回・バックアップの taskosSyncTiming）。
 　受信箱の取り下げの退避は import_inbox_backup_lastwithdraw（戻すときは import_inbox_v1 に戻し、import_inbox_done_v1 から id を外す）
+※ ヒトメモ＝人の正本、ソーシャルユニバース（su-v6-persons）＝これからの3か月の注ぎ先の地図（2026-11-12）。★TOP10 と「この3か月の一手」（nextAction）の正本は SU。
+　ヒトメモは SU を読んで ★ と一手を出す（ヒトメモの isTop10・nextExperience は表示に使わない・消さない）。SU は名前・関わり方タイプ・この3か月に会った回数（接点）をヒトメモから描くたびに読む。SU からヒトメモへは書かない
 ※ reflect_focus_v1 はReflect→Task OSの重点ミラー（派生データ・Reflect起動で再生成可）。
 　形式（focusQuestions/unlinkedExperiments/themes）はTask OSが読むため変更時は両OS同時に
 

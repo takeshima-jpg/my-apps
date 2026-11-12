@@ -397,7 +397,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
     <button class="hbtn hbtn-ghost" onclick="doPrint()">⊟ A3印刷</button>
     <span id="qrChip" onclick="qrChipClick()" style="display:none;align-self:center;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;white-space:nowrap;"></span>
     <button class="hbtn" style="background:#0e7490;border-color:#0e7490;color:#fff;" onclick="openQuarterReview()" title="四半期に一度のマップ見直し。気づきを記録してスナップショットと一緒に保存します">◔ 四半期見直し</button>
-    <button class="hbtn hbtn-ghost" onclick="openTop10Actions()" title="★Top10の次の行動を1ページでまとめて記入（いつでも開けます）">✎ Top10一括</button>
+    <button class="hbtn hbtn-ghost" onclick="openTop10Actions()" title="★TOP10の「この3か月の一手」を1ページでまとめて記入（いつでも開けます）">✎ TOP10一括</button>
     <button class="hbtn hbtn-ghost" onclick="doSnapshot()" title="A3印刷プレビューをHTMLファイルで保存">◈ スナップショット</button>
     <button class="hbtn hbtn-ghost" onclick="openSnapshotHistory()" id="snapHistBtn" title="保存済みスナップショット一覧">≡ 履歴</button>
     <button class="hbtn hbtn-add"   onclick="openModal(null)">＋ 人物を追加</button>
@@ -411,6 +411,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
   <div class="left-panel">
     <div class="lp-scroll">
     <div class="lp-sec">
+      <div style="font-size:12px;color:var(--s700);line-height:1.6;margin-bottom:10px;">これからの3か月、自分の時間と気持ちを誰に注ぐかを決める地図</div>
       <div class="lp-ttl">凡例・判断基準</div>
       <div class="leg-purpose-name leg-biz">事業・成果</div>
       <div class="leg-purpose-q">「組めば事業が伸びるか？」</div>
@@ -431,23 +432,25 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
     </div>
     <hr class="leg-sep">
     <div class="lp-sec">
-      <div class="lp-ttl">頻度（外枠）</div>
-      <div class="leg-row"><span class="leg-dot" style="width:12px;height:12px;background:transparent;border:3px solid var(--s400)"></span>毎週〜隔週</div>
-      <div class="leg-row"><span class="leg-dot" style="width:12px;height:12px;background:transparent;border:1.5px solid var(--s400)"></span>月1〜年数回</div>
-      <div class="leg-row"><span class="leg-dot" style="width:12px;height:12px;background:transparent;border:1px dashed var(--s400)"></span>半年に1回以下</div>
+      <div class="lp-ttl">この3か月に会った回数（外枠）</div>
+      <div class="leg-row"><span class="leg-dot" style="width:12px;height:12px;background:transparent;border:3px solid var(--s400)"></span>6回以上</div>
+      <div class="leg-row"><span class="leg-dot" style="width:12px;height:12px;background:transparent;border:1.5px solid var(--s400)"></span>1〜5回</div>
+      <div class="leg-row"><span class="leg-dot" style="width:12px;height:12px;background:transparent;border:1px dashed var(--s400)"></span>0回</div>
+      <div class="leg-row" style="font-size:11px;color:var(--s400)">ヒトメモの接点から数える</div>
     </div>
     <hr class="leg-sep">
     <div class="lp-sec">
       <div class="lp-ttl">インパクト（大きさ）</div>
       <div class="leg-row">大 → 中 → 小 の3段階</div>
       <div class="lp-ttl" style="margin-top:6px">バッジ</div>
-      <div class="leg-row"><span style="font-size:13px">★</span> Top10</div>
-      <div class="leg-row" style="font-size:13px;color:var(--s400)">[タグ] 関わり方タイプ</div>
+      <div class="leg-row"><span style="font-size:13px">★</span> TOP10</div>
+      <div class="leg-row" style="font-size:11px;color:var(--s400);line-height:1.5">この3か月、自分から時間を使うと決めた10人（関係の深さとは別）</div>
+      <div class="leg-row" style="font-size:13px;color:var(--s400)">[タグ] 関わり方タイプ（ヒトメモ）</div>
     </div>
     <hr class="leg-sep">
     <div class="lp-sec">
       <div class="lp-ttl">フィルター</div>
-      <label class="filter-item"><input type="checkbox" id="fTop10"    onchange="renderMap()"> Top10のみ</label>
+      <label class="filter-item"><input type="checkbox" id="fTop10"    onchange="renderMap()"> TOP10のみ</label>
       <label class="filter-item"><input type="checkbox" id="fDormant"  onchange="renderMap()"> 余白も表示</label>
       <div class="lp-ttl" style="margin-top:7px">関わり方タイプ別</div>
       <select class="filter-sel" id="fType" onchange="renderMap()">
@@ -470,7 +473,6 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
     <div class="map-toolbar">
       <div class="map-stats" id="mapStats"></div>
       <div style="display:flex;align-items:center;gap:10px;">
-        <button class="hbtn" style="font-size:12px;padding:6px 12px;background:#4f46e5;color:#fff;border:1px solid #4338ca;font-weight:600;" onclick="reflectToHitomemo()" title="Top10のネクストアクションを、ヒトメモの『次に渡す経験』へ書き戻します">→ ヒトメモに反映（Top10）</button>
         <div style="font-size:10px;color:var(--s400)">ドラッグで自由配置 ／ ダブルクリックで詳細編集</div>
       </div>
     </div>
@@ -514,35 +516,18 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
         <select class="fs" id="fEnergy"><option>増える</option><option>普通</option><option>消耗</option></select></div>
     </div>
     <div class="fg2">
-      <div class="fg"><label class="fl">頻度</label>
-        <select class="fs" id="fFreq"><option>毎週〜隔週</option><option>月1〜年数回</option><option>半年に1回以下</option></select></div>
-    </div>
-    <div class="fg3">
       <div class="fg"><label class="fl">インパクト</label>
         <select class="fs" id="fImpact"><option>大</option><option>中</option><option>小</option></select></div>
-      <div class="fg"><label class="fl">価値の流れ</label>
-        <select class="fs" id="fValueFlow">
-          <option value="◉">◉ もらい与える</option><option value="〇">〇 もらっている</option>
-          <option value="●">● 与えている</option><option value="">— なし</option>
-        </select></div>
-      <div class="fg"><label class="fl">アクションタイプ</label>
-        <select class="fs" id="fActionType" style="display:none">
-          <option>深める</option><option>実験</option><option>役割明確化</option>
-          <option>距離を置く</option><option>手放す</option><option>維持</option>
-        </select></div>
+      <div class="fg"><label class="fl">ヒトメモから（読むだけ）</label>
+        <div id="fHmInfo" style="font-size:13px;color:var(--s500);line-height:1.6;padding-top:4px"></div></div>
     </div>
     <hr class="f-div">
-    <div class="fg"><label class="fl">今の関係の状態</label><textarea class="ft" id="fCurrentState" rows="2"></textarea></div>
-    <div class="fg"><label class="fl">本来どうしたいか</label><textarea class="ft" id="fDesiredState" rows="2"></textarea></div>
-    <div class="fg2">
-      <div class="fg"><label class="fl">ズレ・課題</label><textarea class="ft" id="fGap" rows="2"></textarea></div>
-      <div class="fg"><label class="fl">次のアクション</label><textarea class="ft" id="fNextAction" rows="2"></textarea></div>
-    </div>
-    <input type="hidden" id="fDueDate">
-    <input type="hidden" id="fMemo">
+    <div class="fg"><label class="fl">この3か月の一手</label><textarea class="ft" id="fNextAction" rows="2" placeholder="1人1つ・3か月で終わるもの"></textarea></div>
+    <!-- 現状・理想・ギャップ・メモ・期日・行動の種類・価値の流れは 2026-11-12 に画面から外した（データは残す・保存で上書きしない）。
+         頻度・関わり方タイプはヒトメモの値を読むだけ（上の「ヒトメモから」） -->
     <div style="display:flex;gap:14px;margin-top:4px">
       <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:14px;color:var(--s700)">
-        <input type="checkbox" id="fIsTop10" style="width:13px;height:13px;accent-color:var(--t10)"> ⭐ Top10</label>
+        <input type="checkbox" id="fIsTop10" style="width:13px;height:13px;accent-color:var(--t10)"> ⭐ TOP10</label>
       
       <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:14px;color:var(--s700)">
         <input type="checkbox" id="fIsDormant" style="width:13px;height:13px;accent-color:var(--s400)"> 🌿 余白</label>
@@ -566,9 +551,9 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
       <div style="font-size:17px;font-weight:700;color:var(--s700);flex:1;">◔ 四半期見直し</div>
       <button onclick="closeQuarterReview()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--s400);">✕</button>
     </div>
-    <div style="font-size:12px;color:var(--s400);margin-bottom:12px;">運用サイクル：<b>① Top10アクション振り返り → ② マップ調整 → ③ ◈スナップショットで紙出し</b>（今回の記録は③のスナップショットに添付されます）</div>
+    <div style="font-size:12px;color:var(--s400);margin-bottom:12px;">運用サイクル：<b>① TOP10の「この3か月の一手」の振り返り → ② マップ調整 → ③ ◈スナップショットで紙出し</b>（今回の記録は③のスナップショットに添付されます）</div>
     <div style="margin-bottom:12px;">
-      <div style="font-size:11px;color:var(--s400);margin-bottom:4px;">① この3か月のTop10アクション <span style="font-size:10px;">前回渡した「次の行動」に対して、何が起きたかを1行で</span></div>
+      <div style="font-size:11px;color:var(--s400);margin-bottom:4px;">① この3か月のTOP10の一手 <span style="font-size:10px;">前回決めた「この3か月の一手」に対して、何が起きたかを1行で</span></div>
       <div id="qrTop10" style="max-height:210px;overflow:auto;border:1px solid var(--s200,#e2e8f0);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.6;background:#f8fafc;"></div>
     </div>
     <div style="margin-bottom:12px;">
@@ -602,10 +587,10 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 <div id="qrActOverlay" style="display:none" class="mo" onclick="if(event.target===this)closeTop10Actions()">
   <div style="background:#fff;border-radius:14px;max-width:620px;width:92%;max-height:88vh;overflow:auto;padding:22px 24px;" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-      <div style="font-size:17px;font-weight:700;color:var(--s700);flex:1;">✎ 今回のTop10アクション（一括入力）</div>
+      <div style="font-size:17px;font-weight:700;color:var(--s700);flex:1;">✎ TOP10の「この3か月の一手」（一括入力）</div>
       <button onclick="closeTop10Actions()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--s400);">✕</button>
     </div>
-    <div style="font-size:12px;color:var(--s400);margin-bottom:14px;">② マップ調整で決めた★Top10に、次の3か月の行動を1ページでまとめて記入。保存で各人物のネクストアクションに反映されます（→ヒトメモに反映・A3印刷のTop10表もこの内容）。</div>
+    <div style="font-size:12px;color:var(--s400);margin-bottom:14px;">② マップ調整で決めた★TOP10に、「この3か月の一手」を1ページでまとめて記入。保存で各人物の一手に入ります（A3印刷のTOP10表もこの内容。ヒトメモの人の画面にも、読むだけで出ます）。</div>
     <div id="qrActList" style="margin-bottom:16px;"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--s200,#e2e8f0);padding-top:14px;">
       <button onclick="closeTop10Actions()" style="padding:10px 16px;border-radius:8px;border:1px solid var(--s200,#e2e8f0);background:#fff;color:var(--s400);font-size:13px;cursor:pointer;">キャンセル</button>
@@ -687,7 +672,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
         <div class="pp-map-cols" id="ppMapCols"></div>
       </div>
       <div class="pp-t10-col">
-        <div class="pp-t10-ttl">⭐ Top10 アクション</div>
+        <div class="pp-t10-ttl">⭐ TOP10 この3か月の一手</div>
         <div id="ppTop10"></div>
         <div id="ppQr"></div>
       </div>
@@ -709,20 +694,17 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
         <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:#fee2e2;border:1.5pt solid #ef4444"></span>消耗：削られる</div>
       </div>
       <div class="pp-leg-blk">
-        <div class="pp-leg-ttl">◯ 頻度（外枠）</div>
-        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:transparent;border:2pt solid #94a3b8"></span>毎週〜隔週</div>
-        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:transparent;border:1pt solid #94a3b8"></span>月1〜年数回</div>
-        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:transparent;border:0.8pt dashed #94a3b8"></span>半年に1回以下</div>
+        <div class="pp-leg-ttl">◯ この3か月に会った回数（外枠）</div>
+        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:transparent;border:2pt solid #94a3b8"></span>6回以上</div>
+        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:transparent;border:1pt solid #94a3b8"></span>1〜5回</div>
+        <div class="pp-leg-row"><span class="pp-leg-dot" style="width:3.5mm;height:3.5mm;background:transparent;border:0.8pt dashed #94a3b8"></span>0回</div>
         <div class="pp-leg-ttl" style="margin-top:1.5mm">● 大きさ</div>
         <div class="pp-leg-row">大・中・小（インパクト）</div>
       </div>
       <div class="pp-leg-blk">
-        <div class="pp-leg-ttl">◉ 価値の流れ</div>
-        <div class="pp-leg-row"><span style="font-size:9pt;color:#15803d">◉</span>もらい与える</div>
-        <div class="pp-leg-row"><span style="font-size:9pt;color:#1d4ed8">〇</span>もらっている</div>
-        <div class="pp-leg-row"><span style="font-size:9pt;color:#dc2626">●</span>与えている</div>
-        <div class="pp-leg-ttl" style="margin-top:1.5mm">バッジ</div>
-        <div class="pp-leg-row">★ Top10</div>
+        <div class="pp-leg-ttl">バッジ</div>
+        <div class="pp-leg-row">★ TOP10</div>
+        <div class="pp-leg-sub">この3か月、自分から時間を使うと決めた10人（関係の深さとは別）</div>
       </div>
       <div class="pp-leg-blk">
         <div class="pp-leg-ttl">⚡ 3秒判断ガイド</div>
@@ -790,46 +772,37 @@ function ts(){ return new Date().toISOString(); }
 function ld(k){ try{ const r=localStorage.getItem(k); if(r) return JSON.parse(r); }catch{} return null; }
 function sv(k,d){ localStorage.setItem(k,JSON.stringify(d)); }
 
-// SUのTop10のネクストアクションを、ヒトメモの「次に渡す経験」へ書き戻す（hitoId優先・名前フォールバック）
-function reflectToHitomemo(){
-  const HM_KEY='hitomemo_profiles_v1';
-  let hm=[];
-  try{ hm=JSON.parse(localStorage.getItem(HM_KEY)||'[]'); }catch(e){ hm=[]; }
-  if(!Array.isArray(hm)||!hm.length){ alert('ヒトメモに人物データが見つかりません。'); return; }
-  const norm = z => String(z||'').replace(/さん$/,'').replace(/\s+/g,'').trim();
-  const byId={}; hm.forEach(p=>{ if(p&&p.id) byId[p.id]=p; });
-  const byName={}; hm.forEach(p=>{ const nm=norm((p.name&&p.name.value)||p.name); if(nm && !(nm in byName)) byName[nm]=p; });
-  const top10 = (persons||[]).filter(su => su.isTop10);   // Top10のみ反映
-  const top10HmIds = new Set();
-  let updated=0, noLink=0;
-  top10.forEach(su=>{
-    const na = (su.nextAction||'').trim();
-    let p = (su.hitoId && byId[su.hitoId]) ? byId[su.hitoId] : (byName[norm(su.name)]||null);
-    if(!p){ if(na) noLink++; return; }
-    top10HmIds.add(p.id);
-    if((p.nextExperience||'') !== na){
-      p.nextExperience = na;
-      p.updatedAt = new Date().toISOString();
-      updated++;
-    }
-  });
-  // Top10フラグをヒトメモへ同期（Top10=true / 外れた人=false）
-  // ※関係ステージ凡例(partner-stage-legend-v1-1)準拠：Top10は「注意配分」の軸で、関係の深さ(stage)や
-  //   稼働(isActive)とは別物。この同期は nextExperience / isTop10 のみを触り、stage・isActive・旧tierには
-  //   一切書き込まない（新規人物の作成もしない）。旧tier復活を防ぐためstage系は絶対に上書きしないこと。
-  let flagChanged=0;
-  hm.forEach(p=>{
-    const want = top10HmIds.has(p.id);
-    if(!!p.isTop10 !== want){ p.isTop10 = want; p.updatedAt = new Date().toISOString(); flagChanged++; }
-  });
-  if(updated || flagChanged) localStorage.setItem(HM_KEY, JSON.stringify(hm));
-  let msg = `Top10のネクストアクションを、ヒトメモの「次に渡す経験」に ${updated}件 反映しました。（Top10 ${top10.length}人中）`;
-  if(flagChanged) msg += `\nTop10バッジを ${flagChanged}件 更新しました。`;
-  if(noLink) msg += `\n（${noLink}件はヒトメモに該当者が見つからず未反映。ヒトメモから移行した人なら自動で紐づきます）`;
-  if(top10.length===0) msg = 'Top10が設定されていません。SUでTop10をオンにしてから反映してください。';
-  else if(updated===0 && noLink===0 && flagChanged===0) msg = '反映対象がありませんでした（既に最新です）。';
-  alert(msg);
+/* ── ヒトメモの今の値を読む（2026-11-12 本人決定：ヒトメモ＝人の正本・SU＝これからの3か月の注ぎ先の地図）──
+   写しを持たず、描くたびに hitomemo_profiles_v1 から読む。SU からヒトメモへは書かない（旧「ヒトメモに反映」は外した）。
+   人は hitoId で引き、無ければ名前（括弧注記・さん・空白を除き NFKC）が1人だけ一致するとき。読めなければ SU の自分の値で今までどおり。
+   名前＝ヒトメモの登録名／関わり方タイプ＝ヒトメモの engagementType（未設定なら SU の relationshipType）／
+   頻度（地図の外枠）＝ヒトメモの changeLog の type「接点」で今日から90日以内の数：6回以上・1〜5回・0回（人が見つからなければ SU の frequency） */
+function suNormName(z){ return String((z&&z.value)||z||'').replace(/[（(][^）)]*[）)]/g,'').replace(/さん$/,'').replace(/\s+/g,'').normalize('NFKC').toLowerCase(); }
+function suHmIndex(){
+  let hm=null;
+  try{ const a=JSON.parse(localStorage.getItem('hitomemo_profiles_v1')||'null'); if(Array.isArray(a)) hm=a; }catch(e){}
+  const byId={}, byName={};
+  (hm||[]).forEach(h=>{ if(!h) return; if(h.id) byId[h.id]=h; const k=suNormName(h.name); if(k) (byName[k]=byName[k]||[]).push(h); });
+  return {byId, byName};
 }
+let _suHmIdx=null;   /* 描くたびに作り直す（suHmRefresh） */
+function suHmRefresh(){ _suHmIdx=suHmIndex(); }
+function suHm(p){
+  if(!p) return null;
+  const ix=_suHmIdx||(_suHmIdx=suHmIndex());
+  if(p.hitoId&&ix.byId[p.hitoId]) return ix.byId[p.hitoId];
+  const c=ix.byName[suNormName(p.name)]||[];
+  return c.length===1?c[0]:null;
+}
+function suName(p){ const h=suHm(p); const n=h&&((h.name&&h.name.value)||(typeof h.name==='string'?h.name:'')); return n||p.name||''; }
+function suType(p){ const h=suHm(p); const e=h&&h.engagementType; return (e&&e!=='未設定')?e:(p.relationshipType||'未設定'); }
+function suMeetCount(p){
+  const h=suHm(p); if(!h) return null;
+  const from=new Date(); from.setDate(from.getDate()-90); const f=from.toISOString().slice(0,10), t=td();
+  return (h.changeLog||[]).filter(l=>l&&l.type==='接点'&&String(l.date||'')>=f&&String(l.date||'')<=t).length;
+}
+function suFreq(p){ const n=suMeetCount(p); if(n===null) return p.frequency; return n>=6?'毎週〜隔週':n>=1?'月1〜年数回':'半年に1回以下'; }
+function suFreqText(p){ const n=suMeetCount(p); return n===null?(p.frequency||'—')+'（ヒトメモに見つからないため SU の値）':n+'回'; }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function sel2(id,v){ const e=document.getElementById(id); if(!e)return; for(const o of e.options) if(o.value===v){o.selected=true;break;} }
 
@@ -957,7 +930,7 @@ function getMapPersons(){
     if(p.isDormant&&!f.dormant) return false;
     if(f.top10    &&!p.isTop10) return false;
     if(f.drain    &&p.energyState!=='消耗') return false;
-    if(f.type     &&p.relationshipType!==f.type) return false;
+    if(f.type     &&suType(p)!==f.type) return false;   /* 関わり方タイプはヒトメモの値で絞る */
     return true;
   });
 }
@@ -974,14 +947,14 @@ function getRec(p){
   if(pur==='安心・人生'&&e==='増える') return '利害なしで定期的に会う時間を取る。';
   if(pur==='安心・人生'&&e==='普通')  return '無理に深めず、自然な接点を維持する。';
   if(pur==='安心・人生'&&e==='消耗')  return '親しさと距離感を分け、境界線を引く。';
-  if(p.isTop10&&!p.nextAction) return 'Top10なのに次アクション未入力。次の3か月で何をするか必ず1つ決める。';
+  if(p.isTop10&&!p.nextAction) return 'TOP10なのに「この3か月の一手」が未入力。3か月で何をするか必ず1つ決める。';
   return '現状を維持しながら観察しましょう。';
 }
 
 function getTodaySuggestions(){
   const drain=persons.filter(p=>!p.isDormant&&(p.isDraining||p.energyState==='消耗')).slice(0,1).map(p=>({p,why:'⚠ 消耗・距離設計が必要'}));
-  const noAct=persons.filter(p=>!p.isDormant&&p.isTop10&&!p.nextAction).slice(0,1).map(p=>({p,why:'⭐ Top10なのに次アクション未入力'}));
-  const lowF =persons.filter(p=>!p.isDormant&&p.relationshipPurpose==='事業・成果'&&p.frequency==='半年に1回以下'&&!drain.find(d=>d.p.id===p.id)).slice(0,1).map(p=>({p,why:'🔵 事業レイヤーだが接点が少ない'}));
+  const noAct=persons.filter(p=>!p.isDormant&&p.isTop10&&!p.nextAction).slice(0,1).map(p=>({p,why:'⭐ TOP10なのに「この3か月の一手」が未入力'}));
+  const lowF =persons.filter(p=>!p.isDormant&&p.relationshipPurpose==='事業・成果'&&suFreq(p)==='半年に1回以下'&&!drain.find(d=>d.p.id===p.id)).slice(0,1).map(p=>({p,why:'🔵 事業レイヤーだが接点が少ない'}));
   return [...drain,...noAct,...lowF].slice(0,3);
 }
 
@@ -989,6 +962,7 @@ function getTodaySuggestions(){
 // ║  FREE MAP RENDER                                         ║
 // ╚══════════════════════════════════════════════════════════╝
 function renderMap(){
+  suHmRefresh();   /* ヒトメモの今の値を読み直す（写しを持たない） */
   const filtered=getMapPersons();
 
   // Ensure x,y always present (ensureXY applied at load, but guard here too)
@@ -1040,21 +1014,20 @@ function renderMap(){
 function createCircleEl(p, showDormant){
   const ecls=energyCls(p.energyState);
   const scls=sizeCls(p.impact);
-  const fcls=freqCls(p.frequency);
+  const fcls=freqCls(suFreq(p));   /* 外枠＝この3か月に会った回数（ヒトメモの接点） */
   const dormCls=p.isDormant?' dormant-show':'';
   const selCls=selectedId===p.id?' selected':'';
-  const vf=p.valueFlow;
-  const vfc=VF_COL[vf]||'';
+  const nm=suName(p), rt=suType(p);   /* 名前・関わり方タイプはヒトメモの今の値 */
 
   const el=document.createElement('div');
   el.className=`pc-free pce-${ecls} ${scls} ${fcls}${dormCls}${selCls}`;
   el.dataset.id=p.id;
   el.dataset.purpose=p.relationshipPurpose;
   el.draggable=true;
-  el.title=`${p.name}\n${p.relationshipPurpose} / ${p.energyState}\n${shortRT(p.relationshipType)} / ${p.frequency}${p.isTop10?'\n★ Top10':''}${p.isDraining?'\n⚠ isDraining':''}`;
+  el.title=`${nm}\n${p.relationshipPurpose} / ${p.energyState}\n${shortRT(rt)} / この3か月に会った回数：${suFreqText(p)}${p.isTop10?'\n★ TOP10':''}${p.isDraining?'\n⚠ isDraining':''}`;
 
   // Name text（円内はふりがなを外して見やすく。ツールチップ el.title は全表記のまま）
-  el.appendChild(Object.assign(document.createElement('span'),{textContent:nameDisp(p.name)}));
+  el.appendChild(Object.assign(document.createElement('span'),{textContent:nameDisp(nm)}));
 
   // Badges
   if(p.isTop10){
@@ -1063,11 +1036,9 @@ function createCircleEl(p, showDormant){
   if(p.isDraining){
     const w=document.createElement('div'); w.className='pc-warn-badge'; w.textContent='⚠'; el.appendChild(w);
   }
-  if(vf){
-    const v=document.createElement('div'); v.className='pc-vf-badge'; v.style.color=vfc; v.textContent=vf; el.appendChild(v);
-  }
-  // Type tag
-  const tag=document.createElement('div'); tag.className='pc-type-tag'; tag.textContent=shortRT(p.relationshipType); el.appendChild(tag);
+  // 価値の流れのバッジは 2026-11-12 に画面から外した（データは残す）
+  // Type tag（ヒトメモの関わり方タイプ）
+  const tag=document.createElement('div'); tag.className='pc-type-tag'; tag.textContent=shortRT(rt); el.appendChild(tag);
 
   // Events
   el.addEventListener('click', e=>{ e.stopPropagation(); selectPerson(p.id); });
@@ -1091,7 +1062,7 @@ function updateStats(filtered){
   const t10C=all.filter(p=>p.isTop10).length;
   const drnC=all.filter(p=>p.isDraining||p.energyState==='消耗').length;
   const el=document.getElementById('mapStats');
-  if(el) el.textContent=`マップ ${all.length}名 ／ Top10: ${t10C}名 ／ 消耗: ${drnC}名 ／ 余白: ${dormC}名`;
+  if(el) el.textContent=`マップ ${all.length}名 ／ TOP10: ${t10C}名 ／ 消耗: ${drnC}名 ／ 余白: ${dormC}名`;
 }
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -1195,7 +1166,7 @@ function renderQAP(){
     let sHTML='';
     sugg.forEach(({p,why})=>{
       sHTML+=`<div class="qap-today-card" onclick="selectPerson('${p.id}')">
-        <div class="qap-today-nm">${esc(p.name)}</div>
+        <div class="qap-today-nm">${esc(suName(p))}</div>
         <div class="qap-today-why">${why}</div>
       </div>`;
     });
@@ -1216,26 +1187,25 @@ function renderQAP(){
   const urgentNA=p.isTop10&&!p.nextAction;
   const recTxt=getRec(p);
 
-  const atOpts=['深める','実験','役割明確化','距離を置く','手放す','維持'].map(a=>`<option${p.actionType===a?' selected':''}>${a}</option>`).join('');
   const purOpts=PURPOSES.map(v=>`<option${p.relationshipPurpose===v?' selected':''}>${v}</option>`).join('');
   const eOpts=['増える','普通','消耗'].map(v=>`<option${p.energyState===v?' selected':''}>${v}</option>`).join('');
-  const fOpts=['毎週〜隔週','月1〜年数回','半年に1回以下'].map(v=>`<option${p.frequency===v?' selected':''}>${v}</option>`).join('');
-  const vfOpts=[['◉','◉ もらい与える'],['〇','〇 もらっている'],['●','● 与えている'],['','— なし']].map(([v,l])=>`<option value="${v}"${p.valueFlow===v?' selected':''}>${l}</option>`).join('');
   const impOpts=['大','中','小'].map(v=>`<option${p.impact===v?' selected':''}>${v}</option>`).join('');
-  const typeOpts=['未設定','育成（若手）','共同成長（同世代）','相互学習（年上・専門家）','維持（確定パートナー・専門家）'].map(v=>`<option${p.relationshipType===v?' selected':''}>${v}</option>`).join('');
+  /* 頻度・関わり方タイプはヒトメモの値を読むだけ。価値の流れ・現状・理想・ギャップは 2026-11-12 に画面から外した（データは残す） */
+  const inHm=!!suHm(p);
 
   panel.innerHTML=`<div class="qap-card e-${ecls}">
     <div class="qap-hdr">
       <button class="qap-close" onclick="selectedId=null;renderMap()">✕</button>
-      <div class="qap-name">${isDrain?'⚠ ':''}${esc(p.name)}<span id="qapSaved" class="qap-saved">✓ 保存</span></div>
+      <div class="qap-name">${isDrain?'⚠ ':''}${esc(suName(p))}<span id="qapSaved" class="qap-saved">✓ 保存</span></div>
       <div class="qap-badges">
         <span class="bd bd-${ecls}">${p.energyState}</span>
         <span class="bd bd-${PUR_CLS[p.relationshipPurpose]||'biz'}">${p.relationshipPurpose}</span>
-        ${p.isTop10?'<span class="bd bd-t10">⭐ Top10</span>':''}
+        ${p.isTop10?'<span class="bd bd-t10">⭐ TOP10</span>':''}
         ${p.isDraining?'<span class="bd bd-draining">⚠ 消耗</span>':''}
         ${p.isDormant?'<span class="bd bd-dorm">🌿 余白</span>':''}
       </div>
-      <div class="qap-meta">頻度：${p.frequency}　インパクト：${p.impact}　流れ：${p.valueFlow||'—'}</div>
+      <div class="qap-meta">この3か月に会った回数：${esc(suFreqText(p))}　インパクト：${p.impact}</div>
+      <div class="qap-meta">関わり方：${esc(shortRT(suType(p)))}${inHm?'（ヒトメモ）':''}</div>
     </div>
     <div class="qap-body">
       ${isDrain?`<div class="qap-drain-warn"><span>⚠</span>消耗フラグあり。距離・接点・テーマを再設計してください。</div>`:''}
@@ -1244,25 +1214,15 @@ function renderQAP(){
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','relationshipPurpose',this.value)">${purOpts}</select></div>
         <div><span class="qap-fl">エネルギー状態</span>
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','energyState',this.value)">${eOpts}</select></div>
-        <div><span class="qap-fl">頻度</span>
-          <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','frequency',this.value)">${fOpts}</select></div>
         <div><span class="qap-fl">インパクト</span>
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','impact',this.value)">${impOpts}</select></div>
-        <div><span class="qap-fl">価値の流れ</span>
-          <select class="qap-sel" onchange="qapUp('${p.id}','valueFlow',this.value)">${vfOpts}</select></div>
       </div>
-      <div><span class="qap-fl">今の関係の状態</span>
-        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','currentState',this.value)">${esc(p.currentState||'')}</textarea></div>
-      <div><span class="qap-fl">本来どうしたいか</span>
-        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','desiredState',this.value)">${esc(p.desiredState||'')}</textarea></div>
-      <div><span class="qap-fl">ズレ・課題</span>
-        <textarea class="qap-inp" rows="2" onblur="qapUp('${p.id}','gap',this.value)">${esc(p.gap||'')}</textarea></div>
-      <div><span class="qap-fl">次のアクション${urgentNA?' <span style="color:#dc2626;font-size:9px">⚠ 未入力（Top10必須）</span>':''}</span>
-        <textarea class="qap-inp${urgentNA?' urgent':''}" rows="3" id="qap-na" onblur="qapUp('${p.id}','nextAction',this.value)">${esc(p.nextAction||'')}</textarea></div>
+      <div><span class="qap-fl">この3か月の一手${urgentNA?' <span style="color:#dc2626;font-size:9px">⚠ 未入力（TOP10は必ず1つ）</span>':''}</span>
+        <textarea class="qap-inp${urgentNA?' urgent':''}" rows="3" id="qap-na" placeholder="1人1つ・3か月で終わるもの" onblur="qapUp('${p.id}','nextAction',this.value)">${esc(p.nextAction||'')}</textarea></div>
     </div>
     <div class="qap-ftr">
       <div class="qap-ftr-row">
-        <button class="qbtn qbtn-t10"  onclick="toggleT10('${p.id}')">${p.isTop10?'⭐ Top10から外す':'☆ Top10に追加'}</button>
+        <button class="qbtn qbtn-t10"  onclick="toggleT10('${p.id}')">${p.isTop10?'⭐ TOP10から外す':'☆ TOP10に追加'}</button>
       </div>
       <div class="qap-ftr-row">
       </div>
@@ -1290,7 +1250,7 @@ function qapUpAndRedraw(id,field,value){
 
 function toggleT10(id){
   const i=persons.findIndex(p=>p.id===id); if(i<0) return;
-  if(!persons[i].isTop10&&persons.filter(p=>p.isTop10).length>=10){alert('Top10はすでに10名です。');return;}
+  if(!persons[i].isTop10&&persons.filter(p=>p.isTop10).length>=10){alert('TOP10はすでに10名です。');return;}
   persons[i]={...persons[i],isTop10:!persons[i].isTop10,updatedAt:ts()};
   sv(SK,persons); renderMap();
 }
@@ -1322,7 +1282,8 @@ function closeDormant(){ document.getElementById('dormScreen').classList.remove(
 
 function renderDormant(){
   const q=(document.getElementById('dormSearch')?.value||'').trim().toLowerCase();
-  const dorms=persons.filter(p=>p.isDormant&&(!q||p.name.toLowerCase().includes(q)));
+  suHmRefresh();
+  const dorms=persons.filter(p=>p.isDormant&&(!q||suName(p).toLowerCase().includes(q)||String(p.name||'').toLowerCase().includes(q)));
   let h='';
   if(!dorms.length){
     h='<div style="text-align:center;padding:36px 0;color:var(--s400);font-size:15px">余白リストに人物はいません。</div>';
@@ -1330,9 +1291,8 @@ function renderDormant(){
     dorms.forEach(p=>{
       h+=`<div class="dorm-card">
         <div class="dorm-info">
-          <div class="dorm-nm">${esc(p.name)}</div>
-          <div class="dorm-meta">${shortRT(p.relationshipType)} ／ ${p.relationshipPurpose} ／ ${p.frequency}<br>更新：${p.updatedAt?p.updatedAt.split('T')[0]:'—'}</div>
-          ${p.memo?`<div class="dorm-memo">${esc(p.memo)}</div>`:''}
+          <div class="dorm-nm">${esc(suName(p))}</div>
+          <div class="dorm-meta">${esc(shortRT(suType(p)))} ／ ${p.relationshipPurpose} ／ この3か月に会った回数：${esc(suFreqText(p))}<br>更新：${p.updatedAt?p.updatedAt.split('T')[0]:'—'}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
           <button class="dorm-restore" onclick="restoreDormant('${p.id}')">📌 マップへ復活</button>
@@ -1361,16 +1321,13 @@ function openModal(id){
   document.getElementById('fName').value=p?.name??'';
   sel2('fPurpose',   p?.relationshipPurpose??'事業・成果');
   sel2('fEnergy',    p?.energyState??'普通');
-  sel2('fFreq',      p?.frequency??'月1〜年数回');
   sel2('fImpact',    p?.impact??'中');
-  sel2('fValueFlow', p?.valueFlow??'');
-  sel2('fActionType',p?.actionType??'維持');
-  document.getElementById('fCurrentState').value=p?.currentState??'';
-  document.getElementById('fDesiredState').value=p?.desiredState??'';
-  document.getElementById('fGap').value=p?.gap??'';
+  suHmRefresh();
+  document.getElementById('fHmInfo').innerHTML = p
+    ? (suHm(p)?'':'<span style="color:var(--s400)">ヒトメモに見つかりません（SU の値で表示）</span><br>')
+      +'関わり方：'+esc(shortRT(suType(p)))+'<br>この3か月に会った回数：'+esc(suFreqText(p))
+    : '<span style="color:var(--s400)">保存後、ヒトメモに同じ人がいれば表示されます</span>';
   document.getElementById('fNextAction').value=p?.nextAction??'';
-  document.getElementById('fDueDate').value=p?.actionDueDate??'';
-  document.getElementById('fMemo').value=p?.memo??'';
   document.getElementById('fIsTop10').checked=p?.isTop10??false;
   document.getElementById('fIsDormant').checked=p?.isDormant??false;
   document.getElementById('moOverlay').style.display='flex';
@@ -1382,21 +1339,14 @@ function doSave(){
   const name=document.getElementById('fName').value.trim();
   if(!name){alert('名前を入力してください。');return;}
   const id=document.getElementById('editId').value;
+  /* 画面から外した欄（価値の流れ・行動の種類・現状・理想・ギャップ・期日・メモ）と、手入力をやめた頻度・関わり方タイプは
+     ここに入れない＝今の値をそのまま残す（上書きしない）。新しい人だけ空の初期値を入れる */
   const f={
     name,
     relationshipPurpose:document.getElementById('fPurpose').value,
     energyState:document.getElementById('fEnergy').value,
-    relationshipType:((document.getElementById('editId').value && (persons.find(x=>x.id===document.getElementById('editId').value)||{}).relationshipType) || '未設定'),
-    frequency:document.getElementById('fFreq').value,
     impact:document.getElementById('fImpact').value,
-    valueFlow:document.getElementById('fValueFlow').value,
-    actionType:document.getElementById('fActionType').value,
-    currentState:document.getElementById('fCurrentState').value,
-    desiredState:document.getElementById('fDesiredState').value,
-    gap:document.getElementById('fGap').value,
     nextAction:document.getElementById('fNextAction').value,
-    actionDueDate:document.getElementById('fDueDate').value,
-    memo:document.getElementById('fMemo').value,
     isTop10:document.getElementById('fIsTop10').checked,
     isDraining:false,
     isDormant:document.getElementById('fIsDormant').checked,
@@ -1406,7 +1356,8 @@ function doSave(){
     const i=persons.findIndex(p=>p.id===id);
     if(i>=0) persons[i]={...persons[i],...f};
   } else {
-    persons.push({id:crypto.randomUUID(),...f,x:50,y:50,createdAt:ts()});
+    persons.push({id:crypto.randomUUID(),relationshipType:'未設定',frequency:'月1〜年数回',valueFlow:'',actionType:'維持',
+      currentState:'',desiredState:'',gap:'',actionDueDate:'',memo:'',...f,x:50,y:50,createdAt:ts()});
   }
   sv(SK,persons); closeModal(); renderMap();
 }
@@ -1580,6 +1531,7 @@ function qrBlockHTML(review){
   </div>`;
 }
 function buildPrint(){
+  suHmRefresh();   /* 名前・関わり方・会った回数はヒトメモの今の値 */
   const now=new Date();
   document.getElementById('ppDate').textContent=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
 
@@ -1599,16 +1551,15 @@ function buildPrint(){
     ps.forEach(p=>{
       const ecls=energyCls(p.energyState);
       const scls=p.impact==='大'?'pp-pc-lg':p.impact==='中'?'pp-pc-md':'pp-pc-sm';
-      const fcls=p.frequency==='毎週〜隔週'?'pp-fq-h':p.frequency==='月1〜年数回'?'pp-fq-m':'pp-fq-l';
-      const vf=p.valueFlow, vfc=VF_COL[vf]||'';
+      const fq=suFreq(p);   /* 外枠＝この3か月に会った回数（ヒトメモの接点） */
+      const fcls=fq==='毎週〜隔週'?'pp-fq-h':fq==='月1〜年数回'?'pp-fq-m':'pp-fq-l';
       const xPct=Math.max(5,Math.min(95,p.x??50));
       const yPct=Math.max(5,Math.min(95,p.y??50));
       mapH+=`<div class="pp-pc pp-pc-${ecls} ${scls} ${fcls}" style="left:${xPct}%;top:${yPct}%">
-        ${esc(nameDisp(p.name))}
+        ${esc(nameDisp(suName(p)))}
         ${p.isTop10?`<div class="pp-star">★</div>`:''}
         ${p.isDraining?`<div class="pp-warn-p">!</div>`:''}
-        ${vf?`<div class="pp-vf-badge" style="position:absolute;bottom:-0.8mm;right:-0.8mm;font-size:5pt;width:2.8mm;height:2.8mm;border-radius:50%;background:white;border:0.4pt solid rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:${vfc}">${vf}</div>`:''}
-        <div class="pp-type-tag">${esc(shortRT(p.relationshipType))}</div>
+        <div class="pp-type-tag">${esc(shortRT(suType(p)))}</div>
       </div>`;
     });
     mapH+=`</div></div>`;
@@ -1619,17 +1570,17 @@ function buildPrint(){
   const top10=printPersons.filter(p=>p.isTop10&&p.nextAction).slice(0,10);
   let t10h='';
   if(!top10.length){
-    t10h='<div style="font-size:7pt;color:#94a3b8;padding:3mm 0">Top10アクション未設定</div>';
+    t10h='<div style="font-size:7pt;color:#94a3b8;padding:3mm 0">TOP10の一手 未設定</div>';
   } else {
     t10h=`<table class="pp-t10-tbl">`;
     top10.forEach((p,i)=>{
       t10h+=`<tr>
         <td class="pp-t10-num">${i+1}</td>
-        <td class="pp-t10-name">${esc(nameDisp(p.name))}</td>
+        <td class="pp-t10-name">${esc(nameDisp(suName(p)))}</td>
         <td class="pp-t10-act">${esc(p.nextAction)}</td>
       </tr>`;
     });
-    t10h+=`</table><div class="pp-t10-note">※ Top10は次の行動を決めた人のみ</div>`;
+    t10h+=`</table><div class="pp-t10-note">※ TOP10は一手を決めた人のみ</div>`;
   }
   document.getElementById('ppTop10').innerHTML=t10h;
   const _qrv = ld('su_pending_review') || (lastReviewSnap()&&lastReviewSnap().review) || null;
@@ -1842,14 +1793,15 @@ function lastReviewSnap(){
   return null;
 }
 function openQuarterReview(){
+  suHmRefresh();
   document.getElementById('qrQuarter').value=currentQuarterLabel();
   const t10=(persons||[]).filter(su=>su.isTop10&&!su.isDormant);
   document.getElementById('qrTop10').innerHTML = t10.length
-    ? t10.map(su=>'<div style="margin-bottom:7px;">★ <b>'+nameDisp(su.name)+'</b>'
-        +(su.nextAction?'：<span style="color:#475569">'+String(su.nextAction).replace(/</g,'&lt;')+'</span>':'<span style="color:#94a3b8">：（アクション未設定）</span>')
+    ? t10.map(su=>'<div style="margin-bottom:7px;">★ <b>'+nameDisp(suName(su))+'</b>'
+        +(su.nextAction?'：<span style="color:#475569">'+String(su.nextAction).replace(/</g,'&lt;')+'</span>':'<span style="color:#94a3b8">：（一手 未設定）</span>')
         +'<input type="text" data-qr-result="'+su.id+'" placeholder="結果：どうなったか1行（空欄可）" style="display:block;width:100%;margin-top:3px;padding:6px 9px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;box-sizing:border-box;background:#fff;">'
         +'</div>').join('')
-    : '<span style="color:#94a3b8">Top10が未設定です（★を付けてから見直すと材料が揃います）</span>';
+    : '<span style="color:#94a3b8">TOP10が未設定です（★を付けてから見直すと材料が揃います）</span>';
   const last=lastReviewSnap();
   const hint=document.getElementById('qrInsights');
   hint.placeholder = last && last.review && last.review.policy
@@ -1863,7 +1815,7 @@ function saveQuarterReview(){
   if(!insights){ alert('「マップ全体の気づき」を1行以上入れてください（見直しの核なので）'); return; }
   const top10Results=[...document.querySelectorAll('[data-qr-result]')].map(inp=>{
     const su=(persons||[]).find(x=>x.id===inp.getAttribute('data-qr-result'));
-    return su?{name:nameDisp(su.name), action:su.nextAction||'', result:inp.value.trim()}:null;
+    return su?{name:nameDisp(suName(su)), action:su.nextAction||'', result:inp.value.trim()}:null;
   }).filter(x=>x&&(x.action||x.result));
   const review={
     quarter: document.getElementById('qrQuarter').value.trim()||currentQuarterLabel(),
@@ -1881,11 +1833,12 @@ function saveQuarterReview(){
   showToast('◔ '+review.quarter+' の見直しを記録しました。マップを調整したら ◈スナップショット（紙出し）で締めてください');
 }
 function openTop10Actions(){
+  suHmRefresh();
   const t10=(persons||[]).filter(su=>su.isTop10&&!su.isDormant);
   document.getElementById('qrActList').innerHTML = t10.length
-    ? t10.map(su=>'<div style="margin-bottom:10px;"><div style="font-size:12px;font-weight:600;color:var(--s700);margin-bottom:3px;">★ '+nameDisp(su.name)+'</div>'
-        +'<input type="text" data-qr-next="'+su.id+'" value="'+String(su.nextAction||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" placeholder="次の3か月の行動（空欄＝アクションなし）" style="width:100%;padding:8px 11px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;box-sizing:border-box;"></div>').join('')
-    : '<span style="color:#94a3b8;font-size:13px;">★Top10がいません。マップで★を付けてから開いてください。</span>';
+    ? t10.map(su=>'<div style="margin-bottom:10px;"><div style="font-size:12px;font-weight:600;color:var(--s700);margin-bottom:3px;">★ '+nameDisp(suName(su))+'</div>'
+        +'<input type="text" data-qr-next="'+su.id+'" value="'+String(su.nextAction||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" placeholder="この3か月の一手（1人1つ・3か月で終わるもの。空欄＝なし）" style="width:100%;padding:8px 11px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;box-sizing:border-box;"></div>').join('')
+    : '<span style="color:#94a3b8;font-size:13px;">★TOP10がいません。マップで★を付けてから開いてください。</span>';
   document.getElementById('qrActOverlay').style.display='flex';
 }
 function closeTop10Actions(){ document.getElementById('qrActOverlay').style.display='none'; }
@@ -1898,13 +1851,13 @@ function saveTop10Actions(){
   if(n) sv(SK,persons);
   closeTop10Actions();
   if(typeof render==='function'){ try{render();}catch(e){} }
-  showToast('✎ Top10アクションを'+n+'件更新しました。'+(ld('su_pending_review')?'◈スナップショット（紙出し）で締めてください':''));
+  showToast('✎ TOP10の一手を'+n+'件更新しました。'+(ld('su_pending_review')?'◈スナップショット（紙出し）で締めてください':''));
 }
 function qrChipClick(){ if(ld('su_pending_review')) openTop10Actions(); else openQuarterReview(); }
 function updateQrChip(){
   const el=document.getElementById('qrChip'); if(!el) return;
   const pend=ld('su_pending_review');
-  if(pend){ el.style.display='inline-block'; el.style.background='#fef9c3'; el.style.color='#a16207'; el.textContent='◔ '+pend.quarter+' 記録済み — 調整→✎アクション一括入力（クリック）→◈紙出し'; return; }
+  if(pend){ el.style.display='inline-block'; el.style.background='#fef9c3'; el.style.color='#a16207'; el.textContent='◔ '+pend.quarter+' 記録済み — 調整→✎一手の一括入力（クリック）→◈紙出し'; return; }
   const last=lastReviewSnap();
   if(!last){ el.style.display='inline-block'; el.style.background='#f1f5f9'; el.style.color='#64748b'; el.textContent='見直し記録なし'; return; }
   const days=Math.floor((Date.now()-new Date(last.review.reviewedAt||last.savedAt).getTime())/86400000);
@@ -2049,6 +2002,8 @@ async function inboxApply(block, links, item) {
 renderMap();
 updateSnapBadge();
 updateQrChip();
+/* 他のタブでヒトメモが変わったら描き直す（名前・関わり方・この3か月に会った回数） */
+window.addEventListener('storage', e => { if (e.key === 'hitomemo_profiles_v1') { renderMap(); if (document.getElementById('dormScreen').classList.contains('open')) renderDormant(); } });
 inboxProcess('load');   /* 受信箱：自分宛て（targetOS:'su'）があっても保留のまま（取り込み口なし） */
 </script>
   <script>

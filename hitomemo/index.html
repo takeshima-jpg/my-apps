@@ -1430,8 +1430,35 @@ changeLog:
 - {器・価値観・成長速度の変化 / 気づき / ステージ変化}｜{内容}`;
 
 
+/* ソーシャルユニバース（su-v6-persons）を読むだけ（2026-11-12 本人決定）：★TOP10 と「この3か月の一手」の正本は SU。
+   ヒトメモの isTop10・nextExperience は表示に使わない（消さない・新しく書かない）。SU の人は hitoId で、無ければ名前（lxNormName）が1人だけ一致するとき */
+function suReadLink(profiles, norm) {
+  let su = [];
+  try { const a = JSON.parse(localStorage.getItem('su-v6-persons') || '[]'); if (Array.isArray(a)) su = a; } catch (e) {}
+  const ids = new Set((profiles || []).map(p => p && p.id));
+  const byName = {};
+  (profiles || []).forEach(p => { const k = norm((p && p.name && p.name.value) || (p && p.name) || ''); if (k) (byName[k] = byName[k] || []).push(p); });
+  const top10 = new Set(), next = {};
+  su.forEach(s => {
+    if (!s) return;
+    let id = (s.hitoId && ids.has(s.hitoId)) ? s.hitoId : null;
+    if (!id) { const c = byName[norm(s.name || '')] || []; if (c.length === 1) id = c[0].id; }
+    if (!id) return;
+    if (s.isTop10) top10.add(id);
+    const na = String(s.nextAction || '').trim();
+    if (na) next[id] = na;
+  });
+  return { top10, next };
+}
+
 const App = () => {
   const [view, setView] = useState('list');
+  const [suTick, setSuTick] = useState(0);   /* 他のタブで SU が変わったら ★ と一手を描き直す */
+  useEffect(() => {
+    const onSt = e => { if (e.key === 'su-v6-persons') setSuTick(t => t + 1); };
+    window.addEventListener('storage', onSt);
+    return () => window.removeEventListener('storage', onSt);
+  }, []);
   const [profiles, setProfiles] = useState([]);
   const [query, setQuery] = useState('');
   const [filterStar, setFilterStar] = useState(false);
@@ -1746,6 +1773,8 @@ const App = () => {
     .replace(/\s+/g, '')
     .normalize('NFKC')
     .toLowerCase();
+  const suLink = suReadLink(profiles, lxNormName);   /* ★TOP10・この3か月の一手（SU を描くたびに読む。suTick で描き直し） */
+  void suTick;
   const toggleSelect = (id) => setSelectedIds(s => s.includes(id) ? s.filter(x=>x!==id) : [...s, id]);
   const moveToSU = () => {
     let su=[]; try{ su=JSON.parse(localStorage.getItem('su-v6-persons')||'[]'); }catch(e){ su=[]; }
@@ -1880,7 +1909,7 @@ const App = () => {
           <span style={{display:'flex',alignItems:'center',gap:7}}>
             <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={()=>toggleSelect(p.id)} style={{width:15,height:15,cursor:'pointer',flexShrink:0,marginTop:2}} title="SU移行用に選択" />
             <span style={{fontWeight:700,fontSize:15,color:'#1a1a2e'}}>{(p.name&&p.name.value)||p.name||'名前未設定'}</span>
-            {p.isTop10 && <span style={{fontSize:10,fontWeight:700,color:'#b45309',background:'#fef3c7',borderRadius:5,padding:'1px 6px',flexShrink:0}}>★Top10</span>}
+            {suLink.top10.has(p.id) && <span style={{fontSize:10,fontWeight:700,color:'#b45309',background:'#fef3c7',borderRadius:5,padding:'1px 6px',flexShrink:0}} title="ソーシャルユニバースの TOP10（この3か月、自分から時間を使うと決めた10人）">★TOP10</span>}
           </span>
           {isFamily(p)
             ? <span className="tier-badge" style={{background:'#fce7f3',color:'#9d174d'}}>❤️ 家族{p.relation ? '・' + p.relation : ''}</span>
@@ -2581,6 +2610,14 @@ const App = () => {
             ))
           )}
         </div>
+
+        {/* ソーシャルユニバースの「この3か月の一手」（読むだけ・SU に居て一手が入っている人だけ） */}
+        {suLink.next[current.id] && (
+          <div style={{fontSize:13,color:'#92400e',background:'#fffbeb',border:'1px solid #fde68a',borderRadius:8,padding:'8px 12px',marginBottom:12,lineHeight:1.6}}>
+            <b>この3か月の一手</b>{suLink.top10.has(current.id) ? '（★TOP10）' : ''}：{suLink.next[current.id]}
+            <span style={{fontSize:11,color:'#b45309',marginLeft:6}}>ソーシャルユニバースから</span>
+          </div>
+        )}
 
         {/* コア（常時表示） */}
         <div className="detail-section">
