@@ -776,7 +776,7 @@ function sv(k,d){ localStorage.setItem(k,JSON.stringify(d)); }
    写しを持たず、描くたびに hitomemo_profiles_v1 から読む。SU からヒトメモへは書かない（旧「ヒトメモに反映」は外した）。
    人は hitoId で引き、無ければ名前（括弧注記・さん・空白を除き NFKC）が1人だけ一致するとき。読めなければ SU の自分の値で今までどおり。
    名前＝ヒトメモの登録名／関わり方タイプ＝ヒトメモの engagementType（未設定なら SU の relationshipType）／
-   頻度（地図の外枠）＝ヒトメモの changeLog の type「接点」で今日から90日以内の数：6回以上・1〜5回・0回（人が見つからなければ SU の frequency） */
+   頻度（地図の外枠）＝ヒトメモの changeLog の type「接点」で今日から90日以内の数：6回以上・1〜5回・0回（人が見つからない・家族なら SU の frequency） */
 function suNormName(z){ return String((z&&z.value)||z||'').replace(/[（(][^）)]*[）)]/g,'').replace(/さん$/,'').replace(/\s+/g,'').normalize('NFKC').toLowerCase(); }
 function suHmIndex(){
   let hm=null;
@@ -796,13 +796,19 @@ function suHm(p){
 }
 function suName(p){ const h=suHm(p); const n=h&&((h.name&&h.name.value)||(typeof h.name==='string'?h.name:'')); return n||p.name||''; }
 function suType(p){ const h=suHm(p); const e=h&&h.engagementType; return (e&&e!=='未設定')?e:(p.relationshipType||'未設定'); }
+/* 家族（ヒトメモの personType==='family'）は週次で接点を追わないので回数で決めない（2026-11-13 本人決定）。
+   外枠は SU の自分の頻度（frequency）で、頻度は手で選べる。ヒトメモに見つからない人と同じ扱い */
+function suIsFamily(p){ const h=suHm(p); return !!(h&&h.personType==='family'); }
 function suMeetCount(p){
-  const h=suHm(p); if(!h) return null;
+  const h=suHm(p); if(!h||h.personType==='family') return null;
   const from=new Date(); from.setDate(from.getDate()-90); const f=from.toISOString().slice(0,10), t=td();
   return (h.changeLog||[]).filter(l=>l&&l.type==='接点'&&String(l.date||'')>=f&&String(l.date||'')<=t).length;
 }
 function suFreq(p){ const n=suMeetCount(p); if(n===null) return p.frequency; return n>=6?'毎週〜隔週':n>=1?'月1〜年数回':'半年に1回以下'; }
 function suFreqText(p){ const n=suMeetCount(p); return n===null?(p.frequency||'—')+'（ヒトメモに見つからないため SU の値）':n+'回'; }
+/* 画面に出す1行：家族は「頻度：毎週〜隔週」（SU の値）、ほかは「この3か月に会った回数：n回」 */
+function suFreqLine(p){ return suIsFamily(p) ? '頻度：'+(p.frequency||'—') : 'この3か月に会った回数：'+suFreqText(p); }
+const SU_FREQ_OPTS=['毎週〜隔週','月1〜年数回','半年に1回以下'];
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function sel2(id,v){ const e=document.getElementById(id); if(!e)return; for(const o of e.options) if(o.value===v){o.selected=true;break;} }
 
@@ -1024,7 +1030,7 @@ function createCircleEl(p, showDormant){
   el.dataset.id=p.id;
   el.dataset.purpose=p.relationshipPurpose;
   el.draggable=true;
-  el.title=`${nm}\n${p.relationshipPurpose} / ${p.energyState}\n${shortRT(rt)} / この3か月に会った回数：${suFreqText(p)}${p.isTop10?'\n★ TOP10':''}${p.isDraining?'\n⚠ isDraining':''}`;
+  el.title=`${nm}\n${p.relationshipPurpose} / ${p.energyState}\n${shortRT(rt)} / ${suFreqLine(p)}${p.isTop10?'\n★ TOP10':''}${p.isDraining?'\n⚠ isDraining':''}`;
 
   // Name text（円内はふりがなを外して見やすく。ツールチップ el.title は全表記のまま）
   el.appendChild(Object.assign(document.createElement('span'),{textContent:nameDisp(nm)}));
@@ -1192,6 +1198,8 @@ function renderQAP(){
   const impOpts=['大','中','小'].map(v=>`<option${p.impact===v?' selected':''}>${v}</option>`).join('');
   /* 頻度・関わり方タイプはヒトメモの値を読むだけ。価値の流れ・現状・理想・ギャップは 2026-11-12 に画面から外した（データは残す） */
   const inHm=!!suHm(p);
+  const isFam=suIsFamily(p);   /* 家族だけ頻度を手で選べる（外枠も SU の頻度） */
+  const fOpts=SU_FREQ_OPTS.map(v=>`<option${p.frequency===v?' selected':''}>${v}</option>`).join('');
 
   panel.innerHTML=`<div class="qap-card e-${ecls}">
     <div class="qap-hdr">
@@ -1204,7 +1212,7 @@ function renderQAP(){
         ${p.isDraining?'<span class="bd bd-draining">⚠ 消耗</span>':''}
         ${p.isDormant?'<span class="bd bd-dorm">🌿 余白</span>':''}
       </div>
-      <div class="qap-meta">この3か月に会った回数：${esc(suFreqText(p))}　インパクト：${p.impact}</div>
+      <div class="qap-meta">${esc(suFreqLine(p))}　インパクト：${p.impact}</div>
       <div class="qap-meta">関わり方：${esc(shortRT(suType(p)))}${inHm?'（ヒトメモ）':''}</div>
     </div>
     <div class="qap-body">
@@ -1216,6 +1224,8 @@ function renderQAP(){
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','energyState',this.value)">${eOpts}</select></div>
         <div><span class="qap-fl">インパクト</span>
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','impact',this.value)">${impOpts}</select></div>
+        ${isFam?`<div><span class="qap-fl">頻度（家族）</span>
+          <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','frequency',this.value)">${fOpts}</select></div>`:''}
       </div>
       <div><span class="qap-fl">この3か月の一手${urgentNA?' <span style="color:#dc2626;font-size:9px">⚠ 未入力（TOP10は必ず1つ）</span>':''}</span>
         <textarea class="qap-inp${urgentNA?' urgent':''}" rows="3" id="qap-na" placeholder="1人1つ・3か月で終わるもの" onblur="qapUp('${p.id}','nextAction',this.value)">${esc(p.nextAction||'')}</textarea></div>
@@ -1292,7 +1302,7 @@ function renderDormant(){
       h+=`<div class="dorm-card">
         <div class="dorm-info">
           <div class="dorm-nm">${esc(suName(p))}</div>
-          <div class="dorm-meta">${esc(shortRT(suType(p)))} ／ ${p.relationshipPurpose} ／ この3か月に会った回数：${esc(suFreqText(p))}<br>更新：${p.updatedAt?p.updatedAt.split('T')[0]:'—'}</div>
+          <div class="dorm-meta">${esc(shortRT(suType(p)))} ／ ${p.relationshipPurpose} ／ ${esc(suFreqLine(p))}<br>更新：${p.updatedAt?p.updatedAt.split('T')[0]:'—'}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
           <button class="dorm-restore" onclick="restoreDormant('${p.id}')">📌 マップへ復活</button>
@@ -1325,7 +1335,10 @@ function openModal(id){
   suHmRefresh();
   document.getElementById('fHmInfo').innerHTML = p
     ? (suHm(p)?'':'<span style="color:var(--s400)">ヒトメモに見つかりません（SU の値で表示）</span><br>')
-      +'関わり方：'+esc(shortRT(suType(p)))+'<br>この3か月に会った回数：'+esc(suFreqText(p))
+      +'関わり方：'+esc(shortRT(suType(p)))+'<br>'
+      +(suIsFamily(p)   /* 家族は頻度を手で選ぶ（SU の値） */
+        ? '頻度（家族）：<select class="fs" id="fFreq" style="margin-top:4px">'+SU_FREQ_OPTS.map(v=>'<option'+(p.frequency===v?' selected':'')+'>'+v+'</option>').join('')+'</select>'
+        : esc(suFreqLine(p)))
     : '<span style="color:var(--s400)">保存後、ヒトメモに同じ人がいれば表示されます</span>';
   document.getElementById('fNextAction').value=p?.nextAction??'';
   document.getElementById('fIsTop10').checked=p?.isTop10??false;
@@ -1352,6 +1365,7 @@ function doSave(){
     isDormant:document.getElementById('fIsDormant').checked,
     updatedAt:ts(),
   };
+  const ff=document.getElementById('fFreq'); if(ff) f.frequency=ff.value;   /* 家族のときだけ出る頻度の選択 */
   if(id){
     const i=persons.findIndex(p=>p.id===id);
     if(i>=0) persons[i]={...persons[i],...f};
