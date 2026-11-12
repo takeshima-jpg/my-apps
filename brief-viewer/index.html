@@ -88,6 +88,10 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--text);
 .bv-lectin .bv-lx-more > summary { cursor: pointer; display: flex; align-items: center; min-height: 44px; font-size: 13px; font-weight: 600; color: #0e7490; user-select: none; }
 .bv-lectin-skip { max-width: 760px; margin: 12px auto 0; padding: 10px 18px; border: 1px dashed var(--border, #cbd5e1); border-radius: 12px; color: var(--text3, #64748b); font-size: 13.5px; }
 .bv-lectin-past { opacity: .55; }
+/* 明日の予告は概要の1行だけ（開閉なし）。長い文は折り返す（切らない） */
+.bv-lectin-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 10px 18px; }
+.bv-lectin-line .bv-lx-title { font-weight: 700; color: #0e7490; font-size: 15px; white-space: nowrap; }
+.bv-lectin-line .bv-lx-line { flex: 1 1 280px; min-width: 0; overflow-wrap: anywhere; }
 .bv-lectin .bv-lx-pastnote { font-size: 11px; font-weight: 500; color: var(--text3, #94a3b8); }
 @media (max-width: 600px) { .bv-lectin, .bv-lectin-skip { margin: 10px 18px 0; } .bv-lectin .bv-lx-smp, .bv-lectin .bv-lx-sub { padding-left: 1em; margin-left: 0; } }
 .brief-body { max-width: 760px; margin: 0 auto; padding: 14px 24px 60px; line-height: 1.8; width: 100%; }
@@ -786,6 +790,20 @@ function lectinCardHTML(nx, kind){
   const id = nx.experimentId || nx.selectedExperimentId || '';
   const title = nx.title || nx.selectedExperimentTitle || '';
   if (!id && !title) return '';
+  if (!isToday) {
+    /* 明日の予告は概要の1行だけ（2026-11-12 本人決定）。開閉なし・時刻で変えない。中身は本文と今日の実験のカードにある。
+       cardLine があればそのまま。無ければ「M/D（曜）：題名（ID）× 関連の題名（関連ID）——次の場面の → より前」を組み立てる */
+    let line = (typeof nx.cardLine === 'string' && nx.cardLine.trim()) ? nx.cardLine.trim() : '';
+    if (!line) {
+      const pid = s => s ? `（${s}）` : '';
+      let d = '';
+      if (nx.date && /^\d{4}-\d{2}-\d{2}$/.test(nx.date)) { const dt=new Date(nx.date+'T00:00:00'); d=`${dt.getMonth()+1}/${dt.getDate()}（${wd[dt.getDay()]}）`; }
+      const rt = nx.relatedExperimentTitle || '', rid = nx.relatedExperimentId || '';
+      const scene = typeof nx.nextScene === 'string' ? nx.nextScene.split('→')[0].trim() : '';
+      line = (d ? d + '：' : '') + title + pid(id) + ((rt || rid) ? '× ' + rt + pid(rid) : '') + (scene ? '——' + scene : '');
+    }
+    return `<div class="bv-lectin bv-lectin-line${past?' bv-lectin-past':''}"><span class="bv-lx-title">✦ ${label}</span><span class="bv-lx-line">${_lxEsc(line)}</span></div>`;
+  }
   const isNew = Array.isArray(nx.samples) && nx.samples.length > 0;
   const rel = nx.relatedExperimentId ? ` × ${_lxEsc(nx.relatedExperimentId)}「${_lxEsc(nx.relatedExperimentTitle||'')}」` : '';
   const row = (k, v) => (typeof v === 'string' && v.trim()) ? `<div class="bv-lx-row"><span class="bv-lx-k">${k}</span><span>${_lxEsc(v)}</span></div>` : '';
@@ -810,7 +828,7 @@ function lectinCardHTML(nx, kind){
       ${nx.targetSchedule?`<div class="bv-lx-row"><span class="bv-lx-k">場面</span><span>${_lxEsc(nx.targetSchedule)}</span></div>`:''}
       ${nx.prepTonight?`<div class="bv-lx-row"><span class="bv-lx-k">今夜準備</span><span>${_lxEsc(nx.prepTonight)}</span></div>`:''}`;
   }
-  const open = isToday || new Date().getHours() >= 18;   /* 明日の予告は 0:00〜17:59 は畳む（描くたびにその時刻で決める） */
+  const open = isToday;   /* 今日の実験はいつも開く（明日の予告は上で1行にして返している） */
   return `<details class="bv-lectin${past?' bv-lectin-past':''}"${open?' open':''}>
     <summary>✦ ${label}${dstr?`（${_lxEsc(dstr)}）`:''}${past?`<span class="bv-lx-pastnote">${isToday?'実験':'予告'}は ${_lxEsc(dstr)} 分</span>`:''}</summary>
     <div class="bv-lx-body">${body}</div>
