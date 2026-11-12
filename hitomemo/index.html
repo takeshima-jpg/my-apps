@@ -894,7 +894,7 @@ if (new URLSearchParams(location.search).get('inbox') === '1') { window.alert = 
 /* React が起動し、保存済みの人物を読み終えるまで待つ（読み終える前に適用すると一覧を空で上書きするため） */
 async function hmInboxReady() {
   for (let i = 0; i < 60; i++) {
-    if (window.__hitomemoImportPeople && window.__hitomemoApplyContacts && window.__hitomemoGetAll) {
+    if (window.__hitomemoImportPeople && window.__hitomemoApplyContacts && window.__hitomemoApplyStages && window.__hitomemoGetAll) {
       let n = 0; try { n = (JSON.parse(localStorage.getItem('hitomemo_profiles_v1') || '[]') || []).length; } catch(e) {}
       if (window.__hitomemoGetAll().length === n) return true;
     }
@@ -902,22 +902,32 @@ async function hmInboxReady() {
   }
   return false;
 }
-/* block：既存の AI更新読込と同じ JSON（{"people":[…]}／{"contacts":[…]}／両方）。Markdown 書式は新設しない */
+/* block：既存の AI更新読込と同じ JSON（{"people":[…]}／{"contacts":[…]}／両方）＋ 2026-11-12 から {"stages":[{name, stage, isActive?}]}。Markdown 書式は新設しない。
+   処理の順は people → stages → contacts（同じ block で足した人のステージ・接点も決められるように）。
+   名前が合わなかった接点・ステージは summary の末尾に「／名前が合わない：…」（最大5人）。ほかが反映できれば ok のまま（保留に残さない） */
 async function inboxApply(block, links, item) {
   let data = null;
   try { data = JSON.parse(String(block || '').trim()); } catch(e) {}
   if (!data || typeof data !== 'object') return { ok:false, summary:'JSON として読めません（{"people":[…]} または {"contacts":[…]}）' };
   const people = Array.isArray(data.people) ? data.people : [], contacts = Array.isArray(data.contacts) ? data.contacts : [];
-  if (!people.length && !contacts.length) return { ok:false, summary:'people／contacts がありません' };
+  const stages = Array.isArray(data.stages) ? data.stages : [];
+  if (!people.length && !contacts.length && !stages.length) return { ok:false, summary:'people／contacts／stages がありません' };
   if (!(await hmInboxReady())) return { ok:false, summary:'ヒトメモの読み込みが終わりませんでした（次回また試します）' };
   /* 人物・接点に付けるのは 戦略目標・PJ だけ（人はヒトメモ自身なので付けない） */
   const lk = {}; const l = links || {};
   ['strategyGoalId','projectId','projectName'].forEach(k => { if (l[k]) lk[k] = String(l[k]); });
-  const outP = { links: lk }, outC = { links: lk, applied: 0 };
+  const outP = { links: lk }, outC = { links: lk, applied: 0, unmatched: [] }, outS = { links: lk, applied: 0 };
   const added = people.length ? (window.__hitomemoImportPeople(people, outP) || 0) : 0;
+  if (stages.length) window.__hitomemoApplyStages(stages, outS);
   if (contacts.length) window.__hitomemoApplyContacts(contacts, outC);
-  const skip = (people.length - added) + (contacts.length - (outC.applied || 0));
-  return { ok:true, summary:'人物 ' + added + '件・接点 ' + (outC.applied || 0) + '件' + (skip ? '（うち既存 ' + skip + '件はスキップ）' : '') };
+  const skip = (people.length - added) + (contacts.length - (outC.applied || 0)) + (stages.length - (outS.applied || 0));
+  const names = arr => { const u = [...new Set((arr || []).filter(Boolean))]; return u.slice(0, 5).join('、') + (u.length > 5 ? ' ほか ' + (u.length - 5) + '人' : ''); };
+  const unmatched = [...(outC.unmatched || []), ...(outS.unmatched || [])];
+  return { ok:true, summary:'人物 ' + added + '件・接点 ' + (outC.applied || 0) + '件' + (stages.length ? '・ステージ ' + (outS.applied || 0) + '件' : '')
+    + (skip ? '（うち既存 ' + skip + '件はスキップ）' : '')
+    + ((outS.family || []).length ? '／家族はステージを変えない：' + names(outS.family) : '')
+    + ((outS.badStage || []).length ? '／読めないステージ：' + names(outS.badStage) : '')
+    + (unmatched.length ? '／名前が合わない：' + names(unmatched) : '') };
 }
 /* 接点行のチップ：PJ名（id があれば pos_v4 の今の名前）。旧 S-ID は 2026-11-03 に表示をやめた（links.strategyGoalId は残す） */
 function hmLinkLabels(l) {
@@ -1582,7 +1592,7 @@ const App = () => {
           const exact = cands.filter(p => lxNormName((p.name && p.name.value) || p.name || '') === key);
           if (exact.length === 1) matched = exact[0];
         }
-        if (!matched) return;
+        if (!matched) { if (out && Array.isArray(out.unmatched)) out.unmatched.push(String(c.name || '').trim()); return; }   /* 受信箱：名前が合わない人を summary に出す */
         const idx = list.findIndex(p => p.id === matched.id);
         if (idx < 0) return;
         const p = list[idx];
@@ -1601,6 +1611,48 @@ const App = () => {
       updateList(list);
       profilesRef.current = list;
       return { updated: touchedNames.size, names: [...touchedNames.values()] };
+    };
+
+    // 受信箱の stages（2026-11-12）：[{name, stage, isActive?}] で関係ステージを決める。名前の合わせ方は接点と同じ（部分一致で1人／複数なら完全一致1人）。
+    // 結果は __hitomemoUpdateStage と同じ（ステージが変わったら changeLog に「ステージ: 旧 → 新」1行・type ステージ変化・source 受信箱）。
+    // 階層が「未登録」の人は、ステージを決めたら階層を「記録のみ」にする（未登録＝tier 未登録 から外れる。changeLog の同じ行に「階層: 未登録 → 記録のみ」）。
+    // isActive（true／false）があれば 🤝 も直す。家族の人は変えない。同じ値なら何もしない（何度取り込んでも増えない）。
+    // out（任意）：applied に反映した人数、unmatched／family／badStage に名前を入れる
+    window.__hitomemoApplyStages = (stages, out) => {
+      if (!Array.isArray(stages) || stages.length === 0) return 0;
+      const list = [...(profilesRef.current || [])];
+      const today = new Date().toISOString().slice(0, 10);
+      const push = (k, v) => { if (out) (out[k] = out[k] || []).push(v); };
+      let applied = 0;
+      stages.forEach(s => {
+        if (!s || typeof s !== 'object') return;
+        const name = String(s.name || '').trim(), stage = String(s.stage || '').trim();
+        const key = lxNormName(name);
+        if (!key) return;
+        if (!STAGE_ORDER.includes(stage)) { push('badStage', name + '（' + (stage || '空') + '）'); return; }
+        const cands = list.filter(p => { const pn = lxNormName((p.name && p.name.value) || p.name || ''); return pn && (pn.includes(key) || key.includes(pn)); });
+        let matched = null;
+        if (cands.length === 1) matched = cands[0];
+        else if (cands.length > 1) { const exact = cands.filter(p => lxNormName((p.name && p.name.value) || p.name || '') === key); if (exact.length === 1) matched = exact[0]; }
+        if (!matched) { push('unmatched', name); return; }
+        const idx = list.findIndex(p => p.id === matched.id);
+        if (idx < 0) return;
+        const p = list[idx];
+        if (isFamily(p)) { push('family', name); return; }
+        const changes = {}, logs = [];
+        if ((p.stage || '記録のみ') !== stage) { changes.stage = stage; logs.push(`ステージ: ${p.stage || '記録のみ'} → ${stage}`); }
+        if (p.tier === '未登録') { changes.tier = '記録のみ'; logs.push('階層: 未登録 → 記録のみ'); }
+        if (typeof s.isActive === 'boolean' && !!p.isActive !== s.isActive) { changes.isActive = s.isActive; logs.push(`🤝 稼働中: ${p.isActive ? 'あり' : 'なし'} → ${s.isActive ? 'あり' : 'なし'}`); }
+        if (!logs.length) return;   // 同じ値＝何もしない
+        changes.changeLog = [...(p.changeLog || []), { date: today, type: 'ステージ変化', text: logs.join(' / '), source: '受信箱', ...((out && out.links && Object.keys(out.links).length) ? { links: { ...out.links } } : {}) }];
+        list[idx] = { ...p, ...changes, updatedAt: new Date().toISOString() };
+        applied++;
+      });
+      if (out) out.applied = (out.applied || 0) + applied;
+      if (!applied) return 0;
+      updateList(list);
+      profilesRef.current = list;
+      return applied;
     };
 
     // Cowork用CRUD API

@@ -51,6 +51,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-inbox-withdraw-koso-discard-spec.md](specs/claude-code-inbox-withdraw-koso-discard-spec.md) | 依頼書9：Task OS の受信箱の保留に「取り下げ」（その場で確かめる・取り込み済みに入れて記録に1行・退避 import_inbox_backup_lastwithdraw）。構想ログの「■ 廃棄：」で相手がもう無いときは済み扱い | ✅実装済み（2026-11-10） |
 | [claude-code-taskos-sync-shorter-spec.md](specs/claude-code-taskos-sync-shorter-spec.md) | 依頼書10：Task OS の Drive 同期を短くする（受信箱は新しい・書き換わったファイルだけ4本ずつ読む／週次スナップショットは自動で1日1回／バックアップを字下げなしで書く／各段の時間を taskos_sync_timing_v1 とバックアップの taskosSyncTiming に） | ✅実装済み（2026-11-10） |
 | [claude-code-brief-next-oneline-spec.md](specs/claude-code-brief-next-oneline-spec.md) | 依頼書11：Brief Viewer の「✦ 明日の予告」カードを概要1行だけに（cardLine、無ければ日付・題名・関連・次の場面から組み立て。開閉と18時の切り替えはやめる） | ✅実装済み（2026-11-12） |
+| [claude-code-hitomemo-inbox-stages-spec.md](specs/claude-code-hitomemo-inbox-stages-spec.md) | 依頼書12：ヒトメモの受信箱に stages（関係ステージ・🤝稼働中を決める。未登録の人は階層を記録のみに）。名前が合わなかった接点・ステージを summary に出す | ✅実装済み（2026-11-12） |
 | [claude-code-koso-log-v2-spec.md](specs/claude-code-koso-log-v2-spec.md) | 構想ログ v2（記録・GOサイン・由来・関連・KOSO-IMPORT）。2026-10-26 に §4-2 の重複判定を「全件」へ訂正して保管 | ✅実装済み（保管のみ・本体は以前に配置） |
 | [claude-code-launcher-pwa-spec.md](specs/claude-code-launcher-pwa-spec.md) | コックピットのPWA化＋自作SVGアイコン（ホーム追加・standalone表示） | ✅実装済み 2026-07-12 `89f825e` |
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |
