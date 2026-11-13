@@ -536,6 +536,15 @@ button, [role="button"], .btn, .nav a, .nav button, .tab, .tab-btn {
     .partner-goal-label { font-size:12px; color:rgba(255,255,255,0.7); }
     .partner-goal-bar { margin-top:8px; background:rgba(255,255,255,0.2); border-radius:4px; height:4px; }
     .partner-goal-fill { background:#fbbf24; border-radius:4px; height:4px; transition:width 0.3s; }
+    /* 一番上の3つの数字（つながり n／50・経営パートナー n／10・今月新しく会った人）を1つの枠に並べて言い分ける（2026-11-13） */
+    .goal3 { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+    .goal3-item { min-width:0; }
+    .goal3-sub { font-size:11px; color:rgba(255,255,255,0.5); margin-top:6px; }
+    /* 「記録のみ」は1行の一覧（名前・出会った日） */
+    .rec-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:7px 4px; border-bottom:1px solid #f1f5f9; cursor:pointer; font-size:13px; }
+    .rec-row:hover { background:#f8fafc; }
+    .rec-date { font-size:11px; color:#94a3b8; white-space:nowrap; }
+    .rec-sub { font-size:11px; color:#94a3b8; font-weight:700; margin:8px 0 2px; }
     /* パートナー形成ファネル */
     .funnel { display:flex; align-items:stretch; gap:8px; margin-bottom:12px; }
     .funnel-seg { flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:10px 8px; text-align:center; }
@@ -1017,6 +1026,10 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
 
       <button class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;" onclick="window.__hitomemoShowList?.()"><svg width="15" height="15" viewBox="0 0 24 24" fill="#f59e0b" style="vertical-align:-2px;margin-right:5px;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>一覧</button>
+      <!-- 入力の道具は畳む（2026-11-13：本人はヒトメモを開いて更新しない。更新は週1回、受信箱から）。機能はそのまま -->
+      <details style="margin-top:4px;">
+        <summary style="cursor:pointer;font-size:11px;color:rgba(255,255,255,0.55);padding:6px 2px;user-select:none;">手で直す（予備）</summary>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
       <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:4px 2px 2px;letter-spacing:0.5px;">新規登録</div>
       <button id="sbNewPersonBtn" class="sb-btn" style="background:rgba(255,255,255,0.15);font-size:12px;padding:7px 8px;" onclick="window.__hitomemoNewPerson?.()">＋ 新しい人物を記録</button>
       <button id="sbImportMemoBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;" onclick="window.__hitomemoImportMemo?.()">📋 メモからインポート</button>
@@ -1027,6 +1040,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
       <div style="font-size:10px;color:rgba(255,255,255,0.4);padding:6px 2px 2px;letter-spacing:0.5px;">AI更新</div>
       <button id="sbAiUpdateBtn" class="sb-btn" style="font-size:12px;padding:7px 8px;background:rgba(139,92,246,0.25);border:1px solid rgba(139,92,246,0.4);" onclick="window.__hitomemoAiUpdate?.()">🤖 AI更新読込</button>
+        </div>
+      </details>
 
     </div>
   </div>
@@ -1052,7 +1067,6 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="rb-content">
     <div class="rb-h">🧭 判断基準</div>
     <div style="margin-bottom:8px;">肩書・結果でなく、<b>器・変化・成長速度・価値観</b>で観る。美化せず共創余地（噛む／噛まない）を見立てる。</div>
-    <div class="rb-k">階層</div><div class="rb-v">価値観の一致＋器の大きさ</div>
     <div class="rb-k">ステージ</div><div class="rb-v">いま任せられる役割の段階</div>
     <div class="rb-k">関わり方</div><div class="rb-v">相手の立場（若手／同世代／年上・専門家）</div>
 
@@ -1072,12 +1086,17 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="rb-v">はしごはパートナー路線の人のみ。専門家・友人等は「つながり」＋関わり方タイプで表す（例: 福山さん）</div>
     <div class="rb-k" style="margin-top:8px;">昇格の目安（つながり→信頼を深める段階）</div>
     <div class="rb-v">役割を超えて人として関わりたくなった瞬間（誘いたい／弱みを話せた／対立しても壊れない 等）。自動昇格はしない</div>
-    <div class="rb-k" style="margin-top:8px;">棚卸し</div>
-    <div class="rb-v">信頼を深める段階で30日停滞／🤝稼働中で30日接触なしをアラート（自動降格はしない）</div>
-    <div class="rb-k" style="margin-top:8px;">★Top10（別軸）</div>
-    <div class="rb-v">SUの「注意配分」対象。深さとは別物（SUで設定し反映）</div>
+    <div class="rb-k" style="margin-top:8px;">★ TOP10（別軸）</div>
+    <div class="rb-v">この3か月、自分から時間を使うと決めた10人。関係の深さとは別。ソーシャルユニバースで決める（ヒトメモは読むだけ）</div>
     <div class="rb-k" style="margin-top:8px;">関わり方タイプ（関係の質）</div>
     <div class="rb-v">育成（若手）／共同成長（同世代）／相互学習（年上・専門家）／維持（確定パートナー・専門家）</div>
+
+    <div class="rb-h" style="margin-top:16px;">🔢 数字の読み方</div>
+    <div class="rb-v">つながり n／50：つながり以上（家族を除く）の人の数</div>
+    <div class="rb-v">経営パートナー n／10：関係の深さがいちばん上の人の数</div>
+    <div class="rb-v">TOP10：注ぎ先の10人（深さとは別）</div>
+    <div class="rb-h" style="margin-top:16px;">🔄 更新のしかた</div>
+    <div class="rb-v">接点は『つながり』以上の人だけ。週1回、日曜の週次で確かめた分が受信箱から入る</div>
   </div>
 </aside>
 </div><!-- /.layout -->
@@ -1438,17 +1457,18 @@ function suReadLink(profiles, norm) {
   const ids = new Set((profiles || []).map(p => p && p.id));
   const byName = {};
   (profiles || []).forEach(p => { const k = norm((p && p.name && p.name.value) || (p && p.name) || ''); if (k) (byName[k] = byName[k] || []).push(p); });
-  const top10 = new Set(), next = {};
+  const top10 = new Set(), next = {}, list = [];   /* list：SU の TOP10 を SU の並びで [{id（当たらなければ null）, suName, action}] */
   su.forEach(s => {
     if (!s) return;
     let id = (s.hitoId && ids.has(s.hitoId)) ? s.hitoId : null;
     if (!id) { const c = byName[norm(s.name || '')] || []; if (c.length === 1) id = c[0].id; }
+    const na = String(s.nextAction || '').trim();
+    if (s.isTop10) list.push({ id, suName: String(s.name || ''), action: na });
     if (!id) return;
     if (s.isTop10) top10.add(id);
-    const na = String(s.nextAction || '').trim();
     if (na) next[id] = na;
   });
-  return { top10, next };
+  return { top10, next, list };
 }
 
 const App = () => {
@@ -1872,17 +1892,20 @@ const App = () => {
     const unclassified = partnerProfiles.filter(p => !(stageOf(p) in STAGE_RANK));   // 旧値・想定外stage＝未分類（消さず表示）
     const activeOnes = partnerProfiles.filter(p => p.isActive);   // 🤝 稼働中
 
-    // 棚卸しアラート（凡例）：信頼を深める段階で30日以上接点なし ／ 🤝稼働中で30日以上接触なし
-    const staleDeepening = deepening.filter(p => daysDiff(p.lastContactDate || p.updatedAt) >= 30);
-    const staleActive = activeOnes.filter(p => daysDiff(p.lastContactDate || p.updatedAt) >= 30);
+    // 30日の知らせ（信頼を深める段階の停滞・🤝稼働中の接触なし）は 2026-11-13 に外した（接点の記録が週1回の受信箱だけになり、催促になるため）
 
     // 変化ありの人（直近30日以内にchangeLog追加）＝つながり以上
     const changeWatch = [...partners, ...deepening, ...connections];
     const recentChanged = changeWatch.filter(p =>
       (p.changeLog||[]).some(l => daysDiff(l.date) <= 30)
     );
-    // 次の経験あり（つながり以上）
-    const hasNextExp = changeWatch.filter(p => p.nextExperience && p.nextExperience.trim());
+    // 一番上の3つの数字（家族を除く）：つながり以上の人／経営パートナー／今月新しく会った人（createdAt が今月）
+    const connectedUp = partners.length + deepening.length + connections.length;
+    const ym = today.slice(0, 7);
+    const newThisMonth = partnerProfiles.filter(p => String(p.createdAt || '').slice(0, 7) === ym).length;
+    // 日付の出し方：M/D（今年でなければ YYYY/M/D）
+    const fmtMD = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return ''; return (m[1] === today.slice(0, 4) ? '' : m[1] + '/') + (+m[2]) + '/' + (+m[3]); };
+    const pName = p => (p.name && p.name.value) || p.name || '名前未設定';
 
     // 同名重複の検出（正規化名で2件以上）
     const dupMap = {};
@@ -1926,9 +1949,6 @@ const App = () => {
             ✦ {(p.changeLog[p.changeLog.length-1].type)}：{(p.changeLog[p.changeLog.length-1].text).slice(0,35)}{(p.changeLog[p.changeLog.length-1].text).length>35?'…':''}
           </div>
         )}
-        {!compact && p.nextExperience && (
-          <div style={{fontSize:11,color:'#10b981',marginTop:4,padding:'4px 8px',background:'#f0fdf4',borderRadius:6}}>▶ {p.nextExperience.slice(0,35)}</div>
-        )}
         <div style={{display:'flex',justifyContent:'flex-end',marginTop:8}}>
           <button onClick={()=>{ setCurrent(p); setView('detail'); }} style={{fontSize:11,padding:'3px 12px',background:'#eef2ff',border:'1px solid #c7d2fe',borderRadius:6,color:'#4338ca',cursor:'pointer',fontWeight:600,fontFamily:'inherit'}}>✎ 編集</button>
         </div>
@@ -1939,17 +1959,35 @@ const App = () => {
     return (
       <div className="app">
         {catFilter !== 'family' && (<>
-        {/* パートナー形成ゴール */}
+        {/* 一番上の3つの数字（つながり n／50・経営パートナー n／10・今月新しく会った人）。家族を除く */}
         <div className="partner-goal">
-          <div style={{display:'flex',alignItems:'flex-end',gap:8,marginBottom:6}}>
-            <span className="partner-goal-count">{partners.length}</span>
-            <span style={{fontSize:14,color:'rgba(255,255,255,0.8)',marginBottom:4}}>/ 10人</span>
-            <span className="partner-goal-label" style={{marginBottom:4}}>経営パートナー</span>
+          <div className="goal3">
+            <div className="goal3-item">
+              <div style={{display:'flex',alignItems:'flex-end',gap:6,marginBottom:6,flexWrap:'wrap'}}>
+                <span className="partner-goal-count">{connectedUp}</span>
+                <span style={{fontSize:14,color:'rgba(255,255,255,0.8)',marginBottom:4}}>/ 50人</span>
+                <span className="partner-goal-label" style={{marginBottom:4}}>つながり</span>
+              </div>
+              <div className="partner-goal-bar"><div className="partner-goal-fill" style={{width:`${Math.min(100,connectedUp*2)}%`}}></div></div>
+              <div className="goal3-sub">2027年12月までに50人</div>
+            </div>
+            <div className="goal3-item">
+              <div style={{display:'flex',alignItems:'flex-end',gap:6,marginBottom:6,flexWrap:'wrap'}}>
+                <span className="partner-goal-count">{partners.length}</span>
+                <span style={{fontSize:14,color:'rgba(255,255,255,0.8)',marginBottom:4}}>/ 10人</span>
+                <span className="partner-goal-label" style={{marginBottom:4}}>経営パートナー</span>
+              </div>
+              <div className="partner-goal-bar"><div className="partner-goal-fill" style={{width:`${Math.min(100,partners.length*10)}%`}}></div></div>
+              <div className="goal3-sub">2030年までに10人</div>
+            </div>
+            <div className="goal3-item">
+              <div style={{display:'flex',alignItems:'flex-end',gap:6,marginBottom:6,flexWrap:'wrap'}}>
+                <span className="partner-goal-count">{newThisMonth}</span>
+                <span style={{fontSize:14,color:'rgba(255,255,255,0.8)',marginBottom:4}}>人</span>
+                <span className="partner-goal-label" style={{marginBottom:4}}>今月新しく会った人</span>
+              </div>
+            </div>
           </div>
-          <div className="partner-goal-bar">
-            <div className="partner-goal-fill" style={{width:`${Math.min(100,partners.length*10)}%`}}></div>
-          </div>
-          <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:6}}>2030年までに10人形成</div>
         </div>
 
         {/* 関係ステージの階段（つながり → 信頼を深める段階 → 経営パートナー。パートナー路線のはしご）*/}
@@ -1961,7 +1999,7 @@ const App = () => {
           <div className="funnel-seg funnel-done"><div className="funnel-n">{partners.length}</div><div className="funnel-l">経営パートナー</div></div>
         </div>
         {activeOnes.length > 0 && (
-          <div className="funnel-note">🤝 稼働中 {activeOnes.length}人{staleActive.length > 0 ? ` ／ うち30日以上接触なし ${staleActive.length}人（フラグ見直し）` : ''}{staleDeepening.length > 0 ? ` ・ 信頼を深める段階で30日停滞 ${staleDeepening.length}人` : ''}</div>
+          <div className="funnel-note">🤝 稼働中 {activeOnes.length}人</div>
         )}
         </>)}
 
@@ -1979,7 +2017,7 @@ const App = () => {
             {Object.keys(SORT_LABELS).map(k => <option key={k} value={k}>{SORT_LABELS[k]}</option>)}
           </select>
           <div style={{display:'flex',gap:4}}>
-            {[['all','すべて'],['partner','パートナー形成'],['family','家族']].map(([v,l]) => (
+            {[['all','すべて'],['top10','★ TOP10'],['partner','パートナー形成'],['family','家族']].map(([v,l]) => (
               <button key={v} onClick={() => changeCatFilter(v)}
                 style={{fontSize:12,padding:'6px 12px',borderRadius:999,border:'1px solid '+(catFilter===v?'#a5b4fc':'#e2e8f0'),background:catFilter===v?'#eef2ff':'#fff',color:catFilter===v?'#4338ca':'#64748b',cursor:'pointer',fontFamily:'inherit',fontWeight:catFilter===v?700:400}}>{l}</button>
             ))}
@@ -1997,7 +2035,7 @@ const App = () => {
                 {g.map(p => (
                   <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'3px 0',cursor:'pointer'}}
                     onClick={() => { setCurrent(p); setView('detail'); }}>
-                    <span style={{fontSize:12,color:'#374151'}}>{stageOf(p)}・{(p.changeLog||[]).length}ログ・接触{daysDiff(p.lastContactDate||p.updatedAt)}日前</span>
+                    <span style={{fontSize:12,color:'#374151'}}>{stageOf(p)}・{(p.changeLog||[]).length}ログ{p.lastContactDate ? '・最後に会った日 ' + fmtMD(p.lastContactDate) : ''}</span>
                     <span style={{fontSize:11,color:'#9ca3af'}}>開く ›</span>
                   </div>
                 ))}
@@ -2006,31 +2044,21 @@ const App = () => {
           </div>
         )}
 
-        {/* 棚卸しアラート：信頼を深める段階で30日以上停滞（凡例・自動降格はしない） */}
-        {staleDeepening.length > 0 && (
-          <div className="alert-card">
-            <div className="alert-label">⚠ 信頼を深める段階で30日以上接点なし</div>
-            {staleDeepening.map(p => (
-              <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #fed7aa',cursor:'pointer'}}
-                onClick={() => { setCurrent(p); setView('detail'); }}>
-                <span style={{fontSize:14,fontWeight:600}}>{(p.name&&p.name.value)||p.name}</span>
-                <span style={{fontSize:11,color:'#c2410c'}}>{daysDiff(p.lastContactDate||p.updatedAt)}日前</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 次に経験を渡す人 */}
-        {hasNextExp.length > 0 && (
+        {/* ★ TOP10・この3か月の一手（ソーシャルユニバースを読むだけ。正本は SU。件数は出さない）。
+            ヒトメモの nextExperience はホームに出さない（データは残す・詳細画面の欄は今のまま） */}
+        {suLink.list.length > 0 && (
           <div className="next-exp-card">
-            <div className="next-exp-label">▶ 次の経験を渡す</div>
-            {hasNextExp.slice(0,3).map(p => (
-              <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #bbf7d0',cursor:'pointer'}}
-                onClick={() => { setCurrent(p); setView('detail'); }}>
-                <span style={{fontSize:14,fontWeight:600}}>{(p.name&&p.name.value)||p.name}</span>
-                <span style={{fontSize:11,color:'#166534'}}>{p.nextExperience.slice(0,20)}</span>
-              </div>
-            ))}
+            <div className="next-exp-label">★ TOP10・この3か月の一手</div>
+            {suLink.list.map((t, i) => {
+              const hp = t.id ? profiles.find(x => x.id === t.id) : null;
+              return (
+                <div key={(t.id || 'su') + i} style={{display:'flex',gap:10,alignItems:'baseline',padding:'6px 0',borderBottom:'1px solid #bbf7d0',cursor:hp?'pointer':'default'}}
+                  onClick={hp ? () => { setCurrent(hp); setView('detail'); } : undefined}>
+                  <span style={{fontSize:14,fontWeight:600,flexShrink:0}}>{hp ? pName(hp) : t.suName}</span>
+                  {t.action && <span style={{fontSize:12,color:'#166534',lineHeight:1.6,overflowWrap:'anywhere'}}>{t.action}</span>}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -2038,17 +2066,31 @@ const App = () => {
         {(() => {
           const qf = p => !query || ((p.name&&p.name.value)||p.name||'').toLowerCase().includes(query.toLowerCase());
           const sortFn = SORT_FNS[sortMode] || SORT_FNS.stage;
-          const Section = ({sk, title, people, compact}) => {
+          const Section = ({sk, title, people, compact, rows}) => {
             if (!people.length) return null;
             const shown = people.filter(qf).slice().sort(sortFn);
             if (query && !shown.length) return null;          // 検索中：ヒットなしセクションは隠す
             const open = query ? true : secIsOpen(sk);        // 検索中：折りたたみを無視して開く
+            /* 「記録のみ」は1行の一覧（名前・出会った日）。上に「まだ決めていない人」（tier 未登録）、下にそのほか */
+            const recRows = list => list.map(p => (
+              <div key={p.id} className="rec-row" onClick={() => { setCurrent(p); setView('detail'); }}>
+                <span style={{fontWeight:600,color:'#1a1a2e'}}>{pName(p)}</span>
+                {fmtMD(p.createdAt) && <span className="rec-date">出会った日 {fmtMD(p.createdAt)}</span>}
+              </div>));
+            const undecided = rows ? shown.filter(p => p.tier === '未登録') : [];
             return (<>
               <div className="section-header" onClick={() => toggleSec(sk)} style={{cursor:'pointer',userSelect:'none'}} title="クリックで開閉">
                 <span className="section-title-new">{open ? '▾' : '▸'} {title}</span>
                 <span className="section-count">{people.length}人</span>
               </div>
-              {open && (
+              {open && rows && (
+                <div>
+                  {undecided.length > 0 && (<><div className="rec-sub">まだ決めていない人</div>{recRows(undecided)}</>)}
+                  {undecided.length > 0 && <div className="rec-sub" style={{marginTop:12}}>記録のみ</div>}
+                  {recRows(shown.filter(p => p.tier !== '未登録'))}
+                </div>
+              )}
+              {open && !rows && (
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:10}}>
                   {shown.map(p => ProfileCard({p, compact}))}
                 </div>
@@ -2056,13 +2098,17 @@ const App = () => {
             </>);
           };
           const recentSub = recentChanged.filter(p => stageOf(p) !== '経営パートナー' && stageOf(p) !== '信頼を深める段階');
+          /* ★ TOP10 で絞る：SU の TOP10 に当たる人だけ（家族も含む） */
+          if (catFilter === 'top10') {
+            return <Section sk="TOP10" title="★ TOP10" people={profiles.filter(p => suLink.top10.has(p.id))} />;
+          }
           return (<>
             {catFilter !== 'family' && (<>
               <Section sk="経営パートナー" title="🌟 経営パートナー" people={partners} />
               <Section sk="信頼を深める段階" title="🔥 信頼を深める段階" people={deepening} />
-              <Section sk="最近変化あり" title="✦ 最近変化あり（直近30日）" people={recentSub} />
+              <Section sk="最近変化あり" title="✦ 最近変化あり（直近1か月）" people={recentSub} />
               <Section sk="つながり" title="🔗 つながり" people={connections.filter(p => !recentSub.includes(p))} compact={true} />
-              <Section sk="記録のみ" title="🗂 記録のみ" people={recordOnly} compact={true} />
+              <Section sk="記録のみ" title="🗂 記録のみ" people={recordOnly} rows={true} />
               <Section sk="未分類" title="❓ 未分類（旧ステージ値）" people={unclassified} compact={true} />
             </>)}
             {catFilter !== 'partner' && <Section sk="家族" title="❤️ 家族" people={familyProfiles} compact={true} />}
