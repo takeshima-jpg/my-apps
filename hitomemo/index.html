@@ -1092,7 +1092,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="rb-v">育成（若手）／共同成長（同世代）／相互学習（年上・専門家）／維持（確定パートナー・専門家）</div>
 
     <div class="rb-h" style="margin-top:16px;">🔢 数字の読み方</div>
-    <div class="rb-v">つながり n／50：つながり以上（家族を除く）の人の数</div>
+    <div class="rb-v">つながり以上 n／50：つながり以上（家族を除く）の人の数</div>
     <div class="rb-v">経営パートナー n／10：関係の深さがいちばん上の人の数</div>
     <div class="rb-v">TOP10：注ぎ先の10人（深さとは別）</div>
     <div class="rb-h" style="margin-top:16px;">🔄 更新のしかた</div>
@@ -1966,7 +1966,7 @@ const App = () => {
               <div style={{display:'flex',alignItems:'flex-end',gap:6,marginBottom:6,flexWrap:'wrap'}}>
                 <span className="partner-goal-count">{connectedUp}</span>
                 <span style={{fontSize:14,color:'rgba(255,255,255,0.8)',marginBottom:4}}>/ 50人</span>
-                <span className="partner-goal-label" style={{marginBottom:4}}>つながり</span>
+                <span className="partner-goal-label" style={{marginBottom:4}}>つながり以上</span>
               </div>
               <div className="partner-goal-bar"><div className="partner-goal-fill" style={{width:`${Math.min(100,connectedUp*2)}%`}}></div></div>
               <div className="goal3-sub">2027年12月までに50人</div>
