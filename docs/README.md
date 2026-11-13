@@ -54,6 +54,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-hitomemo-inbox-stages-spec.md](specs/claude-code-hitomemo-inbox-stages-spec.md) | 依頼書12：ヒトメモの受信箱に stages（関係ステージ・🤝稼働中を決める。未登録の人は階層を記録のみに）。名前が合わなかった接点・ステージを summary に出す | ✅実装済み（2026-11-12） |
 | [claude-code-su-redefine-hitomemo-link-spec.md](specs/claude-code-su-redefine-hitomemo-link-spec.md) | 依頼書13：ソーシャルユニバースを「これからの3か月の注ぎ先の地図」に（使わない欄を画面から外す・データは残す・「この3か月の一手」「TOP10」に言葉をそろえる）。名前・関わり方・会った回数はヒトメモを読む。「ヒトメモに反映」をなくし、ヒトメモの ★TOP10 と一手は SU を読んで出す | ✅実装済み（2026-11-12） |
 | [claude-code-hitomemo-home-review-spec.md](specs/claude-code-hitomemo-home-review-spec.md) | 依頼書14：ヒトメモのホームを見直す（30日の知らせを外す・緑の枠を SU の「★ TOP10・この3か月の一手」に・一番上をつながり n／50・経営パートナー n／10・今月新しく会った人に・入力の道具を「手で直す（予備）」に畳む・記録のみを1行の一覧に・★ TOP10 の絞り込み・右の欄の言葉） | ✅実装済み（2026-11-13） |
+| [claude-code-su-screen-review-spec.md](specs/claude-code-su-screen-review-spec.md) | 依頼書15：ソーシャルユニバースの画面を見直す（今日確認すべき人物・おすすめを外す・タグは「関わり方を表示」のときだけ・消耗0名を出さない・見直しの帯を黄土色に・右の欄に TOP10 の一手・全データを消去を詳細（復旧用）へ・「＋ ヒトメモから載せる」） | ✅実装済み（2026-11-13） |
 | [claude-code-koso-log-v2-spec.md](specs/claude-code-koso-log-v2-spec.md) | 構想ログ v2（記録・GOサイン・由来・関連・KOSO-IMPORT）。2026-10-26 に §4-2 の重複判定を「全件」へ訂正して保管 | ✅実装済み（保管のみ・本体は以前に配置） |
 | [claude-code-launcher-pwa-spec.md](specs/claude-code-launcher-pwa-spec.md) | コックピットのPWA化＋自作SVGアイコン（ホーム追加・standalone表示） | ✅実装済み 2026-07-12 `89f825e` |
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |

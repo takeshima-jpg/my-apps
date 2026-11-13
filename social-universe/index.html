@@ -44,8 +44,8 @@ body{font-family: 'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;backgrou
 header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-items:center;justify-content:space-between;height:50px;box-shadow:0 2px 12px rgba(0,0,0,.25);position:relative;z-index:200;}
 .h-title{font-size:17px;font-weight:700;letter-spacing:.04em;}
 .h-sub{font-size:9px;color:#94a3b8;margin-top:1px;}
-.h-actions{display:flex;align-items:center;gap:6px;}
-.hbtn{display:inline-flex;align-items:center;gap:4px;padding:6px 11px;border-radius:7px;font-size:14px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap;}
+.h-actions{display:flex;align-items:center;gap:5px;min-width:0;}   /* 幅が足りないときは見直しの帯（qrChip）が縮んで「…」になる（題名とボタンは縮めない・2026-11-13） */
+.hbtn{flex-shrink:0;display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:7px;font-size:14px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap;}
 .hbtn-add   {background:white;color:var(--navy);}
 .hbtn-add:hover{background:#e2e8f0;}
 .hbtn-ghost {background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.2);}
@@ -202,7 +202,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 .qap-today-card{background:var(--s50);border:1px solid var(--s200);border-radius:8px;padding:8px 10px;margin-bottom:5px;cursor:pointer;text-align:left;}
 .qap-today-card:hover{border-color:var(--t10-b);background:var(--t10-l);}
 .qap-today-nm{font-size:14px;font-weight:600;color:var(--s800);}
-.qap-today-why{font-size:10px;color:var(--s500);margin-top:2px;}
+.qap-today-act{font-size:12px;color:var(--s600);margin-top:2px;line-height:1.6;overflow-wrap:anywhere;}   /* ★TOP10 の一手（切らずに折り返す） */
 
 .qap-card{border-bottom:3px solid transparent;}
 .qap-card.e-grow{border-color:var(--grow);}
@@ -227,11 +227,6 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 .qap-chk{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--s700);cursor:pointer;}
 .qap-chk input{width:13px;height:13px;cursor:pointer;}
 .qap-drain-warn{background:#fef2f2;border:1px solid #fca5a5;border-radius:7px;padding:8px 10px;font-size:13px;color:#7f1d1d;display:flex;align-items:center;gap:6px;}
-.qap-rec{background:#fefce8;border:1px solid #fde68a;border-radius:7px;padding:9px 10px;}
-.qap-rec-ttl{font-size:10px;font-weight:700;color:#92400e;margin-bottom:2px;}
-.qap-rec-txt{font-size:13px;color:#78350f;line-height:1.6;}
-.qap-rec-btn{margin-top:5px;font-size:13px;color:var(--mg-ac);cursor:pointer;font-weight:600;background:none;border:none;font-family:inherit;padding:0;}
-.qap-rec-btn:hover{text-decoration:underline;}
 .qap-ftr{padding:10px 14px;border-top:1px solid var(--s100);display:flex;flex-direction:column;gap:6px;}
 .qap-ftr-row{display:flex;gap:5px;}
 .qbtn{border-radius:7px;padding:6px 9px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--s200);}
@@ -388,19 +383,19 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
 
 <!-- ═══ HEADER ═══════════════════════════════════════════════ -->
 <header>
-  <div>
+  <div style="flex-shrink:20;min-width:205px;">
     <div style="display:flex;align-items:center;gap:8px;"><img src="icons/icon-32.png" style="width:28px;height:28px;border-radius:7px;flex-shrink:0;"><span style="font-size:15px;font-weight:700;">ソーシャル・ユニバース</span></div>
     <div id="visionPillSu" style="font-size:10px;color:var(--s400);margin-top:3px;line-height:1.4;max-width:300px;"></div>
   </div>
   <div class="h-actions">
     <button class="hbtn hbtn-ghost" onclick="openDormant()">◇ 余白リスト</button>
     <button class="hbtn hbtn-ghost" onclick="doPrint()">⊟ A3印刷</button>
-    <span id="qrChip" onclick="qrChipClick()" style="display:none;align-self:center;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;white-space:nowrap;"></span>
+    <span id="qrChip" onclick="qrChipClick()" style="display:none;align-self:center;font-size:11px;padding:4px 10px;border-radius:10px;cursor:pointer;white-space:normal;line-height:1.3;max-height:3.5em;max-width:260px;min-width:0;flex-shrink:1;overflow:hidden;"></span>
     <button class="hbtn" style="background:#0e7490;border-color:#0e7490;color:#fff;" onclick="openQuarterReview()" title="四半期に一度のマップ見直し。気づきを記録してスナップショットと一緒に保存します">◔ 四半期見直し</button>
     <button class="hbtn hbtn-ghost" onclick="openTop10Actions()" title="★TOP10の「この3か月の一手」を1ページでまとめて記入（いつでも開けます）">✎ TOP10一括</button>
     <button class="hbtn hbtn-ghost" onclick="doSnapshot()" title="A3印刷プレビューをHTMLファイルで保存">◈ スナップショット</button>
     <button class="hbtn hbtn-ghost" onclick="openSnapshotHistory()" id="snapHistBtn" title="保存済みスナップショット一覧">≡ 履歴</button>
-    <button class="hbtn hbtn-add"   onclick="openModal(null)">＋ 人物を追加</button>
+    <button class="hbtn hbtn-add"   onclick="openHmAdd()" title="ヒトメモの「つながり」以上で、まだ地図に居ない人から選んで載せます">＋ ヒトメモから載せる</button>
   </div>
 </header>
 
@@ -452,6 +447,7 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
       <div class="lp-ttl">フィルター</div>
       <label class="filter-item"><input type="checkbox" id="fTop10"    onchange="renderMap()"> TOP10のみ</label>
       <label class="filter-item"><input type="checkbox" id="fDormant"  onchange="renderMap()"> 余白も表示</label>
+      <label class="filter-item"><input type="checkbox" id="fShowType" onchange="suSetShowType(this.checked)"> 関わり方を表示</label>
       <div class="lp-ttl" style="margin-top:7px">関わり方タイプ別</div>
       <select class="filter-sel" id="fType" onchange="renderMap()">
         <option value="">すべて</option>
@@ -464,7 +460,6 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
     </div><!-- /.lp-scroll -->
     <div class="lp-fixed">
       <button class="sort-btn" onclick="openBackup()">⬇ JSON保存</button>
-      <button class="sort-btn" style="background:#fef2f2;border-color:#fca5a5;color:#b91c1c;" onclick="resetAllSU()">🗑 全データを消去</button>
     </div><!-- /.lp-fixed -->
   </div><!-- /.left-panel -->
 
@@ -645,16 +640,38 @@ header{background:var(--navy);color:white;padding:9px 18px;display:flex;align-it
           <div class="bk-desc">JSONファイルを読み込みます。現在のデータは上書きされます。</div>
           <input type="file" id="importFile" accept=".json" style="display:none" onchange="doImport(event)">
           <button class="btn-s" onclick="document.getElementById('importFile').click()">ファイルを選択</button>
+          <!-- 名前を手で打って足す（ヒトメモに居ない人）。ふだんは「＋ ヒトメモから載せる」（2026-11-13） -->
+          <div class="bk-ttl" style="margin-top:12px;">✎ 名前を手で打って足す</div>
+          <div class="bk-desc">ヒトメモに居ない人を地図に足します。</div>
+          <button class="btn-s" onclick="closeBackup();openModal(null)">名前を手で打って足す（ヒトメモに居ない人）</button>
+          <!-- 全データを消去はふだん見えない所へ（2026-11-13）。動き（確認の出し方）は今までどおり -->
+          <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:12px;margin-top:12px;">
+            <div class="bk-ttl" style="color:#b91c1c;">🗑 全データを消去（重点者だけにする準備）</div>
+            <div class="bk-desc">SUの全員を削除して空にします。重点者だけをヒトメモから移行し直したいときに。バックアップは自動では取りません。必要なら先に上の「JSONエクスポート」で保存してください。</div>
+            <button class="btn-s" style="border-color:#fca5a5;color:#b91c1c;" onclick="resetAllSU()">全消去</button>
+          </div>
         </details>
       </div>
     </div>
-    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:14px;margin-bottom:14px;">
-      <div class="bk-ttl" style="color:#b91c1c;">🗑 全データを消去（重点者だけにする準備）</div>
-      <div class="bk-desc">SUの全員を削除して空にします。重点者だけをヒトメモから移行し直したいときに。バックアップは自動では取りません。必要なら先に上の「JSONエクスポート」で保存してください。</div>
-      <button class="btn-s" style="border-color:#fca5a5;color:#b91c1c;" onclick="resetAllSU()">全消去</button>
-    </div>
     <div style="font-size:13px;font-weight:600;color:var(--s500);margin-bottom:5px">現在のデータプレビュー</div>
     <div class="jp"><pre id="jsonPreview"></pre></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ ヒトメモから載せる（2026-11-13）：ヒトメモの「つながり」以上で、まだ地図に居ない人を選ぶ ═══ -->
+<div id="hmAddOverlay" style="display:none" class="mo" onclick="if(event.target===this)closeHmAdd()">
+<div class="md" onclick="event.stopPropagation()">
+  <div class="md-hd"><div class="md-ttl">＋ ヒトメモから載せる</div><button class="md-cls" onclick="closeHmAdd()">✕</button></div>
+  <div class="md-bd">
+    <div style="font-size:12px;color:var(--s400);margin-bottom:10px;">ヒトメモの「つながり」以上（家族も含む）で、まだ地図に居ない人です。選んで「載せる」を押すと地図に足します。</div>
+    <div id="hmAddList"></div>
+  </div>
+  <div class="md-ft">
+    <div style="display:flex;gap:7px;margin-left:auto">
+      <button class="btn-s" onclick="closeHmAdd()">キャンセル</button>
+      <button class="btn-p" id="hmAddOk" onclick="doHmAdd()">載せる</button>
+    </div>
   </div>
 </div>
 </div>
@@ -891,6 +908,11 @@ function migRelType(p){
   return p;
 }
 function shortRT(v){ return String(v||'').replace(/（[^）]*）/,''); }
+/* 円の下の関わり方タグ（2026-11-13）：最初は出さない。左の「関わり方を表示」を入れたときだけ。未設定は出さない。状態は localStorage に覚える。印刷も同じ */
+const SU_SHOW_TYPE_KEY='su_show_type_v1';
+function suShowType(){ try{ return localStorage.getItem(SU_SHOW_TYPE_KEY)==='1'; }catch(e){ return false; } }
+function suSetShowType(on){ try{ localStorage.setItem(SU_SHOW_TYPE_KEY, on?'1':'0'); }catch(e){} renderMap(); }
+function suTypeTagText(p){ if(!suShowType()) return ''; const t=shortRT(suType(p)); return (t&&t!=='未設定')?t:''; }
 // 円ラベル表示用：ふりがな等の（…）／(…) と、末尾の「／ふりがな（かなのみ）」を表示時だけ除去（データは変更しない）
 function nameDisp(v){
   return String(v||'')
@@ -941,34 +963,15 @@ function getMapPersons(){
   });
 }
 
-// ── RECOMMENDATION ──
-function getRec(p){
-  const pur=p.relationshipPurpose, e=p.energyState;
-  if(p.isDraining||e==='消耗') return '距離・接点・テーマを再設計する。まず「会う理由」を問い直す。';
-  if(pur==='事業・成果'&&e==='増える') return '深める。挑戦テーマを共有し、接点頻度を増やす。';
-  if(pur==='事業・成果'&&e==='普通')  return '役割期待を明確にする。';
-  if(pur==='視野・学び'&&e==='増える') return '軽い実験や共創テーマを設定する。';
-  if(pur==='視野・学び'&&e==='普通')  return '接点頻度と学びのテーマを見直す。';
-  if(pur==='視野・学び'&&e==='消耗')  return '距離を置くか、関わり方を限定する。';
-  if(pur==='安心・人生'&&e==='増える') return '利害なしで定期的に会う時間を取る。';
-  if(pur==='安心・人生'&&e==='普通')  return '無理に深めず、自然な接点を維持する。';
-  if(pur==='安心・人生'&&e==='消耗')  return '親しさと距離感を分け、境界線を引く。';
-  if(p.isTop10&&!p.nextAction) return 'TOP10なのに「この3か月の一手」が未入力。3か月で何をするか必ず1つ決める。';
-  return '現状を維持しながら観察しましょう。';
-}
-
-function getTodaySuggestions(){
-  const drain=persons.filter(p=>!p.isDormant&&(p.isDraining||p.energyState==='消耗')).slice(0,1).map(p=>({p,why:'⚠ 消耗・距離設計が必要'}));
-  const noAct=persons.filter(p=>!p.isDormant&&p.isTop10&&!p.nextAction).slice(0,1).map(p=>({p,why:'⭐ TOP10なのに「この3か月の一手」が未入力'}));
-  const lowF =persons.filter(p=>!p.isDormant&&p.relationshipPurpose==='事業・成果'&&suFreq(p)==='半年に1回以下'&&!drain.find(d=>d.p.id===p.id)).slice(0,1).map(p=>({p,why:'🔵 事業レイヤーだが接点が少ない'}));
-  return [...drain,...noAct,...lowF].slice(0,3);
-}
+/* 型どおりの「おすすめ」（目的×エネルギー）と「📌 今日確認すべき人物」は 2026-11-13 に外した。
+   会った回数をヒトメモの記録から数えるようになり、記録が薄い人がみな当たって催促になるため */
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  FREE MAP RENDER                                         ║
 // ╚══════════════════════════════════════════════════════════╝
 function renderMap(){
-  suHmRefresh();   /* ヒトメモの今の値を読み直す（写しを持たない） */
+  suHmRefresh();
+  { const c=document.getElementById('fShowType'); if(c) c.checked=suShowType(); }   /* ヒトメモの今の値を読み直す（写しを持たない） */
   const filtered=getMapPersons();
 
   // Ensure x,y always present (ensureXY applied at load, but guard here too)
@@ -1043,12 +1046,14 @@ function createCircleEl(p, showDormant){
     const w=document.createElement('div'); w.className='pc-warn-badge'; w.textContent='⚠'; el.appendChild(w);
   }
   // 価値の流れのバッジは 2026-11-12 に画面から外した（データは残す）
-  // Type tag（ヒトメモの関わり方タイプ）
-  const tag=document.createElement('div'); tag.className='pc-type-tag'; tag.textContent=shortRT(rt); el.appendChild(tag);
+  // Type tag（ヒトメモの関わり方タイプ）。「関わり方を表示」を入れたときだけ・未設定は出さない
+  const tt=suTypeTagText(p);
+  if(tt){ const tag=document.createElement('div'); tag.className='pc-type-tag'; tag.textContent=tt; el.appendChild(tag); }
 
   // Events
   el.addEventListener('click', e=>{ e.stopPropagation(); selectPerson(p.id); });
-  // dblclick: 詳細編集モーダル廃止（右サイドバーに統一）
+  // dblclick：詳細編集（右の欄の案内「ダブルクリックで詳細編集」に合わせる・2026-11-13）
+  el.addEventListener('dblclick', e=>{ e.stopPropagation(); openModal(p.id); });
   el.addEventListener('dragstart', e=>onCircleDragStart(e, p.id));
   el.addEventListener('dragend',   e=>onCircleDragEnd(e));
 
@@ -1068,7 +1073,7 @@ function updateStats(filtered){
   const t10C=all.filter(p=>p.isTop10).length;
   const drnC=all.filter(p=>p.isDraining||p.energyState==='消耗').length;
   const el=document.getElementById('mapStats');
-  if(el) el.textContent=`マップ ${all.length}名 ／ TOP10: ${t10C}名 ／ 消耗: ${drnC}名 ／ 余白: ${dormC}名`;
+  if(el) el.textContent=`マップ ${all.length}名 ／ TOP10: ${t10C}名${drnC?` ／ 消耗: ${drnC}名`:''} ／ 余白: ${dormC}名`;   /* 消耗は1人以上のときだけ */
 }
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -1168,19 +1173,15 @@ function renderQAP(){
   if(!panel) return;
 
   if(!selectedId){
-    const sugg=getTodaySuggestions();
-    let sHTML='';
-    sugg.forEach(({p,why})=>{
-      sHTML+=`<div class="qap-today-card" onclick="selectPerson('${p.id}')">
-        <div class="qap-today-nm">${esc(suName(p))}</div>
-        <div class="qap-today-why">${why}</div>
-      </div>`;
-    });
-    panel.innerHTML=`<div class="qap-empty">
-      <div class="qap-empty-ico">👆</div>
-      <div class="qap-empty-ttl">人物をクリックしてください</div>
-      <div class="qap-empty-sub">円をクリックすると即アクション編集<br><span style="font-size:10px;color:var(--s300)">ダブルクリックで詳細編集</span></div>
-      ${sugg.length?`<div class="qap-today-ttl" style="margin-top:14px">📌 今日確認すべき人物</div>${sHTML}`:''}
+    /* 誰も選んでいないとき：★ TOP10・この3か月の一手（目的の列の順・同じ列はデータの順。件数は出さない。一手が空なら名前だけ） */
+    const t10=PURPOSES.flatMap(pur=>persons.filter(p=>p.isTop10&&p.relationshipPurpose===pur));
+    const rows=t10.map(p=>`<div class="qap-today-card" onclick="selectPerson('${p.id}')">
+        <div class="qap-today-nm">★ ${esc(suName(p))}</div>
+        ${String(p.nextAction||'').trim()?`<div class="qap-today-act">${esc(p.nextAction)}</div>`:''}
+      </div>`).join('');
+    panel.innerHTML=`<div class="qap-empty" style="text-align:left">
+      ${t10.length?`<div class="qap-today-ttl">★ TOP10・この3か月の一手</div>${rows}`:''}
+      <div class="qap-empty-sub" style="margin-top:12px;text-align:center">円を押すと、この3か月の一手を書けます<br><span style="font-size:10px;color:var(--s300)">ダブルクリックで詳細編集</span></div>
     </div>`;
     return;
   }
@@ -1189,9 +1190,6 @@ function renderQAP(){
   if(!p){ selectedId=null; renderQAP(); return; }
 
   const ecls=energyCls(p.energyState);
-  const isDrain=p.isDraining||p.energyState==='消耗';
-  const urgentNA=p.isTop10&&!p.nextAction;
-  const recTxt=getRec(p);
 
   const purOpts=PURPOSES.map(v=>`<option${p.relationshipPurpose===v?' selected':''}>${v}</option>`).join('');
   const eOpts=['増える','普通','消耗'].map(v=>`<option${p.energyState===v?' selected':''}>${v}</option>`).join('');
@@ -1204,7 +1202,7 @@ function renderQAP(){
   panel.innerHTML=`<div class="qap-card e-${ecls}">
     <div class="qap-hdr">
       <button class="qap-close" onclick="selectedId=null;renderMap()">✕</button>
-      <div class="qap-name">${isDrain?'⚠ ':''}${esc(suName(p))}<span id="qapSaved" class="qap-saved">✓ 保存</span></div>
+      <div class="qap-name">${esc(suName(p))}<span id="qapSaved" class="qap-saved">✓ 保存</span></div>
       <div class="qap-badges">
         <span class="bd bd-${ecls}">${p.energyState}</span>
         <span class="bd bd-${PUR_CLS[p.relationshipPurpose]||'biz'}">${p.relationshipPurpose}</span>
@@ -1216,7 +1214,6 @@ function renderQAP(){
       <div class="qap-meta">関わり方：${esc(shortRT(suType(p)))}${inHm?'（ヒトメモ）':''}</div>
     </div>
     <div class="qap-body">
-      ${isDrain?`<div class="qap-drain-warn"><span>⚠</span>消耗フラグあり。距離・接点・テーマを再設計してください。</div>`:''}
       <div class="qap-g2">
         <div><span class="qap-fl">関係の目的</span>
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','relationshipPurpose',this.value)">${purOpts}</select></div>
@@ -1227,8 +1224,8 @@ function renderQAP(){
         ${isFam?`<div><span class="qap-fl">頻度（家族）</span>
           <select class="qap-sel" onchange="qapUpAndRedraw('${p.id}','frequency',this.value)">${fOpts}</select></div>`:''}
       </div>
-      <div><span class="qap-fl">この3か月の一手${urgentNA?' <span style="color:#dc2626;font-size:9px">⚠ 未入力（TOP10は必ず1つ）</span>':''}</span>
-        <textarea class="qap-inp${urgentNA?' urgent':''}" rows="3" id="qap-na" placeholder="1人1つ・3か月で終わるもの" onblur="qapUp('${p.id}','nextAction',this.value)">${esc(p.nextAction||'')}</textarea></div>
+      <div><span class="qap-fl">この3か月の一手</span>
+        <textarea class="qap-inp" rows="3" id="qap-na" placeholder="1人1つ・3か月で終わるもの" onblur="qapUp('${p.id}','nextAction',this.value)">${esc(p.nextAction||'')}</textarea></div>
     </div>
     <div class="qap-ftr">
       <div class="qap-ftr-row">
@@ -1238,7 +1235,7 @@ function renderQAP(){
       </div>
       <div class="qap-ftr-row">
         <button class="qbtn qbtn-dorm" onclick="toggleDormant('${p.id}')">${p.isDormant?'📌 マップへ戻す':'🌿 余白へ移動'}</button>
-        <button class="qbtn qbtn-del"  onclick="qapDelete('${p.id}')">🗑 削除</button>
+        <button class="qbtn qbtn-edit" onclick="openModal('${p.id}')">✏ 詳細編集</button>
       </div>
     </div>
   </div>`;
@@ -1393,6 +1390,48 @@ function openBackup(){
   document.getElementById('backupOverlay').style.display='flex';
 }
 function closeBackup(){ document.getElementById('backupOverlay').style.display='none'; }
+
+/* ＋ ヒトメモから載せる（2026-11-13）：ヒトメモの「つながり」以上（関係ステージ つながり・信頼を深める段階・経営パートナー。家族も含む）で、
+   まだ SU に居ない人（hitoId、無ければ今の名前の合わせ方）を選んで足す。初期値はヒトメモの「SUへ移行」と同じ（hitoId 必須）。
+   SU からヒトメモへは書かない */
+const SU_HM_UP=['つながり','信頼を深める段階','経営パートナー'];
+function suHmAddCandidates(){
+  let hm=null; try{ const a=JSON.parse(localStorage.getItem('hitomemo_profiles_v1')||'null'); if(Array.isArray(a)) hm=a; }catch(e){}
+  if(!hm) return null;
+  suHmRefresh();
+  const onMap=new Set(persons.map(p=>{ const h=suHm(p); return h&&h.id; }).filter(Boolean));
+  return hm.filter(h=>h&&h.id&&SU_HM_UP.includes(h.stage)&&!onMap.has(h.id));
+}
+function openHmAdd(){
+  const c=suHmAddCandidates(), box=document.getElementById('hmAddList'), ok=document.getElementById('hmAddOk');
+  if(c===null){ box.innerHTML='<div style="font-size:13px;color:var(--s500)">ヒトメモのデータが見つかりません</div>'; ok.style.display='none'; }
+  else if(!c.length){ box.innerHTML='<div style="font-size:13px;color:var(--s500)">ヒトメモの「つながり」以上の人は、みな地図に載っています</div>'; ok.style.display='none'; }
+  else {
+    ok.style.display='';
+    box.innerHTML=c.map(h=>'<label style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:14px;">'
+      +'<input type="checkbox" data-hm-add="'+esc(h.id)+'" style="width:15px;height:15px;">'
+      +'<span style="flex:1;min-width:0;">'+esc((h.name&&h.name.value)||h.name||'')+'</span>'
+      +'<span style="font-size:11px;color:var(--s400);white-space:nowrap;">'+esc(h.stage)+(h.personType==='family'?'・家族':'')+'</span></label>').join('');
+  }
+  document.getElementById('hmAddOverlay').style.display='flex';
+}
+function closeHmAdd(){ document.getElementById('hmAddOverlay').style.display='none'; }
+function doHmAdd(){
+  const ids=[...document.querySelectorAll('[data-hm-add]')].filter(x=>x.checked).map(x=>x.getAttribute('data-hm-add'));
+  if(!ids.length){ closeHmAdd(); return; }
+  const c=suHmAddCandidates()||[]; const now=new Date().toISOString(); let n=0;
+  ids.forEach(id=>{ const h=c.find(x=>x.id===id); if(!h) return;
+    persons.push({
+      id:'hm_'+h.id+'_'+Math.random().toString(36).slice(2,7), hitoId:h.id, name:(h.name&&h.name.value)||h.name||'',
+      relationshipPurpose:'事業・成果', energyState:'普通',
+      relationshipType:(h.engagementType&&h.engagementType!=='未設定')?h.engagementType:'未設定',
+      frequency:'月1〜年数回', impact:'中', valueFlow:'', isTop10:false, isDraining:false, isDormant:false,
+      currentState:'', desiredState:'', gap:'', nextAction:'', actionType:'維持', actionDueDate:'', memo:'',
+      tier:h.tier||'', stage:h.stage||'', x:30+Math.random()*40, y:30+Math.random()*40, createdAt:now, updatedAt:now });
+    n++; });
+  sv(SK,persons); closeHmAdd(); renderMap();
+  showToast('＋ '+n+'人を地図に載せました（目的「事業・成果」に置いています。円を動かして配置してください）');
+}
 
 function resetAllSU(){
   if(!confirm('SUの全'+persons.length+'人を削除して空にします。\n（バックアップは自動では取りません。必要なら先に「JSONエクスポート」で保存してください）\n\n実行してよいですか？（重点者はヒトメモから移行し直せます）')) return;
@@ -1573,7 +1612,7 @@ function buildPrint(){
         ${esc(nameDisp(suName(p)))}
         ${p.isTop10?`<div class="pp-star">★</div>`:''}
         ${p.isDraining?`<div class="pp-warn-p">!</div>`:''}
-        <div class="pp-type-tag">${esc(shortRT(suType(p)))}</div>
+        ${suTypeTagText(p)?`<div class="pp-type-tag">${esc(suTypeTagText(p))}</div>`:''}
       </div>`;
     });
     mapH+=`</div></div>`;
@@ -1868,16 +1907,16 @@ function saveTop10Actions(){
   showToast('✎ TOP10の一手を'+n+'件更新しました。'+(ld('su_pending_review')?'◈スナップショット（紙出し）で締めてください':''));
 }
 function qrChipClick(){ if(ld('su_pending_review')) openTop10Actions(); else openQuarterReview(); }
-function updateQrChip(){
+function updateQrChip(){   /* 帯は幅に上限（はみ出す分は「…」）。全文は title で見える（2026-11-13） */
   const el=document.getElementById('qrChip'); if(!el) return;
   const pend=ld('su_pending_review');
-  if(pend){ el.style.display='inline-block'; el.style.background='#fef9c3'; el.style.color='#a16207'; el.textContent='◔ '+pend.quarter+' 記録済み — 調整→✎一手の一括入力（クリック）→◈紙出し'; return; }
+  if(pend){ el.style.display='inline-block'; el.style.background='#fef9c3'; el.style.color='#a16207'; el.title=el.textContent='◔ '+pend.quarter+' 記録済み — 調整→✎一手の一括入力（クリック）→◈紙出し'; return; }
   const last=lastReviewSnap();
-  if(!last){ el.style.display='inline-block'; el.style.background='#f1f5f9'; el.style.color='#64748b'; el.textContent='見直し記録なし'; return; }
+  if(!last){ el.style.display='inline-block'; el.style.background='#f1f5f9'; el.style.color='#64748b'; el.title=el.textContent='見直し記録なし'; return; }
   const days=Math.floor((Date.now()-new Date(last.review.reviewedAt||last.savedAt).getTime())/86400000);
   el.style.display='inline-block';
-  if(days>=92){ el.style.background='#fee2e2'; el.style.color='#b91c1c'; el.textContent='⚠ 前回見直しから'+days+'日 — 四半期見直しの時期です'; }
-  else { el.style.background='#ecfeff'; el.style.color='#0e7490'; el.textContent='前回見直し：'+(last.review.quarter||last.label)+'（'+days+'日前）'; }
+  if(days>=92){ el.style.background='#fbf0dc'; el.style.color='#8a5300'; el.title=el.textContent='前回見直しから'+days+'日（四半期の見直しの時期）'; }   /* 赤・⚠は使わない（赤は締切だけ） */
+  else { el.style.background='#ecfeff'; el.style.color='#0e7490'; el.title=el.textContent='前回見直し：'+(last.review.quarter||last.label)+'（'+days+'日前）'; }
 }
 // ── TOAST ──
 let _toastTimer=null;
