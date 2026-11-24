@@ -98,6 +98,12 @@ body{font-family:'Meiryo', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
   text-transform: uppercase;
 }
 .vision-body { font-size: 13px; color: var(--text2); line-height: 1.6; }
+/* Drive のログイン切れの1行（依頼書18）：黄土色（SU の見直しの帯と同じ）・赤/オレンジ/⚠/アニメーションなし */
+.gd-login-wrap{padding:14px 26px 0;flex-shrink:0;}
+.gd-login-bar{display:block;width:100%;min-height:42px;padding:10px 16px;box-sizing:border-box;
+  background:#fbf0dc;color:#8a5300;border:1px solid #f0e0c0;border-radius:8px;
+  font-family:inherit;font-size:13px;text-align:left;cursor:pointer;}
+.gd-login-bar:hover{border-color:#e2c999;}
 .vision-keyword { font-weight: 700; color: var(--text1); margin-right: 6px; }
 .tb-title{font-size:15px;font-weight:600;color:var(--text2);letter-spacing:.02em;}
 .tb-right{display:flex;align-items:center;gap:8px;}
@@ -459,6 +465,8 @@ select.fi{cursor:pointer;}
       </div>
     </div>
     <div class="vision-area" id="visionArea"></div>
+    <!-- Drive のログインが切れているときだけ出す1行（2026-11-24・依頼書18）。出し入れは gdUpdateBtn()。renderHome() の外に置く -->
+    <div class="gd-login-wrap" id="gdLoginWrap" style="display:none"><button type="button" class="gd-login-bar" onclick="gdConnect()">☁️ Drive につながっていません（押すとつなぎ直します）</button></div>
     <div class="scroll" id="home-content"></div>
   </div>
 
@@ -858,7 +866,7 @@ function collectAllOSData() {
 }
 
 // 全OSのデータを復元
-const BUILD_VER = '2026-11-10';
+const BUILD_VER = '2026-11-24';
 function markSync(kind){
   try{ localStorage.setItem('taskos_last_sync', JSON.stringify({at:Date.now(), kind:kind||''})); }catch(e){}
   updateSyncFooter();
@@ -2997,10 +3005,14 @@ function gdConnect(){
 }
 function gdClear(){ gdToken = null; localStorage.removeItem(GD_TOKEN_KEY); gdUpdateBtn(); }
 function gdToggle(){ if(gdToken) gdAutoSync(true); else gdConnect(); }
-function gdUpdateBtn(){ const b=document.getElementById('gdriveBtn'); if(b) b.textContent = gdToken ? '☁️ GDrive同期' : '☁️ GDrive接続'; }
+function gdUpdateBtn(){
+  const b=document.getElementById('gdriveBtn'); if(b) b.textContent = gdToken ? '☁️ GDrive同期' : '☁️ GDrive接続';
+  /* ホームの一番上の「Drive につながっていません」の1行：トークンが無いときだけ出す（依頼書18） */
+  const w=document.getElementById('gdLoginWrap'); if(w) w.style.display = gdToken ? 'none' : '';
+}
 function gdSetStatus(s){
   const b=document.getElementById('gdriveBtn'); if(!b) return;
-  const m={ syncing:'☁️ 同期中…', ok:'☁️ GDrive同期', err:'☁️ 同期エラー(再試行)' };
+  const m={ syncing:'☁️ 同期中…', ok: gdToken ? '☁️ GDrive同期' : '☁️ GDrive接続', err:'☁️ 同期エラー(再試行)' };   // ok はトークンが無ければ「接続」（依頼書18）
   b.textContent = m[s] || (gdToken ? '☁️ GDrive同期' : '☁️ GDrive接続');
 }
 
@@ -3331,7 +3343,7 @@ async function gdAutoSync(manual){
     bodyOk = true;
   } catch(e){
     if(e.code===401){
-      gdClear(); gdSetStatus('ok');
+      gdClear();   // ボタンは「☁️ GDrive接続」・ホームに1行（gdUpdateBtn）。gdSetStatus('ok') は呼ばない（依頼書18）
       if(manual){ alert('GDriveの認証が切れました。再接続してください。'); gdConnect(); }
       return;
     }
