@@ -1031,7 +1031,8 @@ function applyAixTasks(parsed){
       const existingDrafts = JSON.parse(localStorage.getItem('aix_drafts') || '[]');
       const draftMap = {};
       const keyOf = d => d && (d.targetDate || d.date);
-      for (const d of existingDrafts) { const k = keyOf(d); if (k && !loggedDates.has(k)) draftMap[k] = d; } // 登録済みの既存ドラフトも除去
+      // 登録済みの既存ドラフトも除去。ただし「足す下書き」（append:true＝保存済みの日に受信箱から届いた足す1行・1day の inboxApply が付ける）は残す（2026-11-24）
+      for (const d of existingDrafts) { const k = keyOf(d); if (k && (!loggedDates.has(k) || (d && d.append === true))) draftMap[k] = d; }
       for (const d of parsed.aix_drafts) {
         const k = keyOf(d);
         if (!k || loggedDates.has(k)) continue;   // 登録済み日付はスキップ

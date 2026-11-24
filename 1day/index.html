@@ -1974,7 +1974,7 @@ function _aixLoadDrafts() {
   try {
     const logs = (typeof state !== 'undefined' && state && Array.isArray(state.logs)) ? state.logs : JSON.parse(localStorage.getItem(DB_KEY) || '[]');
     const logged = new Set((logs||[]).filter(l => l && !l.archived && l.date).map(l => l.date));
-    result = result.filter(d => { const k = d && (d.targetDate || d.date); return !k || !logged.has(k) || !!(d && d.inboxId); });
+    result = result.filter(d => { const k = d && (d.targetDate || d.date); return !k || !logged.has(k) || !!(d && (d.inboxId || d.append === true)); });
   } catch(e) {}
   return result;
 }
@@ -2045,7 +2045,26 @@ function renderAixDraftList() {
   /* ＋記録する（手動フォーム）と同一構成に統一：タグ無し・フラグは違和感/深掘りの2種のみ */
   const flags = { unease:'△ 違和感', deep:'◎ 深掘り' };
 
-  list.innerHTML = drafts.map((d, i) => `
+  /* 足す下書き（append:true）で、その日に archived でないログがあるものは小さい形（2026-11-24・依頼書16）。
+     ボタンは並びの番号ではなく日付で下書きを引く。ログが無くなっていたら今までどおりの大きい形 */
+  const savedDates = new Set((state.logs || []).filter(l => l && !l.archived && l.date).map(l => l.date));
+  const appendCard = d => {
+    const td = d.targetDate || d.date || '';
+    return `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:16px;width:100%;max-width:760px;box-sizing:border-box;">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">${td}<span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:10px;">保存済みの日に足す</span></div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">足す内容</div>
+        <textarea id="aix-app-${td}" oninput="this.style.height='auto';this.style.height=Math.max(70,this.scrollHeight)+'px'" style="width:100%;min-height:70px;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || ''}</textarea>
+      </div>
+      <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);">
+        <button onclick="aixAppendByDate('${td}')" style="background:var(--accent);color:#1a2a00;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">足す</button>
+        <button onclick="aixSkipAppendByDate('${td}')" style="background:transparent;color:var(--text3);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;">スキップ</button>
+      </div>
+    </div>`;
+  };
+
+  list.innerHTML = drafts.map((d, i) => (d && d.append === true && savedDates.has(d.targetDate || d.date)) ? appendCard(d) : `
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:16px;width:100%;max-width:760px;box-sizing:border-box;">
       <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">${d.targetDate || d.date || ''}</div>
       <div style="margin-bottom:14px;">
@@ -2144,6 +2163,36 @@ function aixApproveByIdx(i) {
 function aixDismissByIdx(i) {
   const drafts = _aixLoadDrafts();
   drafts.splice(i, 1); _aixSaveDrafts(drafts);
+  renderAixDraftList(); updateAixBadge();
+}
+
+/* 足す下書き（append:true）の「足す」「スキップ」。日付で下書きを引く（2026-11-24・依頼書16）。
+   足すのは「できごと」の末尾だけ。満足度・ゆみさんの負荷・違和感・フラグ・タグは読まない・書かない */
+function _aixRawDrafts() {
+  try { const a = JSON.parse(localStorage.getItem('aix_drafts') || 'null'); if (Array.isArray(a)) return a; } catch(e) {}
+  return [];
+}
+function _aixRemoveAppendDraft(td) {
+  _aixSaveDrafts(_aixRawDrafts().filter(x => !(x && x.append === true && (x.targetDate || x.date) === td)));
+}
+function aixAppendByDate(td) {
+  const d = _aixRawDrafts().find(x => x && x.append === true && (x.targetDate || x.date) === td);
+  if (!d) { renderAixDraftList(); updateAixBadge(); return; }
+  const ta = document.getElementById('aix-app-' + td);
+  const add = ta ? ta.value.trim() : String(d.events || '').trim();
+  if (!add) { if (typeof toast === 'function') toast('足す内容を入力してください'); return; }
+  const log = state.logs.find(l => l && !l.archived && l.date === td);
+  if (!log) { renderAixDraftList(); return; }   /* ログが無くなっていたら大きい形で出し直す */
+  log.events = log.events ? log.events + '\n' + add : add;
+  if (d.links && Object.keys(d.links).length) log.links = { ...(log.links || {}), ...d.links };   /* 受信箱の下書き由来 */
+  log.updatedAt = new Date().toISOString();
+  saveData();
+  _aixRemoveAppendDraft(td);
+  renderAixDraftList(); updateAixBadge(); render();
+  if (typeof toast === 'function') toast(`✅ ${Number(td.slice(5,7))}/${Number(td.slice(8,10))} の記録に足しました`);
+}
+function aixSkipAppendByDate(td) {
+  _aixRemoveAppendDraft(td);
   renderAixDraftList(); updateAixBadge();
 }
 
@@ -2283,11 +2332,38 @@ async function inboxApply(block, links, item) {
   ['strategyGoalId','projectId','projectName','questionId'].forEach(k => { if (l[k]) lk[k] = String(l[k]); });
   ['personIds','personNames'].forEach(k => { if (Array.isArray(l[k]) && l[k].length) lk[k] = l[k].slice(); });
   if (Object.keys(lk).length) nd.links = lk;
+  const md = Number(td.slice(5,7)) + '/' + Number(td.slice(8,10));
+  /* 保存済みの日（archived でないログがある日）に届いたら「足す下書き」（append:true）にする（2026-11-24）。
+     その日のログの「できごと」と、今ある足す下書きにすでにある行は除く（行ごと・前後の空白を取ってぴったり同じなら同じ）。
+     同じ日の足す下書きがあれば置き換えずに重ねる。足すのは「できごと」だけ（unease・flags は持たせない）。
+     見えない iframe でも動くよう、ログは localStorage から読む */
+  let logs = [];
+  try { const a = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if (Array.isArray(a)) logs = a; } catch(e) {}
+  const log = logs.find(x => x && !x.archived && x.date === td);
+  if (log) {
+    const lines = s => String(s || '').split('\n').map(x => x.trim()).filter(Boolean);
+    const prev = drafts.find(x => x && (x.targetDate || x.date) === td && x.append === true);
+    const have = new Set([...lines(log.events), ...(prev ? lines(prev.events) : [])]);
+    const add = [];
+    lines(d.events).forEach(x => { if (!have.has(x)) { have.add(x); add.push(x); } });
+    if (!add.length) return { ok:true, summary: md + ' はもう入っています（足す行なし）' };
+    const ad = prev ? Object.assign({}, prev) : { targetDate: td, events: '', append: true };
+    ad.events = (String(ad.events || '').trim() ? String(ad.events).replace(/\s+$/, '') + '\n' : '') + add.join('\n');
+    if (Object.keys(lk).length) ad.links = Object.assign({}, ad.links || {}, lk);
+    ad.inboxId = (item && item.id) || ''; ad.generatedAt = new Date().toISOString(); ad.append = true;
+    delete ad.unease; delete ad.flags;
+    /* 同じ日の下書きは1件（Task OS は日付で1件に束ねるため）。重ねるときは前の足す下書きの位置のまま */
+    if (prev) drafts = drafts.map(x => x === prev ? ad : x).filter(x => x === ad || !(x && (x.targetDate || x.date) === td));
+    else { drafts = drafts.filter(x => !(x && (x.targetDate || x.date) === td)); drafts.push(ad); }
+    _aixSaveDrafts(drafts);
+    try { updateAixBadge(); if (document.getElementById('aix-view') && document.getElementById('aix-view').style.display === 'block') renderAixDraftList(); } catch(e) {}
+    return { ok:true, summary: md + ' に足す1行を追加（承認待ち）' };
+  }
   drafts = drafts.filter(x => !(x && (x.targetDate || x.date) === td));
   drafts.push(nd);
   _aixSaveDrafts(drafts);
   try { updateAixBadge(); if (document.getElementById('aix-view') && document.getElementById('aix-view').style.display === 'block') renderAixDraftList(); } catch(e) {}
-  return { ok:true, summary: Number(td.slice(5,7)) + '/' + Number(td.slice(8,10)) + ' の下書きを追加（承認待ち）' };
+  return { ok:true, summary: md + ' の下書きを追加（承認待ち）' };
 }
 /* ログの紐づけ：PJ名・人。旧 S-ID は 2026-11-03 に表示をやめた（links.strategyGoalId は残す） */
 function odLinkHtml(l) {
