@@ -394,6 +394,10 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .yl-btn.selected[data-yl="yes"], .yl-btn.selected[id$="-yes"] { border-color: var(--sat-great); background: rgba(62,207,142,0.1); color: var(--sat-great); }
 .yl-btn.selected[data-yl="no"],  .yl-btn.selected[id$="-no"]  { border-color: var(--sat-meh);   background: rgba(245,200,66,0.1); color: #b8900f; }
 .yl-note { margin-top: 8px; }
+/* 「🤲 今日、誰かに信頼・愛情を与えた」（2026-11-24・依頼書19）：ボタンは「与えた」1つ。ゆみさんの「はい」と同じ見た目。.yl-btn にしない（ゆみさんの欄のクリック処理に拾われないように） */
+.gv-btn { flex: 1; padding: 11px 0; background: var(--bg3); border: 2px solid var(--border); border-radius: var(--radius); font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; color: var(--text2); font-family: var(--font-body); min-height: 44px; }
+.gv-btn:hover { border-color: var(--border2); }
+.gv-btn.selected { border-color: var(--sat-great); background: rgba(62,207,142,0.1); color: var(--sat-great); }
 .yl-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; }
 .yl-card-alert { border-color: var(--sat-bad); background: rgba(255,92,92,0.04); }
 .yl-head { font-size: .78rem; color: var(--text3); font-weight: 600; margin-bottom: 8px; }
@@ -461,6 +465,13 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
         <button type="button" class="yl-btn" data-yl="no">いいえ</button>
       </div>
       <input type="text" id="yumiLoadNote" class="yl-note" placeholder="引き取ったこと（任意・1行）" style="display:none">
+    </div>
+    <div class="field">
+      <div class="field-label">🤲 今日、誰かに信頼・愛情を与えた</div>
+      <div class="yl-row">
+        <button type="button" class="gv-btn" id="gaveBtn" onclick="gvApply(!selectedGave)">与えた</button>
+      </div>
+      <input type="text" id="gaveNote" class="yl-note" placeholder="誰に・何を（任意・1行）" style="display:none">
     </div>
     <div class="field">
       <div class="field-label">△ 違和感 <span class="optional">任意</span></div>
@@ -1089,6 +1100,13 @@ function aixToggleYumi(i, v) {
   ['yes','no'].forEach(k => { const b = document.getElementById('aix-yl-' + i + '-' + k); if (b) b.classList.toggle('selected', k === nv); });
   const n = document.getElementById('aix-yln-' + i); if (n) n.style.display = nv === 'yes' ? 'block' : 'none';
 }
+/* AIX 承認フォームの「与えた」（依頼書19）：押すと選ぶ・もう一度押すと外す */
+function aixToggleGave(i) {
+  const nv = !window['_aixGave_' + i];
+  window['_aixGave_' + i] = nv;
+  const b = document.getElementById('aix-gv-' + i); if (b) b.classList.toggle('selected', nv);
+  const n = document.getElementById('aix-gvn-' + i); if (n) n.style.display = nv ? 'block' : 'none';
+}
 
 // ── 行動記録サマリ（センターピン直下）：直近7日の「はい」日数と、平日「いいえ」の連続 ──
 function yumiDayMap() {
@@ -1403,6 +1421,9 @@ function buildCard(log) {
   const yumiHtml = log.yumiLoad === 'yes'
     ? `<div class="log-yumi yes">🏠 引き取った${log.yumiLoadNote ? '：' + escHtml(log.yumiLoadNote) : ''}</div>`
     : (log.yumiLoad === 'no' ? `<div class="log-yumi no">🏠 引き取れず</div>` : '');
+  /* 「与えた」日だけ1行（依頼書19）。無い日は何も出さない */
+  const gaveHtml = log.gave === true
+    ? `<div class="log-yumi yes log-gave">🤲 与えた${log.gaveNote ? '：' + escHtml(log.gaveNote) : ''}</div>` : '';
   const checkHtml  = state.view === 'log'
     ? `<div class="card-check">${state.selected.has(log.id) ? '✓' : ''}</div>`
     : '';
@@ -1430,6 +1451,7 @@ function buildCard(log) {
     <div class="log-events truncated">${escHtml(log.events||'')}</div>
     ${uneaseHtml}
     ${yumiHtml}
+    ${gaveHtml}
     ${odLinkHtml(log.links)}
     ${(tagsHtml||flagsHtml) ? `<div class="log-footer">${tagsHtml}${flagsHtml}</div>` : ''}
   `;
@@ -1490,6 +1512,12 @@ function ylApply(v) {
   document.querySelectorAll('#entryModal .yl-btn').forEach(b => b.classList.toggle('selected', b.dataset.yl === v));
   const note = document.getElementById('yumiLoadNote');
   if (note) note.style.display = v === 'yes' ? 'block' : 'none';
+}
+let selectedGave = false;   // 「与えた」（依頼書19）。選んでいないときは gave・gaveNote の項目を持たない
+function gvApply(v) {
+  selectedGave = !!v;
+  const b = document.getElementById('gaveBtn'); if (b) b.classList.toggle('selected', selectedGave);
+  const note = document.getElementById('gaveNote'); if (note) note.style.display = selectedGave ? 'block' : 'none';
 }
 
 function buildDateButtons(editDate = null) {
@@ -1655,6 +1683,7 @@ function openEntryModal(editId = null) {
   state.editId = editId;
   selectedSat = ''; selectedTags = new Set(); selectedFlags = new Set();
   document.getElementById('yumiLoadNote').value = ''; ylApply('');
+  document.getElementById('gaveNote').value = ''; gvApply(false);
   document.getElementById('modalTitle').textContent = editId ? '記録を編集' : '今週を記録';
   document.getElementById('eventsInput').value = '';
   document.getElementById('eventsInput').dataset.kjTouched = '';
@@ -1677,6 +1706,8 @@ function openEntryModal(editId = null) {
       document.getElementById('unease').value = log.unease || '';
       ylApply(log.yumiLoad === 'yes' || log.yumiLoad === 'no' ? log.yumiLoad : '');
       document.getElementById('yumiLoadNote').value = log.yumiLoadNote || '';
+      gvApply(log.gave === true);
+      document.getElementById('gaveNote').value = log.gave === true ? (log.gaveNote || '') : '';
       selectedSat = log.satisfaction || '';
       selectedTags = new Set(log.tags || []);
       selectedFlags = new Set(log.flags || []);
@@ -1712,9 +1743,13 @@ function saveEntry() {
   // 既存データ互換：learning フラグがあれば学びタグを付与、flagsから除去しない（表示のみ除外済み）
 
   const ylNote = selectedYumi === 'yes' ? document.getElementById('yumiLoadNote').value.trim() : '';
+  const gvNote = selectedGave ? document.getElementById('gaveNote').value.trim() : '';
   const applyYumi = o => {   /* 回答があれば書く／未回答なら項目を持たない（旧ログと同じ＝未記録） */
     delete o.yumiLoad; delete o.yumiLoadNote;
     if (selectedYumi === 'yes' || selectedYumi === 'no') { o.yumiLoad = selectedYumi; if (ylNote) o.yumiLoadNote = ylNote; }
+    /* 与えた（依頼書19）：選んでいれば gave:true と（あれば）gaveNote。選んでいなければ両方の項目を消す */
+    delete o.gave; delete o.gaveNote;
+    if (selectedGave) { o.gave = true; if (gvNote) o.gaveNote = gvNote; }
     return o;
   };
   if (state.editId) {
@@ -2087,6 +2122,13 @@ function renderAixDraftList() {
         <input type="text" id="aix-yln-${i}" class="yl-note" placeholder="引き取ったこと（任意・1行）" style="display:none;font-size:13px;padding:8px 12px;">
       </div>
       <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">🤲 今日、誰かに信頼・愛情を与えた</div>
+        <div class="yl-row">
+          <button type="button" class="gv-btn" id="aix-gv-${i}" onclick="aixToggleGave(${i})">与えた</button>
+        </div>
+        <input type="text" id="aix-gvn-${i}" class="yl-note" placeholder="誰に・何を（任意・1行）" style="display:none;font-size:13px;padding:8px 12px;">
+      </div>
+      <div style="margin-bottom:14px;">
         <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">△ 違和感 <span style="font-size:10px;">任意</span></div>
         <input type="text" id="aix-unease-${i}" placeholder="なんかモヤっとしたこと、一言で" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);font-family:var(--font-body);font-size:13px;">
       </div>
@@ -2106,6 +2148,8 @@ function renderAixDraftList() {
   drafts.forEach((d, i) => {
     window['_aixSat_'+i] = '';
     window['_aixFlags_'+i] = [];
+    window['_aixYumi_'+i] = '';     /* 描き直しで画面は空に戻るので、選択も空に戻す（前のカードの「はい／いいえ」が残らないように・依頼書19） */
+    window['_aixGave_'+i] = false;
   });
 }
 
@@ -2138,6 +2182,8 @@ function aixApproveByIdx(i) {
   const flags = window['_aixFlags_' + i] || [];
   const yumi = window['_aixYumi_' + i] || '';
   const yumiNote = yumi === 'yes' ? ((document.getElementById('aix-yln-' + i) || {}).value || '').trim() : '';
+  const gave = window['_aixGave_' + i] === true;   /* 与えた（依頼書19）。選んでいないときは何も変えない */
+  const gaveNote = gave ? ((document.getElementById('aix-gvn-' + i) || {}).value || '').trim() : '';
   let log = state.logs.find(l => l.date === targetDate);
   if (log) {
     log.events = log.events ? log.events + '\n' + events : events;
@@ -2146,11 +2192,13 @@ function aixApproveByIdx(i) {
     if (tags.length) log.tags = [...new Set([...(log.tags||[]), ...tags])];
     if (flags.length) log.flags = [...new Set([...(log.flags||[]), ...flags])];
     if (yumi) { log.yumiLoad = yumi; if (yumiNote) log.yumiLoadNote = yumiNote; else if (yumi === 'no') delete log.yumiLoadNote; }
+    if (gave) { log.gave = true; if (gaveNote) log.gaveNote = gaveNote; }
     if (d.links && Object.keys(d.links).length) log.links = { ...(log.links || {}), ...d.links };   /* 受信箱の下書き由来 */
     log.updatedAt = new Date().toISOString();
   } else {
     const nl = { id: Date.now().toString(), date: targetDate, satisfaction, events, unease, tags, flags, archived: false, createdAt: new Date().toISOString() };
     if (yumi) { nl.yumiLoad = yumi; if (yumiNote) nl.yumiLoadNote = yumiNote; }
+    if (gave) { nl.gave = true; if (gaveNote) nl.gaveNote = gaveNote; }
     if (d.links && Object.keys(d.links).length) nl.links = { ...d.links };   /* 受信箱の下書き由来 */
     state.logs.push(nl);
   }

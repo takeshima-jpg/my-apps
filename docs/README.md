@@ -58,6 +58,7 @@ my-apps（竹嶋OS）の設計・手順・プロンプトの置き場。
 | [claude-code-1day-append-line-spec.md](specs/claude-code-1day-append-line-spec.md) | 依頼書16：1day の保存済みの日に、受信箱から「足す1行」を出す（足す下書き append:true・すでにある行は除いて同じ日に重ねる・Task OS の同期で消さない・承認フォームは「保存済みの日に足す」の小さい形で、できごとの末尾に足すだけ） | ✅実装済み（2026-11-24） |
 | [claude-code-taskos-weekly-bg-spec.md](specs/claude-code-taskos-weekly-bg-spec.md) | 依頼書17：Task OS の週次スナップショットを、同期の本体が通った後に裏で書く（待たない・走っている間の同期は 'busy' で書かない・失敗は次の同期で書き直す・401 は gdClear だけ・時間は同じ記録に weeklyBgMs） | ✅実装済み（2026-11-24） |
 | [claude-code-taskos-drive-login-line-spec.md](specs/claude-code-taskos-drive-login-line-spec.md) | 依頼書18：Task OS で Drive のログインが切れているとき（トークンが無いとき）だけ、ホームの一番上に黄土色の1行「☁️ Drive につながっていません（押すとつなぎ直します）」を出す（押すと gdConnect・出し入れは gdUpdateBtn・401 の後のボタンの字を「GDrive接続」に） | ✅実装済み（2026-11-24） |
+| [claude-code-1day-gave-field-spec.md](specs/claude-code-1day-gave-field-spec.md) | 依頼書19：1day に「🤲 今日、誰かに信頼・愛情を与えた」の欄（ボタン「与えた」1つ＋一言メモ・gave:true／gaveNote は与えた日だけ持つ・「いいえ」と集計は作らない・ログのカードに「🤲 与えた：…」）。AIX 承認フォームの描き直しで _aixYumi_i も空に戻す | ✅実装済み（2026-11-24） |
 | [claude-code-koso-log-v2-spec.md](specs/claude-code-koso-log-v2-spec.md) | 構想ログ v2（記録・GOサイン・由来・関連・KOSO-IMPORT）。2026-10-26 に §4-2 の重複判定を「全件」へ訂正して保管 | ✅実装済み（保管のみ・本体は以前に配置） |
 | [claude-code-launcher-pwa-spec.md](specs/claude-code-launcher-pwa-spec.md) | コックピットのPWA化＋自作SVGアイコン（ホーム追加・standalone表示） | ✅実装済み 2026-07-12 `89f825e` |
 | [claude-code-launcher-display-tweak-spec.md](specs/claude-code-launcher-display-tweak-spec.md) | ランチャーOS表示調整（名称統一・アイコンをTask OSと差別化・文字サイズ拡大） | ✅実装済み 2026-07-12 `9d14778` |
