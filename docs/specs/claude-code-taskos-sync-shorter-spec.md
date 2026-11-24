@@ -41,6 +41,9 @@ Task OS を開くたびに、次を順番に行っている：
 - 新しい localStorage キー `taskos_sync_timing_v1`：直近10回分の配列。1回分は
   `{ at: ISO時刻, manual: true|false, totalMs, steps: { dailyTasks, hitomemo, lectica, collect, uploadMorning, uploadWeekly（飛ばしたら "skip"）, inboxList, inboxDownload }, inboxFiles: 一覧の本数, inboxDownloaded: 読んだ本数 }`
 - 同期が途中で失敗しても、そこまでの段を記録する
+- （2026-11-24 追記・依頼書17）`uploadWeekly` が `"bg"`＝週次スナップショットを同期の後に裏で書いた回（`totalMs` に週次の時間は入らない）
+- （同）`uploadWeekly` が `"busy"`＝前の回の裏の書き込みがまだ走っていたので、この回では週次を書かなかった（「同期」ボタンの回でも）
+- （同）`weeklyBgMs`＝裏の週次の書き込み（書く＋古い週の掃除）にかかったミリ秒。終わった後に同じ記録（`at` が同じ）へ書き足す。失敗したら `"fail"`（`taskos_weekly_uploaded_ymd` は今日にならず、次の同期でまた書く）
 - バックアップ（`collectAllOSDataWithReflect()` の結果）の一番上に **`taskosSyncTiming`** としてこの配列を入れる（メンテナンス担当がバックアップで時間を確かめるため）。バックアップは同期の途中で作るので、入るのは**前回までの**記録でよい
 - 画面には出さない（件数・秒数の表示は作らない）
 

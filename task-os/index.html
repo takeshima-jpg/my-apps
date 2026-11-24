@@ -3251,6 +3251,7 @@ async function gdAutoSync(manual){
   const t0 = performance.now();
   let ts = performance.now();
   const lap = name => { const n=performance.now(); tm.steps[name]=Math.round(n-ts); ts=n; };
+  let bodyOk = false, weeklyJob = null;   // 週次スナップショットは本体が通った後に裏で（gdWeeklyBg）
   try {
     // C0: rejected 30日超の掃除（取り込み・スナップショット送出の前に済ませて集計ノイズを消す）
     pruneRejectedShots();
@@ -3300,16 +3301,16 @@ async function gdAutoSync(manual){
 
     // A2: 週次スナップショット（完全版。ISO週キー・同一週は上書き）。週差分レビュー＋完全復元用に直近8週を保持。
     //     自動の同期は1日1回だけ書く（taskos_weekly_uploaded_ymd が今日なら飛ばす）。「同期」ボタン（manual）は今日でも書く
+    //     2026-11-24（依頼書17）：書くのは同期の本体が最後まで通った後に裏で（gdWeeklyBg・待たない）。ここでは書くかどうかだけ決める。
+    //     裏の書き込みが走っている間に始まった同期では書かない（'busy'・「同期」ボタンでも）
     const todayYmd = inboxYmd(new Date());
-    if(!manual && localStorage.getItem(GD_WEEKLY_YMD_KEY) === todayYmd){
+    if(gdWeeklyBusy){
+      tm.steps.uploadWeekly = 'busy';
+    } else if(!manual && localStorage.getItem(GD_WEEKLY_YMD_KEY) === todayYmd){
       tm.steps.uploadWeekly = 'skip';
     } else {
-      try {
-        await gdUpload(GD_WEEKLY_PREFIX + isoWeekKey(new Date()) + '.json', JSON.stringify(fullSnap), GD_BACKUP_FOLDER_ID);
-        try{ localStorage.setItem(GD_WEEKLY_YMD_KEY, todayYmd); }catch(e){}
-        await gdPruneWeekly();
-      } catch(e){ if(e.code===401) throw e; console.warn('週次スナップショット保存スキップ', e); }
-      lap('uploadWeekly');
+      tm.steps.uploadWeekly = 'bg';
+      weeklyJob = { at: tm.at, ymd: todayYmd, week: isoWeekKey(new Date()), snap: fullSnap };
     }
     ts = performance.now();
 
@@ -3327,6 +3328,7 @@ async function gdAutoSync(manual){
     markSync('GDrive');
     if(importMsg && typeof toast==='function') toast('☁️ '+importMsg);
     else if(manual && typeof toast==='function') toast('☁️ GDrive同期完了');
+    bodyOk = true;
   } catch(e){
     if(e.code===401){
       gdClear(); gdSetStatus('ok');
@@ -3337,8 +3339,38 @@ async function gdAutoSync(manual){
     if(manual && typeof toast==='function') toast('⚠️ GDrive同期に失敗しました');
     console.warn('gdAutoSync error', e);
   } finally {
-    tm.totalMs = Math.round(performance.now() - t0);
+    tm.totalMs = Math.round(performance.now() - t0);   // 同期の本体だけの時間（裏の週次を含めない）
     gdTimingSave(tm);   // 途中で失敗・401 でもそこまでの段を残す
+  }
+  // 同期の本体が最後まで通ったときだけ、週次スナップショットを裏で書く（待たない・2026-11-24 依頼書17）
+  if(bodyOk && weeklyJob) gdWeeklyBg(weeklyJob);
+}
+
+/* 週次スナップショットを同期の後に裏で書く（2026-11-24・依頼書17）。
+   成功したら taskos_weekly_uploaded_ymd を同期の日付に → 古い週の掃除。時間は同じ同期の記録（at が同じ）に weeklyBgMs で書き足す。
+   失敗・タブを閉じたときは日付を入れない（次の同期でまた書く）。画面には出さない（console.warn だけ）。
+   401 は gdClear() だけ（gdSetStatus・アラートは出さない）。必ずここの catch で受ける */
+let gdWeeklyBusy = false;
+function gdTimingPatch(at, patch){
+  try{
+    const a = gdTimingList(); const r = a.find(x => x && x.at === at); if(!r) return;
+    Object.assign(r, patch); localStorage.setItem(GD_TIMING_KEY, JSON.stringify(a));
+  }catch(e){}
+}
+async function gdWeeklyBg(job){
+  gdWeeklyBusy = true;
+  const t = performance.now();
+  try {
+    await gdUpload(GD_WEEKLY_PREFIX + job.week + '.json', JSON.stringify(job.snap), GD_BACKUP_FOLDER_ID);
+    try{ localStorage.setItem(GD_WEEKLY_YMD_KEY, job.ymd); }catch(e){}
+    await gdPruneWeekly();
+    gdTimingPatch(job.at, { weeklyBgMs: Math.round(performance.now() - t) });
+  } catch(e){
+    gdTimingPatch(job.at, { weeklyBgMs: 'fail' });
+    if(e && e.code===401){ gdClear(); return; }
+    console.warn('週次スナップショット保存スキップ（裏）', e);
+  } finally {
+    gdWeeklyBusy = false;
   }
 }
 
