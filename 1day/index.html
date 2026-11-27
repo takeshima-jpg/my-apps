@@ -398,6 +398,29 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
 .gv-btn { flex: 1; padding: 11px 0; background: var(--bg3); border: 2px solid var(--border); border-radius: var(--radius); font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; color: var(--text2); font-family: var(--font-body); min-height: 44px; }
 .gv-btn:hover { border-color: var(--border2); }
 .gv-btn.selected { border-color: var(--sat-great); background: rgba(62,207,142,0.1); color: var(--sat-great); }
+/* AIX 承認フォーム（2026-11-27・依頼書20）：日付のタブで1日ずつ。大きい形は 左＝できごと／右＝選ぶ所と保存（900px 以上）。
+   ボタンを低くするのは承認フォームの中だけ（「＋記録する」の .yl-btn・.gv-btn は変えない） */
+.aix-tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+.aix-tab { background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 7px 12px; font-family: var(--font-body); font-size: 13px; color: var(--text3); cursor: pointer; }
+.aix-tab:hover { color: var(--text2); }
+.aix-tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.aix-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 22px; width: 100%; box-sizing: border-box; }
+.aix-big { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.aix-right { position: sticky; top: var(--aix-stick, 12px); }
+.aix-lbl { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+.aix-sec { margin-bottom: 10px; }
+.aix-ta { display: block; width: 100%; min-height: 140px; box-sizing: border-box; background: var(--bg3); border: 1px solid var(--border2); border-radius: 6px; padding: 10px 12px; color: var(--text); font-family: var(--font-body); font-size: 13px; line-height: 1.7; resize: vertical; overflow-y: hidden; }
+.aix-sat { flex: 1; height: 34px; min-height: 34px; padding: 0 4px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 15px; cursor: pointer; }
+.aix-card .yl-btn, .aix-card .gv-btn { min-height: 34px; height: 34px; padding: 0; font-size: 0.92rem; }
+.aix-card .yl-note { margin-top: 6px; }
+.aix-card .kj-btn, .aix-card .kj-chip { min-height: 34px; }
+.aix-date { font-size: 13px; font-weight: 600; color: var(--text); margin-right: 10px; }
+.aix-card input.aix-in { width: 100%; box-sizing: border-box; padding: 7px 12px; border: 1px solid var(--border2); border-radius: 6px; background: var(--bg3); color: var(--text); font-family: var(--font-body); font-size: 13px; }
+.aix-flag { min-height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 13px; cursor: pointer; }
+.aix-acts { display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+.aix-save { background: var(--accent); color: #1a2a00; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.aix-skip { background: transparent; color: var(--text3); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 16px; font-size: 13px; cursor: pointer; }
+@media (max-width: 899px) { .aix-big { display: block; } .aix-right { position: static; margin-top: 14px; } }
 .yl-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; }
 .yl-card-alert { border-color: var(--sat-bad); background: rgba(255,92,92,0.04); }
 .yl-head { font-size: .78rem; color: var(--text3); font-weight: 600; margin-bottom: 8px; }
@@ -588,8 +611,9 @@ textarea::placeholder, input::placeholder { color: var(--text3); font-size: 0.97
     <div class="reflect-area" id="reflectArea" style="display:none"></div>
 
     <!-- AIX未承認ドラフト一覧 -->
-    <div id="aix-view" style="width:100%;flex:1 1 auto;min-width:0;display:none; padding: 24px 32px; max-width: 680px; margin: 0 auto;">
-      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px;">AIX — 未承認ドラフト一覧</div>
+    <div id="aix-view" style="width:100%;flex:1 1 auto;min-width:0;display:none; padding: 16px 32px 10px; max-width: 1200px; margin: 0 auto; box-sizing: border-box;">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;">AIX — 未承認ドラフト一覧</div>
+      <div class="aix-tabs" id="aixTabs" style="display:none"></div>
       <div id="aixDraftList"></div>
       <div id="aixEmptyState" style="display:none;text-align:center;padding:60px 0;color:var(--text3);font-size:14px;">未承認のドラフトはありません</div>
     </div>
@@ -1093,19 +1117,24 @@ function render() {
 }
 
 // ── Project OS（pos_v4）から進行中PJのセンターピンを読み、ログ画面の先頭に表示 ──
-function aixToggleYumi(i, v) {
-  const cur = window['_aixYumi_' + i] || '';
-  const nv = cur === v ? '' : v;
-  window['_aixYumi_' + i] = nv;
-  ['yes','no'].forEach(k => { const b = document.getElementById('aix-yl-' + i + '-' + k); if (b) b.classList.toggle('selected', k === nv); });
-  const n = document.getElementById('aix-yln-' + i); if (n) n.style.display = nv === 'yes' ? 'block' : 'none';
+/* AIX 承認フォームで選んだ状態は日付（カードのキー）ごとに持つ（2026-11-27・依頼書20）。
+   カードを作ったときに空で作り、カードを消したら消す（並びの番号で持つと、タブの出し入れで別の日に移るため） */
+const _aixSel = {};
+function _aixS(key) { return _aixSel[key] || (_aixSel[key] = { sat: '', flags: [], yumi: '', gave: false }); }
+function aixToggleYumi(key, v) {
+  const s = _aixS(key);
+  const nv = s.yumi === v ? '' : v;
+  s.yumi = nv;
+  ['yes','no'].forEach(k => { const b = document.getElementById('aix-yl-' + key + '-' + k); if (b) b.classList.toggle('selected', k === nv); });
+  const n = document.getElementById('aix-yln-' + key); if (n) n.style.display = nv === 'yes' ? 'block' : 'none';
 }
 /* AIX 承認フォームの「与えた」（依頼書19）：押すと選ぶ・もう一度押すと外す */
-function aixToggleGave(i) {
-  const nv = !window['_aixGave_' + i];
-  window['_aixGave_' + i] = nv;
-  const b = document.getElementById('aix-gv-' + i); if (b) b.classList.toggle('selected', nv);
-  const n = document.getElementById('aix-gvn-' + i); if (n) n.style.display = nv ? 'block' : 'none';
+function aixToggleGave(key) {
+  const s = _aixS(key);
+  const nv = !s.gave;
+  s.gave = nv;
+  const b = document.getElementById('aix-gv-' + key); if (b) b.classList.toggle('selected', nv);
+  const n = document.getElementById('aix-gvn-' + key); if (n) n.style.display = nv ? 'block' : 'none';
 }
 
 // ── 行動記録サマリ（センターピン直下）：直近7日の「はい」日数と、平日「いいえ」の連続 ──
@@ -2034,7 +2063,8 @@ function updateAixBadge() {
 function showView(v) {
   const aixView = document.getElementById('aix-view');
   const logList = document.getElementById('logList');
-  const filterBar = document.querySelector('.filter-bar-wrap') || document.querySelector('.filter-chips');
+  /* 承認フォームでは隠す（前は '.filter-bar-wrap' で探していて見つからず、承認フォームにも出ていた・依頼書20） */
+  const filterBar = document.getElementById('filter-bar-wrap') || document.querySelector('.filter-bar-wrap') || document.querySelector('.filter-chips');
   const weekDisplay = document.getElementById('weekDisplay');
   const visionArea = document.getElementById('visionArea');
 
@@ -2055,6 +2085,8 @@ function showView(v) {
     if (v === 'log' && typeof renderReflectToday === 'function') renderReflectToday();
     else reflectArea.style.display = 'none';
   }
+  /* ゆみさんのカードは承認フォームでは出さない（renderYumiSummary 自身が承認フォームのときは隠す。切り替えで呼んでいなかった・依頼書20） */
+  if (typeof renderYumiSummary === 'function') renderYumiSummary();
 
   ['log','aix'].forEach(name => {
     const btn = document.getElementById('nav-' + name);
@@ -2063,127 +2095,232 @@ function showView(v) {
   if (v === 'aix') renderAixDraftList();
 }
 
-function renderAixDraftList() {
+/* AIX 未承認ドラフト一覧（2026-11-27・依頼書20）：日付のタブで1日ずつ出す。
+   ・カードはタブごとに作って出し入れする（書きかけは画面の中に残す。localStorage には書かない）
+   ・描き直しで、開いている日のカードと書きかけのあるカードは作り直さない。タブの並びだけ足し引きする
+   ・保存・スキップは日付（キー）で下書きを引く。開いている日が無くなったら、同じ位置の次の日（無ければ1つ前の日）を開く */
+let _aixOpen = null;     /* 開いている日のキー */
+let _aixOrder = [];      /* 前に描いたときのキーの並び */
+function _aixTxt(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+/* 下書きにキーを付ける：日付そのもの（同じ日が2件あれば _2 を付ける）。i は _aixLoadDrafts() の並びの番号 */
+function _aixKeyed(drafts) {
+  const seen = {};
+  return drafts.map((d, i) => {
+    const td = (d && (d.targetDate || d.date)) || '';
+    let k = String(td).replace(/[^0-9A-Za-z_-]/g, '') || 'nodate';
+    if (seen[k]) { seen[k]++; k = k + '_' + seen[k]; } else seen[k] = 1;
+    return { key: k, d, i, td };
+  });
+}
+function _aixFind(key) {
   const drafts = _aixLoadDrafts();
+  const e = _aixKeyed(drafts).find(x => x.key === key);
+  return e ? Object.assign({ drafts }, e) : null;
+}
+function _aixTabLabel(td, isAppend) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(td)) return td || '日付なし';
+  const md = Number(td.slice(5,7)) + '/' + Number(td.slice(8,10));
+  if (isAppend) return md + ' に足す';
+  return md + '（' + '日月火水木金土'[new Date(td + 'T00:00:00').getDay()] + '）';
+}
+/* できごとの欄を中身が全部見える高さに（最小 140px）。上限は窓の高さから、欄の上と、欄の下（感情の補助・カードと一覧の下の余白）を引いた高さ。
+   それを超える長い日だけ欄の中でスクロールする */
+function aixFitTa(ta) {
+  if (!ta || !ta.offsetParent) return;
+  const main = ta.closest('.main');
+  const top = ta.getBoundingClientRect().top + (main ? main.scrollTop : 0) + (window.scrollY || 0);
+  const kj = ta.nextElementSibling;
+  const card = ta.closest('.aix-card'), view = document.getElementById('aix-view');
+  const pb = el => el ? (parseFloat(getComputedStyle(el).paddingBottom) || 0) + (parseFloat(getComputedStyle(el).borderBottomWidth) || 0) : 0;
+  const below = (kj && kj.classList.contains('kj-bar') ? kj.offsetHeight + (parseFloat(getComputedStyle(kj).marginTop) || 0) : 0) + pb(card) + pb(view) + 2;
+  const max = Math.max(140, Math.floor(window.innerHeight - top - below));
+  ta.style.height = 'auto';
+  const need = ta.scrollHeight + 2;
+  const h = Math.min(Math.max(140, need), max);
+  ta.style.height = h + 'px';
+  ta.style.overflowY = need > h ? 'auto' : 'hidden';
+}
+function _aixBigCardHtml(e) {
+  const k = e.key, d = e.d || {};
+  const satLabels = { great:'◎', good:'〇', meh:'△', bad:'×' };
+  /* ＋記録する（手動フォーム）と同一構成に統一：タグ無し・フラグは違和感/深掘りの2種のみ */
+  const flags = { unease:'△ 違和感', deep:'◎ 深掘り' };
+  return `
+    <div class="aix-big">
+      <div class="aix-left">
+        <div class="aix-lbl"><span class="aix-date">${_aixTxt(e.td)}</span>できごと</div>
+        <textarea id="aix-events-${k}" class="aix-ta" oninput="aixFitTa(this)">${_aixTxt(d.events || d.text || d.content || '')}</textarea>
+        ${kjBarHtml('aix-events-' + k)}
+      </div>
+      <div class="aix-right">
+        <div class="aix-sec">
+          <div class="aix-lbl">今週は？</div>
+          <div style="display:flex;gap:8px;">
+            ${['great','good','meh','bad'].map(v => `<button type="button" class="aix-sat" onclick="aixToggleSat('${k}','${v}')" id="aix-sat-${k}-${v}">${satLabels[v]}</button>`).join('')}
+          </div>
+        </div>
+        <div class="aix-sec">
+          <div class="aix-lbl">🏠 今日、ゆみさんの負荷を一つ引き取ったか</div>
+          <div class="yl-row">
+            <button type="button" class="yl-btn" id="aix-yl-${k}-yes" onclick="aixToggleYumi('${k}','yes')">はい</button>
+            <button type="button" class="yl-btn" id="aix-yl-${k}-no" onclick="aixToggleYumi('${k}','no')">いいえ</button>
+          </div>
+          <input type="text" id="aix-yln-${k}" class="yl-note" placeholder="引き取ったこと（任意・1行）" style="display:none;font-size:13px;padding:7px 12px;">
+        </div>
+        <div class="aix-sec">
+          <div class="aix-lbl">🤲 今日、誰かに信頼・愛情を与えた</div>
+          <div class="yl-row">
+            <button type="button" class="gv-btn" id="aix-gv-${k}" onclick="aixToggleGave('${k}')">与えた</button>
+          </div>
+          <input type="text" id="aix-gvn-${k}" class="yl-note" placeholder="誰に・何を（任意・1行）" style="display:none;font-size:13px;padding:7px 12px;">
+        </div>
+        <div class="aix-sec">
+          <div class="aix-lbl">△ 違和感 <span style="font-size:10px;">任意</span></div>
+          <input type="text" id="aix-unease-${k}" class="aix-in" placeholder="なんかモヤっとしたこと、一言で" value="${_aixTxt(d.unease || '')}">
+        </div>
+        <div class="aix-sec" style="margin-bottom:12px;">
+          <div class="aix-lbl">フラグ <span style="font-size:10px;">任意</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${Object.entries(flags).map(([f,v]) => `<button type="button" class="aix-flag" onclick="aixToggleFlag('${k}','${f}')" id="aix-flag-${k}-${f}">${v}</button>`).join('')}
+          </div>
+        </div>
+        <div class="aix-acts">
+          <button type="button" class="aix-save" onclick="aixApproveByDate('${k}')">保存</button>
+          <button type="button" class="aix-skip" onclick="aixDismissByDate('${k}')">スキップ</button>
+        </div>
+      </div>
+    </div>`;
+}
+/* 足す下書き（append:true）で、その日に archived でないログがあるものは小さい形（2026-11-24・依頼書16）。中身は今のまま（1列） */
+function _aixAppendCardHtml(e) {
+  const k = e.key, td = e.td, d = e.d || {};
+  return `
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">${_aixTxt(td)}<span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:10px;">保存済みの日に足す</span></div>
+      <div style="margin-bottom:14px;">
+        <div class="aix-lbl">足す内容</div>
+        <textarea id="aix-app-${k}" oninput="this.style.height='auto';this.style.height=Math.max(70,this.scrollHeight)+'px'" style="width:100%;min-height:70px;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${_aixTxt(d.events || '')}</textarea>
+      </div>
+      <div class="aix-acts">
+        <button type="button" class="aix-save" onclick="aixAppendByDate('${_aixTxt(td)}','${k}')">足す</button>
+        <button type="button" class="aix-skip" onclick="aixSkipAppendByDate('${_aixTxt(td)}')">スキップ</button>
+      </div>`;
+}
+function _aixMakeCard(e, kind, sig) {
+  const c = document.createElement('div');
+  c.className = 'aix-card';
+  c.dataset.key = e.key; c.dataset.kind = kind; c.dataset.sig = sig; c.dataset.td = e.td;
+  c.innerHTML = kind === 'append' ? _aixAppendCardHtml(e) : _aixBigCardHtml(e);
+  /* 書きかけ：打った・押したら印を付ける（描き直しで作り直さないため） */
+  c.addEventListener('input', () => { c.dataset.dirty = '1'; });
+  c.addEventListener('click', ev => { if (ev.target.closest && ev.target.closest('button')) c.dataset.dirty = '1'; });
+  delete _aixSel[e.key];
+  return c;
+}
+function _aixDropCard(key) {
   const list = document.getElementById('aixDraftList');
+  const c = list && Array.from(list.children).find(x => x.dataset && x.dataset.key === key);
+  if (c) c.remove();
+  delete _aixSel[key];
+}
+function aixOpenTab(key) { _aixOpen = key; renderAixDraftList(); }
+
+function renderAixDraftList() {
+  const list = document.getElementById('aixDraftList');
+  const tabs = document.getElementById('aixTabs');
   const empty = document.getElementById('aixEmptyState');
   if (!list) return;
-  if (drafts.length === 0) {
+  const entries = _aixKeyed(_aixLoadDrafts());
+  if (entries.length === 0) {
     list.innerHTML = '';
+    if (tabs) { tabs.innerHTML = ''; tabs.style.display = 'none'; }
     if (empty) empty.style.display = 'block';
+    _aixOpen = null; _aixOrder = [];
+    Object.keys(_aixSel).forEach(k => delete _aixSel[k]);
     return;
   }
   if (empty) empty.style.display = 'none';
+  const keys = entries.map(e => e.key);
 
-  const satLabels = { great:'◎', good:'〇', meh:'△', bad:'×' };
-  const satVals = ['great','good','meh','bad'];
-  /* ＋記録する（手動フォーム）と同一構成に統一：タグ無し・フラグは違和感/深掘りの2種のみ */
-  const flags = { unease:'△ 違和感', deep:'◎ 深掘り' };
+  /* 開く日：今の日が残っていればそのまま。無くなっていれば前の並びで同じ位置の次の日、無ければ1つ前の日、それも無ければ一番左 */
+  let open = (_aixOpen && keys.includes(_aixOpen)) ? _aixOpen : null;
+  if (!open) {
+    const pos = _aixOrder.indexOf(_aixOpen);
+    if (pos >= 0) {
+      for (let j = pos + 1; j < _aixOrder.length && !open; j++) if (keys.includes(_aixOrder[j])) open = _aixOrder[j];
+      for (let j = pos - 1; j >= 0 && !open; j--) if (keys.includes(_aixOrder[j])) open = _aixOrder[j];
+    }
+    if (!open) open = keys[0];
+  }
 
-  /* 足す下書き（append:true）で、その日に archived でないログがあるものは小さい形（2026-11-24・依頼書16）。
-     ボタンは並びの番号ではなく日付で下書きを引く。ログが無くなっていたら今までどおりの大きい形 */
   const savedDates = new Set((state.logs || []).filter(l => l && !l.archived && l.date).map(l => l.date));
-  const appendCard = d => {
-    const td = d.targetDate || d.date || '';
-    return `
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:16px;width:100%;max-width:760px;box-sizing:border-box;">
-      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">${td}<span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:10px;">保存済みの日に足す</span></div>
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">足す内容</div>
-        <textarea id="aix-app-${td}" oninput="this.style.height='auto';this.style.height=Math.max(70,this.scrollHeight)+'px'" style="width:100%;min-height:70px;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || ''}</textarea>
-      </div>
-      <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);">
-        <button onclick="aixAppendByDate('${td}')" style="background:var(--accent);color:#1a2a00;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">足す</button>
-        <button onclick="aixSkipAppendByDate('${td}')" style="background:transparent;color:var(--text3);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;">スキップ</button>
-      </div>
-    </div>`;
-  };
+  const have = {};
+  Array.from(list.children).forEach(c => { if (c.dataset && c.dataset.key) have[c.dataset.key] = c; else c.remove(); });
+  Object.keys(have).forEach(k => { if (!keys.includes(k)) { have[k].remove(); delete have[k]; delete _aixSel[k]; } });
 
-  list.innerHTML = drafts.map((d, i) => (d && d.append === true && savedDates.has(d.targetDate || d.date)) ? appendCard(d) : `
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:16px;width:100%;max-width:760px;box-sizing:border-box;">
-      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">${d.targetDate || d.date || ''}</div>
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">今週は？</div>
-        <div style="display:flex;gap:8px;">
-          ${satVals.map(v => `<button onclick="aixToggleSat(${i},'${v}')" id="aix-sat-${i}-${v}" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:16px;cursor:pointer;">${satLabels[v]}</button>`).join('')}
-        </div>
-      </div>
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">できごと</div>
-        <textarea id="aix-events-${i}" oninput="this.style.height='auto';this.style.height=Math.max(140,this.scrollHeight)+'px'" style="width:100%;min-height:140px;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.7;resize:vertical;">${d.events || d.text || d.content || ''}</textarea>
-        ${kjBarHtml('aix-events-' + i)}
-      </div>
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">🏠 今日、ゆみさんの負荷を一つ引き取ったか</div>
-        <div class="yl-row">
-          <button type="button" class="yl-btn" id="aix-yl-${i}-yes" onclick="aixToggleYumi(${i},'yes')">はい</button>
-          <button type="button" class="yl-btn" id="aix-yl-${i}-no" onclick="aixToggleYumi(${i},'no')">いいえ</button>
-        </div>
-        <input type="text" id="aix-yln-${i}" class="yl-note" placeholder="引き取ったこと（任意・1行）" style="display:none;font-size:13px;padding:8px 12px;">
-      </div>
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">🤲 今日、誰かに信頼・愛情を与えた</div>
-        <div class="yl-row">
-          <button type="button" class="gv-btn" id="aix-gv-${i}" onclick="aixToggleGave(${i})">与えた</button>
-        </div>
-        <input type="text" id="aix-gvn-${i}" class="yl-note" placeholder="誰に・何を（任意・1行）" style="display:none;font-size:13px;padding:8px 12px;">
-      </div>
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">△ 違和感 <span style="font-size:10px;">任意</span></div>
-        <input type="text" id="aix-unease-${i}" placeholder="なんかモヤっとしたこと、一言で" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);font-family:var(--font-body);font-size:13px;">
-      </div>
-      <div style="margin-bottom:18px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">フラグ <span style="font-size:10px;">任意</span></div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          ${Object.entries(flags).map(([k,v]) => `<button onclick="aixToggleFlag(${i},'${k}')" id="aix-flag-${i}-${k}" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;">${v}</button>`).join('')}
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);">
-        <button onclick="aixApproveByIdx(${i})" style="background:var(--accent);color:#1a2a00;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">保存</button>
-        <button onclick="aixDismissByIdx(${i})" style="background:transparent;color:var(--text3);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;">スキップ</button>
-      </div>
-    </div>
-  `).join('');
-
-  drafts.forEach((d, i) => {
-    window['_aixSat_'+i] = '';
-    window['_aixFlags_'+i] = [];
-    window['_aixYumi_'+i] = '';     /* 描き直しで画面は空に戻るので、選択も空に戻す（前のカードの「はい／いいえ」が残らないように・依頼書19） */
-    window['_aixGave_'+i] = false;
+  let fit = null;
+  entries.forEach((e, idx) => {
+    const kind = (e.d && e.d.append === true && savedDates.has(e.td)) ? 'append' : 'big';
+    const sig = kind + '|' + JSON.stringify(e.d);
+    let c = have[e.key], made = false;
+    /* 開いている日と書きかけのある日は作り直さない。それ以外は下書きが変わっていれば作り直す */
+    if (c && c.dataset.sig !== sig && e.key !== _aixOpen && c.dataset.dirty !== '1') { c.remove(); c = null; }
+    if (!c) { c = _aixMakeCard(e, kind, sig); made = true; }
+    if (list.children[idx] !== c) list.insertBefore(c, list.children[idx] || null);
+    const show = e.key === open;
+    const wasHidden = c.style.display === 'none';
+    c.style.display = show ? '' : 'none';
+    if (show && (made || wasHidden) && kind === 'big') fit = e.key;
   });
+
+  if (tabs) {
+    tabs.style.display = '';
+    tabs.innerHTML = entries.map(e => {
+      const isApp = !!(e.d && e.d.append === true && savedDates.has(e.td));
+      return `<button type="button" class="aix-tab${e.key === open ? ' active' : ''}" onclick="aixOpenTab('${e.key}')">${_aixTxt(_aixTabLabel(e.td, isApp))}</button>`;
+    }).join('');
+  }
+  _aixOpen = open; _aixOrder = keys;
+  /* 右の列を、上の帯（topbar・貼り付き）のすぐ下に貼り付ける */
+  const tb = document.querySelector('.topbar');
+  const view = document.getElementById('aix-view');
+  if (view) view.style.setProperty('--aix-stick', (((tb && getComputedStyle(tb).position === 'sticky') ? tb.offsetHeight : 0) + 12) + 'px');
+  if (fit) aixFitTa(document.getElementById('aix-events-' + fit));
 }
 
-function aixToggleSat(i, val) {
-  window['_aixSat_'+i] = window['_aixSat_'+i] === val ? '' : val;
+function aixToggleSat(key, val) {
+  const s = _aixS(key);
+  s.sat = s.sat === val ? '' : val;
   ['great','good','meh','bad'].forEach(v => {
-    const btn = document.getElementById(`aix-sat-${i}-${v}`);
-    if (btn) { btn.style.background = window['_aixSat_'+i] === v ? 'var(--accent)' : 'var(--bg3)'; btn.style.color = window['_aixSat_'+i] === v ? '#1a2a00' : 'var(--text2)'; }
+    const btn = document.getElementById(`aix-sat-${key}-${v}`);
+    if (btn) { btn.style.background = s.sat === v ? 'var(--accent)' : 'var(--bg3)'; btn.style.color = s.sat === v ? '#1a2a00' : 'var(--text2)'; }
   });
 }
 
-function aixToggleFlag(i, flag) {
-  const arr = window['_aixFlags_'+i] || [];
+function aixToggleFlag(key, flag) {
+  const s = _aixS(key);
+  const arr = s.flags;
   const idx = arr.indexOf(flag); if (idx >= 0) arr.splice(idx,1); else arr.push(flag);
-  window['_aixFlags_'+i] = arr;
-  const btn = document.getElementById(`aix-flag-${i}-${flag}`);
+  const btn = document.getElementById(`aix-flag-${key}-${flag}`);
   if (btn) { btn.style.background = arr.includes(flag) ? 'var(--bg4)' : 'var(--bg3)'; btn.style.borderColor = arr.includes(flag) ? 'var(--border2)' : 'var(--border)'; btn.style.color = arr.includes(flag) ? 'var(--text)' : 'var(--text2)'; }
 }
 
-function aixApproveByIdx(i) {
-  const drafts = _aixLoadDrafts();
-  const d = drafts[i]; if (!d) return;
-  const ta = document.getElementById('aix-events-' + i);
+/* 「保存」：日付（キー）で下書きを引く（依頼書20）。ログに書く中身は前の aixApproveByIdx と同じ */
+function aixApproveByDate(key) {
+  const f = _aixFind(key);
+  if (!f) { _aixDropCard(key); renderAixDraftList(); updateAixBadge(); return; }
+  const drafts = f.drafts, d = f.d, i = f.i, s = _aixS(key);
+  const ta = document.getElementById('aix-events-' + key);
   const events = ta ? ta.value.trim() : (d.events || '');
   if (!events) { if (typeof toast === 'function') toast('「できごと」を入力してください'); return; }
   const targetDate = d.targetDate || d.date || today();  // 描画と同じく date 両対応＋最終フォールバック（サイレント失敗防止）
-  const unease = (document.getElementById('aix-unease-' + i) || {}).value || '';
-  const satisfaction = window['_aixSat_' + i] || '';
+  const unease = (document.getElementById('aix-unease-' + key) || {}).value || '';
+  const satisfaction = s.sat || '';
   const tags = [];   /* ＋記録するに合わせタグ入力は廃止（既存ログのタグ表示・データは不変） */
-  const flags = window['_aixFlags_' + i] || [];
-  const yumi = window['_aixYumi_' + i] || '';
-  const yumiNote = yumi === 'yes' ? ((document.getElementById('aix-yln-' + i) || {}).value || '').trim() : '';
-  const gave = window['_aixGave_' + i] === true;   /* 与えた（依頼書19）。選んでいないときは何も変えない */
-  const gaveNote = gave ? ((document.getElementById('aix-gvn-' + i) || {}).value || '').trim() : '';
+  const flags = s.flags.slice();
+  const yumi = s.yumi || '';
+  const yumiNote = yumi === 'yes' ? ((document.getElementById('aix-yln-' + key) || {}).value || '').trim() : '';
+  const gave = s.gave === true;   /* 与えた（依頼書19）。選んでいないときは何も変えない */
+  const gaveNote = gave ? ((document.getElementById('aix-gvn-' + key) || {}).value || '').trim() : '';
   let log = state.logs.find(l => l.date === targetDate);
   if (log) {
     log.events = log.events ? log.events + '\n' + events : events;
@@ -2208,9 +2345,9 @@ function aixApproveByIdx(i) {
   if (typeof toast === 'function') toast(`✅ ${targetDate} の記録を保存しました`);
 }
 
-function aixDismissByIdx(i) {
-  const drafts = _aixLoadDrafts();
-  drafts.splice(i, 1); _aixSaveDrafts(drafts);
+function aixDismissByDate(key) {
+  const f = _aixFind(key);
+  if (f) { f.drafts.splice(f.i, 1); _aixSaveDrafts(f.drafts); }
   renderAixDraftList(); updateAixBadge();
 }
 
@@ -2223,14 +2360,15 @@ function _aixRawDrafts() {
 function _aixRemoveAppendDraft(td) {
   _aixSaveDrafts(_aixRawDrafts().filter(x => !(x && x.append === true && (x.targetDate || x.date) === td)));
 }
-function aixAppendByDate(td) {
+function aixAppendByDate(td, key) {
+  key = key || td;
   const d = _aixRawDrafts().find(x => x && x.append === true && (x.targetDate || x.date) === td);
   if (!d) { renderAixDraftList(); updateAixBadge(); return; }
-  const ta = document.getElementById('aix-app-' + td);
+  const ta = document.getElementById('aix-app-' + key);
   const add = ta ? ta.value.trim() : String(d.events || '').trim();
   if (!add) { if (typeof toast === 'function') toast('足す内容を入力してください'); return; }
   const log = state.logs.find(l => l && !l.archived && l.date === td);
-  if (!log) { renderAixDraftList(); return; }   /* ログが無くなっていたら大きい形で出し直す */
+  if (!log) { _aixDropCard(key); renderAixDraftList(); return; }   /* ログが無くなっていたら大きい形で出し直す */
   log.events = log.events ? log.events + '\n' + add : add;
   if (d.links && Object.keys(d.links).length) log.links = { ...(log.links || {}), ...d.links };   /* 受信箱の下書き由来 */
   log.updatedAt = new Date().toISOString();
@@ -2243,6 +2381,23 @@ function aixSkipAppendByDate(td) {
   _aixRemoveAppendDraft(td);
   renderAixDraftList(); updateAixBadge();
 }
+
+/* Ctrl＋Enter（Mac は ⌘＋Enter）：承認フォームが出ているときだけ、開いている日を保存（大きい形は「保存」、小さい形は「足す」） */
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter' || !(ev.ctrlKey || ev.metaKey) || ev.isComposing) return;
+  const view = document.getElementById('aix-view');
+  if (!view || view.style.display !== 'block' || !_aixOpen) return;
+  if (document.querySelector('.modal-overlay.open') || document.getElementById('briefPage')) return;
+  const list = document.getElementById('aixDraftList');
+  const c = list && Array.from(list.children).find(x => x.dataset && x.dataset.key === _aixOpen);
+  if (!c || c.style.display === 'none') return;
+  ev.preventDefault();
+  if (c.dataset.kind === 'append') aixAppendByDate(c.dataset.td, _aixOpen); else aixApproveByDate(_aixOpen);
+});
+window.addEventListener('resize', () => {
+  const view = document.getElementById('aix-view');
+  if (view && view.style.display === 'block' && _aixOpen) aixFitTa(document.getElementById('aix-events-' + _aixOpen));
+});
 
 /* ══ 受信箱 共通部品 v1 ══
    各OSはこのブロックをそのままコピーし、INBOX_OS と（ブロックの外に書く）inboxApply だけ差し替える。
@@ -2431,7 +2586,11 @@ bindEvents();
 updateAixBadge();
 inboxProcess('load');   /* 受信箱：自分宛て（targetOS:'oneday'）を下書きに足す。無ければ何もしない */
 window.addEventListener('storage', function(e) {
-  if (e.key === 'aix_drafts' || e.key === 'oneday_aix_draft') { updateAixBadge(); }
+  if (e.key === 'aix_drafts' || e.key === 'oneday_aix_draft') {
+    updateAixBadge();
+    /* ほかのタブ（Task OS など）で下書きが増えた・変わったとき：タブの並びだけ足し引きする（開いている日・書きかけのカードは作り直さない・依頼書20） */
+    try { const v = document.getElementById('aix-view'); if (v && v.style.display === 'block') renderAixDraftList(); } catch(err) {}
+  }
 });
 </script>
   <script>
